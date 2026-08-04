@@ -33,6 +33,17 @@ def test_quality_workflow_delegates_to_frozen_local_gate() -> None:
     assert "dependency-review-action" not in workflow
 
 
+def test_quality_workflow_fetches_the_architecture_baseline_history() -> None:
+    workflow = (ROOT / ".github/workflows/quality.yml").read_text(encoding="utf-8")
+
+    checkout = (
+        "uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4\n"
+        "        with:\n"
+        "          fetch-depth: 0"
+    )
+    assert checkout in workflow
+
+
 def test_container_workflow_builds_both_target_architectures() -> None:
     workflow = (ROOT / ".github/workflows/container.yml").read_text(encoding="utf-8")
 
