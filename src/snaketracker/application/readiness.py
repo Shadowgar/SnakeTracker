@@ -12,7 +12,8 @@ class CompatibilityStatus(Protocol):
     @property
     def normal_readiness(self) -> bool: ...
 
-    reason_code: str
+    @property
+    def reason_code(self) -> str: ...
 
 
 class PlatformReadiness:

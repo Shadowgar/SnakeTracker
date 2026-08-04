@@ -6,6 +6,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 
+from sqlalchemy.engine import Engine
+
 CURRENT_MANIFEST_VERSION = 1
 CURRENT_RELATIONAL_SCHEMA_VERSION = 1
 MINIMUM_RELATIONAL_SCHEMA_VERSION = 0
@@ -88,3 +90,29 @@ def evaluate_compatibility(
             "A database migration is required before startup.",
         )
     return _report(CompatibilityMode.NORMAL, "compatible", "The application is ready.")
+
+
+def inspect_database_compatibility(engine: Engine) -> CompatibilityReport:
+    with engine.connect() as connection:
+        tables = set(
+            connection.exec_driver_sql(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+            ).scalars()
+        )
+        if not tables:
+            return evaluate_compatibility(None, database_is_empty=True)
+        if "alembic_version" not in tables:
+            return evaluate_compatibility(None, database_is_empty=False)
+        revision = connection.exec_driver_sql(
+            "SELECT version_num FROM alembic_version"
+        ).scalar_one_or_none()
+    if revision == "0001_phase1_baseline":
+        return evaluate_compatibility(
+            {"manifest_version": 1, "relational_schema_version": 1},
+            database_is_empty=False,
+        )
+    return _report(
+        CompatibilityMode.RECOVERY_REQUIRED,
+        "relational_schema_unknown",
+        "Stored data requires a compatible application release.",
+    )

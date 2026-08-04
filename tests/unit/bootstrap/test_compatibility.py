@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import pytest
+from sqlalchemy import create_engine, text
 
 from snaketracker.bootstrap.compatibility import (
     CompatibilityMode,
     evaluate_compatibility,
+    inspect_database_compatibility,
 )
 
 
@@ -61,3 +63,45 @@ def test_newer_schema_reason_is_safe_and_stable() -> None:
     assert report.reason_code == "relational_schema_too_new"
     assert report.public_detail == "Stored data requires a newer compatible application."
     assert "99" not in report.public_detail
+
+
+def test_known_alembic_revision_is_compatible(tmp_path) -> None:
+    database = tmp_path / "known.sqlite3"
+    engine = create_engine(f"sqlite+pysqlite:///{database}")
+    try:
+        with engine.begin() as connection:
+            connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
+            connection.execute(text("INSERT INTO alembic_version VALUES ('0001_phase1_baseline')"))
+
+        assert inspect_database_compatibility(engine).mode is CompatibilityMode.NORMAL
+    finally:
+        engine.dispose()
+
+
+def test_unknown_alembic_revision_requires_recovery(tmp_path) -> None:
+    database = tmp_path / "unknown.sqlite3"
+    engine = create_engine(f"sqlite+pysqlite:///{database}")
+    try:
+        with engine.begin() as connection:
+            connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
+            connection.execute(text("INSERT INTO alembic_version VALUES ('future_revision')"))
+
+        report = inspect_database_compatibility(engine)
+        assert report.mode is CompatibilityMode.RECOVERY_REQUIRED
+        assert report.reason_code == "relational_schema_unknown"
+    finally:
+        engine.dispose()
+
+
+def test_nonempty_database_without_migration_metadata_requires_recovery(tmp_path) -> None:
+    database = tmp_path / "unmanaged.sqlite3"
+    engine = create_engine(f"sqlite+pysqlite:///{database}")
+    try:
+        with engine.begin() as connection:
+            connection.execute(text("CREATE TABLE unrelated (id INTEGER)"))
+
+        report = inspect_database_compatibility(engine)
+        assert report.mode is CompatibilityMode.RECOVERY_REQUIRED
+        assert report.reason_code == "compatibility_metadata_missing"
+    finally:
+        engine.dispose()

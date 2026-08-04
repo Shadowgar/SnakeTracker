@@ -7,10 +7,16 @@ from collections.abc import Awaitable, Callable
 from fastapi import FastAPI, Request, Response
 
 from snaketracker.application.ports.readiness import ReadinessPort
+from snaketracker.application.readiness import PlatformReadiness
+from snaketracker.bootstrap.compatibility import inspect_database_compatibility
+from snaketracker.bootstrap.configuration import Environment, Settings
+from snaketracker.infrastructure.database.engine import create_sqlite_engine
+from snaketracker.infrastructure.database.health import SQLAlchemyDatabaseHealth
 from snaketracker.infrastructure.observability.correlation import (
     correlation_context,
     normalize_correlation_id,
 )
+from snaketracker.infrastructure.observability.logging import configure_logging
 from snaketracker.infrastructure.observability.metrics import PlatformMetrics
 from snaketracker.presentation.health import create_health_router
 
@@ -35,4 +41,22 @@ def create_application(*, readiness: ReadinessPort) -> FastAPI:
         response.headers["X-Request-ID"] = correlation_id
         return response
 
+    return app
+
+
+def build_application(settings: Settings) -> FastAPI:
+    """Build the production composition from validated settings."""
+    configure_logging(settings.log_level)
+    engine = create_sqlite_engine(
+        settings.database_path,
+        require_local_storage=settings.environment is Environment.PRODUCTION,
+    )
+    compatibility = inspect_database_compatibility(engine)
+    readiness = PlatformReadiness(
+        database=SQLAlchemyDatabaseHealth(engine),
+        compatibility=compatibility,
+    )
+    app = create_application(readiness=readiness)
+    app.state.database_engine = engine
+    app.state.compatibility = compatibility
     return app
