@@ -1,0 +1,109 @@
+Script started on 2026-08-04 06:08:50-04:00 [COMMAND="./scripts/quality/check.sh" <not executed on terminal>]
+128 files already formatted
+
+All checks passed!
+
+architecture freeze passed: 35 accepted ADRs
+
+documentation links passed: 73 files checked
+
+Success: no issues found in 24 source files
+
+============================= test session starts ==============================
+
+platform linux -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0
+
+rootdir: /home/rocco/SnakeTracker
+
+configfile: pyproject.toml
+
+testpaths: tests
+
+plugins: timeout-2.4.0, anyio-4.14.2, cov-7.1.0
+
+timeout: 30.0s
+
+timeout method: signal
+
+timeout func_only: False
+
+collecting ...
+collecting 16 items
+collected 92 items
+
+
+
+tests/architecture/test_dependency_boundaries.py ...                     [  3%]
+
+tests/architecture/test_phase_scope.py ...                               [  6%]
+
+tests/integration/test_alembic_lifecycle.py ..                           [  8%]
+
+tests/integration/test_application_startup.py ........                   [ 17%]
+
+tests/integration/test_container_contract.py .....                       [ 22%]
+
+tests/integration/test_database_port.py .                                [ 23%]
+
+tests/integration/test_health_endpoints.py ..                            [ 26%]
+
+tests/integration/test_maintenance_cli.py ...                            [ 29%]
+
+tests/integration/test_quality_contract.py .....                         [ 34%]
+
+tests/integration/test_sqlite_profile.py ....                            [ 39%]
+
+tests/unit/application/test_readiness.py ....                            [ 43%]
+
+tests/unit/bootstrap/test_compatibility.py .................             [ 61%]
+
+tests/unit/bootstrap/test_configuration.py ...........                   [ 73%]
+
+tests/unit/infrastructure/test_correlation.py ..                         [ 76%]
+
+tests/unit/infrastructure/test_logging.py ...                            [ 79%]
+
+tests/unit/infrastructure/test_sqlite_profile.py ....                    [ 83%]
+
+tests/unit/scripts/test_architecture_freeze.py .                         [ 84%]
+
+tests/unit/scripts/test_phase1_qualification.py ..............           [100%]
+
+
+
+------------ generated xml file: /home/rocco/SnakeTracker/junit.xml ------------
+
+================================ tests coverage ================================
+
+_______________ coverage: platform linux, python 3.13.14-final-0 _______________
+
+
+
+Name                                          Stmts   Miss Branch BrPart  Cover   Missing
+
+-----------------------------------------------------------------------------------------
+
+src/snaketracker/bootstrap/compatibility.py      80      3     26      1    96%   165-166, 178
+
+-----------------------------------------------------------------------------------------
+
+TOTAL                                           425      3     82      1    99%
+
+
+
+23 files skipped due to complete coverage.
+
+Coverage XML written to file coverage.xml
+
+Coverage JSON written to file coverage.json
+
+Required test coverage of 90.0% reached. Total coverage: 99.21%
+
+============================== 92 passed in 2.30s ==============================
+
+coverage gates passed: lines=99.29% branches=98.78%
+
+No known vulnerabilities found
+
+
+Script done on 2026-08-04 06:08:59-04:00 [COMMAND_EXIT_CODE="0"]

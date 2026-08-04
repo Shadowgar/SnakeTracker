@@ -1,0 +1,545 @@
+{
+  "duration_seconds": 95.935,
+  "health_latency": {
+    "max_ms": 3.613,
+    "p50_ms": 1.339,
+    "p95_ms": 1.793,
+    "samples": 30
+  },
+  "image_size_bytes": 107286714,
+  "persistence": {
+    "database_exists_after_restart": true,
+    "schema_after_restart": "0001_phase1_baseline",
+    "schema_before_restart": "0001_phase1_baseline",
+    "schema_revision_preserved_after_restart": true
+  },
+  "readiness_seconds": 7.569,
+  "resources": {
+    "containers": 3,
+    "idle_cpu_p95_percent": 14.39,
+    "idle_cpu_variance": 48.617391,
+    "memory_variance": 0.256992,
+    "peak_memory_mib": 94.837,
+    "raw": [
+      {
+        "cpu_percent": 0.14,
+        "memory_mib": 93.241,
+        "raw": [
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.00%",
+            "Container": "c28e62bf8eb4d7a78039e4485745abc62a5f39981ea998128f167cbcadcf9aa3",
+            "ID": "c28e62bf8eb4",
+            "MemPerc": "5.42%",
+            "MemUsage": "6.941MiB / 128MiB",
+            "Name": "snaketracker-phase1-q-116783-nginx-1",
+            "NetIO": "2.38kB / 2.19kB",
+            "PIDs": "17"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.13%",
+            "Container": "e7a0ff7700427522103ac49797b2a2fc1dd3bf6a25dab0cf6b980e2f32f51b56",
+            "ID": "e7a0ff770042",
+            "MemPerc": "13.39%",
+            "MemUsage": "51.41MiB / 384MiB",
+            "Name": "snaketracker-phase1-q-116783-web-1",
+            "NetIO": "2.51kB / 1.33kB",
+            "PIDs": "6"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.01%",
+            "Container": "c4a8b214325042b787c3848ffc99fc057b9767d4804a0627add25bf6e9913b40",
+            "ID": "c4a8b2143250",
+            "MemPerc": "13.63%",
+            "MemUsage": "34.89MiB / 256MiB",
+            "Name": "snaketracker-phase1-q-116783-worker-1",
+            "NetIO": "1.36kB / 126B",
+            "PIDs": "1"
+          }
+        ]
+      },
+      {
+        "cpu_percent": 0.14,
+        "memory_mib": 93.351,
+        "raw": [
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.00%",
+            "Container": "c28e62bf8eb4d7a78039e4485745abc62a5f39981ea998128f167cbcadcf9aa3",
+            "ID": "c28e62bf8eb4",
+            "MemPerc": "5.49%",
+            "MemUsage": "7.031MiB / 128MiB",
+            "Name": "snaketracker-phase1-q-116783-nginx-1",
+            "NetIO": "3.06kB / 2.86kB",
+            "PIDs": "17"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.13%",
+            "Container": "e7a0ff7700427522103ac49797b2a2fc1dd3bf6a25dab0cf6b980e2f32f51b56",
+            "ID": "e7a0ff770042",
+            "MemPerc": "13.39%",
+            "MemUsage": "51.43MiB / 384MiB",
+            "Name": "snaketracker-phase1-q-116783-web-1",
+            "NetIO": "3.25kB / 1.94kB",
+            "PIDs": "6"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.01%",
+            "Container": "c4a8b214325042b787c3848ffc99fc057b9767d4804a0627add25bf6e9913b40",
+            "ID": "c4a8b2143250",
+            "MemPerc": "13.63%",
+            "MemUsage": "34.89MiB / 256MiB",
+            "Name": "snaketracker-phase1-q-116783-worker-1",
+            "NetIO": "1.43kB / 126B",
+            "PIDs": "1"
+          }
+        ]
+      },
+      {
+        "cpu_percent": 0.55,
+        "memory_mib": 93.54,
+        "raw": [
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.00%",
+            "Container": "c28e62bf8eb4d7a78039e4485745abc62a5f39981ea998128f167cbcadcf9aa3",
+            "ID": "c28e62bf8eb4",
+            "MemPerc": "5.65%",
+            "MemUsage": "7.23MiB / 128MiB",
+            "Name": "snaketracker-phase1-q-116783-nginx-1",
+            "NetIO": "4.22kB / 4.13kB",
+            "PIDs": "17"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.54%",
+            "Container": "e7a0ff7700427522103ac49797b2a2fc1dd3bf6a25dab0cf6b980e2f32f51b56",
+            "ID": "e7a0ff770042",
+            "MemPerc": "13.39%",
+            "MemUsage": "51.43MiB / 384MiB",
+            "Name": "snaketracker-phase1-q-116783-web-1",
+            "NetIO": "4.51kB / 3.11kB",
+            "PIDs": "6"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.01%",
+            "Container": "c4a8b214325042b787c3848ffc99fc057b9767d4804a0627add25bf6e9913b40",
+            "ID": "c4a8b2143250",
+            "MemPerc": "13.63%",
+            "MemUsage": "34.88MiB / 256MiB",
+            "Name": "snaketracker-phase1-q-116783-worker-1",
+            "NetIO": "1.43kB / 126B",
+            "PIDs": "1"
+          }
+        ]
+      },
+      {
+        "cpu_percent": 0.23,
+        "memory_mib": 93.68,
+        "raw": [
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.00%",
+            "Container": "c28e62bf8eb4d7a78039e4485745abc62a5f39981ea998128f167cbcadcf9aa3",
+            "ID": "c28e62bf8eb4",
+            "MemPerc": "5.72%",
+            "MemUsage": "7.32MiB / 128MiB",
+            "Name": "snaketracker-phase1-q-116783-nginx-1",
+            "NetIO": "4.83kB / 4.8kB",
+            "PIDs": "17"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.22%",
+            "Container": "e7a0ff7700427522103ac49797b2a2fc1dd3bf6a25dab0cf6b980e2f32f51b56",
+            "ID": "e7a0ff770042",
+            "MemPerc": "13.41%",
+            "MemUsage": "51.48MiB / 384MiB",
+            "Name": "snaketracker-phase1-q-116783-web-1",
+            "NetIO": "5.25kB / 3.72kB",
+            "PIDs": "6"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.01%",
+            "Container": "c4a8b214325042b787c3848ffc99fc057b9767d4804a0627add25bf6e9913b40",
+            "ID": "c4a8b2143250",
+            "MemPerc": "13.63%",
+            "MemUsage": "34.88MiB / 256MiB",
+            "Name": "snaketracker-phase1-q-116783-worker-1",
+            "NetIO": "1.5kB / 126B",
+            "PIDs": "1"
+          }
+        ]
+      },
+      {
+        "cpu_percent": 2.06,
+        "memory_mib": 93.932,
+        "raw": [
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "1.79%",
+            "Container": "c28e62bf8eb4d7a78039e4485745abc62a5f39981ea998128f167cbcadcf9aa3",
+            "ID": "c28e62bf8eb4",
+            "MemPerc": "5.94%",
+            "MemUsage": "7.602MiB / 128MiB",
+            "Name": "snaketracker-phase1-q-116783-nginx-1",
+            "NetIO": "6.13kB / 6.06kB",
+            "PIDs": "17"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.26%",
+            "Container": "e7a0ff7700427522103ac49797b2a2fc1dd3bf6a25dab0cf6b980e2f32f51b56",
+            "ID": "e7a0ff770042",
+            "MemPerc": "13.40%",
+            "MemUsage": "51.45MiB / 384MiB",
+            "Name": "snaketracker-phase1-q-116783-web-1",
+            "NetIO": "6.52kB / 4.95kB",
+            "PIDs": "6"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.01%",
+            "Container": "c4a8b214325042b787c3848ffc99fc057b9767d4804a0627add25bf6e9913b40",
+            "ID": "c4a8b2143250",
+            "MemPerc": "13.63%",
+            "MemUsage": "34.88MiB / 256MiB",
+            "Name": "snaketracker-phase1-q-116783-worker-1",
+            "NetIO": "1.5kB / 126B",
+            "PIDs": "1"
+          }
+        ]
+      },
+      {
+        "cpu_percent": 14.39,
+        "memory_mib": 93.988,
+        "raw": [
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.00%",
+            "Container": "c28e62bf8eb4d7a78039e4485745abc62a5f39981ea998128f167cbcadcf9aa3",
+            "ID": "c28e62bf8eb4",
+            "MemPerc": "5.94%",
+            "MemUsage": "7.598MiB / 128MiB",
+            "Name": "snaketracker-phase1-q-116783-nginx-1",
+            "NetIO": "6.75kB / 6.67kB",
+            "PIDs": "17"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "14.38%",
+            "Container": "e7a0ff7700427522103ac49797b2a2fc1dd3bf6a25dab0cf6b980e2f32f51b56",
+            "ID": "e7a0ff770042",
+            "MemPerc": "13.41%",
+            "MemUsage": "51.5MiB / 384MiB",
+            "Name": "snaketracker-phase1-q-116783-web-1",
+            "NetIO": "7.12kB / 5.56kB",
+            "PIDs": "6"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.01%",
+            "Container": "c4a8b214325042b787c3848ffc99fc057b9767d4804a0627add25bf6e9913b40",
+            "ID": "c4a8b2143250",
+            "MemPerc": "13.63%",
+            "MemUsage": "34.89MiB / 256MiB",
+            "Name": "snaketracker-phase1-q-116783-worker-1",
+            "NetIO": "1.5kB / 126B",
+            "PIDs": "1"
+          }
+        ]
+      },
+      {
+        "cpu_percent": 0.15,
+        "memory_mib": 94.049,
+        "raw": [
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.00%",
+            "Container": "c28e62bf8eb4d7a78039e4485745abc62a5f39981ea998128f167cbcadcf9aa3",
+            "ID": "c28e62bf8eb4",
+            "MemPerc": "6.02%",
+            "MemUsage": "7.699MiB / 128MiB",
+            "Name": "snaketracker-phase1-q-116783-nginx-1",
+            "NetIO": "7.29kB / 7.33kB",
+            "PIDs": "17"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.14%",
+            "Container": "e7a0ff7700427522103ac49797b2a2fc1dd3bf6a25dab0cf6b980e2f32f51b56",
+            "ID": "e7a0ff770042",
+            "MemPerc": "13.40%",
+            "MemUsage": "51.46MiB / 384MiB",
+            "Name": "snaketracker-phase1-q-116783-web-1",
+            "NetIO": "7.79kB / 6.11kB",
+            "PIDs": "6"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.01%",
+            "Container": "c4a8b214325042b787c3848ffc99fc057b9767d4804a0627add25bf6e9913b40",
+            "ID": "c4a8b2143250",
+            "MemPerc": "13.63%",
+            "MemUsage": "34.89MiB / 256MiB",
+            "Name": "snaketracker-phase1-q-116783-worker-1",
+            "NetIO": "1.5kB / 126B",
+            "PIDs": "1"
+          }
+        ]
+      },
+      {
+        "cpu_percent": 5.63,
+        "memory_mib": 94.237,
+        "raw": [
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.00%",
+            "Container": "c28e62bf8eb4d7a78039e4485745abc62a5f39981ea998128f167cbcadcf9aa3",
+            "ID": "c28e62bf8eb4",
+            "MemPerc": "6.16%",
+            "MemUsage": "7.887MiB / 128MiB",
+            "Name": "snaketracker-phase1-q-116783-nginx-1",
+            "NetIO": "8.46kB / 8.6kB",
+            "PIDs": "17"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.13%",
+            "Container": "e7a0ff7700427522103ac49797b2a2fc1dd3bf6a25dab0cf6b980e2f32f51b56",
+            "ID": "e7a0ff770042",
+            "MemPerc": "13.40%",
+            "MemUsage": "51.47MiB / 384MiB",
+            "Name": "snaketracker-phase1-q-116783-web-1",
+            "NetIO": "9.05kB / 7.27kB",
+            "PIDs": "6"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "5.50%",
+            "Container": "c4a8b214325042b787c3848ffc99fc057b9767d4804a0627add25bf6e9913b40",
+            "ID": "c4a8b2143250",
+            "MemPerc": "13.63%",
+            "MemUsage": "34.88MiB / 256MiB",
+            "Name": "snaketracker-phase1-q-116783-worker-1",
+            "NetIO": "1.57kB / 126B",
+            "PIDs": "1"
+          }
+        ]
+      },
+      {
+        "cpu_percent": 5.29,
+        "memory_mib": 94.337,
+        "raw": [
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.00%",
+            "Container": "c28e62bf8eb4d7a78039e4485745abc62a5f39981ea998128f167cbcadcf9aa3",
+            "ID": "c28e62bf8eb4",
+            "MemPerc": "6.23%",
+            "MemUsage": "7.977MiB / 128MiB",
+            "Name": "snaketracker-phase1-q-116783-nginx-1",
+            "NetIO": "9.07kB / 9.27kB",
+            "PIDs": "17"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "5.28%",
+            "Container": "e7a0ff7700427522103ac49797b2a2fc1dd3bf6a25dab0cf6b980e2f32f51b56",
+            "ID": "e7a0ff770042",
+            "MemPerc": "13.41%",
+            "MemUsage": "51.48MiB / 384MiB",
+            "Name": "snaketracker-phase1-q-116783-web-1",
+            "NetIO": "9.79kB / 7.82kB",
+            "PIDs": "6"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.01%",
+            "Container": "c4a8b214325042b787c3848ffc99fc057b9767d4804a0627add25bf6e9913b40",
+            "ID": "c4a8b2143250",
+            "MemPerc": "13.63%",
+            "MemUsage": "34.88MiB / 256MiB",
+            "Name": "snaketracker-phase1-q-116783-worker-1",
+            "NetIO": "1.57kB / 126B",
+            "PIDs": "1"
+          }
+        ]
+      },
+      {
+        "cpu_percent": 2.67,
+        "memory_mib": 94.837,
+        "raw": [
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "2.23%",
+            "Container": "c28e62bf8eb4d7a78039e4485745abc62a5f39981ea998128f167cbcadcf9aa3",
+            "ID": "c28e62bf8eb4",
+            "MemPerc": "6.61%",
+            "MemUsage": "8.457MiB / 128MiB",
+            "Name": "snaketracker-phase1-q-116783-nginx-1",
+            "NetIO": "10.3kB / 10.5kB",
+            "PIDs": "17"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.43%",
+            "Container": "e7a0ff7700427522103ac49797b2a2fc1dd3bf6a25dab0cf6b980e2f32f51b56",
+            "ID": "e7a0ff770042",
+            "MemPerc": "13.41%",
+            "MemUsage": "51.5MiB / 384MiB",
+            "Name": "snaketracker-phase1-q-116783-web-1",
+            "NetIO": "11.1kB / 9.05kB",
+            "PIDs": "6"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.01%",
+            "Container": "c4a8b214325042b787c3848ffc99fc057b9767d4804a0627add25bf6e9913b40",
+            "ID": "c4a8b2143250",
+            "MemPerc": "13.63%",
+            "MemUsage": "34.88MiB / 256MiB",
+            "Name": "snaketracker-phase1-q-116783-worker-1",
+            "NetIO": "1.57kB / 126B",
+            "PIDs": "1"
+          }
+        ]
+      },
+      {
+        "cpu_percent": 0.7,
+        "memory_mib": 94.658,
+        "raw": [
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.39%",
+            "Container": "c28e62bf8eb4d7a78039e4485745abc62a5f39981ea998128f167cbcadcf9aa3",
+            "ID": "c28e62bf8eb4",
+            "MemPerc": "6.45%",
+            "MemUsage": "8.258MiB / 128MiB",
+            "Name": "snaketracker-phase1-q-116783-nginx-1",
+            "NetIO": "10.9kB / 11.1kB",
+            "PIDs": "17"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.30%",
+            "Container": "e7a0ff7700427522103ac49797b2a2fc1dd3bf6a25dab0cf6b980e2f32f51b56",
+            "ID": "e7a0ff770042",
+            "MemPerc": "13.41%",
+            "MemUsage": "51.51MiB / 384MiB",
+            "Name": "snaketracker-phase1-q-116783-web-1",
+            "NetIO": "11.7kB / 9.66kB",
+            "PIDs": "6"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.01%",
+            "Container": "c4a8b214325042b787c3848ffc99fc057b9767d4804a0627add25bf6e9913b40",
+            "ID": "c4a8b2143250",
+            "MemPerc": "13.63%",
+            "MemUsage": "34.89MiB / 256MiB",
+            "Name": "snaketracker-phase1-q-116783-worker-1",
+            "NetIO": "1.57kB / 126B",
+            "PIDs": "1"
+          }
+        ]
+      },
+      {
+        "cpu_percent": 23.72,
+        "memory_mib": 94.698,
+        "raw": [
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.00%",
+            "Container": "c28e62bf8eb4d7a78039e4485745abc62a5f39981ea998128f167cbcadcf9aa3",
+            "ID": "c28e62bf8eb4",
+            "MemPerc": "6.45%",
+            "MemUsage": "8.258MiB / 128MiB",
+            "Name": "snaketracker-phase1-q-116783-nginx-1",
+            "NetIO": "11.5kB / 11.8kB",
+            "PIDs": "17"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "23.71%",
+            "Container": "e7a0ff7700427522103ac49797b2a2fc1dd3bf6a25dab0cf6b980e2f32f51b56",
+            "ID": "e7a0ff770042",
+            "MemPerc": "13.42%",
+            "MemUsage": "51.55MiB / 384MiB",
+            "Name": "snaketracker-phase1-q-116783-web-1",
+            "NetIO": "12.3kB / 10.3kB",
+            "PIDs": "6"
+          },
+          {
+            "BlockIO": "0B / 0B",
+            "CPUPerc": "0.01%",
+            "Container": "c4a8b214325042b787c3848ffc99fc057b9767d4804a0627add25bf6e9913b40",
+            "ID": "c4a8b2143250",
+            "MemPerc": "13.63%",
+            "MemUsage": "34.89MiB / 256MiB",
+            "Name": "snaketracker-phase1-q-116783-worker-1",
+            "NetIO": "1.57kB / 126B",
+            "PIDs": "1"
+          }
+        ]
+      }
+    ],
+    "sample_interval_seconds": 5.0,
+    "samples": 12
+  },
+  "restart_readiness_seconds": 2.376,
+  "schema_version": 2,
+  "shutdown_seconds": 2.189,
+  "sqlite": {
+    "checkpoint_ms": 1.394,
+    "checkpoint_result": [
+      0,
+      211,
+      211
+    ],
+    "commit_max_ms": 2.183,
+    "commit_p50_ms": 1.117,
+    "commit_p95_ms": 1.376,
+    "commit_samples": 200,
+    "fts5": true,
+    "integrity": "ok",
+    "open_ms": 20.74,
+    "pragmas": {
+      "auto_vacuum": 2,
+      "busy_timeout_ms": 5000,
+      "journal_mode": "wal",
+      "journal_size_limit_bytes": 268435456,
+      "synchronous": 2,
+      "wal_autocheckpoint_pages": 1000
+    }
+  },
+  "storage_qualification": {
+    "filesystem": "ext4",
+    "mount_point": "/",
+    "status": "supported"
+  },
+  "targets": {
+    "database_exists_after_restart": true,
+    "idle_cpu_at_most_5_percent": false,
+    "memory_at_most_512_mib": true,
+    "readiness_at_most_15_seconds": true,
+    "restart_readiness_at_most_15_seconds": true,
+    "schema_revision_preserved_after_restart": true,
+    "sqlite_busy_timeout_5000_ms": true,
+    "sqlite_checkpoint_not_busy": true,
+    "sqlite_fts5_available": true,
+    "sqlite_full_durability": true,
+    "sqlite_incremental_auto_vacuum": true,
+    "sqlite_journal_limit_256_mib": true,
+    "sqlite_quick_check_ok": true,
+    "sqlite_wal": true,
+    "sqlite_wal_autocheckpoint_1000_pages": true,
+    "supported_local_filesystem": true
+  }
+}
