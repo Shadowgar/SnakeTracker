@@ -76,3 +76,6 @@ logs/
 cache/
 tmp/
 temp/
+
+# Local generated specification-workflow state
+.spec-workflow/
