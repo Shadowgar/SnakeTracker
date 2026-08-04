@@ -1,7 +1,7 @@
 # M1 Platform Evidence
 
 - Execution date: 2026-08-04
-- Implementation revision: `da061911a7956892adbf8b5a1414e7407ce05b2a`
+- Implementation revision: `419b8949e9ca60bce18b5b69b6730fce2e546b43`
 - Architecture baseline: `bb3ab394a1487943424dad6d7544995c71156c98`
 - Branch: `phase1/platform-foundation`
 - Operator: Codex automation in the local `rocco` workspace
@@ -21,7 +21,7 @@ measurement rather than being promoted or discarded.
 | amd64 and arm64 images build; native Pi smoke retained | Partial | [container evidence](containers/README.md); native Pi smoke missing |
 | SQLite profile on qualified local SSD | Partial | [SQLite evidence](operations/sqlite-profile.md); profile passes, candidate Pi SSD unverified |
 | Unsupported compatibility fails safely | Pass | [test mapping](tests/README.md) |
-| Local and CI-adapter quality gates exist and pass validation | Pass locally | [quality gate](tests/quality-gate.log), [actionlint](tests/actionlint.log) |
+| Local and CI-adapter quality gates exist and pass validation | Pass locally and remotely | [quality gate](tests/quality-gate.log), [GitHub Actions](tests/github-actions.md) |
 | Hardened local Compose topology starts, restarts, preserves its schema, and stops cleanly | Pass locally | [development results](performance/development-host-warm/results.json) |
 | Startup and idle targets pass on pinned Pi environment | Not run | [native Pi status](performance/native-pi5-status.md) |
 | Structured reproducible evidence and review | Pending review | [manifest](evidence-manifest.json), [review](approvals/m1-review.md) |

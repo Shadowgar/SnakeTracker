@@ -1,11 +1,11 @@
-Script started on 2026-08-04 06:08:50-04:00 [COMMAND="./scripts/quality/check.sh" <not executed on terminal>]
-128 files already formatted
+Script started on 2026-08-04 06:27:20-04:00 [COMMAND="./scripts/quality/check.sh" <not executed on terminal>]
+130 files already formatted
 
 All checks passed!
 
 architecture freeze passed: 35 accepted ADRs
 
-documentation links passed: 73 files checked
+documentation links passed: 75 files checked
 
 Success: no issues found in 24 source files
 
@@ -29,7 +29,7 @@ timeout func_only: False
 
 collecting ...
 collecting 16 items
-collected 92 items
+collected 93 items
 
 
 
@@ -45,19 +45,19 @@ tests/integration/test_container_contract.py .....                       [ 22%]
 
 tests/integration/test_database_port.py .                                [ 23%]
 
-tests/integration/test_health_endpoints.py ..                            [ 26%]
+tests/integration/test_health_endpoints.py ..                            [ 25%]
 
 tests/integration/test_maintenance_cli.py ...                            [ 29%]
 
-tests/integration/test_quality_contract.py .....                         [ 34%]
+tests/integration/test_quality_contract.py ......                        [ 35%]
 
 tests/integration/test_sqlite_profile.py ....                            [ 39%]
 
-tests/unit/application/test_readiness.py ....                            [ 43%]
+tests/unit/application/test_readiness.py ....                            [ 44%]
 
-tests/unit/bootstrap/test_compatibility.py .................             [ 61%]
+tests/unit/bootstrap/test_compatibility.py .................             [ 62%]
 
-tests/unit/bootstrap/test_configuration.py ...........                   [ 73%]
+tests/unit/bootstrap/test_configuration.py ...........                   [ 74%]
 
 tests/unit/infrastructure/test_correlation.py ..                         [ 76%]
 
@@ -99,11 +99,11 @@ Coverage JSON written to file coverage.json
 
 Required test coverage of 90.0% reached. Total coverage: 99.21%
 
-============================== 92 passed in 2.30s ==============================
+============================== 93 passed in 2.33s ==============================
 
 coverage gates passed: lines=99.29% branches=98.78%
 
 No known vulnerabilities found
 
 
-Script done on 2026-08-04 06:08:59-04:00 [COMMAND_EXIT_CODE="0"]
+Script done on 2026-08-04 06:27:29-04:00 [COMMAND_EXIT_CODE="0"]

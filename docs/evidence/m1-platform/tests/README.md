@@ -1,7 +1,7 @@
 # M1 Test Evidence
 
-- Source revision: `da061911a7956892adbf8b5a1414e7407ce05b2a`
-- Execution time: 2026-08-04T10:09Z
+- Source revision: `419b8949e9ca60bce18b5b69b6730fce2e546b43`
+- Execution time: 2026-08-04T10:27Z
 - Environment: x86_64 WSL2 development host, Python 3.13.14
 - Dataset: `phase1-platform-empty-v1`
 - Reviewer: Pending owner review
@@ -16,7 +16,7 @@ uv sync --frozen
 The separate [toolchain bootstrap record](../environment/README.md) retains the actual frozen-sync
 execution; `quality-gate.log` begins with the quality command itself.
 
-Result: 92 tests passed; Ruff formatting/linting passed; strict mypy passed; line coverage 99.29%;
+Result: 93 tests passed; Ruff formatting/linting passed; strict mypy passed; line coverage 99.29%;
 branch coverage 98.78%; dependency audit found no known vulnerabilities; architecture freeze,
 documentation links, Compose configuration, and whitespace checks passed.
 
@@ -46,4 +46,6 @@ Health endpoints return stable, non-sensitive liveness/readiness responses and a
 
 ## Workflow syntax
 
-The exact actionlint command and zero exit status are retained in [actionlint.log](actionlint.log). GitHub Actions itself was not executed because no remote workflow run was requested or available in this workspace.
+The exact actionlint command and zero exit status are retained in [actionlint.log](actionlint.log).
+Both remote workflows passed on the implementation revision; see
+[GitHub Actions evidence](github-actions.md).
