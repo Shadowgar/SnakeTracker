@@ -1,0 +1,78 @@
+# Python bytecode and build products
+__pycache__/
+*.py[cod]
+*$py.class
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments and package tooling
+.venv/
+venv/
+env/
+.python-version
+.uv-cache/
+
+# Test, type, lint, and coverage artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+junit.xml
+test-results/
+playwright-report/
+blob-report/
+
+# Editors and operating-system metadata
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Runtime databases and SQLite sidecars
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+data/
+
+# Attachments, uploads, backups, and generated media
+uploads/
+media/
+backups/
+restore-work/
+staging/
+
+# Local Docker and Compose overrides
+compose.override.yaml
+compose.override.yml
+docker-compose.override.yaml
+docker-compose.override.yml
+.docker/
+
+# Logs, caches, and temporary files
+*.log
+logs/
+cache/
+tmp/
+temp/
