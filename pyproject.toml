@@ -49,6 +49,8 @@ exclude_also = [
     "if TYPE_CHECKING:",
     "if __name__ == .__main__.:",
 ]
+# These are the only Phase 1 exclusions: static typing guards and executable
+# module launchers. New exclusions require explicit architecture review.
 
 [tool.ruff]
 line-length = 100
