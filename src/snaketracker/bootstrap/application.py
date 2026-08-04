@@ -10,7 +10,7 @@ from starlette.types import Lifespan
 
 from snaketracker.application.ports.readiness import ReadinessPort
 from snaketracker.application.readiness import PlatformReadiness
-from snaketracker.bootstrap.compatibility import inspect_database_compatibility
+from snaketracker.bootstrap.compatibility import inspect_startup_compatibility
 from snaketracker.bootstrap.configuration import Environment, Settings, load_settings
 from snaketracker.infrastructure.database.engine import create_sqlite_engine
 from snaketracker.infrastructure.database.health import SQLAlchemyDatabaseHealth
@@ -61,7 +61,7 @@ def build_application(settings: Settings) -> FastAPI:
         settings.database_path,
         require_local_storage=settings.environment is Environment.PRODUCTION,
     )
-    compatibility = inspect_database_compatibility(engine)
+    compatibility = inspect_startup_compatibility(engine)
     readiness = PlatformReadiness(
         database=SQLAlchemyDatabaseHealth(engine),
         compatibility=compatibility,

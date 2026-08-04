@@ -29,6 +29,9 @@ def test_phase_one_project_uses_python_313_and_src_layout() -> None:
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())
 
     assert project["project"]["requires-python"] == ">=3.13,<3.14"
+    assert (ROOT / ".python-version").read_text(encoding="utf-8").strip() == "3.13.14"
+    bootstrap = (ROOT / "scripts/development/bootstrap.sh").read_text(encoding="utf-8")
+    assert 'uv python install "$python_version"' in bootstrap
     assert (ROOT / "src/snaketracker/__init__.py").is_file()
     assert (ROOT / "src/snaketracker/py.typed").is_file()
 

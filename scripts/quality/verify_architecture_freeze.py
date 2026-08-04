@@ -10,6 +10,26 @@ from pathlib import Path
 ROOT = Path(__file__).parents[2]
 BASELINE_COMMIT = "bb3ab39"
 ACCEPTANCE_DATE = "2026-08-04"
+PROTECTED_PREFIXES = (
+    "docs/adr/",
+    "docs/architecture/",
+    "docs/quality/",
+    "docs/requirements/",
+    "docs/roadmap/",
+    "docs/security/",
+    "docs/ux/",
+)
+PROTECTED_FILES = {
+    "docs/README.md",
+    "docs/operations/backup-and-restoration.md",
+    "docs/operations/runtime-operations.md",
+}
+
+
+def protected_architecture_changes(paths: set[str]) -> set[str]:
+    return {
+        path for path in paths if path in PROTECTED_FILES or path.startswith(PROTECTED_PREFIXES)
+    }
 
 
 def main() -> int:
@@ -30,6 +50,23 @@ def main() -> int:
         failures.append("architecture index does not record approval and decision freeze")
     if "Accepted on 2026-08-04" not in adr_index or "decision freeze is active" not in adr_index:
         failures.append("ADR index does not record acceptance and decision freeze")
+
+    diff = subprocess.run(
+        ["git", "diff", "--name-only", BASELINE_COMMIT, "--", "docs"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if diff.returncode != 0:
+        failures.append("could not compare architecture documents to the baseline")
+    else:
+        changes = protected_architecture_changes(set(diff.stdout.splitlines()))
+        if changes:
+            failures.append(
+                "accepted architecture changed without updating the freeze gate: "
+                + ", ".join(sorted(changes))
+            )
 
     ancestor = subprocess.run(
         ["git", "merge-base", "--is-ancestor", BASELINE_COMMIT, "HEAD"],

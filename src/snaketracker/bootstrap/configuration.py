@@ -23,7 +23,12 @@ class Environment(StrEnum):
 class Settings(BaseSettings):
     """Validated settings composed at process startup."""
 
-    model_config = SettingsConfigDict(frozen=True, extra="forbid", validate_default=True)
+    model_config = SettingsConfigDict(
+        frozen=True,
+        extra="forbid",
+        validate_default=True,
+        hide_input_in_errors=True,
+    )
 
     environment: Environment = Environment.DEVELOPMENT
     database_path: Path = Path("data/snaketracker.sqlite3")

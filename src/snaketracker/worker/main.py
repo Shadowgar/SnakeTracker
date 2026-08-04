@@ -7,7 +7,7 @@ import threading
 from types import FrameType
 
 from snaketracker.application.readiness import PlatformReadiness
-from snaketracker.bootstrap.compatibility import inspect_database_compatibility
+from snaketracker.bootstrap.compatibility import inspect_startup_compatibility
 from snaketracker.bootstrap.configuration import Environment, Settings, load_settings
 from snaketracker.infrastructure.database.engine import create_sqlite_engine
 from snaketracker.infrastructure.database.health import SQLAlchemyDatabaseHealth
@@ -43,7 +43,7 @@ def run_worker(settings: Settings, stop: threading.Event, poll_interval: float =
     try:
         readiness = PlatformReadiness(
             database=SQLAlchemyDatabaseHealth(engine),
-            compatibility=inspect_database_compatibility(engine),
+            compatibility=inspect_startup_compatibility(engine),
         )
         if not readiness.check().is_ready:
             return EXIT_RECOVERY_REQUIRED

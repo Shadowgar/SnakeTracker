@@ -6,7 +6,9 @@ from sqlalchemy import create_engine, text
 from snaketracker.bootstrap.compatibility import (
     CompatibilityMode,
     evaluate_compatibility,
+    evaluate_runtime_compatibility,
     inspect_database_compatibility,
+    inspect_startup_compatibility,
 )
 
 
@@ -103,5 +105,52 @@ def test_nonempty_database_without_migration_metadata_requires_recovery(tmp_path
         report = inspect_database_compatibility(engine)
         assert report.mode is CompatibilityMode.RECOVERY_REQUIRED
         assert report.reason_code == "compatibility_metadata_missing"
+    finally:
+        engine.dispose()
+
+
+def test_malformed_alembic_table_requires_recovery_instead_of_crashing(tmp_path) -> None:
+    database = tmp_path / "malformed.sqlite3"
+    engine = create_engine(f"sqlite+pysqlite:///{database}")
+    try:
+        with engine.begin() as connection:
+            connection.execute(text("CREATE TABLE alembic_version (wrong_column TEXT)"))
+
+        report = inspect_database_compatibility(engine)
+
+        assert report.mode is CompatibilityMode.RECOVERY_REQUIRED
+        assert report.reason_code == "compatibility_inspection_failed"
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize(
+    ("sqlite_version", "compile_options", "expected_reason"),
+    [
+        ("3.34.0", {"ENABLE_FTS5"}, "sqlite_version_unsupported"),
+        ("3.53.1", set(), "sqlite_fts5_unavailable"),
+        ("invalid", {"ENABLE_FTS5"}, "sqlite_version_invalid"),
+    ],
+)
+def test_runtime_compatibility_rejects_unsupported_sqlite(
+    sqlite_version: str,
+    compile_options: set[str],
+    expected_reason: str,
+) -> None:
+    report = evaluate_runtime_compatibility(sqlite_version, compile_options)
+
+    assert report.mode is CompatibilityMode.RECOVERY_REQUIRED
+    assert report.reason_code == expected_reason
+
+
+def test_startup_compatibility_accepts_supported_runtime_and_schema(tmp_path) -> None:
+    database = tmp_path / "startup.sqlite3"
+    engine = create_engine(f"sqlite+pysqlite:///{database}")
+    try:
+        with engine.begin() as connection:
+            connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
+            connection.execute(text("INSERT INTO alembic_version VALUES ('0001_phase1_baseline')"))
+
+        assert inspect_startup_compatibility(engine).mode is CompatibilityMode.NORMAL
     finally:
         engine.dispose()

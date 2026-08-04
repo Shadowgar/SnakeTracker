@@ -26,7 +26,7 @@ parse_cpu_model = qualification.parse_cpu_model
 
 def complete_manifest() -> dict[str, object]:
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "classification": "non-qualifying-development",
         "revision": "abc123",
         "hardware": {
@@ -35,6 +35,9 @@ def complete_manifest() -> dict[str, object]:
             "firmware": "not-applicable",
             "cpu": "test-cpu",
             "cooling": "development-host",
+            "cpu_governor": "performance",
+            "temperature": "unavailable",
+            "throttle_status": "unavailable",
         },
         "operating_system": {
             "name": "Test OS",
@@ -44,9 +47,14 @@ def complete_manifest() -> dict[str, object]:
         "storage": {
             "filesystem": "overlay",
             "mount_options": "rw",
+            "mount_source": "overlay",
             "medium": "unknown",
             "controller": "unknown",
             "capacity_bytes": 1,
+            "device_path": "/dev/test",
+            "rotational": True,
+            "ssd_verified": False,
+            "transport": "unknown",
         },
         "runtime": {
             "docker": "29",
@@ -59,6 +67,9 @@ def complete_manifest() -> dict[str, object]:
         "test_configuration": {
             "encryption": "disabled-phase1",
             "cache_state": "warm",
+            "cache_preparation": "unspecified",
+            "boot_id": "test-boot",
+            "uptime_seconds": 100,
             "dataset_id": "phase1-platform-empty-v1",
             "concurrency_mix": "one-health-client",
         },
@@ -70,6 +81,16 @@ def test_manifest_rejects_missing_required_field() -> None:
     del manifest["storage"]
 
     with pytest.raises(EnvironmentValidationError, match="storage"):
+        validate_manifest(manifest)
+
+
+def test_manifest_rejects_missing_nested_field() -> None:
+    manifest = complete_manifest()
+    hardware = manifest["hardware"]
+    assert isinstance(hardware, dict)
+    del hardware["firmware"]
+
+    with pytest.raises(EnvironmentValidationError, match=r"hardware\.firmware"):
         validate_manifest(manifest)
 
 
@@ -128,3 +149,81 @@ def test_cpu_model_prefers_descriptive_model_name() -> None:
     cpuinfo = "processor : 0\nmodel : 141\nmodel name : Example CPU 9000\n"
 
     assert parse_cpu_model(cpuinfo) == "Example CPU 9000"
+
+
+def test_sqlite_contract_targets_fail_when_durability_drifts() -> None:
+    results = {
+        "integrity": "ok",
+        "fts5": True,
+        "checkpoint_result": (0, 1, 1),
+        "pragmas": {
+            "auto_vacuum": 2,
+            "busy_timeout_ms": 5_000,
+            "journal_mode": "wal",
+            "journal_size_limit_bytes": 256 * 1024 * 1024,
+            "synchronous": 1,
+            "wal_autocheckpoint_pages": 1_000,
+        },
+    }
+
+    targets = qualification.sqlite_contract_targets(results)
+
+    assert targets["sqlite_full_durability"] is False
+    assert all(value for key, value in targets.items() if key != "sqlite_full_durability")
+
+
+def test_candidate_root_rejects_broad_or_missing_paths(tmp_path: Path) -> None:
+    with pytest.raises(EnvironmentValidationError):
+        qualification.validate_candidate_root(Path("/"))
+    with pytest.raises(EnvironmentValidationError):
+        qualification.validate_candidate_root(tmp_path / "missing")
+
+    assert qualification.validate_candidate_root(tmp_path) == tmp_path.resolve()
+
+
+def test_cli_requires_an_explicit_candidate_data_root(tmp_path: Path) -> None:
+    with pytest.raises(SystemExit):
+        qualification.parse_args(["--output-dir", str(tmp_path / "evidence")])
+
+    args = qualification.parse_args(
+        [
+            "--output-dir",
+            str(tmp_path / "evidence"),
+            "--candidate-data-root",
+            str(tmp_path),
+        ]
+    )
+
+    assert args.candidate_data_root == tmp_path
+
+
+def test_qualifying_cache_state_requires_documented_preparation() -> None:
+    with pytest.raises(EnvironmentValidationError, match="cache preparation"):
+        qualification.validate_cache_preparation("qualifying-pi5", "cold", "unspecified")
+
+    assert (
+        qualification.validate_cache_preparation(
+            "qualifying-pi5", "cold", "sync; drop_caches=3; image preloaded"
+        )
+        == "sync; drop_caches=3; image preloaded"
+    )
+
+
+def test_persistence_check_requires_same_schema_revision_and_database() -> None:
+    assert qualification.persistence_targets(
+        database_exists=True,
+        schema_before="0001_phase1_baseline",
+        schema_after="0001_phase1_baseline",
+    ) == {
+        "database_exists_after_restart": True,
+        "schema_revision_preserved_after_restart": True,
+    }
+
+    assert qualification.persistence_targets(
+        database_exists=False,
+        schema_before="0001_phase1_baseline",
+        schema_after=None,
+    ) == {
+        "database_exists_after_restart": False,
+        "schema_revision_preserved_after_restart": False,
+    }

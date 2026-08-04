@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import SQLAlchemyError
 
 CURRENT_MANIFEST_VERSION = 1
 CURRENT_RELATIONAL_SCHEMA_VERSION = 1
 MINIMUM_RELATIONAL_SCHEMA_VERSION = 0
+MINIMUM_SQLITE_VERSION = (3, 35, 0)
 
 
 class CompatibilityMode(StrEnum):
@@ -93,19 +95,26 @@ def evaluate_compatibility(
 
 
 def inspect_database_compatibility(engine: Engine) -> CompatibilityReport:
-    with engine.connect() as connection:
-        tables = set(
-            connection.exec_driver_sql(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
-            ).scalars()
+    try:
+        with engine.connect() as connection:
+            tables = set(
+                connection.exec_driver_sql(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+                ).scalars()
+            )
+            if not tables:
+                return evaluate_compatibility(None, database_is_empty=True)
+            if "alembic_version" not in tables:
+                return evaluate_compatibility(None, database_is_empty=False)
+            revision = connection.exec_driver_sql(
+                "SELECT version_num FROM alembic_version"
+            ).scalar_one_or_none()
+    except SQLAlchemyError:
+        return _report(
+            CompatibilityMode.RECOVERY_REQUIRED,
+            "compatibility_inspection_failed",
+            "Stored data could not be inspected safely.",
         )
-        if not tables:
-            return evaluate_compatibility(None, database_is_empty=True)
-        if "alembic_version" not in tables:
-            return evaluate_compatibility(None, database_is_empty=False)
-        revision = connection.exec_driver_sql(
-            "SELECT version_num FROM alembic_version"
-        ).scalar_one_or_none()
     if revision == "0001_phase1_baseline":
         return evaluate_compatibility(
             {"manifest_version": 1, "relational_schema_version": 1},
@@ -116,3 +125,55 @@ def inspect_database_compatibility(engine: Engine) -> CompatibilityReport:
         "relational_schema_unknown",
         "Stored data requires a compatible application release.",
     )
+
+
+def evaluate_runtime_compatibility(
+    sqlite_version: str, compile_options: Collection[str]
+) -> CompatibilityReport:
+    """Validate the minimum SQLite runtime required by the Phase 1 release."""
+    try:
+        version = tuple(int(part) for part in sqlite_version.split("."))
+    except ValueError:
+        return _report(
+            CompatibilityMode.RECOVERY_REQUIRED,
+            "sqlite_version_invalid",
+            "The database runtime is not compatible with this release.",
+        )
+    if len(version) < 3 or version[:3] < MINIMUM_SQLITE_VERSION:
+        return _report(
+            CompatibilityMode.RECOVERY_REQUIRED,
+            "sqlite_version_unsupported",
+            "The database runtime is not compatible with this release.",
+        )
+    if "ENABLE_FTS5" not in compile_options:
+        return _report(
+            CompatibilityMode.RECOVERY_REQUIRED,
+            "sqlite_fts5_unavailable",
+            "The database runtime is missing a required capability.",
+        )
+    return _report(CompatibilityMode.NORMAL, "runtime_compatible", "The runtime is ready.")
+
+
+def inspect_runtime_compatibility(engine: Engine) -> CompatibilityReport:
+    try:
+        with engine.connect() as connection:
+            sqlite_version = str(connection.exec_driver_sql("SELECT sqlite_version()").scalar_one())
+            compile_options = {
+                str(option)
+                for option in connection.exec_driver_sql("PRAGMA compile_options").scalars()
+            }
+    except SQLAlchemyError:
+        return _report(
+            CompatibilityMode.RECOVERY_REQUIRED,
+            "runtime_inspection_failed",
+            "The database runtime could not be inspected safely.",
+        )
+    return evaluate_runtime_compatibility(sqlite_version, compile_options)
+
+
+def inspect_startup_compatibility(engine: Engine) -> CompatibilityReport:
+    """Require both the release runtime and stored schema to be compatible."""
+    runtime = inspect_runtime_compatibility(engine)
+    if not runtime.normal_readiness:
+        return runtime
+    return inspect_database_compatibility(engine)

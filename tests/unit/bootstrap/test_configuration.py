@@ -118,3 +118,31 @@ def test_process_environment_is_used_when_mapping_is_omitted(
 
     assert settings.environment is Environment.TEST
     assert settings.database_path == tmp_path / "from-process.sqlite3"
+
+
+@pytest.mark.parametrize(
+    "environment",
+    [
+        {
+            "SNAKETRACKER_ENVIRONMENT": "production",
+            "SNAKETRACKER_DATABASE_PATH": "/srv/snaketracker.sqlite3",
+            "SNAKETRACKER_EXTERNAL_ORIGIN": "https://example.test",
+            "SNAKETRACKER_RUNTIME_SECRET": "short-sensitive-value",
+        },
+        {
+            "SNAKETRACKER_ENVIRONMENT": "production",
+            "SNAKETRACKER_DATABASE_PATH": "relative.sqlite3",
+            "SNAKETRACKER_EXTERNAL_ORIGIN": "https://example.test",
+            "SNAKETRACKER_RUNTIME_SECRET": "valid-but-sensitive-value-that-is-long-enough",
+        },
+    ],
+)
+def test_validation_errors_never_include_secret_input(
+    environment: dict[str, str],
+) -> None:
+    with pytest.raises(ValueError) as raised:
+        load_settings(environment)
+
+    message = str(raised.value)
+    assert environment["SNAKETRACKER_RUNTIME_SECRET"] not in message
+    assert "input_value=" not in message
