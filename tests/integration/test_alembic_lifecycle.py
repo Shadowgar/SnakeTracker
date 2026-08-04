@@ -37,6 +37,13 @@ def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -
 
     engine = create_engine(f"sqlite+pysqlite:///{database}")
     try:
+        with engine.connect() as connection:
+            assert connection.exec_driver_sql("PRAGMA auto_vacuum").scalar_one() == 2
+    finally:
+        engine.dispose()
+
+    engine = create_engine(f"sqlite+pysqlite:///{database}")
+    try:
         assert set(inspect(engine).get_table_names()) == {"alembic_version"}
     finally:
         engine.dispose()

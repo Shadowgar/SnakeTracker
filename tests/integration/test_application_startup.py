@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import signal
 import threading
 from pathlib import Path
@@ -9,7 +10,8 @@ import pytest
 from alembic import command
 from alembic.config import Config
 
-from snaketracker.bootstrap.application import build_application
+from snaketracker.bootstrap.application import application_factory, build_application
+from snaketracker.bootstrap.compatibility import CompatibilityMode
 from snaketracker.bootstrap.configuration import load_settings
 from snaketracker.worker.main import (
     EXIT_RECOVERY_REQUIRED,
@@ -125,3 +127,40 @@ def test_worker_lifecycle_waits_until_stop_is_requested(tmp_path: Path) -> None:
 
     assert run_worker(settings, stop, poll_interval=0.001) == 0
     assert stop.calls == 2
+
+
+def test_application_factory_loads_process_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = tmp_path / "factory.sqlite3"
+    migrate(database)
+    monkeypatch.setenv("SNAKETRACKER_ENVIRONMENT", "test")
+    monkeypatch.setenv("SNAKETRACKER_DATABASE_PATH", str(database))
+
+    app = application_factory()
+
+    assert app.state.compatibility.mode is CompatibilityMode.NORMAL
+    app.state.database_engine.dispose()
+
+
+def test_application_lifespan_disposes_database_pool(tmp_path: Path) -> None:
+    database = tmp_path / "lifespan.sqlite3"
+    migrate(database)
+    settings = load_settings(
+        {
+            "SNAKETRACKER_ENVIRONMENT": "test",
+            "SNAKETRACKER_DATABASE_PATH": str(database),
+        }
+    )
+    app = build_application(settings)
+    with app.state.database_engine.connect():
+        pass
+    assert app.state.database_engine.pool.checkedin() == 1
+
+    async def run_lifespan() -> None:
+        async with app.router.lifespan_context(app):
+            pass
+
+    asyncio.run(run_lifespan())
+
+    assert app.state.database_engine.pool.checkedin() == 0
