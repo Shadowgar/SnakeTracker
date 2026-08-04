@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 FORBIDDEN_IMPORTS = {
+    "application": {"bootstrap", "infrastructure", "presentation", "worker"},
     "infrastructure": {"bootstrap", "presentation", "worker"},
     "presentation": {"bootstrap", "infrastructure", "worker"},
 }
