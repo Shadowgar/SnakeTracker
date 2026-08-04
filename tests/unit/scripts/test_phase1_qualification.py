@@ -227,3 +227,17 @@ def test_persistence_check_requires_same_schema_revision_and_database() -> None:
         "database_exists_after_restart": False,
         "schema_revision_preserved_after_restart": False,
     }
+
+
+def test_block_device_parser_preserves_an_empty_transport_field() -> None:
+    parsed = qualification.parse_block_device_fields(
+        'TYPE="disk" ROTA="0" TRAN="" SIZE="1099511627776" MODEL="Msft Virtual Disk"'
+    )
+
+    assert parsed == {
+        "TYPE": "disk",
+        "ROTA": "0",
+        "TRAN": "",
+        "SIZE": "1099511627776",
+        "MODEL": "Msft Virtual Disk",
+    }

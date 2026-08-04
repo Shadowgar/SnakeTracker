@@ -10,6 +10,7 @@ import os
 import platform
 import re
 import secrets
+import shlex
 import socket
 import sqlite3
 import statistics
@@ -211,6 +212,15 @@ def file_value(path: Path, fallback: str = "unavailable") -> str:
         return fallback
 
 
+def parse_block_device_fields(raw: str) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    for token in shlex.split(raw):
+        key, separator, value = token.partition("=")
+        if separator:
+            fields[key] = value
+    return fields
+
+
 def measured_block_storage(mount_source: str) -> dict[str, object]:
     source = mount_source.split("[", 1)[0]
     if not source.startswith("/dev/"):
@@ -225,10 +235,11 @@ def measured_block_storage(mount_source: str) -> dict[str, object]:
         }
     parent = optional_output(["lsblk", "-ndo", "PKNAME", source], fallback="")
     device = f"/dev/{parent}" if parent else source
-    fields = optional_output(["lsblk", "-bdno", "TYPE,ROTA,TRAN,SIZE,MODEL", device]).split(
-        maxsplit=4
+    fields = parse_block_device_fields(
+        optional_output(["lsblk", "-bdPno", "TYPE,ROTA,TRAN,SIZE,MODEL", device])
     )
-    if len(fields) < 4:
+    required_fields = {"TYPE", "ROTA", "TRAN", "SIZE", "MODEL"}
+    if not required_fields.issubset(fields) or not fields["SIZE"].isdigit():
         return {
             "capacity_bytes": 0,
             "controller": "unavailable",
@@ -238,8 +249,11 @@ def measured_block_storage(mount_source: str) -> dict[str, object]:
             "ssd_verified": False,
             "transport": "unavailable",
         }
-    device_type, rotational_raw, transport, capacity_raw = fields[:4]
-    model = fields[4] if len(fields) == 5 else "unavailable"
+    device_type = fields["TYPE"]
+    rotational_raw = fields["ROTA"]
+    transport = fields["TRAN"]
+    capacity_raw = fields["SIZE"]
+    model = fields["MODEL"] or "unavailable"
     rotational = rotational_raw == "1"
     accepted_transport = transport.lower() in {"ata", "nvme", "sata", "usb"}
     ssd_verified = device_type == "disk" and not rotational and accepted_transport
