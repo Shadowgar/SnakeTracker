@@ -42,7 +42,13 @@ The corpus includes approved images and documents across typical and maximum dim
 
 ## Qualification environment manifest
 
-Every run pins and records board revision/firmware, OS image digest, kernel, CPU governor/cooling, ext4 options, SSD controller/capacity/performance and fsync latency, Docker/Compose, container digests, Python patch, SQLite version and compile options, dependencies, Nginx, encryption settings, dataset commit/hash, cache state, and concurrency mix.
+Development runs pin and record the available host, OS image, kernel, filesystem, Docker/Compose,
+container digests, Python patch, SQLite version and compile options, dependencies, Nginx,
+encryption settings, dataset commit/hash, cache state, and concurrency mix. Phase 7/pre-deployment
+Pi runs additionally require board revision/firmware, CPU governor/cooling, ext4 options, SSD
+controller/capacity/performance and fsync latency, temperature, and throttle state. Development
+measurements are non-production evidence; only the native suite grants `Raspberry Pi deployment
+qualified`.
 
 Both cold-cache and warm-cache runs are required. Network shaping defines the mobile 4G profile. Results include sample count, percentiles, variance, failures, memory, CPU, I/O, WAL, storage, and thermal throttling.
 

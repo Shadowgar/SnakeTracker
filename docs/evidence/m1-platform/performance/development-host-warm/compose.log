@@ -1,0 +1,154 @@
+web-1      | INFO:     Started server process [1]
+migrate-1  | INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+web-1      | INFO:     Waiting for application startup.
+web-1      | INFO:     Application startup complete.
+migrate-1  | INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+web-1      | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+migrate-1  | INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+web-1      | INFO:     127.0.0.1:43476 - "GET /health/ready HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:33868 - "GET /health/ready HTTP/1.1" 200 OK
+web-1      | INFO:     127.0.0.1:44880 - "GET /health/ready HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:40764 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     127.0.0.1:44886 - "GET /health/ready HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:40774 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:44446 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     127.0.0.1:44216 - "GET /health/ready HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:44448 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     127.0.0.1:44228 - "GET /health/ready HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:54452 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     127.0.0.1:37564 - "GET /health/ready HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:54464 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     127.0.0.1:37580 - "GET /health/ready HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:58944 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     127.0.0.1:54722 - "GET /health/ready HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:58946 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     127.0.0.1:44758 - "GET /health/ready HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:55192 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     127.0.0.1:44768 - "GET /health/ready HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:55198 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     127.0.0.1:59404 - "GET /health/ready HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:37834 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     127.0.0.1:59410 - "GET /health/ready HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:37846 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     127.0.0.1:36348 - "GET /health/ready HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:33244 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     127.0.0.1:36356 - "GET /health/ready HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:33252 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     127.0.0.1:38738 - "GET /health/ready HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:52690 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     127.0.0.1:38754 - "GET /health/ready HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:52692 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     127.0.0.1:46912 - "GET /health/ready HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45188 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45192 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45198 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45208 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45218 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45230 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45232 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45238 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45250 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45256 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45258 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45274 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45282 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45292 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45302 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45304 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45312 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45318 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45320 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45336 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45346 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45358 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45366 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45380 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45394 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45404 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45408 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45420 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45424 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     172.22.0.4:45428 - "GET /health/live HTTP/1.1" 200 OK
+web-1      | INFO:     Shutting down
+web-1      | INFO:     Waiting for application shutdown.
+web-1      | INFO:     Application shutdown complete.
+web-1      | INFO:     Finished server process [1]
+web-1      | INFO:     Started server process [1]
+web-1      | INFO:     Waiting for application startup.
+web-1      | INFO:     Application startup complete.
+web-1      | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+web-1      | INFO:     172.22.0.3:42684 - "GET /health/ready HTTP/1.1" 200 OK
+nginx-1  | /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+nginx-1  | /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+nginx-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+nginx-1  | 10-listen-on-ipv6-by-default.sh: info: can not modify /etc/nginx/conf.d/default.conf (read-only file system?)
+nginx-1  | /docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh
+nginx-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+nginx-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh
+nginx-1  | /docker-entrypoint.sh: Configuration complete; ready for start up
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:05:34 +0000] "GET /health/ready HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 127.0.0.1 - - [04/Aug/2026:10:05:39 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Wget"
+nginx-1  | 127.0.0.1 - - [04/Aug/2026:10:05:44 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Wget"
+nginx-1  | 127.0.0.1 - - [04/Aug/2026:10:05:49 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Wget"
+nginx-1  | 127.0.0.1 - - [04/Aug/2026:10:05:54 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Wget"
+nginx-1  | 127.0.0.1 - - [04/Aug/2026:10:05:59 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Wget"
+nginx-1  | 127.0.0.1 - - [04/Aug/2026:10:06:04 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Wget"
+nginx-1  | 127.0.0.1 - - [04/Aug/2026:10:06:09 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Wget"
+nginx-1  | 127.0.0.1 - - [04/Aug/2026:10:06:15 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Wget"
+nginx-1  | 127.0.0.1 - - [04/Aug/2026:10:06:20 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Wget"
+nginx-1  | 127.0.0.1 - - [04/Aug/2026:10:06:25 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Wget"
+nginx-1  | 127.0.0.1 - - [04/Aug/2026:10:06:30 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Wget"
+nginx-1  | 127.0.0.1 - - [04/Aug/2026:10:06:35 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Wget"
+nginx-1  | 127.0.0.1 - - [04/Aug/2026:10:06:40 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Wget"
+nginx-1  | 127.0.0.1 - - [04/Aug/2026:10:06:45 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Wget"
+nginx-1  | 127.0.0.1 - - [04/Aug/2026:10:06:50 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Wget"
+nginx-1  | 127.0.0.1 - - [04/Aug/2026:10:06:55 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Wget"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:06:58 +0000] "GET /health/live HTTP/1.1" 200 18 "-" "Python-urllib/3.13"
+nginx-1  | /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+nginx-1  | /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+nginx-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+nginx-1  | 10-listen-on-ipv6-by-default.sh: info: can not modify /etc/nginx/conf.d/default.conf (read-only file system?)
+nginx-1  | /docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh
+nginx-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+nginx-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh
+nginx-1  | /docker-entrypoint.sh: Configuration complete; ready for start up
+nginx-1  | 2026/08/04 10:06:59 [emerg] 1#1: host not found in upstream "web" in /etc/nginx/nginx.conf:35
+nginx-1  | nginx: [emerg] host not found in upstream "web" in /etc/nginx/nginx.conf:35
+nginx-1  | /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+nginx-1  | /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+nginx-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+nginx-1  | 10-listen-on-ipv6-by-default.sh: info: can not modify /etc/nginx/conf.d/default.conf (read-only file system?)
+nginx-1  | /docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh
+nginx-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+nginx-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh
+nginx-1  | /docker-entrypoint.sh: Configuration complete; ready for start up
+nginx-1  | 172.22.0.1 - - [04/Aug/2026:10:07:00 +0000] "GET /health/ready HTTP/1.1" 200 18 "-" "Python-urllib/3.13"

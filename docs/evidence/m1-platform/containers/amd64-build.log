@@ -1,0 +1,209 @@
+Script started on 2026-08-04 06:12:17-04:00 [COMMAND="env SNAKETRACKER_UID=1001 docker compose --progress plain build" <not executed on terminal>]
+#1 [internal] load local bake definitions
+
+#1 reading from stdin 1.55kB done
+
+#1 DONE 0.0s
+
+
+
+#2 [worker internal] load build definition from Dockerfile
+
+#2 transferring dockerfile: 1.19kB done
+
+#2 DONE 0.0s
+
+
+
+#3 [migrate internal] load metadata for docker.io/library/python@sha256:9d7f287598e1a5a978c015ee176d8216435aaf335ed69ac3c38dd1bbb10e8d64
+
+#3 DONE 0.0s
+
+
+
+#4 [worker internal] load metadata for ghcr.io/astral-sh/uv@sha256:cf4eedcaa81655197f625739489effcbe71b61ceb1506f332c3facae5deceded
+
+#4 DONE 0.0s
+
+
+
+#5 [worker internal] load .dockerignore
+
+#5 transferring context: 252B done
+
+#5 DONE 0.0s
+
+
+
+#6 [migrate uv 1/1] FROM ghcr.io/astral-sh/uv@sha256:cf4eedcaa81655197f625739489effcbe71b61ceb1506f332c3facae5deceded
+
+#6 resolve ghcr.io/astral-sh/uv@sha256:cf4eedcaa81655197f625739489effcbe71b61ceb1506f332c3facae5deceded 0.0s done
+
+#6 DONE 0.0s
+
+
+
+#7 [migrate runtime  1/11] FROM docker.io/library/python@sha256:9d7f287598e1a5a978c015ee176d8216435aaf335ed69ac3c38dd1bbb10e8d64
+
+#7 resolve docker.io/library/python@sha256:9d7f287598e1a5a978c015ee176d8216435aaf335ed69ac3c38dd1bbb10e8d64 0.0s done
+
+#7 DONE 0.0s
+
+
+
+#8 [worker internal] load build context
+
+#8 transferring context: 5.51kB done
+
+#8 DONE 0.0s
+
+
+
+#9 [web runtime  2/11] RUN groupadd --gid 1001 snaketracker     && useradd --uid 1001 --gid 1001 --create-home --shell /usr/sbin/nologin snaketracker
+
+#9 CACHED
+
+
+
+#10 [web runtime 10/11] COPY deploy/docker/entrypoint.sh /usr/local/bin/snaketracker-entrypoint
+
+#10 CACHED
+
+
+
+#11 [web runtime  8/11] COPY alembic.ini ./
+
+#11 CACHED
+
+
+
+#12 [web runtime  3/11] WORKDIR /app
+
+#12 CACHED
+
+
+
+#13 [web runtime  9/11] COPY migrations ./migrations
+
+#13 CACHED
+
+
+
+#14 [web runtime  5/11] COPY pyproject.toml uv.lock README.md ./
+
+#14 CACHED
+
+
+
+#15 [web runtime  4/11] COPY --from=uv /uv /uvx /bin/
+
+#15 CACHED
+
+
+
+#16 [web runtime  7/11] RUN uv sync --frozen --no-dev --no-editable     && rm -rf /root/.cache/uv
+
+#16 CACHED
+
+
+
+#17 [web runtime  6/11] COPY src ./src
+
+#17 CACHED
+
+
+
+#18 [migrate runtime 11/11] RUN chmod 0555 /usr/local/bin/snaketracker-entrypoint     && chown -R snaketracker:snaketracker /app
+
+#18 CACHED
+
+
+
+#19 [web] exporting to image
+
+#19 exporting layers
+
+#19 exporting layers done
+
+#19 exporting manifest sha256:04e053bfe5d1f07fdd40c72d47972745449178eaab6ff697765b4802f09c900b done
+
+#19 exporting config sha256:0099200a7ee67c51b253eb1815d2e33596a3f158a0a6be022ac76040fe724265 done
+
+#19 exporting attestation manifest sha256:417b5321aecfdfb266edc2af6fe4a7deaa6ee4a2d85822c08a2deb863064f64c 0.0s done
+
+#19 exporting manifest list sha256:88cdbde4dbf1abee005a5d0a967cffc7696bf56d91d70f1198d9df83500a7576 0.0s done
+
+#19 naming to docker.io/library/snaketracker:phase1
+
+#19 naming to docker.io/library/snaketracker:phase1 done
+
+#19 unpacking to docker.io/library/snaketracker:phase1 0.0s done
+
+#19 DONE 0.1s
+
+
+
+#20 [worker] exporting to image
+
+#20 exporting layers done
+
+#20 exporting manifest sha256:d09117d746478a0740115c05bd9ee0703a6a598a3bdac0513e81704edf87bbb6 done
+
+#20 exporting config sha256:ae780f69a058051baa75e7476e595b082c129ad67c946e76346b606987355e5b done
+
+#20 exporting attestation manifest sha256:9cbf823d1cf9b7594b32588bae4bfe9fb24bf19abb9bbe91a9c47bbe3137b049 0.1s done
+
+#20 exporting manifest list sha256:03e135387d8cec2f8791ac462de5a36a33515d35384488370d5aae94e98aaf49 0.0s done
+
+#20 naming to docker.io/library/snaketracker:phase1 done
+
+#20 unpacking to docker.io/library/snaketracker:phase1 0.0s done
+
+#20 DONE 0.1s
+
+
+
+#21 [migrate] exporting to image
+
+#21 exporting layers done
+
+#21 exporting manifest sha256:2cd56a8f89c1e213980bc0b19023f5c6b4f083113be5510f78f4dda920bd1ad1 done
+
+#21 exporting config sha256:11701048dc1484cb5f14dbd76655a41d619940519ddae80730a59bcff8469f33 0.0s done
+
+#21 exporting attestation manifest sha256:96805efb16be8bd3ed51ea1cd21f887e5c304fd3c8335e1a97688969144fdbc8 0.1s done
+
+#21 exporting manifest list sha256:8a6c5dd9f017f6ef37e61b07054c94425be873fb7f5a09fc45501b05a04eaeda 0.0s done
+
+#21 naming to docker.io/library/snaketracker:phase1 done
+
+#21 unpacking to docker.io/library/snaketracker:phase1 0.0s done
+
+#21 DONE 0.2s
+
+
+
+#22 [web] resolving provenance for metadata file
+
+#22 DONE 0.0s
+
+
+
+#23 [worker] resolving provenance for metadata file
+
+#23 DONE 0.0s
+
+
+
+#24 [migrate] resolving provenance for metadata file
+
+#24 DONE 0.0s
+
+ snaketracker:phase1  Built
+
+ snaketracker:phase1  Built
+
+ snaketracker:phase1  Built
+
+
+Script done on 2026-08-04 06:12:18-04:00 [COMMAND_EXIT_CODE="0"]

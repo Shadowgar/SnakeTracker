@@ -1,0 +1,9 @@
+{
+  "algorithm": "sha256",
+  "files": {
+    "compose.log": "3760b31389c6f5e92cb4bc2cef8fc2506703383673ba34962aff4c2b63c14a10",
+    "environment-manifest.json": "3e064fa6a7fcd042338cc0cc44f7b57483dfd284c808de2c1bbafee9b6ec8a36",
+    "results.json": "7e7544829182fbb26884dae608b9cece1daf51f4c1196364b0d0865349d57218",
+    "summary.md": "ee4d7ab286d9abb2f6a0c7fc562b8b31c67b27693f0ad86566b0529479c986bf"
+  }
+}
