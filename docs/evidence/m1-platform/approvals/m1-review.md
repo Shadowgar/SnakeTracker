@@ -2,17 +2,22 @@
 
 - Implementation revision: `419b8949e9ca60bce18b5b69b6730fce2e546b43`
 - Evidence commit: to be recorded after commit
-- Review status: **Pending**
+- Review status: **Pending owner acceptance — evidence supports `M1 development-platform qualified`**
 - Reviewer: Pending owner assignment
 - Approval date: Pending
 
-## Open release blockers
+## Phase 1 result
 
-- Native Raspberry Pi 5 cold-cache and warm-cache qualification has not run.
-- The Pi database path has not yet been proven to use the pinned local SSD/ext4 configuration.
+All mandatory M1 development-platform gates pass: locked environment, local quality suite, amd64
+Compose lifecycle, SQLite development profile and persistence, migrations, compatibility checks,
+and linux/arm64 image construction.
 
 The non-qualifying WSL2 run recorded idle CPU p95 of 14.39%, above the 5% target. This does not
-replace the required Pi measurement, but it remains an operational risk to investigate if the
-native Pi run also misses the target.
+replace the future Pi measurement and remains an optimization observation to revisit during
+production hardening. It does not fail M1 under ADR-0036.
 
-The owner should not approve M1 or merge the branch until the required native Pi evidence is attached and reviewed, or an accepted ADR/governance decision explicitly changes the M1 gate.
+Native Raspberry Pi execution, local SSD/ext4 placement, cold/warm performance, resource and
+thermal budgets, SQLite durability/persistence, and backup/restoration remain mandatory before
+actual Pi deployment. Their absence is not an M1 blocker. The owner may accept M1 and merge this
+Phase 1 branch after reviewing the amendment and green PR checks; Pi deployment remains prohibited
+until the separate `Raspberry Pi deployment qualified` status is approved.

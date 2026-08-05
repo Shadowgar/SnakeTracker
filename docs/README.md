@@ -3,7 +3,7 @@
 Status: Approved
 Acceptance date: 2026-08-04
 
-This package is the approved implementation-independent architecture baseline for SnakeTracker. It contains no application implementation code. The decision freeze in [ADR-0028](adr/0028-architecture-governance-and-decision-freeze.md) is active as of 2026-08-04.
+This package is the approved implementation-independent architecture baseline for SnakeTracker. It contains no application implementation code. The decision freeze in [ADR-0028](adr/0028-architecture-governance-and-decision-freeze.md) is active as of 2026-08-04. [ADR-0036](adr/0036-development-and-pi-deployment-qualification.md), accepted on 2026-08-05, separates laptop development qualification from mandatory pre-deployment Raspberry Pi qualification.
 
 ## Document map
 
@@ -31,5 +31,6 @@ This package is the approved implementation-independent architecture baseline fo
 - **RD — Mandatory before remote or public deployment:** required before enabling Cloudflare Tunnel or any non-local user access.
 - **QT — Qualified operational target:** measured against the versioned representative dataset and pinned qualification environment; not a universal guarantee.
 - **DC — Deferred capability:** deliberately outside the current release scope and prohibited from silently expanding the initial implementation.
+- **DDQ — Deferred deployment qualification:** not an intermediate feature-phase gate, but mandatory before the named deployment target is used.
 
 When multiple classes apply, the stricter applicable gate controls.

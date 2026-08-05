@@ -77,7 +77,7 @@ All tools are invoked through `uv run` except Docker-native scanners. New depend
 
 ### CI provider
 
-Use GitHub Actions as the proposed initial CI adapter. Local scripts remain authoritative so CI can migrate without changing acceptance logic. Actions must be pinned to immutable commit SHAs during implementation. ARM64 is validated through Buildx image construction in CI and native execution on the Pi qualification host.
+Use GitHub Actions as the proposed initial CI adapter. Local scripts remain authoritative so CI can migrate without changing acceptance logic. Actions must be pinned to immutable commit SHAs during implementation. During Phases 1 through 6, ARM64 compatibility is validated through Buildx image construction in CI. Native execution is a Phase 7/pre-deployment qualification under ADR-0036.
 
 ## Proposed file-change inventory
 
@@ -174,7 +174,7 @@ SnakeTracker/
         └── phase1-qualification.md
 ```
 
-Generated evidence files are not fabricated during implementation. Commands create them from real runs or operators add manifests from the Pi host.
+Generated evidence files are not fabricated during implementation. Commands create them from real runs. Native Pi manifests are added only during the Phase 7/pre-deployment qualification.
 
 ## Phase 1 requirements-to-tests mapping
 
@@ -182,9 +182,10 @@ Generated evidence files are not fabricated during implementation. Commands crea
 |---|---|---|---|---|---|
 | R-001 modular monolith/composition root | 0001, 0004 | TM-14 | `test_dependency_boundaries.py`; import smoke test | `m1-platform/tests/dependency-boundaries.*` | Package boundaries and composition root are enforceable |
 | R-009 SQLite with PostgreSQL boundary | 0009 | TM-18 | engine-port contract and dialect-isolation tests | `m1-platform/tests/database-boundary.*` | Storage is isolated behind application-owned interfaces |
-| R-010 SQLite profile/local SSD | 0010 | TM-09, TM-18 | pragma integration test; filesystem qualification procedure | `m1-platform/operations/sqlite-profile.*` | Approved profile and SSD guard pass |
+| R-010 SQLite profile/storage | 0010, 0036 | TM-09, TM-18 | pragma integration test; supported-development-filesystem procedure | `m1-platform/operations/sqlite-profile.*` | Approved profile and development filesystem guard pass; Pi SSD/ext4 deferred |
 | R-023 observability/health foundation | 0023 | TM-17, TM-18 | log-redaction, correlation, metric, liveness/readiness tests | `m1-platform/tests/observability.*` | Health and diagnostics are safe and useful |
-| R-025 reproducible Pi qualification | 0024 | TM-18 | pinned manifest and repeatable qualification script | `m1-platform/performance/phase1-*` | Startup/idle targets measured on reference host |
+| R-025 native Pi deployment qualification | 0024, 0036 | TM-18 | pinned native qualification suite | `m7-recovery-compatibility/performance/pi` | Deferred to Phase 7/pre-deployment; not an M1 gate |
+| R-041 development-platform qualification | 0036 | TM-18, TM-20 | local quality, amd64 Compose, and ARM64 build suite | `m1-platform` | Development-platform gates pass reproducibly |
 | R-026 API foundation only | 0025 | TM-17 | health error/content contract test | `m1-platform/tests/health-contract.*` | Platform endpoints have stable safe responses |
 | R-027 migration/rollback foundation | 0026 | TM-09, TM-20 | clean upgrade, downgrade, re-upgrade tests | `m1-platform/tests/alembic-lifecycle.*` | Migration framework is reversible at baseline |
 | R-029 decision freeze compliance | 0028 | TM-20 | architecture-diff and ADR-reference gate | `m1-platform/tests/architecture-freeze.*` | No silent architectural change |
@@ -194,12 +195,12 @@ Generated evidence files are not fabricated during implementation. Commands crea
 ## Phase 1 exit criteria
 
 1. A clean supported environment reproduces the locked toolchain.
-2. Images build for linux/amd64 and linux/arm64; native Pi smoke evidence is retained.
-3. SQLite runs only on a qualified local SSD path and reports the approved pragma profile.
+2. Images build for linux/amd64 and linux/arm64; amd64 Compose execution is retained.
+3. SQLite runs on a supported local development filesystem and reports the approved pragma profile; Pi SSD/ext4 qualification is deferred.
 4. Startup refuses unsupported schema/runtime combinations and exposes restricted recovery readiness.
 5. CI and the local quality script enforce formatting, linting, strict types, tests, coverage threshold, dependency audit, architecture scope, documentation links, and container checks.
 6. The Compose topology starts web, worker, and Nginx locally with non-root/read-only/resource/health controls.
-7. Startup and idle resource targets are measured against the pinned Phase 1 qualification environment.
+7. Startup and idle resource measurements are retained for the pinned development environment as non-production evidence and do not gate M1 numerical qualification.
 8. M1 evidence contains exact commands, revision, environment, outputs, result, and reviewer fields.
 
 ## Test-driven implementation tasks
@@ -214,7 +215,7 @@ Generated evidence files are not fabricated during implementation. Commands crea
 - Create: `tests/architecture/test_phase_scope.py`
 - Modify: `.gitignore` only if generated tools reveal a missing safe artifact pattern
 
-**Traceability:** R-001, R-025, R-039; ADR-0001, ADR-0024, ADR-0028; TM-14, TM-18, TM-20.
+**Traceability:** R-001, R-039, R-041; ADR-0001, ADR-0024, ADR-0028, ADR-0036; TM-14, TM-18, TM-20.
 
 **Steps:**
 
@@ -311,16 +312,16 @@ Generated evidence files are not fabricated during implementation. Commands crea
 - Create: `scripts/benchmarks/verify_storage.sh`
 - Create: `scripts/maintenance/check_database.sh`, `scripts/maintenance/checkpoint_wal.sh`
 
-**Traceability:** R-009, R-010, R-025; ADR-0009, ADR-0010, ADR-0024; TM-09, TM-18.
+**Traceability:** R-009, R-010, R-041; ADR-0009, ADR-0010, ADR-0024, ADR-0036; TM-09, TM-18.
 
 **Steps:**
 
 1. Write failing unit tests for the approved profile and integration tests against a temporary real SQLite database.
 2. Test `foreign_keys=ON`, WAL, `synchronous=FULL`, bounded busy timeout, controlled auto-checkpoint, journal size limit, FTS5 availability, UTC behavior, and incremental-vacuum database creation.
-3. Add negative filesystem qualification tests for unsupported or indeterminate storage; production fails closed while development can use an explicit documented test override.
+3. Add negative filesystem qualification tests for unsupported or indeterminate storage; a future Pi deployment fails closed while development uses its documented classification.
 4. Implement the synchronous SQLAlchemy engine factory and connection initialization with no global engine created at import time.
 5. Implement bounded maintenance entry points for quick/integrity checks and WAL checkpoints; do not add scheduling or durable jobs.
-6. Benchmark candidate `busy_timeout`, `wal_autocheckpoint`, and journal limit values on the Pi before finalizing the release manifest. Proposed starting values are 5,000 ms, 1,000 pages, and 256 MiB.
+6. Measure candidate `busy_timeout`, `wal_autocheckpoint`, and journal limit values on the development host. Proposed starting values are 5,000 ms, 1,000 pages, and 256 MiB. Requalify them on the Pi before deployment.
 7. Run unit/integration tests and capture actual pragma/compile-option output.
 8. Commit: `feat: establish SQLite operational profile`.
 
@@ -408,7 +409,7 @@ Generated evidence files are not fabricated during implementation. Commands crea
 - Create: `deploy/nginx/nginx.conf`
 - Create: `tests/integration/test_container_contract.py`
 
-**Traceability:** R-001, R-024, R-025; ADR-0001, ADR-0023, ADR-0024, ADR-0029 boundary; TM-14, TM-17, TM-18.
+**Traceability:** R-001, R-024, R-041; ADR-0001, ADR-0023, ADR-0024, ADR-0029 boundary, ADR-0036; TM-14, TM-17, TM-18.
 
 **Steps:**
 
@@ -416,7 +417,7 @@ Generated evidence files are not fabricated during implementation. Commands crea
 2. Assert no cloudflared service or remote/public binding exists in Phase 1.
 3. Run contract tests; expect failure.
 4. Add a multi-stage, multi-architecture image using frozen dependencies and exec-form entry points.
-5. Add Compose services `web`, `worker`, and `nginx`; use local SSD volume configuration and test-safe defaults.
+5. Add Compose services `web`, `worker`, and `nginx`; use supported local development storage and test-safe defaults while retaining the future local-SSD deployment contract.
 6. Configure Nginx health proxying and security-safe defaults without claiming the Phase 7 trusted-proxy control is complete.
 7. Run `docker compose config`, build linux/amd64 and linux/arm64 with Buildx, start locally, verify health, stop cleanly, and confirm volumes survive restart.
 8. Run image vulnerability scan; classify any findings under the release policy.
@@ -432,7 +433,7 @@ Generated evidence files are not fabricated during implementation. Commands crea
 - Create: `.github/workflows/container.yml`
 - Modify: `scripts/quality/check.sh`, `Makefile`, `pyproject.toml`
 
-**Traceability:** R-001, R-025, R-029, R-039; ADR-0024, ADR-0028; TM-14, TM-20.
+**Traceability:** R-001, R-029, R-039, R-041; ADR-0024, ADR-0028, ADR-0036; TM-14, TM-20.
 
 **Steps:**
 
@@ -446,7 +447,7 @@ Generated evidence files are not fabricated during implementation. Commands crea
 
 **Rollback point:** Revert CI adapter without removing the authoritative local gate.
 
-### Task 11: Build the reproducible Phase 1 qualification harness
+### Task 11: Build the reproducible development-platform qualification harness
 
 **Files:**
 
@@ -455,15 +456,15 @@ Generated evidence files are not fabricated during implementation. Commands crea
 - Create: evidence directory placeholders under `docs/evidence/m1-platform/`
 - Modify: `docs/quality/representative-dataset.md` only if a Phase 1-specific manifest extension is needed
 
-**Traceability:** R-025, R-039; ADR-0024, ADR-0028; TM-18, TM-20.
+**Traceability:** R-039, R-041; ADR-0024, ADR-0028, ADR-0036; TM-18, TM-20.
 
 **Steps:**
 
-1. Define a versioned manifest schema for board/firmware, OS digest, kernel, CPU/cooling, ext4/mounts, SSD/fsync, Docker/Compose, image digests, Python, SQLite compile options, encryption state, cache state, and revision.
+1. Define a versioned manifest schema that captures the development host, OS/kernel, filesystem/mounts, Docker/Compose, image digests, Python, SQLite compile options, encryption state, cache state, and revision while retaining optional board/firmware/cooling fields for future Pi use.
 2. Write harness self-tests for missing fields, invalid environment, output determinism, and failure propagation.
 3. Implement commands measuring container readiness time, steady idle RSS/CPU, health latency, SQLite open/write/checkpoint behavior, image size, and filesystem qualification.
 4. Run first on development hardware and label it non-qualifying.
-5. Run natively on the pinned Pi 5 and retain raw plus summarized evidence.
+5. Run on the pinned laptop Docker environment and retain raw plus summarized non-production development evidence. Defer native Pi execution to Phase 7/pre-deployment.
 6. Confirm targets: readiness at most 15 seconds, total steady application memory at most 512 MiB, idle CPU at most 5% of one core, and no unsupported filesystem warning.
 7. Commit: `test: add reproducible Phase 1 qualification harness`.
 
@@ -485,7 +486,7 @@ Generated evidence files are not fabricated during implementation. Commands crea
 1. Run `scripts/quality/check.sh` from a clean checkout with `uv sync --frozen`.
 2. Run clean SQLite migration upgrade/downgrade/re-upgrade.
 3. Run Compose configuration, multi-architecture build, local smoke, and clean shutdown.
-4. Run the Pi qualification procedure.
+4. Run the development-platform qualification procedure; record the native Pi procedure as deferred deployment work.
 5. Verify every M1 traceability row has exact command/procedure, revision, environment, raw output, result, and reviewer fields.
 6. Run documentation-link, ADR-status, decision-freeze, and absence-of-Phase-2-code checks.
 7. Request code review using `superpowers:requesting-code-review`.
@@ -531,7 +532,7 @@ Every implementation commit must be green for its scoped tests and pass `git dif
 | Compose resource limits differ across runtimes | False qualification | Pin runtime/version and test native Compose behavior |
 | Health checks become deep or expensive | Cascading failure | Keep liveness shallow; readiness bounded; put detailed checks in operator procedures |
 | Metrics leak high-cardinality identifiers | Memory/privacy issue | Allow-list label sets and test forbidden values |
-| GitHub Actions ARM build passes but Pi runtime fails | False portability confidence | Require native Pi evidence before M1 acceptance |
+| GitHub Actions ARM build passes but Pi runtime later fails | Target-specific rework in Phase 7 | Preserve the distinction between ARM64 compatibility and native qualification; reserve remediation time and block actual Pi deployment until native evidence passes |
 | Alembic baseline overreaches into Phase 2 | Scope breach | Architecture scope test forbids domain/event/identity tables and packages |
 | Vulnerability scanner availability/noise | Unstable CI | Pin scanner, archive raw report, define severity and exception policy without suppressing findings silently |
 | Evidence is manually claimed | Invalid milestone | Require machine output or numbered procedure with revision/environment/reviewer |
@@ -541,13 +542,18 @@ Every implementation commit must be green for its scoped tests and pass `git dif
 1. Approve `uv` and committed `uv.lock` as the packaging/lock strategy.
 2. Approve synchronous SQLAlchemy with Python's SQLite driver for v1 rather than `aiosqlite`.
 3. Approve GitHub Actions as the initial CI adapter while keeping local scripts authoritative.
-4. Approve the proposed initial SQLite qualification defaults: FULL durability, 5-second busy timeout, 1,000-page auto-checkpoint, and 256 MiB journal limit. These values are benchmark inputs, not permanently fixed architecture. Preserve Pi measurements under M1 evidence; later changes follow ADR-0010 and ADR-0028 where applicable.
+4. Approve the proposed initial SQLite qualification defaults: FULL durability, 5-second busy timeout, 1,000-page auto-checkpoint, and 256 MiB journal limit. These values are benchmark inputs, not permanently fixed architecture. Preserve development measurements under M1 and requalify on the Pi before deployment; later changes follow ADR-0010 and ADR-0028 where applicable.
 5. Approve a 90% line / 85% branch coverage gate for Phase 1 code. Exclusions must be narrow, documented, and justified; low-value tests written only to inflate coverage are prohibited.
 6. Approve loopback-only Nginx in Phase 1 and complete exclusion of cloudflared/remote access until the RD gate.
 7. Approve a minimal baseline Alembic revision containing no identity, event, household, animal, job, notification, or other product tables.
 8. Approve the proposed branch name and commit sequence.
 
 All eight decisions were approved on 2026-08-04. If implementation conflicts with an accepted ADR, stop the affected task and present the conflict, alternatives, migration impact, and proposed superseding ADR before changing the architecture.
+
+ADR-0036, accepted on 2026-08-05, amends the qualification timing in this plan. M1 is accepted as
+`M1 development-platform qualified` when its laptop Docker, quality, amd64 Compose, SQLite
+development profile, migration, and ARM64 build gates pass. Native Pi/SSD/thermal/performance
+evidence is not required in Phases 1 through 6 and remains mandatory before Pi deployment.
 
 ## Implementation handoff
 

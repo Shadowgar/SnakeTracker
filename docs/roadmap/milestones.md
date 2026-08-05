@@ -6,6 +6,7 @@
 - **RD:** Mandatory before remote or public deployment.
 - **QT:** Qualified operational target for the pinned environment and representative dataset.
 - **DC:** Deferred capability.
+- **DDQ:** Deferred deployment qualification; mandatory before the named target deployment.
 
 ## Phase 0 / M0 — Architecture approved
 
@@ -17,12 +18,18 @@
 
 ## Phase 1 / M1 — Platform reproducible
 
-- [ ] RB Pinned development and Pi environments build reproducibly.
+- [ ] RB Pinned laptop Docker development environment builds reproducibly.
 - [ ] RB Container images support the target architecture and run non-root.
-- [ ] RB SQLite is on a qualified local SSD filesystem with approved pragmas.
+- [ ] RB amd64 Compose lifecycle and linux/arm64 multi-architecture image builds pass.
+- [ ] RB SQLite uses the approved pragmas on a supported local development filesystem.
 - [ ] RB Compatibility scan fails safely for unsupported data.
 - [ ] RB CI enforces formatting, typing, tests, dependency integrity, and documentation checks.
-- [ ] QT Platform meets startup and idle-resource qualification targets.
+- [ ] QT Development-host startup and resource measurements are retained as non-production evidence.
+- [ ] RB Milestone status is recorded explicitly as `M1 development-platform qualified` or not qualified.
+
+Native Raspberry Pi execution, Pi SSD/ext4 verification, thermal/throttling tests, and native Pi
+performance budgets are not M1 criteria. They are deferred deployment qualifications governed by
+ADR-0036.
 
 ## Phase 2 / M2 — Security boundary proven
 
@@ -43,7 +50,7 @@
 - [ ] RB Snapshot incompatibility/corruption falls back to replay.
 - [ ] RB Corrections, voids, reinstatements, and compensations produce correct effective state.
 - [ ] RB Projection rebuild, interruption, rollback, FTS swap, and cleanup tests pass.
-- [ ] QT Replay, append, and rebuild meet qualified Pi targets.
+- [ ] QT Replay, append, and rebuild measurements are retained on the pinned development environment.
 
 ## Phase 4 / M4 — Internal minimum usable baseline
 
@@ -77,7 +84,7 @@ This is an internal operational release, not final production and not approval f
 - [ ] RB Strict CSP passes without unsafe directives.
 - [ ] RB PWA performs no offline writes and persists only allow-listed drafts.
 - [ ] RB Critical journeys meet WCAG 2.2 AA.
-- [ ] QT Dashboard, search, UI, memory, and storage meet qualified Pi targets.
+- [ ] QT Dashboard, search, UI, memory, and storage meet development-environment targets.
 
 ## Phase 7 / M7 — Recovery and compatibility proven
 
@@ -87,7 +94,11 @@ This is an internal operational release, not final production and not approval f
 - [ ] RB Upgrade, rollback, event, projection, plugin, and backup compatibility paths pass.
 - [ ] RB Missing plugins and unknown newer contracts fail safely.
 - [ ] RD Proxy chain, headers, upload delivery, security scanning, monitoring, and runbooks pass.
-- [ ] QT Full Pi and versioned-dataset qualification passes or has an approved superseding ADR.
+- [ ] DDQ/RB Native Raspberry Pi 5 execution passes on the candidate release before Pi deployment.
+- [ ] DDQ/RB Local SSD/ext4 placement is verified for database, attachments, Docker data, and backup staging before Pi deployment.
+- [ ] DDQ/RB Cold/warm performance, CPU, memory, thermal, and throttling budgets pass against the versioned dataset before Pi deployment.
+- [ ] DDQ/RB SQLite durability/persistence and backup/restoration behavior pass natively before Pi deployment.
+- [ ] DDQ/RB Status is recorded explicitly as `Raspberry Pi deployment qualified` before Pi deployment.
 
 ## Phase 8 / M8 — Production release accepted
 
@@ -97,6 +108,7 @@ This is an internal operational release, not final production and not approval f
 - [ ] RB No unresolved critical or high-severity defects remain.
 - [ ] RB Operator completes restore and incident exercises.
 - [ ] RB Product owner approves security, accessibility, performance, recovery, and data integrity.
+- [ ] RB A Raspberry Pi production launch is prohibited unless `Raspberry Pi deployment qualified` is current for the release candidate.
 
 ## Deferred capabilities
 

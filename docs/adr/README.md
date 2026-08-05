@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-ADR-0001 through ADR-0035 were **Accepted on 2026-08-04**. ADR-0028's decision freeze is active. Later architectural changes must create or supersede an ADR and must never silently rewrite accepted decisions.
+ADR-0001 through ADR-0035 were **Accepted on 2026-08-04**. ADR-0036 was **Accepted on 2026-08-05** through ADR-0028 governance. ADR-0028's decision freeze is active. Later architectural changes must create or supersede an ADR and must never silently rewrite accepted decisions.
 
 | ADR | Decision |
 |---|---|
@@ -39,3 +39,4 @@ ADR-0001 through ADR-0035 were **Accepted on 2026-08-04**. ADR-0028's decision f
 | [0033](0033-release-compatibility-matrix.md) | Release compatibility matrix |
 | [0034](0034-accessibility-and-ux.md) | Accessibility and UX |
 | [0035](0035-release-gates-and-internal-baseline.md) | Release gates and internal baseline |
+| [0036](0036-development-and-pi-deployment-qualification.md) | Development and Raspberry Pi deployment qualification |

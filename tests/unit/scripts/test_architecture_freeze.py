@@ -27,3 +27,11 @@ def test_protected_architecture_changes_exclude_phase_evidence_and_plans() -> No
         "docs/architecture/system-architecture.md",
         "docs/adr/0035-release-gates-and-internal-baseline.md",
     }
+
+
+def test_accepted_amendment_paths_cover_adr_0036_governed_documents() -> None:
+    assert "docs/adr/0036-development-and-pi-deployment-qualification.md" in (
+        freeze.APPROVED_AMENDMENT_PATHS
+    )
+    assert "docs/requirements/traceability-matrix.md" in freeze.APPROVED_AMENDMENT_PATHS
+    assert freeze.ACCEPTANCE_DATES["0036"] == "2026-08-05"

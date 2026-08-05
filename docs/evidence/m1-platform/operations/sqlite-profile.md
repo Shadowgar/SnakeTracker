@@ -1,7 +1,7 @@
 # SQLite Profile and Storage Evidence
 
 - Requirement: R-010 / OP-DB-01
-- ADRs: ADR-0009, ADR-0010, ADR-0024
+- ADRs: ADR-0009, ADR-0010, ADR-0024, ADR-0036
 - Threat controls: TM-09, TM-18
 - Source revision: `da061911a7956892adbf8b5a1414e7407ce05b2a`
 - Execution time: 2026-08-04T10:05Z
@@ -28,5 +28,6 @@ p95 1.376 ms, and max 2.183 ms on this host. The application database and
 
 The database path resolved to ext4 on `/dev/sdc` and passed the unsupported-filesystem guard.
 The host reports that virtual device as rotational with no transport, so the harness correctly
-marks the medium unverified. This WSL2 x86_64 result does **not** prove the Raspberry Pi local-SSD
-release blocker. Result: partial, pending native Pi SSD evidence.
+marks the medium unverified. Result for M1: **pass for the supported development-filesystem and
+SQLite-profile checks**. This WSL2 x86_64 result does not prove the future Raspberry Pi local-SSD
+and ext4 deployment gate; that independent check remains mandatory in Phase 7/pre-deployment.

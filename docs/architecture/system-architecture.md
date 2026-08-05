@@ -4,6 +4,12 @@ Status: Approved
 Acceptance date: 2026-08-04
 Target: Raspberry Pi 5, 8 GB RAM, local SSD, Docker Compose
 
+Primary development through Phase 6 uses Docker on the development laptop. amd64 execution,
+automated tests, Compose validation, and linux/arm64 image builds qualify the development
+foundation. Native Raspberry Pi execution and target storage/performance qualification occur in
+Phase 7 or immediately before Pi deployment and remain mandatory for that deployment. See
+ADR-0036.
+
 ## Purpose and scope
 
 SnakeTracker is a self-hosted, mobile-first progressive web application for reptile keepers. Version 1 supports multiple users in one household and is tenant-ready without implementing full organizations. It uses a modular monolith, an event-sourced business core, synchronous correctness projections, asynchronous analytical projections, and conventional operational records.

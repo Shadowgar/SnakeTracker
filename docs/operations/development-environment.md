@@ -2,7 +2,7 @@
 
 ## Required tools
 
-- Python 3.13.14 for the initial Phase 1 qualification run
+- Python 3.13.14 for the initial Phase 1 development-platform qualification run
 - uv 0.12.1 or the release-pinned replacement
 - Git
 - Docker Engine with Compose v2 for container tasks
@@ -28,3 +28,11 @@ generic runtime secret for identity or sessions.
 Run `make check` or `./scripts/quality/check.sh`. The script is authoritative locally and
 in CI. Coverage exclusions are limited to the two documented non-runtime branches in
 `pyproject.toml`; new exclusions require review and must not replace meaningful tests.
+
+## Qualification boundary
+
+Docker on the development laptop is the primary environment through Phase 6. M1 requires local
+quality checks, amd64 Compose execution, and a linux/arm64 image build. These establish
+`M1 development-platform qualified`; they do not claim native Raspberry Pi behavior. Native Pi 5,
+SSD/ext4, performance, thermal, SQLite persistence, and backup/restore qualification are mandatory
+in Phase 7 or immediately before Pi deployment under ADR-0036.

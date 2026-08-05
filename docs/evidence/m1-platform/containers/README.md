@@ -1,7 +1,7 @@
 # Container and ARM64 Evidence
 
-- Requirements: R-001, R-024 foundation, R-025
-- ADRs: ADR-0023, ADR-0024, ADR-0029 boundary
+- Requirements: R-001, R-024 foundation, R-041
+- ADRs: ADR-0023, ADR-0024, ADR-0029 boundary, ADR-0036
 - Threat controls: TM-14, TM-17, TM-18, TM-20
 - Source revision: `da061911a7956892adbf8b5a1414e7407ce05b2a`
 - Execution time: 2026-08-04T10:04Z through 2026-08-04T10:08Z
@@ -22,4 +22,6 @@ Results:
 
 Raw build output is retained in [amd64-build.log](amd64-build.log) and [arm64-build.log](arm64-build.log).
 
-Native Raspberry Pi execution remains missing. See [native-pi5-status.md](../performance/native-pi5-status.md).
+These results satisfy the M1 amd64 runtime and ARM64 build requirements. Native Raspberry Pi
+execution remains a separate Phase 7/pre-deployment qualification; see
+[native-pi5-status.md](../performance/native-pi5-status.md).

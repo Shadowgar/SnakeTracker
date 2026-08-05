@@ -2,7 +2,7 @@
 
 ## Service topology
 
-Run Nginx, one FastAPI web process, one scheduler/worker, cloudflared, and the optional backup agent through Docker Compose. SQLite and attachment volumes must resolve to a local SSD filesystem. Do not place the database on NFS, SMB, a synchronized folder, or an SD card.
+Run Nginx, one FastAPI web process, one scheduler/worker, cloudflared, and the optional backup agent through Docker Compose. For Raspberry Pi deployment, SQLite, attachments, Docker data, and backup staging must resolve to a local SSD using ext4. Do not deploy the database on NFS, SMB, a synchronized folder, or an SD card. Laptop development uses a supported local filesystem under the explicit development classification and does not prove the future Pi storage topology.
 
 ## Health
 
@@ -12,7 +12,7 @@ Run Nginx, one FastAPI web process, one scheduler/worker, cloudflared, and the o
 
 ## SQLite maintenance
 
-The approved SQLite profile uses foreign keys, WAL, full authoritative-write durability, bounded busy timeout, controlled checkpoints, and incremental vacuum. Exact values are versioned in the release qualification manifest after Pi measurement.
+The approved SQLite profile uses foreign keys, WAL, full authoritative-write durability, bounded busy timeout, controlled checkpoints, and incremental vacuum. Development defaults are measured during M1; exact deployment values are versioned in the release qualification manifest after Phase 7/pre-deployment Pi measurement.
 
 - Monitor WAL continuously; warn at 512 MiB and treat 1 GiB as critical for the representative dataset.
 - Use passive checkpoints during normal service and a controlled restart checkpoint in a quiet window.
