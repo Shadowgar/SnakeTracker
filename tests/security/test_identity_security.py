@@ -226,3 +226,31 @@ def test_session_is_household_bound_and_capabilities_follow_current_role(tmp_pat
     with pytest.raises(AuthenticationError):
         service.authenticate(issued.token, now=now + timedelta(minutes=2))
     engine.dispose()
+
+
+def test_restoration_hook_invalidates_all_existing_sessions(tmp_path: Path) -> None:
+    service, engine = identity_service(tmp_path)
+    now = datetime(2026, 8, 5, 12, tzinfo=UTC)
+    issued = service.login(
+        "owner@example.com",
+        "correct horse battery staple",
+        client_ip=None,
+        user_agent=None,
+        correlation_id=uuid4(),
+        now=now,
+    )
+
+    service.invalidate_sessions_after_restoration(
+        correlation_id=uuid4(), now=now + timedelta(minutes=1)
+    )
+
+    with pytest.raises(AuthenticationError):
+        service.authenticate(issued.token, now=now + timedelta(minutes=2))
+    with engine.connect() as connection:
+        assert (
+            connection.execute(
+                text("SELECT count(*) FROM sessions WHERE revocation_reason='restoration'")
+            ).scalar_one()
+            == 1
+        )
+    engine.dispose()

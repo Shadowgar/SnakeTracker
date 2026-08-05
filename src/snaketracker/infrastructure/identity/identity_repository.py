@@ -256,6 +256,23 @@ class SQLAlchemyIdentityRepository:
                 details={"reason": "authentication_or_membership_invalid"},
             )
 
+    def revoke_all_sessions(self, *, reason: str, now: datetime, correlation_id: UUID) -> None:
+        with self._engine.begin() as connection:
+            connection.execute(
+                text(
+                    "UPDATE sessions SET revoked_at=:now,revocation_reason=:reason "
+                    "WHERE revoked_at IS NULL"
+                ),
+                {"now": _timestamp(now), "reason": reason},
+            )
+            self._audit(
+                connection,
+                action="sessions_invalidated",
+                outcome="success",
+                correlation_id=correlation_id,
+                details={"reason": reason},
+            )
+
     @staticmethod
     def _audit(
         connection: Connection,

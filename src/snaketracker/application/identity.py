@@ -103,6 +103,8 @@ class IdentityRepository(Protocol):
         user_agent: str | None,
     ) -> None: ...
 
+    def revoke_all_sessions(self, *, reason: str, now: datetime, correlation_id: UUID) -> None: ...
+
 
 ROLE_CAPABILITIES: dict[str, frozenset[str]] = {
     "owner": frozenset({"household.view", "household.manage", "identity.manage"}),
@@ -235,6 +237,15 @@ class IdentityService:
             correlation_id=correlation_id,
             client_ip=client_ip,
             user_agent=user_agent,
+        )
+
+    def invalidate_sessions_after_restoration(
+        self, *, correlation_id: UUID, now: datetime | None = None
+    ) -> None:
+        self._repository.revoke_all_sessions(
+            reason="restoration",
+            now=now or datetime.now(UTC),
+            correlation_id=correlation_id,
         )
 
     def rotate_session(
