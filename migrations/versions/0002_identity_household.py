@@ -150,6 +150,7 @@ def upgrade() -> None:
         "sessions",
         sa.Column("session_id", sa.String(36), primary_key=True),
         sa.Column("user_id", sa.String(36), nullable=False),
+        sa.Column("household_id", sa.String(36), nullable=False),
         sa.Column("token_hash", sa.String(64), nullable=False),
         sa.Column("csrf_token_hash", sa.String(64), nullable=False),
         sa.Column("created_at", sa.String(32), nullable=False),
@@ -161,6 +162,7 @@ def upgrade() -> None:
         sa.Column("client_ip", sa.String(64)),
         sa.Column("user_agent_class", sa.String(64)),
         sa.ForeignKeyConstraint(["user_id"], ["users.user_id"]),
+        sa.ForeignKeyConstraint(["household_id"], ["household_summaries.household_id"]),
         sa.UniqueConstraint("token_hash", name="uq_sessions_token_hash"),
     )
     op.create_index(

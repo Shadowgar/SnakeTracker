@@ -47,6 +47,7 @@ class Principal:
 class SessionWrite:
     session_id: UUID
     user_id: UUID
+    household_id: UUID
     token_hash: str
     csrf_token_hash: str
     created_at: datetime
@@ -66,6 +67,8 @@ class IdentityRepository(Protocol):
     def login_is_blocked(self, key_hash: str, now: datetime) -> bool: ...
 
     def credential_for(self, email_normalized: str) -> Credential | None: ...
+
+    def active_household_for(self, user_id: UUID) -> UUID | None: ...
 
     def record_login_failure(
         self,
@@ -91,6 +94,14 @@ class IdentityRepository(Protocol):
     def csrf_hash_for(self, token_hash: str, *, now: datetime) -> str | None: ...
 
     def revoke_session(self, token_hash: str, *, now: datetime, correlation_id: UUID) -> None: ...
+
+    def record_access_denied(
+        self,
+        *,
+        correlation_id: UUID,
+        client_ip: str | None,
+        user_agent: str | None,
+    ) -> None: ...
 
 
 ROLE_CAPABILITIES: dict[str, frozenset[str]] = {
@@ -213,15 +224,53 @@ class IdentityService:
             correlation_id=correlation_id,
         )
 
+    def audit_access_denied(
+        self,
+        *,
+        correlation_id: UUID,
+        client_ip: str | None,
+        user_agent: str | None,
+    ) -> None:
+        self._repository.record_access_denied(
+            correlation_id=correlation_id,
+            client_ip=client_ip,
+            user_agent=user_agent,
+        )
+
+    def rotate_session(
+        self,
+        token: str,
+        *,
+        client_ip: str | None,
+        user_agent: str | None,
+        correlation_id: UUID,
+        now: datetime | None = None,
+    ) -> IssuedSession:
+        current = now or datetime.now(UTC)
+        principal = self.authenticate(token, now=current)
+        self.logout(token, correlation_id=correlation_id, now=current)
+        return self._issue_session(
+            principal.user_id,
+            household_id=principal.household_id,
+            client_ip=client_ip,
+            user_agent=user_agent,
+            correlation_id=correlation_id,
+            now=current,
+        )
+
     def _issue_session(
         self,
         user_id: UUID,
         *,
+        household_id: UUID | None = None,
         client_ip: str | None,
         user_agent: str | None,
         correlation_id: UUID,
         now: datetime,
     ) -> IssuedSession:
+        selected_household = household_id or self._repository.active_household_for(user_id)
+        if selected_household is None:
+            raise AuthenticationError("No active household membership is available.")
         token = secrets.token_urlsafe(32)
         csrf_token = secrets.token_urlsafe(32)
         absolute_expiry = now + self._absolute_timeout
@@ -229,6 +278,7 @@ class IdentityService:
             SessionWrite(
                 session_id=uuid4(),
                 user_id=user_id,
+                household_id=selected_household,
                 token_hash=self._digest(f"session:{token}"),
                 csrf_token_hash=self._digest(f"csrf:{csrf_token}"),
                 created_at=now,

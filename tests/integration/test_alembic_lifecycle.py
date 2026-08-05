@@ -101,7 +101,7 @@ def test_identity_schema_has_required_uniqueness_and_foreign_keys(tmp_path: Path
             "uq_sessions_token_hash"
         }
         assert len(inspector.get_foreign_keys("authorization_memberships")) == 2
-        assert len(inspector.get_foreign_keys("sessions")) == 1
+        assert len(inspector.get_foreign_keys("sessions")) == 2
         assert len(inspector.get_foreign_keys("event_subjects")) == 1
     finally:
         engine.dispose()

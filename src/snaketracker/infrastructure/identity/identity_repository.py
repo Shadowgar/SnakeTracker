@@ -49,6 +49,17 @@ class SQLAlchemyIdentityRepository:
             return None
         return Credential(UUID(row["user_id"]), row["password_hash"], row["status"])
 
+    def active_household_for(self, user_id: UUID) -> UUID | None:
+        with self._engine.connect() as connection:
+            household_id = connection.execute(
+                text(
+                    "SELECT household_id FROM authorization_memberships "
+                    "WHERE user_id=:user_id AND status='active' ORDER BY household_id LIMIT 1"
+                ),
+                {"user_id": str(user_id)},
+            ).scalar_one_or_none()
+        return UUID(household_id) if household_id else None
+
     def record_login_failure(
         self,
         key_hash: str,
@@ -118,14 +129,16 @@ class SQLAlchemyIdentityRepository:
             connection.execute(
                 text(
                     "INSERT INTO sessions "
-                    "(session_id,user_id,token_hash,csrf_token_hash,created_at,last_seen_at,"
+                    "(session_id,user_id,household_id,token_hash,csrf_token_hash,created_at,"
+                    "last_seen_at,"
                     "idle_expires_at,absolute_expires_at,client_ip,user_agent_class) VALUES "
-                    "(:session_id,:user_id,:token_hash,:csrf_hash,:created,:created,:idle,:absolute,"
-                    ":client_ip,:user_agent)"
+                    "(:session_id,:user_id,:household_id,:token_hash,:csrf_hash,:created,:created,"
+                    ":idle,:absolute,:client_ip,:user_agent)"
                 ),
                 {
                     "session_id": str(write.session_id),
                     "user_id": str(write.user_id),
+                    "household_id": str(write.household_id),
                     "token_hash": write.token_hash,
                     "csrf_hash": write.csrf_token_hash,
                     "created": _timestamp(write.created_at),
@@ -157,7 +170,8 @@ class SQLAlchemyIdentityRepository:
                         "m.household_id,m.role,h.name AS household_name "
                         "FROM sessions s JOIN users u ON u.user_id=s.user_id "
                         "JOIN authorization_memberships m ON m.user_id=u.user_id "
-                        "JOIN household_summaries h ON h.household_id=m.household_id "
+                        "AND m.household_id=s.household_id "
+                        "JOIN household_summaries h ON h.household_id=s.household_id "
                         "WHERE s.token_hash=:token AND s.revoked_at IS NULL "
                         "AND s.idle_expires_at>:now AND s.absolute_expires_at>:now "
                         "AND u.status='active' AND m.status='active'"
@@ -222,6 +236,24 @@ class SQLAlchemyIdentityRepository:
                 correlation_id=correlation_id,
                 actor_user_id=UUID(user_id) if user_id else None,
                 details={},
+            )
+
+    def record_access_denied(
+        self,
+        *,
+        correlation_id: UUID,
+        client_ip: str | None,
+        user_agent: str | None,
+    ) -> None:
+        with self._engine.begin() as connection:
+            self._audit(
+                connection,
+                action="protected_request",
+                outcome="denied",
+                correlation_id=correlation_id,
+                client_ip=client_ip,
+                user_agent=user_agent,
+                details={"reason": "authentication_or_membership_invalid"},
             )
 
     @staticmethod

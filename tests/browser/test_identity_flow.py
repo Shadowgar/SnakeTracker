@@ -6,6 +6,7 @@ from pathlib import Path
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 
 from snaketracker.bootstrap.application import build_application
 from snaketracker.bootstrap.configuration import Environment, Settings
@@ -145,6 +146,14 @@ def test_login_failure_rate_limit_and_unauthenticated_redirect(tmp_path: Path) -
         assert failed.status_code == 429
         assert "Too many attempts" in failed.text
         assert client.get("/home", follow_redirects=False).headers["location"] == "/login"
+        with client.app.state.database_engine.connect() as connection:
+            denied = connection.execute(
+                text(
+                    "SELECT count(*) FROM security_audit "
+                    "WHERE action='protected_request' AND outcome='denied'"
+                )
+            ).scalar_one()
+        assert denied == 1
 
 
 def test_completed_setup_and_authenticated_login_pages_redirect_safely(tmp_path: Path) -> None:

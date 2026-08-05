@@ -84,13 +84,23 @@ def create_web_router(
 ) -> APIRouter:
     router = APIRouter(include_in_schema=False)
 
-    def principal_for(request: Request) -> Principal | None:
+    def principal_for(request: Request, *, audit_denial: bool = False) -> Principal | None:
         token = request.cookies.get(SESSION_COOKIE)
         if token is None:
+            if audit_denial:
+                client_ip, user_agent = _client_context(request)
+                identity_service.audit_access_denied(
+                    correlation_id=uuid4(), client_ip=client_ip, user_agent=user_agent
+                )
             return None
         try:
             return identity_service.authenticate(token)
         except AuthenticationError:
+            if audit_denial:
+                client_ip, user_agent = _client_context(request)
+                identity_service.audit_access_denied(
+                    correlation_id=uuid4(), client_ip=client_ip, user_agent=user_agent
+                )
             return None
 
     @router.get("/")
@@ -231,7 +241,7 @@ def create_web_router(
 
     @router.get("/home", response_class=HTMLResponse)
     async def home(request: Request) -> Response:
-        principal = principal_for(request)
+        principal = principal_for(request, audit_denial=True)
         if principal is None:
             return RedirectResponse("/login", status_code=303)
         return templates.TemplateResponse(

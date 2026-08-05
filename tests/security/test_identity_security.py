@@ -166,3 +166,63 @@ def test_current_membership_is_checked_on_every_protected_request(tmp_path: Path
     with pytest.raises(AuthenticationError):
         service.authenticate(issued.token, now=now + timedelta(minutes=1))
     engine.dispose()
+
+
+def test_session_rotation_revokes_old_token_and_preserves_household_context(tmp_path: Path) -> None:
+    service, engine = identity_service(tmp_path)
+    now = datetime(2026, 8, 5, 12, tzinfo=UTC)
+    issued = service.login(
+        "owner@example.com",
+        "correct horse battery staple",
+        client_ip="127.0.0.1",
+        user_agent="browser",
+        correlation_id=uuid4(),
+        now=now,
+    )
+
+    rotated = service.rotate_session(
+        issued.token,
+        client_ip="127.0.0.1",
+        user_agent="browser",
+        correlation_id=uuid4(),
+        now=now + timedelta(minutes=1),
+    )
+
+    with pytest.raises(AuthenticationError):
+        service.authenticate(issued.token, now=now + timedelta(minutes=2))
+    assert service.authenticate(rotated.token, now=now + timedelta(minutes=2)).household_name == (
+        "Rocco's Reptiles"
+    )
+    engine.dispose()
+
+
+def test_session_is_household_bound_and_capabilities_follow_current_role(tmp_path: Path) -> None:
+    service, engine = identity_service(tmp_path)
+    now = datetime(2026, 8, 5, 12, tzinfo=UTC)
+    issued = service.login(
+        "owner@example.com",
+        "correct horse battery staple",
+        client_ip=None,
+        user_agent=None,
+        correlation_id=uuid4(),
+        now=now,
+    )
+    with engine.begin() as connection:
+        connection.execute(text("UPDATE authorization_memberships SET role='viewer'"))
+    principal = service.authenticate(issued.token, now=now + timedelta(minutes=1))
+    assert principal.capabilities == frozenset({"household.view"})
+
+    other = uuid4()
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO household_summaries "
+                "(household_id,name,timezone,source_stream_version,source_global_position,"
+                "created_at,updated_at) VALUES (:id,'Other','UTC',1,999,:now,:now)"
+            ),
+            {"id": str(other), "now": now.isoformat()},
+        )
+        connection.execute(text("UPDATE sessions SET household_id=:other"), {"other": str(other)})
+    with pytest.raises(AuthenticationError):
+        service.authenticate(issued.token, now=now + timedelta(minutes=2))
+    engine.dispose()
