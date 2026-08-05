@@ -5,7 +5,7 @@
 - Host: x86_64 WSL2 development environment
 - Python: 3.13.14
 - uv: 0.12.1
-- Reviewer: Pending owner review
+- Reviewer: SnakeTracker owner
 
 The raw output in [toolchain-bootstrap.log](toolchain-bootstrap.log) was produced by:
 

@@ -5,7 +5,7 @@
 - Threat controls: TM-09, TM-18
 - Source revision: `da061911a7956892adbf8b5a1414e7407ce05b2a`
 - Execution time: 2026-08-04T10:05Z
-- Reviewer: Pending owner review
+- Reviewer: SnakeTracker owner
 
 Command:
 

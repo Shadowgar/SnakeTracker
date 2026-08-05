@@ -4,7 +4,7 @@
 - ADRs: ADR-0024, ADR-0036
 - Threat controls: TM-18, TM-20
 - Status: **Deferred deployment qualification — not an M1 criterion**
-- Reviewer: Pending owner review
+- Deployment reviewer: Pending Phase 7/pre-deployment execution
 
 The available host is x86_64 WSL2 (`Linux 5.15.167.4-microsoft-standard-WSL2`), not a Raspberry Pi 5. ARM64 was built under QEMU, but emulation does not satisfy native board, cooling, SSD, filesystem, idle-resource, or thermal qualification. No result has been fabricated or promoted. ADR-0036 defers this native gate until Phase 7 or immediately before Pi deployment; it does not block `M1 development-platform qualified` or Phases 2 through 6.
 

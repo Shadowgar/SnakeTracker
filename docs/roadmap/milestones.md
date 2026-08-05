@@ -10,22 +10,28 @@
 
 ## Phase 0 / M0 — Architecture approved
 
-- [ ] RB Complete architecture, diagrams, catalogs, threat model, runbooks, traceability, dataset, UX IA, ADRs, and roadmap exist.
-- [ ] RB Document links and required sections validate.
-- [ ] RB Owner approves assumptions and unresolved decisions.
-- [ ] RB ADRs transition from Proposed to Accepted.
-- [ ] RB Architecture decision freeze is recorded under `/docs/evidence/m0-architecture`.
+Status: M0 architecture approved
+Accepted: August 4, 2026
+
+- [x] RB Complete architecture, diagrams, catalogs, threat model, runbooks, traceability, dataset, UX IA, ADRs, and roadmap exist. Evidence: [architecture package index](../README.md) and [M0 evidence](../evidence/m0-architecture/README.md).
+- [x] RB Document links and required sections validate. Evidence: [M0 verification record](../evidence/m0-architecture/README.md#criterion-verification).
+- [x] RB Owner approves assumptions and unresolved decisions. Evidence: [owner approval](../evidence/m0-architecture/2026-08-04-owner-approval.md).
+- [x] RB ADRs transition from Proposed to Accepted. Evidence: [ADR index](../adr/README.md) and [ADR-0036 amendment approval](../evidence/m0-architecture/2026-08-05-qualification-timing-amendment.md).
+- [x] RB Architecture decision freeze is recorded under `/docs/evidence/m0-architecture`. Evidence: [owner approval and freeze record](../evidence/m0-architecture/2026-08-04-owner-approval.md).
 
 ## Phase 1 / M1 — Platform reproducible
 
-- [ ] RB Pinned laptop Docker development environment builds reproducibly.
-- [ ] RB Container images support the target architecture and run non-root.
-- [ ] RB amd64 Compose lifecycle and linux/arm64 multi-architecture image builds pass.
-- [ ] RB SQLite uses the approved pragmas on a supported local development filesystem.
-- [ ] RB Compatibility scan fails safely for unsupported data.
-- [ ] RB CI enforces formatting, typing, tests, dependency integrity, and documentation checks.
-- [ ] QT Development-host startup and resource measurements are retained as non-production evidence.
-- [ ] RB Milestone status is recorded explicitly as `M1 development-platform qualified` or not qualified.
+Status: M1 development-platform qualified
+Accepted: August 5, 2026
+
+- [x] RB Pinned laptop Docker development environment builds reproducibly. Evidence: [locked toolchain](../evidence/m1-platform/environment/README.md) and [M1 evidence index](../evidence/m1-platform/README.md).
+- [x] RB Container images support the target architecture and run non-root. Evidence: [container and ARM64 evidence](../evidence/m1-platform/containers/README.md).
+- [x] RB amd64 Compose lifecycle and linux/arm64 multi-architecture image builds pass. Evidence: [container and Compose evidence](../evidence/m1-platform/containers/README.md).
+- [x] RB SQLite uses the approved pragmas on a supported local development filesystem. Evidence: [SQLite profile evidence](../evidence/m1-platform/operations/sqlite-profile.md).
+- [x] RB Compatibility scan fails safely for unsupported data. Evidence: [AT-COMP-FOUNDATION-01](../evidence/m1-platform/tests/README.md#at-comp-foundation-01).
+- [x] RB CI enforces formatting, typing, tests, dependency integrity, architecture freeze, and documentation checks. Evidence: [quality evidence](../evidence/m1-platform/tests/README.md) and [GitHub Actions evidence](../evidence/m1-platform/tests/github-actions.md).
+- [x] QT Development-host startup and resource measurements are retained as non-production evidence. Evidence: [development-host measurement](../evidence/m1-platform/performance/development-host-warm/summary.md) and [M1 interpretation](../evidence/m1-platform/README.md#outcome).
+- [x] RB Milestone status is recorded explicitly as `M1 development-platform qualified`. Evidence: [M1 owner review](../evidence/m1-platform/approvals/m1-review.md).
 
 Native Raspberry Pi execution, Pi SSD/ext4 verification, thermal/throttling tests, and native Pi
 performance budgets are not M1 criteria. They are deferred deployment qualifications governed by

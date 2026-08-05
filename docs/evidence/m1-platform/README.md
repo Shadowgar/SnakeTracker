@@ -5,12 +5,13 @@
 - Architecture baseline: `bb3ab394a1487943424dad6d7544995c71156c98`
 - Branch: `phase1/platform-foundation`
 - Operator: Codex automation in the local `rocco` workspace
-- Reviewer: Pending owner review
+- Reviewer: SnakeTracker owner
+- Milestone status: **M1 development-platform qualified**
+- Accepted: **August 5, 2026**
 
 ## Outcome
 
-Phase 1 implementation is complete and the evidence supports **M1 development-platform
-qualified**, pending owner acceptance. All mandatory local software, amd64 Compose, SQLite
+Phase 1 implementation is complete and accepted as **M1 development-platform qualified**. All mandatory local software, amd64 Compose, SQLite
 development-profile, migration, and ARM64 image-build checks pass. Under ADR-0036, native
 Raspberry Pi 5, SSD/ext4, thermal, and production-performance qualification is a separate Phase
 7/pre-deployment gate and does not block M1 or Phases 2 through 6.
@@ -29,7 +30,7 @@ qualification and is not promoted as evidence of native Pi behavior.
 | Hardened local Compose topology starts, restarts, preserves its schema, and stops cleanly | Pass locally | [development results](performance/development-host-warm/results.json) |
 | Development startup/resource measurements retained | Pass with optimization observation | [development results](performance/development-host-warm/results.json) |
 | Native Pi deployment qualification | Deferred, not an M1 criterion | [native Pi status](performance/native-pi5-status.md) |
-| Structured reproducible evidence and review | Pending review | [manifest](evidence-manifest.json), [review](approvals/m1-review.md) |
+| Structured reproducible evidence and review | Pass and accepted | [manifest](evidence-manifest.json), [review](approvals/m1-review.md) |
 
 The development-host run passed readiness, restart, memory, persistence, filesystem, and SQLite
 contract checks. Its idle CPU p95 was 14.39%, above the 5% development target, so the original
@@ -47,4 +48,7 @@ substitute for future native Pi evidence.
 - `containers/` — amd64, arm64, hardening, and vulnerability-scan evidence.
 - `performance/development-host-warm/` — raw non-qualifying harness output.
 - `performance/native-pi5-status.md` — deferred deployment qualification status and procedure.
-- `approvals/m1-review.md` — owner review record, intentionally pending.
+- `approvals/m1-review.md` — accepted owner review record.
+
+Phase 2 has not started. M2 through M8 remain unaccepted. Native Raspberry Pi deployment
+qualification remains pending under Phase 7 and is not implied by this M1 acceptance.

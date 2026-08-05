@@ -4,7 +4,7 @@
 - Execution time: 2026-08-04T10:27Z
 - Environment: x86_64 WSL2 development host, Python 3.13.14
 - Dataset: `phase1-platform-empty-v1`
-- Reviewer: Pending owner review
+- Reviewer: SnakeTracker owner
 
 Raw output is retained in [quality-gate.log](quality-gate.log). The exact command was:
 
@@ -16,7 +16,9 @@ uv sync --frozen
 The separate [toolchain bootstrap record](../environment/README.md) retains the actual frozen-sync
 execution; `quality-gate.log` begins with the quality command itself.
 
-Result: 93 tests passed; Ruff formatting/linting passed; strict mypy passed; line coverage 99.29%;
+The original retained log records 93 tests at implementation revision `419b894`. The milestone
+acceptance gate was rerun after ADR-0036 and its freeze-guard test, producing 94 passing tests.
+Ruff formatting/linting passed; strict mypy passed; line coverage 99.29%;
 branch coverage 98.78%; dependency audit found no known vulnerabilities; architecture freeze,
 documentation links, Compose configuration, and whitespace checks passed.
 
@@ -38,7 +40,9 @@ Health endpoints return stable, non-sensitive liveness/readiness responses and a
 
 ## DOC-ARCH-01
 
-`scripts/quality/verify_architecture_freeze.py` confirmed ADR-0001 through ADR-0035 remain accepted on 2026-08-04 and `bb3ab39` remains an ancestor. No ADR conflict or architecture change was introduced.
+`scripts/quality/verify_architecture_freeze.py` confirmed ADR-0001 through ADR-0035 remain accepted
+on 2026-08-04, ADR-0036 is accepted on 2026-08-05, the approved amendment paths are explicit, and
+`bb3ab39` remains an ancestor.
 
 ## AT-COMP-FOUNDATION-01
 

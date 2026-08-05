@@ -32,7 +32,7 @@ This matrix is authoritative for architecture acceptance. Evidence paths are rel
 | R-026 | Versioned API, stable errors, ETags/If-Match and expected-stream semantics | RB | 0025 | TM-09 | 3–6 | AT-API-01 compatibility/concurrency suite | m6-product-experience/tests/api | M6 |
 | R-027 | Expand-migrate-contract; event upcasters outside Alembic; controlled rollback | RB | 0026 | TM-20 | 1–7 | AT-MIG-01 upgrade/downgrade matrix | m7-recovery-compatibility/tests/migrations | M7 |
 | R-028 | High-frequency telemetry excluded pending separate ingestion architecture | DC | 0027 | TM-18 | Future | AR-REV-01 ADR approval | m0-architecture/approvals/telemetry | Future |
-| R-029 | Architecture decision freeze and ADR consequence analysis | RB | 0028 | TM-20 | 0–8 | DOC-ARCH-01 ADR governance audit | m0-architecture/approvals/freeze | M0 |
+| R-029 | Architecture decision freeze and ADR consequence analysis | RB | 0028 | TM-20 | 0–8 | DOC-ARCH-01 ADR governance audit | m0-architecture/2026-08-04-owner-approval | M0 |
 | R-030 | Trusted proxy/header/host/secure-origin validation | RD | 0029 | TM-08 | 7 | AT-PROXY-01 spoofing integration suite | m7-recovery-compatibility/security/proxy | M7 |
 | R-031 | UTC storage and household-timezone reporting semantics | RB | 0030 | TM-09 | 3–6 | AT-TIME-01 DST/skew/precision suite | m3-event-integrity/tests/time | M3 |
 | R-032 | Typed subject registration, existence, tenancy, and authorization validation | RB | 0031 | TM-04 | 3 | AT-SUB-01 subject-validation suite | m3-event-integrity/tests/subjects | M3 |
@@ -44,9 +44,16 @@ This matrix is authoritative for architecture acceptance. Evidence paths are rel
 | R-038 | Full production launch waits for M8 evidence and owner approval | RB | 0035 | All applicable | 8 | GATE-M8-01 production acceptance | m8-production/approvals/launch | M8 |
 | R-039 | Evidence is structured, retained, and reproducible | RB | 0028 | TM-20 | 0–8 | DOC-EV-01 evidence manifest audit | each milestone root | Each |
 | R-040 | OAuth, MFA, organizations, offline writes, marketplace, AI, telemetry and similar expansions are deferred | DC | 0021, 0022, 0027, 0035 | Varies | Future | AR-REV-02 approved promotion ADR | m0-architecture/approvals/deferred | Future |
-| R-041 | Laptop Docker is the primary development environment; amd64 tests/Compose and ARM64 image builds qualify M1 without native Pi hardware | RB | 0036 | TM-18, TM-20 | 1–6 | DEV-PLAT-01 local quality, Compose, amd64 runtime, and ARM64 build suite | m1-platform | M1 |
+| R-041 | Laptop Docker is the primary development environment; amd64 tests/Compose and ARM64 image builds qualify M1 without native Pi hardware | RB | 0036 | TM-18, TM-20 | 1–6 | DEV-PLAT-01 local quality, Compose, amd64 runtime, and ARM64 build suite | m1-platform/approvals/m1-review | M1 |
 | R-042 | Native Pi execution, SSD/ext4, cold/warm performance, resources, thermal behavior, SQLite persistence, and backup/restore pass before Pi deployment | DDQ/RB | 0010, 0018, 0024, 0036 | TM-12, TM-13, TM-18, TM-20 | 7/pre-deployment | PERF-PI-01 and OP-BK-01 deployment qualification suite | m7-recovery-compatibility/performance/pi | Raspberry Pi deployment |
 
 ## Coverage rule
 
 A mandatory requirement is satisfied only when its governing document is accepted, its acceptance test or procedure passes for the applicable release, and its evidence artifact exists with source revision, environment, exact reproduction method, result, and reviewer. A missing link is itself a release blocker.
+
+## Milestone acceptance status
+
+- **M0 architecture approved** — accepted August 4, 2026; evidence under `m0-architecture`.
+- **M1 development-platform qualified** — accepted August 5, 2026; evidence under `m1-platform`.
+- Phase 2 has not started; M2 through M8 remain unaccepted.
+- `Raspberry Pi deployment qualified` remains pending under Phase 7/pre-deployment controls.

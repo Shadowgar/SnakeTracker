@@ -3,6 +3,7 @@
 Acceptance date: 2026-08-04
 Decision status: Accepted
 Decision freeze: Active
+Milestone status: M0 architecture approved
 
 The owner approved:
 
@@ -17,3 +18,7 @@ The owner approved:
 - ADR-0001 through ADR-0035
 
 The first Git commit containing this record is the immutable architecture baseline. Any subsequent architectural change must follow ADR-0028.
+
+ADR-0036 was subsequently accepted through the frozen architecture-change process on 2026-08-05;
+see the [qualification-timing amendment evidence](2026-08-05-qualification-timing-amendment.md).
+This amendment does not change the M0 acceptance date.

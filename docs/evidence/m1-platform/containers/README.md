@@ -5,7 +5,7 @@
 - Threat controls: TM-14, TM-17, TM-18, TM-20
 - Source revision: `da061911a7956892adbf8b5a1414e7407ce05b2a`
 - Execution time: 2026-08-04T10:04Z through 2026-08-04T10:08Z
-- Reviewer: Pending owner review
+- Reviewer: SnakeTracker owner
 
 Results:
 

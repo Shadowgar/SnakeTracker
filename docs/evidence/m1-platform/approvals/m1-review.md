@@ -1,10 +1,10 @@
 # M1 Owner Review
 
 - Implementation revision: `419b8949e9ca60bce18b5b69b6730fce2e546b43`
-- Evidence commit: to be recorded after commit
-- Review status: **Pending owner acceptance — evidence supports `M1 development-platform qualified`**
-- Reviewer: Pending owner assignment
-- Approval date: Pending
+- Evidence baseline revision: `419b8949e9ca60bce18b5b69b6730fce2e546b43`
+- Review status: **Accepted — `M1 development-platform qualified`**
+- Reviewer: SnakeTracker owner
+- Approval date: 2026-08-05
 
 ## Phase 1 result
 
@@ -18,6 +18,6 @@ production hardening. It does not fail M1 under ADR-0036.
 
 Native Raspberry Pi execution, local SSD/ext4 placement, cold/warm performance, resource and
 thermal budgets, SQLite durability/persistence, and backup/restoration remain mandatory before
-actual Pi deployment. Their absence is not an M1 blocker. The owner may accept M1 and merge this
-Phase 1 branch after reviewing the amendment and green PR checks; Pi deployment remains prohibited
-until the separate `Raspberry Pi deployment qualified` status is approved.
+actual Pi deployment. Their absence is not an M1 blocker. The owner accepted M1 for laptop/Docker
+development on 2026-08-05. Phase 2 has not started, and Pi deployment remains prohibited until the
+separate `Raspberry Pi deployment qualified` status is approved.

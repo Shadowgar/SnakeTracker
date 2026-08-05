@@ -5,7 +5,8 @@
 - Authority: SnakeTracker owner instruction in the Phase 1 review
 - Baseline commit: `bb3ab394a1487943424dad6d7544995c71156c98`
 - Amendment branch: `phase1/platform-foundation`
-- Reviewer: Owner review pending on PR #2
+- Reviewer: SnakeTracker owner
+- Review status: Accepted
 
 ## Approved change
 
