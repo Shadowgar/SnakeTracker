@@ -105,3 +105,20 @@ def test_identity_schema_has_required_uniqueness_and_foreign_keys(tmp_path: Path
         assert len(inspector.get_foreign_keys("event_subjects")) == 1
     finally:
         engine.dispose()
+
+
+def test_schema_avoids_json_functions_unsafe_on_minimum_sqlite(tmp_path: Path) -> None:
+    database = tmp_path / "portable-schema.sqlite3"
+    command.upgrade(alembic_config(database), "head")
+    engine = create_engine(f"sqlite+pysqlite:///{database}")
+    try:
+        with engine.connect() as connection:
+            schema = "\n".join(
+                str(value)
+                for value in connection.execute(
+                    text("SELECT sql FROM sqlite_master WHERE sql IS NOT NULL")
+                ).scalars()
+            )
+        assert "json_valid(" not in schema
+    finally:
+        engine.dispose()

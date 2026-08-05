@@ -75,8 +75,6 @@ def upgrade() -> None:
         ),
         sa.CheckConstraint("stream_version > 0", name="ck_domain_events_stream_version"),
         sa.CheckConstraint("schema_version > 0", name="ck_domain_events_schema_version"),
-        sa.CheckConstraint("json_valid(payload_json)", name="ck_domain_events_payload_json"),
-        sa.CheckConstraint("json_valid(metadata_json)", name="ck_domain_events_metadata_json"),
     )
     op.create_index(
         "ix_domain_events_stream",
@@ -147,8 +145,6 @@ def upgrade() -> None:
             name="uq_idempotency_scope_key",
         ),
         sa.CheckConstraint("status = 'completed'", name="ck_idempotency_status"),
-        sa.CheckConstraint("json_valid(result_events_json)", name="ck_idempotency_events_json"),
-        sa.CheckConstraint("json_valid(stored_result_json)", name="ck_idempotency_result_json"),
     )
     op.create_table(
         "sessions",
@@ -197,7 +193,6 @@ def upgrade() -> None:
         sa.CheckConstraint(
             "outcome IN ('success', 'denied', 'failure')", name="ck_security_audit_outcome"
         ),
-        sa.CheckConstraint("json_valid(details_json)", name="ck_security_audit_details_json"),
     )
     op.create_index("ix_security_audit_recorded", "security_audit", ["recorded_at"])
     op.create_index("ix_security_audit_actor", "security_audit", ["actor_user_id", "recorded_at"])
