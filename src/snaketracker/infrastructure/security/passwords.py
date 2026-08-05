@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from argon2 import PasswordHasher
+from argon2.exceptions import VerificationError
 from argon2.low_level import Type
 
 
@@ -31,7 +32,7 @@ class Argon2PasswordHasher:
     def verify(self, password_hash: str, password: str) -> bool:
         try:
             return self._hasher.verify(password_hash, password)
-        except Exception:  # argon2 deliberately exposes one generic verification outcome here
+        except VerificationError:
             return False
 
     def needs_rehash(self, password_hash: str) -> bool:
