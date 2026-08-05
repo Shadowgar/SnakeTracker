@@ -129,6 +129,11 @@ def build_application(settings: Settings) -> FastAPI:
                 ),
                 is_bootstrapped=identity_repository.has_users,
                 secure_cookie=settings.session_cookie_secure,
+                expected_origin=(
+                    str(settings.external_origin).rstrip("/")
+                    if settings.external_origin is not None
+                    else None
+                ),
             )
         )
     app.state.database_engine = engine

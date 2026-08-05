@@ -9,7 +9,7 @@ x-app-common: &app-common
   environment: &app-environment
     SNAKETRACKER_ENVIRONMENT: development
     SNAKETRACKER_DATABASE_PATH: /var/lib/snaketracker/snaketracker.sqlite3
-    SNAKETRACKER_EXTERNAL_ORIGIN: http://localhost:8080
+    SNAKETRACKER_EXTERNAL_ORIGIN: ${SNAKETRACKER_EXTERNAL_ORIGIN:-http://localhost:8080}
     SNAKETRACKER_SESSION_COOKIE_SECURE: "false"
     SNAKETRACKER_RUNTIME_SECRET_FILE: /run/secrets/runtime_secret
   secrets:

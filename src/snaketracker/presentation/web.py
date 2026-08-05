@@ -75,12 +75,25 @@ def _preauth_csrf_valid(request: Request, submitted: str) -> bool:
     return cookie is not None and hmac.compare_digest(cookie, submitted)
 
 
+def _form_request_valid(request: Request, expected_origin: str | None) -> bool:
+    media_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if media_type not in {
+        "application/x-www-form-urlencoded",
+        "multipart/form-data",
+    }:
+        return False
+    origin = request.headers.get("origin")
+    allowed_origin = (expected_origin or str(request.base_url)).rstrip("/")
+    return origin is None or hmac.compare_digest(origin.rstrip("/"), allowed_origin)
+
+
 def create_web_router(
     *,
     bootstrap_service: HouseholdBootstrapService,
     identity_service: IdentityService,
     is_bootstrapped: Callable[[], bool],
     secure_cookie: bool,
+    expected_origin: str | None = None,
 ) -> APIRouter:
     router = APIRouter(include_in_schema=False)
 
@@ -119,6 +132,16 @@ def create_web_router(
 
     @router.post("/setup", response_class=HTMLResponse)
     async def setup_submit(request: Request) -> Response:
+        if not _form_request_valid(request, expected_origin):
+            return templates.TemplateResponse(
+                request,
+                "error.html",
+                {
+                    "title": "Request could not be verified",
+                    "message": "Refresh the page and try again.",
+                },
+                status_code=403,
+            )
         form = await request.form()
         submitted_csrf = str(form.get("csrf_token", ""))
         if not _preauth_csrf_valid(request, submitted_csrf):
@@ -196,6 +219,16 @@ def create_web_router(
 
     @router.post("/login", response_class=HTMLResponse)
     async def login_submit(request: Request) -> Response:
+        if not _form_request_valid(request, expected_origin):
+            return templates.TemplateResponse(
+                request,
+                "error.html",
+                {
+                    "title": "Request could not be verified",
+                    "message": "Refresh the login page and try again.",
+                },
+                status_code=403,
+            )
         form = await request.form()
         csrf_token = str(form.get("csrf_token", ""))
         if not _preauth_csrf_valid(request, csrf_token):
@@ -252,6 +285,16 @@ def create_web_router(
 
     @router.post("/logout")
     async def logout(request: Request) -> Response:
+        if not _form_request_valid(request, expected_origin):
+            return templates.TemplateResponse(
+                request,
+                "error.html",
+                {
+                    "title": "Request could not be verified",
+                    "message": "Return home and try again.",
+                },
+                status_code=403,
+            )
         token = request.cookies.get(SESSION_COOKIE)
         submitted = str((await request.form()).get("csrf_token", ""))
         if token is None or not identity_service.verify_csrf(token, submitted):

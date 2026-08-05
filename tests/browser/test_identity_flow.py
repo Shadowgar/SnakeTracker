@@ -128,6 +128,27 @@ def test_csrf_and_validation_errors_are_usable_and_security_headers_are_strict(
         assert client.get("/static/favicon.svg").headers["content-type"] == "image/svg+xml"
 
 
+def test_cross_origin_form_submission_is_rejected_even_with_a_valid_token(tmp_path: Path) -> None:
+    with client_for(tmp_path) as client:
+        page = client.get("/setup")
+        response = client.post(
+            "/setup",
+            headers={"Origin": "https://attacker.example"},
+            data={
+                "csrf_token": csrf_from(page.text),
+                "household_name": "Unsafe",
+                "timezone": "UTC",
+                "display_name": "Owner",
+                "email": "owner@example.com",
+                "password": "correct horse battery staple",
+                "password_confirmation": "correct horse battery staple",
+            },
+        )
+
+        assert response.status_code == 403
+        assert client.get("/setup").status_code == 200
+
+
 def test_login_failure_rate_limit_and_unauthenticated_redirect(tmp_path: Path) -> None:
     with client_for(tmp_path) as client:
         complete_setup(client)
