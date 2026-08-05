@@ -28,7 +28,9 @@ def test_compose_services_are_hardened_and_local_only() -> None:
     for service in ("migrate", "web", "worker", "nginx"):
         assert re.search(rf"^  {service}:$", compose, re.MULTILINE)
     assert "cloudflared:" not in compose
-    assert '"127.0.0.1:${SNAKETRACKER_HTTP_PORT:-8080}:8080"' in compose
+    assert (
+        '"${SNAKETRACKER_BIND_ADDRESS:-127.0.0.1}:${SNAKETRACKER_HTTP_PORT:-8080}:8080"' in compose
+    )
     assert "0.0.0.0:8080:8080" not in compose
     assert compose.count("<<: *app-common") == 3
     assert "SNAKETRACKER_UID: ${SNAKETRACKER_UID:-1000}" in compose

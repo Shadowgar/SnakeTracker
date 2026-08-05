@@ -40,15 +40,19 @@ uv sync --frozen
 ./scripts/quality/check.sh
 ```
 
-Start the currently qualified laptop stack on port 8081 because another local project owns 8080:
+Start the currently qualified laptop stack on port 18081. Port 8080 is owned by another local
+project, and this Windows/Hyper-V installation reserves port 8081:
 
 ```sh
 SNAKETRACKER_UID=1001 COMPOSE_BAKE=false docker compose build web
 SNAKETRACKER_DATA_DIR=./runtime/phase2 \
-SNAKETRACKER_HTTP_PORT=8081 \
-SNAKETRACKER_EXTERNAL_ORIGIN=http://localhost:8081 \
+SNAKETRACKER_BIND_ADDRESS=0.0.0.0 \
+SNAKETRACKER_HTTP_PORT=18081 \
+SNAKETRACKER_EXTERNAL_ORIGIN=http://localhost:18081 \
 docker compose up -d --no-build
 ```
 
-Open `http://localhost:8081`. The active qualification database is intentionally fresh and shows
-the first-run setup page.
+The `0.0.0.0` bind is required for Windows-to-WSL2 localhost forwarding in the qualified laptop
+topology; the Compose default remains the local-only `127.0.0.1`. Windows Firewall remains the
+host boundary. Open `http://localhost:18081/setup` from Windows. The active qualification database
+is intentionally fresh and shows the first-run setup page.
