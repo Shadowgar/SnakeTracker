@@ -39,14 +39,16 @@ ADR-0036.
 
 ## Phase 2 / M2 — Security boundary proven
 
-- [ ] RB Minimal permanent household events, atomic bootstrap append, idempotency, replay, unknown-contract failure, and synchronous authorization projection pass. Evidence: `m2-security/tests/bootstrap`.
-- [ ] RB Household and initial owner bootstrap atomically.
-- [ ] RB Current authorization projection gates every protected request.
-- [ ] RB Cross-household and role-capability tests pass.
-- [ ] RB Sessions rotate, expire, revoke, and invalidate after restoration as designed.
-- [ ] RB CSRF and security-audit coverage pass.
-- [ ] RD Trusted proxy, host, secure-origin, rate-limit, and remote security tests pass.
-- [ ] RB Critical identity flows pass accessibility checks.
+Status: implementation qualified; owner acceptance pending
+
+- [x] RB Minimal permanent household events, atomic bootstrap append, idempotency, replay, unknown-contract failure, and synchronous authorization projection pass. Evidence: `m2-security/tests/bootstrap.md`.
+- [x] RB Household and initial owner bootstrap atomically. Evidence: `m2-security/tests/bootstrap.md`.
+- [x] RB Current authorization projection gates every protected request. Evidence: `m2-security/security/authorization.md`.
+- [x] RB Cross-household and role-capability tests pass. Evidence: `m2-security/security/authorization.md`.
+- [x] RB Sessions rotate, expire, revoke, and invalidate after restoration as designed. Evidence: `m2-security/security/authentication.md`.
+- [x] RB CSRF and security-audit coverage pass. Evidence: `m2-security/security/audit.md`.
+- [ ] RD Trusted proxy, host, secure-origin, rate-limit, and remote security tests pass. Deferred while remote access remains disabled; local rate limiting and same-origin validation pass.
+- [x] RB Critical identity flows pass accessibility checks. Evidence: `m2-security/browser/README.md`.
 
 ## Phase 3 / M3 — Event integrity proven
 
