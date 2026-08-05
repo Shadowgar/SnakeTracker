@@ -124,6 +124,7 @@ def test_csrf_and_validation_errors_are_usable_and_security_headers_are_strict(
         assert "default-src 'self'" in invalid.headers["content-security-policy"]
         assert invalid.headers["x-content-type-options"] == "nosniff"
         assert "unsafe-inline" not in invalid.headers["content-security-policy"]
+        assert client.get("/static/favicon.svg").headers["content-type"] == "image/svg+xml"
 
 
 def test_login_failure_rate_limit_and_unauthenticated_redirect(tmp_path: Path) -> None:
