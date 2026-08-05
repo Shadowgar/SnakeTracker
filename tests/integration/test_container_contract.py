@@ -65,6 +65,14 @@ def test_nginx_does_not_expose_internal_metrics_or_trust_forwarded_headers() -> 
     assert "X-Content-Type-Options" in nginx
 
 
+def test_nginx_reresolves_web_service_after_container_replacement() -> None:
+    nginx = read_project_file("deploy/nginx/nginx.conf")
+
+    assert "resolver 127.0.0.11" in nginx
+    assert "set $snaketracker_web web:8000;" in nginx
+    assert "proxy_pass http://$snaketracker_web;" in nginx
+
+
 def test_container_context_excludes_secrets_and_runtime_state() -> None:
     ignored = read_project_file(".dockerignore")
 
