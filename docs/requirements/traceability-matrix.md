@@ -46,6 +46,7 @@ This matrix is authoritative for architecture acceptance. Evidence paths are rel
 | R-040 | OAuth, MFA, organizations, offline writes, marketplace, AI, telemetry and similar expansions are deferred | DC | 0021, 0022, 0027, 0035 | Varies | Future | AR-REV-02 approved promotion ADR | m0-architecture/approvals/deferred | Future |
 | R-041 | Laptop Docker is the primary development environment; amd64 tests/Compose and ARM64 image builds qualify M1 without native Pi hardware | RB | 0036 | TM-18, TM-20 | 1–6 | DEV-PLAT-01 local quality, Compose, amd64 runtime, and ARM64 build suite | m1-platform/approvals/m1-review | M1 |
 | R-042 | Native Pi execution, SSD/ext4, cold/warm performance, resources, thermal behavior, SQLite persistence, and backup/restore pass before Pi deployment | DDQ/RB | 0010, 0018, 0024, 0036 | TM-12, TM-13, TM-18, TM-20 | 7/pre-deployment | PERF-PI-01 and OP-BK-01 deployment qualification suite | m7-recovery-compatibility/performance/pi | Raspberry Pi deployment |
+| R-043 | Minimal permanent household event slice atomically bootstraps identity and current authorization without bringing general Phase 3 scope forward | RB | 0002, 0005, 0011, 0012, 0015, 0037 | TM-04, TM-09, TM-20 | 2 | AT-EVT-HH-01 atomic append, idempotency, replay, compatibility, and exclusion suite | m2-security/tests/bootstrap | M2 |
 
 ## Coverage rule
 

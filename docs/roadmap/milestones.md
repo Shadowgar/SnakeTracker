@@ -39,6 +39,7 @@ ADR-0036.
 
 ## Phase 2 / M2 — Security boundary proven
 
+- [ ] RB Minimal permanent household events, atomic bootstrap append, idempotency, replay, unknown-contract failure, and synchronous authorization projection pass. Evidence: `m2-security/tests/bootstrap`.
 - [ ] RB Household and initial owner bootstrap atomically.
 - [ ] RB Current authorization projection gates every protected request.
 - [ ] RB Cross-household and role-capability tests pass.
@@ -49,6 +50,7 @@ ADR-0036.
 
 ## Phase 3 / M3 — Event integrity proven
 
+- [ ] RB General event platform extends and replays the Phase 2 household contracts without rewriting stored events.
 - [ ] RB Historical fixtures replay deterministically.
 - [ ] RB Unknown event contracts enter restricted recovery mode.
 - [ ] RB Atomic multi-stream failures leave no partial state.

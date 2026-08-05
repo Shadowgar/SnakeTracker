@@ -35,3 +35,10 @@ def test_accepted_amendment_paths_cover_adr_0036_governed_documents() -> None:
     )
     assert "docs/requirements/traceability-matrix.md" in freeze.APPROVED_AMENDMENT_PATHS
     assert freeze.ACCEPTANCE_DATES["0036"] == "2026-08-05"
+
+
+def test_accepted_amendment_paths_cover_adr_0037_phase_order_change() -> None:
+    assert "docs/adr/0037-phase-order-minimal-household-events.md" in (
+        freeze.APPROVED_AMENDMENT_PATHS
+    )
+    assert freeze.ACCEPTANCE_DATES["0037"] == "2026-08-05"

@@ -21,5 +21,7 @@ Verification on 2026-08-05 found 19 required package/index records, 36 accepted 
 
 Post-freeze amendments are append-oriented and retain their approval and consequence evidence in
 this directory. See the [2026-08-05 qualification-timing amendment](2026-08-05-qualification-timing-amendment.md).
+The [Phase 2 household-event phase-order amendment](2026-08-05-household-event-phase-order-amendment.md)
+records approval of ADR-0037.
 
 Phase 2 has not started. M2 through M8 remain unaccepted in the controlling milestone checklist.

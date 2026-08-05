@@ -12,11 +12,13 @@ BASELINE_COMMIT = "bb3ab39"
 ACCEPTANCE_DATES = {
     **{f"{number:04d}": "2026-08-04" for number in range(1, 36)},
     "0036": "2026-08-05",
+    "0037": "2026-08-05",
 }
 APPROVED_AMENDMENT_PATHS = {
     "docs/README.md",
     "docs/adr/README.md",
     "docs/adr/0036-development-and-pi-deployment-qualification.md",
+    "docs/adr/0037-phase-order-minimal-household-events.md",
     "docs/architecture/system-architecture.md",
     "docs/operations/runtime-operations.md",
     "docs/quality/representative-dataset.md",
@@ -51,7 +53,7 @@ def main() -> int:
     expected_names = set(ACCEPTANCE_DATES)
     actual_names = {path.name[:4] for path in adr_paths}
     if actual_names != expected_names:
-        failures.append("ADR catalog must contain exactly ADR-0001 through ADR-0036")
+        failures.append("ADR catalog must contain exactly ADR-0001 through ADR-0037")
     for path in adr_paths:
         text = path.read_text(encoding="utf-8")
         acceptance_date = ACCEPTANCE_DATES[path.name[:4]]
