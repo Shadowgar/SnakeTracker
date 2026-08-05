@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · SnakeTracker{% endblock %}
+{% block content %}
+<section class="card error-page" aria-labelledby="page-title">
+  <p class="eyebrow">SnakeTracker</p>
+  <h1 id="page-title">{{ title }}</h1>
+  <p>{{ message }}</p>
+  <a class="button-link" href="/">Return to SnakeTracker</a>
+</section>
+{% endblock %}

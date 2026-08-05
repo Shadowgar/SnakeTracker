@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Log in to SnakeTracker{% endblock %}
+{% block content %}
+<section class="auth-layout compact" aria-labelledby="page-title">
+  <div class="intro-panel">
+    <p class="eyebrow">Welcome back</p>
+    <h1 id="page-title">Log in to SnakeTracker</h1>
+    <p>Your household records stay available only to current members.</p>
+  </div>
+  <form class="card form-stack" method="post" action="/login">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% if error %}<div class="alert" role="alert">{{ error }}</div>{% endif %}
+    <label>Email<input name="email" type="email" required autocomplete="username" value="{{ email or '' }}"></label>
+    <label>Password<input name="password" type="password" required autocomplete="current-password"></label>
+    <button type="submit">Log in</button>
+  </form>
+</section>
+{% endblock %}

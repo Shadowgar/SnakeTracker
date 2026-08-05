@@ -40,6 +40,8 @@ def test_compose_services_are_hardened_and_local_only() -> None:
     assert "healthcheck:" in compose
     assert "SNAKETRACKER_RUNTIME_SECRET_FILE" in compose
     assert "SNAKETRACKER_RUNTIME_SECRET:" not in compose
+    assert "SNAKETRACKER_ENVIRONMENT: development" in compose
+    assert 'SNAKETRACKER_SESSION_COOKIE_SECURE: "false"' in compose
     assert 'user: "101:101"' in compose
     assert "/tmp:size=16m,mode=1777,uid=101,gid=101" in compose
 

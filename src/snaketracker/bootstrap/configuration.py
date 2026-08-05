@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     external_origin: HttpUrl | None = None
     runtime_secret: SecretStr | None = None
     log_level: str = "INFO"
+    session_cookie_secure: bool = True
 
     @field_validator("external_origin")
     @classmethod
@@ -91,6 +92,7 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         "SNAKETRACKER_DATABASE_PATH": "database_path",
         "SNAKETRACKER_EXTERNAL_ORIGIN": "external_origin",
         "SNAKETRACKER_LOG_LEVEL": "log_level",
+        "SNAKETRACKER_SESSION_COOKIE_SECURE": "session_cookie_secure",
     }
     for environment_key, field_name in keys.items():
         if environment_key in source:

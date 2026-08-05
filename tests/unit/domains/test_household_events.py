@@ -57,6 +57,24 @@ def test_household_contracts_have_stable_registered_identities() -> None:
         household_event_registry.payload_type("household.future", 1)
 
 
+def test_household_registry_deserializes_both_contracts_and_rejects_shape() -> None:
+    household_id = uuid4()
+    created = household_event_registry.deserialize(
+        "household.created",
+        1,
+        {"household_name": "Home", "timezone": "America/New_York"},
+    )
+    owner = household_event_registry.deserialize(
+        "household.owner_added", 1, {"user_id": str(household_id), "role": "owner"}
+    )
+
+    assert created == HouseholdCreatedV1("Home", "America/New_York")
+    assert owner == HouseholdOwnerAddedV1(household_id, "owner")
+    assert ("household.created", 1) in household_event_registry.identities
+    with pytest.raises(ValueError, match="does not match"):
+        household_event_registry.deserialize("household.created", 1, {"unexpected": True})
+
+
 def test_event_checksum_is_stable_and_detects_payload_change() -> None:
     created = event(
         "household.created",
