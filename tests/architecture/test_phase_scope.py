@@ -7,18 +7,18 @@ import snaketracker
 
 ROOT = Path(__file__).parents[2]
 
-FORBIDDEN_PHASE_ONE_PATHS = (
-    "src/snaketracker/domains",
-    "src/snaketracker/platform/auth",
-    "src/snaketracker/platform/events",
+FORBIDDEN_PHASE_TWO_PATHS = (
+    "src/snaketracker/domains/animals",
+    "src/snaketracker/domains/enclosures",
+    "src/snaketracker/domains/inventory",
+    "src/snaketracker/domains/expenses",
+    "src/snaketracker/domains/reminders",
     "src/snaketracker/platform/jobs",
     "src/snaketracker/platform/notifications",
-    "src/snaketracker/static",
 )
 
-FORBIDDEN_PHASE_ONE_DEPENDENCIES = {
+FORBIDDEN_PHASE_TWO_DEPENDENCIES = {
     "authlib",
-    "jinja2",
     "passlib",
     "pyjwt",
     "python-jose",
@@ -40,12 +40,12 @@ def test_package_exposes_the_project_version() -> None:
     assert snaketracker.__version__ == "0.1.0"
 
 
-def test_phase_one_has_no_phase_two_packages_or_dependencies() -> None:
+def test_phase_two_has_no_later_phase_packages_or_dependencies() -> None:
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())
     dependencies = {
-        requirement.split("[", 1)[0].split("=", 1)[0].split("<", 1)[0].lower()
+        requirement.split("[", 1)[0].split("=", 1)[0].split("<", 1)[0].split(">", 1)[0].lower()
         for requirement in project["project"]["dependencies"]
     }
 
-    assert not FORBIDDEN_PHASE_ONE_DEPENDENCIES & dependencies
-    assert not [path for path in FORBIDDEN_PHASE_ONE_PATHS if (ROOT / path).exists()]
+    assert not FORBIDDEN_PHASE_TWO_DEPENDENCIES & dependencies
+    assert not [path for path in FORBIDDEN_PHASE_TWO_PATHS if (ROOT / path).exists()]
