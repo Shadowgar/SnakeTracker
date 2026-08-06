@@ -1,7 +1,7 @@
 # M2 Browser and Accessibility Evidence
 
-- Retained browser-run source revision: `0bcbc801c2f7fbfed0812f6ad0212eba209f307c`
-- Review-correction revision: `25d52a34ce3cb343d1678de75118863d844d80b5`
+- Accessibility-scan source revision: `25d52a34ce3cb343d1678de75118863d844d80b5`
+- Retained screenshot source revision: `0bcbc801c2f7fbfed0812f6ad0212eba209f307c`
 - Browser: Playwright Chromium, 390 by 844 mobile viewport
 - Reviewer: Codex automated verification; owner visually accepted the flow August 6, 2026
 - Requirement: R-035 M2 critical identity-flow slice
@@ -24,6 +24,7 @@ npx --yes pa11y@9.0.1 http://127.0.0.1:18081/setup \
   --runner axe --standard WCAG2AA --reporter cli
 ```
 
-Pa11y/axe reported `No issues found!` after solid, measurable contrast surfaces replaced decorative
+Pa11y 9.0.1 with axe reported `No issues found!` on the review-correction revision. Solid,
+measurable contrast surfaces replace decorative
 translucent/gradient backgrounds. Keyboard-visible focus, a skip link, responsive layout, and
 reduced-motion handling are present. Broader product-wide WCAG acceptance remains a Phase 6 gate.
