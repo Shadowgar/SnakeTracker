@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -23,6 +24,7 @@ from snaketracker.infrastructure.identity.bootstrap_repository import (
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 from snaketracker.platform.events.envelope import DomainEvent, EventSubject, event_checksum
 from snaketracker.platform.events.store import ExpectedVersionConflictError, StreamKey
+from snaketracker.platform.events.validation import EventValidationError
 
 ROOT = Path(__file__).parents[2]
 SECRET = b"phase3-event-store-test-secret-32-bytes"
@@ -125,5 +127,30 @@ def test_expected_version_conflict_leaves_stream_unchanged(tmp_path: Path) -> No
                 connection.execute(text("SELECT current_version FROM event_streams")).scalar_one()
                 == 2
             )
+    finally:
+        engine.dispose()
+
+
+def test_subject_household_and_current_actor_permission_are_checked_in_append(
+    tmp_path: Path,
+) -> None:
+    store, engine, key, result = migrated_store(tmp_path)
+    try:
+        valid = household_created_event(key, result.user_id, 3)
+        other_household = replace(
+            valid,
+            subjects=(EventSubject("household", uuid4(), "primary", 0),),
+            checksum="",
+        )
+        other_household = other_household.with_checksum(event_checksum(other_household))
+        with pytest.raises(EventValidationError, match="does not exist"):
+            store.append(key, expected_version=2, events=(other_household,))
+
+        unauthorized = replace(valid, actor_user_id=uuid4(), checksum="")
+        unauthorized = unauthorized.with_checksum(event_checksum(unauthorized))
+        with pytest.raises(EventValidationError, match="current household permission"):
+            store.append(key, expected_version=2, events=(unauthorized,))
+
+        assert len(store.load_stream(key)) == 2
     finally:
         engine.dispose()

@@ -13,6 +13,13 @@ from snaketracker.platform.events.registry import (
     SubjectRequirement,
 )
 
+
+class SyntheticSubjectValidator:
+    """Explicit test-only subject validator for reserved fixture contracts."""
+
+    def validate(self, transaction: object, event: object) -> None:
+        del transaction, event
+
 SYNTHETIC_PREFIX = "__snaketracker_test__."
 
 

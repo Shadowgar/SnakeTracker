@@ -1,0 +1,56 @@
+"""SQLite subject existence, tenancy, and actor-permission checks."""
+
+from __future__ import annotations
+
+from typing import cast
+
+from sqlalchemy import text
+from sqlalchemy.engine import Connection
+
+from snaketracker.platform.events.envelope import DomainEvent
+from snaketracker.platform.events.validation import EventValidationError
+
+
+class SQLAlchemySubjectReferenceValidator:
+    """Validate production subject types using the current append transaction."""
+
+    def validate(self, transaction: object, event: DomainEvent) -> None:
+        connection = cast(Connection, transaction)
+        actor_membership = connection.execute(
+            text(
+                "SELECT 1 FROM authorization_memberships "
+                "WHERE household_id=:household_id AND user_id=:user_id AND status='active'"
+            ),
+            {"household_id": str(event.household_id), "user_id": str(event.actor_user_id)},
+        ).scalar_one_or_none()
+        if actor_membership is None:
+            raise EventValidationError("Event actor lacks current household permission.")
+
+        for subject in event.subjects:
+            if subject.subject_type == "household":
+                exists = connection.execute(
+                    text(
+                        "SELECT 1 FROM household_summaries "
+                        "WHERE household_id=:subject_id AND household_id=:household_id"
+                    ),
+                    {
+                        "subject_id": str(subject.subject_id),
+                        "household_id": str(event.household_id),
+                    },
+                ).scalar_one_or_none()
+            elif subject.subject_type == "user":
+                exists = connection.execute(
+                    text(
+                        "SELECT 1 FROM users u JOIN authorization_memberships m "
+                        "ON m.user_id=u.user_id WHERE u.user_id=:subject_id "
+                        "AND m.household_id=:household_id"
+                    ),
+                    {
+                        "subject_id": str(subject.subject_id),
+                        "household_id": str(event.household_id),
+                    },
+                ).scalar_one_or_none()
+            else:
+                raise EventValidationError("Event subject type is not registered.")
+            if exists is None:
+                raise EventValidationError("Event subject does not exist in the event household.")

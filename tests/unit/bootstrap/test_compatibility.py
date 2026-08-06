@@ -16,7 +16,7 @@ from snaketracker.bootstrap.compatibility import (
     ("metadata", "database_is_empty", "expected_mode"),
     [
         (
-            {"manifest_version": 1, "relational_schema_version": 3},
+            {"manifest_version": 1, "relational_schema_version": 4},
             False,
             CompatibilityMode.NORMAL,
         ),
@@ -28,12 +28,12 @@ from snaketracker.bootstrap.compatibility import (
         (None, True, CompatibilityMode.BOOTSTRAP_ALLOWED),
         (None, False, CompatibilityMode.RECOVERY_REQUIRED),
         (
-            {"manifest_version": 2, "relational_schema_version": 3},
+            {"manifest_version": 2, "relational_schema_version": 4},
             False,
             CompatibilityMode.RECOVERY_REQUIRED,
         ),
         (
-            {"manifest_version": 1, "relational_schema_version": 4},
+            {"manifest_version": 1, "relational_schema_version": 5},
             False,
             CompatibilityMode.RECOVERY_REQUIRED,
         ),
@@ -73,9 +73,7 @@ def test_known_alembic_revision_is_compatible(tmp_path) -> None:
     try:
         with engine.begin() as connection:
             connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
-            connection.execute(
-                text("INSERT INTO alembic_version VALUES ('0003_phase2_review_hardening')")
-            )
+            connection.execute(text("INSERT INTO alembic_version VALUES ('0004_event_platform')"))
 
         assert inspect_database_compatibility(engine).mode is CompatibilityMode.NORMAL
     finally:
@@ -168,9 +166,7 @@ def test_startup_compatibility_accepts_supported_runtime_and_schema(tmp_path) ->
     try:
         with engine.begin() as connection:
             connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
-            connection.execute(
-                text("INSERT INTO alembic_version VALUES ('0003_phase2_review_hardening')")
-            )
+            connection.execute(text("INSERT INTO alembic_version VALUES ('0004_event_platform')"))
             connection.execute(
                 text(
                     "CREATE TABLE domain_events ("

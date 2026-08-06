@@ -7,8 +7,9 @@ from alembic.config import Config
 from sqlalchemy import create_engine, inspect, text
 
 ROOT = Path(__file__).parents[2]
-REVISION = "0003_phase2_review_hardening"
-PHASE_TWO_TABLES = {
+REVISION = "0004_event_platform"
+PHASE_THREE_TABLES = {
+    "aggregate_snapshots",
     "alembic_version",
     "authorization_memberships",
     "domain_events",
@@ -17,6 +18,10 @@ PHASE_TWO_TABLES = {
     "household_summaries",
     "idempotency_operations",
     "login_rate_limits",
+    "outbox_items",
+    "projection_checkpoints",
+    "projection_definitions",
+    "projection_generations",
     "security_audit",
     "sessions",
     "users",
@@ -57,7 +62,7 @@ def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -
 
     engine = create_engine(f"sqlite+pysqlite:///{database}")
     try:
-        assert set(inspect(engine).get_table_names()) == PHASE_TWO_TABLES
+        assert set(inspect(engine).get_table_names()) == PHASE_THREE_TABLES
     finally:
         engine.dispose()
 
@@ -68,7 +73,7 @@ def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -
     assert current_revision(database) == REVISION
 
 
-def test_migrations_contain_no_event_upcasters_or_later_phase_tables() -> None:
+def test_migrations_contain_no_event_upcasters_or_phase_four_tables() -> None:
     migration_root = ROOT / "migrations"
     assert not list(migration_root.rglob("*upcaster*"))
 
@@ -82,8 +87,6 @@ def test_migrations_contain_no_event_upcasters_or_later_phase_tables() -> None:
         "expenses",
         "jobs",
         "notifications",
-        "snapshots",
-        "projection_generations",
     }
     assert not {name for name in forbidden if name in migration_text}
 
@@ -114,6 +117,12 @@ def test_identity_schema_has_required_uniqueness_and_foreign_keys(tmp_path: Path
         assert "ix_domain_events_stream" not in {
             item["name"] for item in inspector.get_indexes("domain_events")
         }
+        assert {item["name"] for item in inspector.get_unique_constraints("outbox_items")} == {
+            "uq_outbox_logical_handoff"
+        }
+        assert {
+            item["name"] for item in inspector.get_unique_constraints("aggregate_snapshots")
+        } == {"uq_snapshot_stream_version_schema"}
     finally:
         engine.dispose()
 

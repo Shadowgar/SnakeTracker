@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
@@ -22,8 +25,64 @@ class AppendResult:
     global_positions: tuple[int, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class StreamAppend:
+    key: StreamKey
+    expected_version: int
+    events: tuple[DomainEvent, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class OutboxHandoff:
+    outbox_id: UUID
+    household_id: UUID
+    kind: str
+    payload_contract: str
+    schema_version: int
+    logical_key: str
+    payload: dict[str, object]
+    correlation_id: UUID
+    causation_id: UUID | None
+    available_at: datetime
+    created_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class IdempotencyContext:
+    operation_id: UUID
+    household_id: UUID
+    actor_user_id: UUID
+    operation_scope: str
+    idempotency_key: str
+    command_hash: str
+    correlation_id: UUID
+    stored_response: dict[str, object]
+    stored_response_schema_version: int
+    created_at: datetime
+    expires_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class AtomicAppendRequest:
+    streams: tuple[StreamAppend, ...]
+    idempotency: IdempotencyContext
+    outbox: tuple[OutboxHandoff, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class AtomicAppendResult:
+    stream_versions: tuple[tuple[StreamKey, int], ...]
+    event_ids: tuple[UUID, ...]
+    stored_response: dict[str, object]
+    stored_response_schema_version: int
+
+
 class ExpectedVersionConflictError(RuntimeError):
     """The stream head differs from the command expectation."""
+
+
+class IdempotencyConflictError(RuntimeError):
+    """An idempotency key was reused with a different canonical command hash."""
 
 
 class EventStore(Protocol):
@@ -32,3 +91,12 @@ class EventStore(Protocol):
     def append(
         self, key: StreamKey, *, expected_version: int, events: tuple[DomainEvent, ...]
     ) -> AppendResult: ...
+
+    def append_many(self, request: AtomicAppendRequest) -> AtomicAppendResult: ...
+
+
+def canonical_command_hash(command: dict[str, object]) -> str:
+    canonical = json.dumps(
+        command, sort_keys=True, separators=(",", ":"), ensure_ascii=True
+    ).encode()
+    return hashlib.sha256(canonical).hexdigest()
