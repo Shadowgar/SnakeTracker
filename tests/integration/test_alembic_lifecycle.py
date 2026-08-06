@@ -1,10 +1,21 @@
 from __future__ import annotations
 
 from pathlib import Path
+from uuid import uuid4
 
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import create_engine, inspect, text
+
+from snaketracker.application.household_bootstrap import (
+    BootstrapCommand,
+    HouseholdBootstrapService,
+)
+from snaketracker.infrastructure.database.engine import create_sqlite_engine
+from snaketracker.infrastructure.identity.bootstrap_repository import (
+    SQLAlchemyHouseholdBootstrapRepository,
+)
+from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 
 ROOT = Path(__file__).parents[2]
 REVISION = "0004_event_platform"
@@ -142,3 +153,70 @@ def test_schema_avoids_json_functions_unsafe_on_minimum_sqlite(tmp_path: Path) -
         assert "json_valid(" not in schema
     finally:
         engine.dispose()
+
+
+def test_phase_two_household_events_are_unchanged_by_phase_three_migration(
+    tmp_path: Path,
+) -> None:
+    database = tmp_path / "phase2-upgrade.sqlite3"
+    config = alembic_config(database)
+    command.upgrade(config, "0003_phase2_review_hardening")
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    try:
+        HouseholdBootstrapService(
+            SQLAlchemyHouseholdBootstrapRepository(engine),
+            Argon2PasswordHasher.for_testing(),
+            command_hash_secret=b"phase3-migration-test-secret-32-bytes",
+        ).bootstrap(
+            BootstrapCommand(
+                household_name="Migration Home",
+                timezone="UTC",
+                owner_email="migration@example.com",
+                owner_display_name="Migration Owner",
+                password="correct horse battery staple",
+                idempotency_key="phase3-migration-fixture",
+                correlation_id=uuid4(),
+            )
+        )
+        with engine.connect() as connection:
+            events_before = (
+                connection.execute(text("SELECT * FROM domain_events ORDER BY global_position"))
+                .mappings()
+                .all()
+            )
+            subjects_before = (
+                connection.execute(
+                    text(
+                        "SELECT * FROM event_subjects "
+                        "ORDER BY event_id,subject_type,subject_id,relationship"
+                    )
+                )
+                .mappings()
+                .all()
+            )
+    finally:
+        engine.dispose()
+
+    command.upgrade(config, "head")
+    upgraded = create_engine(f"sqlite+pysqlite:///{database}")
+    try:
+        with upgraded.connect() as connection:
+            assert (
+                connection.execute(text("SELECT * FROM domain_events ORDER BY global_position"))
+                .mappings()
+                .all()
+                == events_before
+            )
+            assert (
+                connection.execute(
+                    text(
+                        "SELECT * FROM event_subjects "
+                        "ORDER BY event_id,subject_type,subject_id,relationship"
+                    )
+                )
+                .mappings()
+                .all()
+                == subjects_before
+            )
+    finally:
+        upgraded.dispose()
