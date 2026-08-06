@@ -1,6 +1,6 @@
 # Phase 3 General Event Platform Implementation Plan
 
-**Status:** Proposed for owner review; implementation has not started.
+**Status:** Approved August 6, 2026; implementation authorized on `phase3/event-platform`.
 
 **Goal:** Extend the permanent Phase 2 household-event slice into the accepted general event
 platform and prove M3 event integrity without adding animal or other Phase 4 product features.
@@ -18,6 +18,19 @@ event API, product search, reports, dashboards, plugins, jobs/notifications, att
 access, or Raspberry Pi deployment is authorized. Synthetic test contracts and test-only
 projections may exercise multi-stream, correction, FTS5 swap, and recovery behavior without
 creating Phase 4 domain functionality.
+
+Synthetic contracts use an unmistakable reserved test namespace, live only in test/fixture
+packages, and are injected only into test-created registries. Production composition, startup
+scans, exports, Alembic migrations, and public routes cannot discover or register them. Projection
+physical identifiers are selected only from code-owned allow-listed definitions and are never
+derived from request or user data.
+
+Phase 2 compatibility preserves the canonical envelope, payload, contract identity, global and
+stream ordering fields, and checksum behavior; it does not claim identical SQLite file bytes.
+Corrupt or incompatible snapshots are ignored or quarantined with diagnostics and replay fallback,
+never silently deleted by aggregate loading. Phase 3 outbox scope ends at atomic durable handoff;
+delivery workers, jobs, notifications, and external side effects remain excluded. Native Pi
+qualification remains deferred and does not block M3.
 
 ## Governing requirements
 
@@ -147,4 +160,5 @@ reviewable; no squash, history rewrite, or architecture change is assumed.
 3. Approve a forward Alembic revision after 0003 rather than modifying the accepted Phase 2
    migrations.
 
-Implementation must wait for explicit approval of this plan.
+Implementation was explicitly approved August 6, 2026. Any semantic conflict with an accepted ADR
+or database contract remains a stop condition under ADR-0028.
