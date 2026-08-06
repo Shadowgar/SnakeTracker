@@ -77,7 +77,7 @@ def test_login_creates_opaque_session_and_resolves_current_authorization(tmp_pat
     assert principal.display_name == "Rocco"
     assert principal.role == "owner"
     assert "household.manage" in principal.capabilities
-    assert service.verify_csrf(issued.token, issued.csrf_token)
+    assert service.verify_csrf(issued.token, issued.csrf_token, now=now + timedelta(minutes=1))
     with engine.connect() as connection:
         row = connection.execute(text("SELECT token_hash, csrf_token_hash FROM sessions")).one()
         assert issued.token not in row.token_hash

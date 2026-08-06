@@ -212,9 +212,9 @@ class IdentityService:
             capabilities=ROLE_CAPABILITIES.get(principal.role, frozenset()),
         )
 
-    def verify_csrf(self, token: str, submitted_token: str) -> bool:
+    def verify_csrf(self, token: str, submitted_token: str, *, now: datetime | None = None) -> bool:
         expected = self._repository.csrf_hash_for(
-            self._digest(f"session:{token}"), now=datetime.now(UTC)
+            self._digest(f"session:{token}"), now=now or datetime.now(UTC)
         )
         actual = self._digest(f"csrf:{submitted_token}")
         return expected is not None and hmac.compare_digest(expected, actual)
