@@ -1,7 +1,9 @@
 # M2 Browser and Accessibility Evidence
 
-- Source revision: `0bcbc801c2f7fbfed0812f6ad0212eba209f307c`
+- Retained browser-run source revision: `0bcbc801c2f7fbfed0812f6ad0212eba209f307c`
+- Review-correction revision: `25d52a34ce3cb343d1678de75118863d844d80b5`
 - Browser: Playwright Chromium, 390 by 844 mobile viewport
+- Reviewer: Codex automated verification; owner visually accepted the flow August 6, 2026
 - Requirement: R-035 M2 critical identity-flow slice
 - Threat controls: TM-03, TM-05
 - Result: Pass
@@ -12,10 +14,13 @@ The semantic snapshots contain one page-level heading, explicit field labels, a 
 regions, and accessible buttons. The retained [mobile screenshot](mobile-home.png) shows the
 authenticated state; it contains only synthetic qualification data.
 
-The reproducible automated check is:
+The retained August 5 browser run used the original local qualification endpoint on port 8081.
+The current owner-facing WSL2 profile uses port 18081 because Windows/Hyper-V later reserved 8081;
+the application and test configuration are otherwise equivalent. The reproducible current
+accessibility check is:
 
 ```sh
-npx --yes pa11y http://127.0.0.1:8081/setup \
+npx --yes pa11y@9.0.1 http://127.0.0.1:18081/setup \
   --runner axe --standard WCAG2AA --reporter cli
 ```
 

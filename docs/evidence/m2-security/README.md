@@ -1,7 +1,7 @@
 # M2 Security Boundary Evidence
 
-- Execution date: 2026-08-05
-- Implementation revision: `0bcbc801c2f7fbfed0812f6ad0212eba209f307c`
+- Execution date: 2026-08-06
+- Implementation revision: `25d52a34ce3cb343d1678de75118863d844d80b5`
 - Architecture baseline: `6c6ae1fa9a1690ab30d453666aecee3eae0acffb`
 - Branch: `phase2/identity-household`
 - Environment: x86_64 WSL2 laptop, Docker Engine, Python 3.13.14
@@ -30,6 +30,7 @@ M2 is not accepted until the owner reviews this branch. Phase 3 has not started.
 - [Container and ARM64 evidence](containers/README.md)
 - [Browser and accessibility evidence](browser/README.md)
 - [Mobile authenticated-home screenshot](browser/mobile-home.png)
+- [PR #3 automated-review disposition](reviews/pr-3-review-disposition.md)
 
 ## Reproduction
 
@@ -40,8 +41,9 @@ uv sync --frozen
 ./scripts/quality/check.sh
 ```
 
-Start the currently qualified laptop stack on port 18081. Port 8080 is owned by another local
-project, and this Windows/Hyper-V installation reserves port 8081:
+Start the current owner-facing laptop stack on port 18081. The retained initial container and
+browser evidence used 8081; Windows/Hyper-V subsequently reserved that port. Port 8080 is owned by
+another local project:
 
 ```sh
 SNAKETRACKER_UID=1001 COMPOSE_BAKE=false docker compose build web

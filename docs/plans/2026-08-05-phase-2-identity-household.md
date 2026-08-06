@@ -15,34 +15,37 @@ the FastAPI startup layer.
 **Tech stack:** Python 3.13, FastAPI, synchronous SQLAlchemy/SQLite, Alembic, Argon2id, Jinja2,
 plain external CSS, Docker Compose, pytest, and Playwright CLI.
 
+**Status:** Implementation and qualification checklist completed August 6, 2026; final owner
+acceptance remains governed by the M2 milestone record.
+
 ## Ordered test-driven checklist
 
-- [ ] Add locked runtime dependencies (`argon2-cffi`, `jinja2`, `python-multipart`) and retain the
+- [x] Add locked runtime dependencies (`argon2-cffi`, `jinja2`, `python-multipart`) and retain the
   existing quality/coverage gates.
-- [ ] Add migration `0002_identity_household` for users, event streams/events, idempotency,
+- [x] Add migration `0002_identity_household` for users, event streams/events, idempotency,
   household summary, authorization memberships, sessions, login rate limits, and security audit;
   prove upgrade, downgrade, constraints, and absence of excluded tables.
-- [ ] Define typed `household.created` and `household.owner_added` v1 contracts, the compatible
+- [x] Define typed `household.created` and `household.owner_added` v1 contracts, the compatible
   minimal envelope, checksum, registry lookup, replay, and unknown-contract failure.
-- [ ] Implement one-transaction bootstrap with canonical idempotency hashing, contiguous stream
+- [x] Implement one-transaction bootstrap with canonical idempotency hashing, contiguous stream
   versions, credential creation, both events, stored result, and synchronous projections; prove
   rollback and retry behavior.
-- [ ] Implement Argon2id password hashing/verification and generic validation failures without
+- [x] Implement Argon2id password hashing/verification and generic validation failures without
   persisting or logging plaintext credentials.
-- [ ] Implement opaque server-side sessions with hashed tokens, rotation on login, idle/absolute
-  expiry, revocation, logout, conditional Secure cookie, HttpOnly, SameSite=Lax, and safe cleanup.
-- [ ] Implement CSRF synchronizer tokens plus Origin/content-type validation for all browser writes.
-- [ ] Implement bounded failed-login rate limiting and append-oriented authentication/session/
+- [x] Implement opaque server-side sessions with hashed tokens, rotation on login, idle/absolute
+  expiry, revocation, logout, conditional Secure cookie, HttpOnly, SameSite=Strict, and safe cleanup.
+- [x] Implement CSRF synchronizer tokens plus Origin/content-type validation for all browser writes.
+- [x] Implement bounded failed-login rate limiting and append-oriented authentication/session/
   authorization/denial security audit records.
-- [ ] Implement centralized current-membership/capability dependencies; prove that stale session
+- [x] Implement centralized current-membership/capability dependencies; prove that stale session
   identity alone never authorizes and cross-household access fails closed.
-- [ ] Implement `/setup`, `/login`, `/`, and `/logout` server-rendered routes with autoescaped Jinja,
+- [x] Implement `/setup`, `/login`, `/`, and `/logout` server-rendered routes with autoescaped Jinja,
   strict CSP/security headers, generic usable errors, responsive external CSS, semantic landmarks,
   visible focus, 44px targets, error summaries, and reduced-motion support.
-- [ ] Run unit, domain, integration, security, migration, browser, and accessibility checks; run the
+- [x] Run unit, domain, integration, security, migration, browser, and accessibility checks; run the
   exact fresh-install/setup/login/home/protected/logout/relogin/expiry/revocation/rate-limit/CSRF
   Docker flow and retain evidence under `/docs/evidence/m2-security`.
-- [ ] Mark only verified M2 RB criteria with evidence. Leave trusted-proxy RD and all M3+ criteria
+- [x] Mark only verified M2 RB criteria with evidence. Leave trusted-proxy RD and all M3+ criteria
   unchecked; record M2 as awaiting owner acceptance.
 
 ## Commit sequence
