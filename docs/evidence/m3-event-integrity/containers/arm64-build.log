@@ -1,0 +1,119 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.19kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for ghcr.io/astral-sh/uv@sha256:cf4eedcaa81655197f625739489effcbe71b61ceb1506f332c3facae5deceded
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/python@sha256:9d7f287598e1a5a978c015ee176d8216435aaf335ed69ac3c38dd1bbb10e8d64
+#3 DONE 0.0s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 252B done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 DONE 0.0s
+
+#6 [runtime  1/11] FROM docker.io/library/python@sha256:9d7f287598e1a5a978c015ee176d8216435aaf335ed69ac3c38dd1bbb10e8d64
+#6 resolve docker.io/library/python@sha256:9d7f287598e1a5a978c015ee176d8216435aaf335ed69ac3c38dd1bbb10e8d64 0.0s done
+#6 DONE 0.0s
+
+#7 [uv 1/1] FROM ghcr.io/astral-sh/uv@sha256:cf4eedcaa81655197f625739489effcbe71b61ceb1506f332c3facae5deceded
+#7 resolve ghcr.io/astral-sh/uv@sha256:cf4eedcaa81655197f625739489effcbe71b61ceb1506f332c3facae5deceded
+#7 resolve ghcr.io/astral-sh/uv@sha256:cf4eedcaa81655197f625739489effcbe71b61ceb1506f332c3facae5deceded 0.0s done
+#7 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 12.42kB done
+#5 DONE 0.0s
+
+#8 [runtime  2/11] RUN groupadd --gid 1001 snaketracker     && useradd --uid 1001 --gid 1001 --create-home --shell /usr/sbin/nologin snaketracker
+#8 CACHED
+
+#9 [runtime  3/11] WORKDIR /app
+#9 CACHED
+
+#10 [runtime  4/11] COPY --from=uv /uv /uvx /bin/
+#10 CACHED
+
+#11 [runtime  5/11] COPY pyproject.toml uv.lock README.md ./
+#11 CACHED
+
+#12 [runtime  6/11] COPY src ./src
+#12 DONE 2.1s
+
+#13 [runtime  7/11] RUN uv sync --frozen --no-dev --no-editable     && rm -rf /root/.cache/uv
+#13 2.837 Using CPython 3.13.14 interpreter at: /usr/local/bin/python3
+#13 2.841 Creating virtual environment at: .venv
+#13 3.076    Building snaketracker @ file:///app
+#13 3.717 Downloading pydantic-core (1.9MiB)
+#13 3.725 Downloading uvloop (4.1MiB)
+#13 3.731 Downloading sqlalchemy (3.1MiB)
+#13 4.988  Downloaded pydantic-core
+#13 5.323  Downloaded sqlalchemy
+#13 5.386  Downloaded uvloop
+#13 12.91       Built snaketracker @ file:///app
+#13 12.95 Prepared 33 packages in 9.99s
+#13 13.14 Installed 33 packages in 185ms
+#13 20.55 Bytecode compiled 986 files in 7.41s
+#13 20.55  + alembic==1.18.5
+#13 20.55  + annotated-doc==0.0.5
+#13 20.55  + annotated-types==0.8.0
+#13 20.55  + anyio==4.14.2
+#13 20.55  + argon2-cffi==25.1.0
+#13 20.55  + argon2-cffi-bindings==25.1.0
+#13 20.55  + cffi==2.1.1
+#13 20.55  + click==8.4.2
+#13 20.55  + fastapi==0.141.1
+#13 20.55  + greenlet==3.5.4
+#13 20.55  + h11==0.16.0
+#13 20.55  + httptools==0.8.0
+#13 20.55  + idna==3.18
+#13 20.55  + jinja2==3.1.6
+#13 20.56  + mako==1.3.12
+#13 20.56  + markupsafe==3.0.3
+#13 20.56  + prometheus-client==0.26.0
+#13 20.56  + pycparser==3.0
+#13 20.56  + pydantic==2.13.4
+#13 20.56  + pydantic-core==2.46.4
+#13 20.56  + pydantic-settings==2.14.2
+#13 20.56  + python-dotenv==1.2.2
+#13 20.56  + python-multipart==0.0.32
+#13 20.56  + pyyaml==6.0.3
+#13 20.56  + snaketracker==0.1.0 (from file:///app)
+#13 20.56  + sqlalchemy==2.0.51
+#13 20.56  + starlette==1.3.1
+#13 20.56  + typing-extensions==4.16.0
+#13 20.56  + typing-inspection==0.4.2
+#13 20.56  + uvicorn==0.52.1
+#13 20.56  + uvloop==0.22.1
+#13 20.56  + watchfiles==1.2.0
+#13 20.56  + websockets==17.0.1
+#13 DONE 20.8s
+
+#14 [runtime  8/11] COPY alembic.ini ./
+#14 DONE 0.0s
+
+#15 [runtime  9/11] COPY migrations ./migrations
+#15 DONE 0.0s
+
+#16 [runtime 10/11] COPY deploy/docker/entrypoint.sh /usr/local/bin/snaketracker-entrypoint
+#16 DONE 0.0s
+
+#17 [runtime 11/11] RUN chmod 0555 /usr/local/bin/snaketracker-entrypoint     && chown -R snaketracker:snaketracker /app
+#17 DONE 3.7s
+
+#18 exporting to oci image format
+#18 exporting layers
+#18 exporting layers 2.3s done
+#18 exporting manifest sha256:345cfcf16ee3691c76f4e1b09bc098f55ea9633b49b0e1ac5b98b29bbbd72b14 done
+#18 exporting config sha256:dbdb283192f54f15836197be454e0ae44bdd9a2513b6ff4b2f723153534bd85b done
+#18 sending tarball
+#18 sending tarball 1.6s done
+#18 DONE 3.9s
+
+#19 resolving provenance for metadata file
+#19 DONE 0.0s

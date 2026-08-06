@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "milestone": "M3",
+  "status": "implementation-qualified; owner acceptance pending",
+  "generated_at": "2026-08-06T08:30:00Z",
+  "implementation_revision": "bf46a32",
+  "qualification_runtime_revision": "04fb0689ac5675ea1f6b8a6051a3db53e16219ef",
+  "environment_classification": "laptop Docker development",
+  "native_raspberry_pi_qualification": "deferred to Phase 7/pre-deployment",
+  "test_result": {
+    "tests": 175,
+    "line_coverage_percent": 95.15,
+    "branch_coverage_percent": 85.56,
+    "dependency_vulnerabilities": 0
+  },
+  "containers": {
+    "amd64_image": "sha256:f38675856a64071acbcbdf4dc5109778bdd3cde76e8668fcefca9d212acfd435",
+    "arm64_descriptor": "sha256:345cfcf16ee3691c76f4e1b09bc098f55ea9633b49b0e1ac5b98b29bbbd72b14",
+    "arm64_oci_sha256": "83e2715f402cb8680a75da23d2177c631eaeb3e9a008c1fbbfede6d5fdbcbe0b",
+    "compose_migration_head": "0004_event_platform"
+  },
+  "qualification": {
+    "dataset_id": "snaketracker-reference-v1-phase3-event-slice",
+    "events": 1000000,
+    "all_targets_passed": true,
+    "stream_growth_review_triggered": true
+  },
+  "commands": [
+    "./scripts/quality/check.sh",
+    "docker build --platform linux/amd64 --build-arg SNAKETRACKER_UID=1001 --tag snaketracker:phase3-amd64 .",
+    "docker buildx build --platform linux/arm64 --build-arg SNAKETRACKER_UID=1001 --output type=oci,dest=/tmp/snaketracker-phase3-arm64.oci.tar .",
+    "docker run --rm --user 1001:1001 --memory 1g --cpus 4 snaketracker:phase3 python -m tests.qualification.phase3_event_platform --events 1000000 --append-samples 100 --replay-samples 5 --concurrency 10"
+  ]
+}

@@ -1,0 +1,89 @@
+201 files already formatted
+All checks passed!
+architecture freeze passed: 37 accepted ADRs
+documentation links passed: 94 files checked
+Success: no issues found in 55 source files
+============================= test session starts ==============================
+platform linux -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0
+rootdir: /home/rocco/SnakeTracker
+configfile: pyproject.toml
+testpaths: tests
+plugins: timeout-2.4.0, anyio-4.14.2, cov-7.1.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 175 items
+
+tests/architecture/test_dependency_boundaries.py ...                     [  1%]
+tests/architecture/test_phase_scope.py ....                              [  4%]
+tests/browser/test_identity_flow.py ........                             [  8%]
+tests/integration/test_alembic_lifecycle.py .....                        [ 11%]
+tests/integration/test_application_startup.py .........                  [ 16%]
+tests/integration/test_atomic_append.py .....                            [ 19%]
+tests/integration/test_container_contract.py ......                      [ 22%]
+tests/integration/test_database_port.py .                                [ 23%]
+tests/integration/test_event_store.py ....                               [ 25%]
+tests/integration/test_health_endpoints.py ..                            [ 26%]
+tests/integration/test_household_bootstrap.py .....                      [ 29%]
+tests/integration/test_maintenance_cli.py ...                            [ 31%]
+tests/integration/test_projection_rebuilds.py .....                      [ 34%]
+tests/integration/test_quality_contract.py ......                        [ 37%]
+tests/integration/test_snapshots.py ...                                  [ 39%]
+tests/integration/test_sqlite_profile.py ....                            [ 41%]
+tests/security/test_identity_security.py ........                        [ 46%]
+tests/unit/application/test_readiness.py ....                            [ 48%]
+tests/unit/bootstrap/test_compatibility.py ...................           [ 59%]
+tests/unit/bootstrap/test_configuration.py ............                  [ 66%]
+tests/unit/domains/test_household_events.py ..........                   [ 72%]
+tests/unit/infrastructure/test_correlation.py ..                         [ 73%]
+tests/unit/infrastructure/test_logging.py ...                            [ 74%]
+tests/unit/infrastructure/test_sqlite_profile.py ....                    [ 77%]
+tests/unit/platform/test_corrections.py ......                           [ 80%]
+tests/unit/platform/test_event_registry.py .......                       [ 84%]
+tests/unit/platform/test_event_store_contracts.py .                      [ 85%]
+tests/unit/platform/test_event_validation.py .....                       [ 88%]
+tests/unit/platform/test_projection_registry.py .                        [ 88%]
+tests/unit/platform/test_snapshot_policy.py .                            [ 89%]
+tests/unit/qualification/test_phase3_qualification.py ..                 [ 90%]
+tests/unit/scripts/test_architecture_freeze.py ...                       [ 92%]
+tests/unit/scripts/test_phase1_qualification.py ..............           [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /home/rocco/SnakeTracker/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+------------ generated xml file: /home/rocco/SnakeTracker/junit.xml ------------
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.13.14-final-0 _______________
+
+Name                                                                Stmts   Miss Branch BrPart  Cover   Missing
+---------------------------------------------------------------------------------------------------------------
+src/snaketracker/application/household_bootstrap.py                    84      6     14      6    88%   78, 115, 117, 119, 121, 123
+src/snaketracker/application/identity.py                              103      2     10      2    96%   132, 287
+src/snaketracker/bootstrap/application.py                              76      1      4      1    98%   145
+src/snaketracker/bootstrap/compatibility.py                           102      7     36      3    93%   129, 139, 185-186, 209-210, 225
+src/snaketracker/domains/households/replay.py                          42      6     22      7    80%   24, 35, 37, 41, 44->29, 46, 49
+src/snaketracker/infrastructure/events/sqlite_event_store.py          151     14     56     13    87%   70, 91-92, 131, 134, 136, 141, 144, 245, 367, 369, 373, 376, 459
+src/snaketracker/infrastructure/events/sqlite_snapshots.py             45      3     14      3    90%   29, 31, 89
+src/snaketracker/infrastructure/events/sqlite_subjects.py              20      3     10      1    80%   41-54
+src/snaketracker/infrastructure/identity/bootstrap_repository.py       79      2     10      2    96%   45, 147
+src/snaketracker/infrastructure/identity/identity_repository.py        73      1      4      1    97%   49
+src/snaketracker/infrastructure/projections/sqlite_generations.py     167      3     54      1    98%   229->228, 323-325
+src/snaketracker/infrastructure/security/passwords.py                  19      1      0      0    95%   39
+src/snaketracker/platform/events/corrections.py                        77      2     58      1    96%   126-130
+src/snaketracker/platform/events/envelope.py                           59      1      6      1    97%   109
+src/snaketracker/platform/events/registry.py                          166     26     46     12    81%   85, 118, 131, 139-140, 174-175, 207-216, 250, 252, 259, 262, 276, 278, 302, 309, 316
+src/snaketracker/platform/projections/definitions.py                   59      4     12      2    92%   83, 91-92, 106
+src/snaketracker/presentation/web.py                                  152     13     38      5    89%   85, 112-118, 169-170, 200, 216, 224, 236, 305
+---------------------------------------------------------------------------------------------------------------
+TOTAL                                                                1960     95    478     61    93%
+
+36 files skipped due to complete coverage.
+Coverage XML written to file coverage.xml
+Coverage JSON written to file coverage.json
+Required test coverage of 90.0% reached. Total coverage: 93.27%
+======================== 175 passed, 1 warning in 8.28s ========================
+coverage gates passed: lines=95.15% branches=85.56%
+No known vulnerabilities found

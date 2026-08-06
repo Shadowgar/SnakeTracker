@@ -51,7 +51,7 @@ Each aggregate instance owns one stream. Stored events have a unique `event_id`;
 
 Expected versions are supplied for every stream affected by a command. Multi-stream operations order streams lexically by `(household_id, stream_type, stream_id)` and commit atomically. Corrections, voids, reinstatements, and compensations append new events. Stored historical events are not edited in normal operation.
 
-Snapshots are rebuildable command-side replay accelerators. They include snapshot schema, aggregate implementation, stream version, boundary event, UTC creation time, state, and checksum. Invalid or incompatible snapshots are ignored. Initial policy evaluates after append, creates a snapshot after 100 new events or replay p95 above 50 ms, avoids streams below 50 events, and retains the newest two valid snapshots.
+Snapshots are rebuildable command-side replay accelerators. They include snapshot schema, aggregate implementation, stream version, boundary event, UTC creation time, state, and checksum. Invalid or incompatible snapshots are quarantined with diagnostics and ignored in favor of deterministic replay; normal loading never silently deletes them. Initial policy evaluates after append, creates a snapshot after 100 new events or replay p95 above 50 ms, avoids streams below 50 events, and retains the newest two valid snapshots.
 
 See the [event catalog](event-catalog.md) and ADRs 0002–0006, 0011, and 0012.
 
