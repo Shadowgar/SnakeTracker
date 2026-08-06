@@ -16,7 +16,7 @@ from snaketracker.bootstrap.compatibility import (
     ("metadata", "database_is_empty", "expected_mode"),
     [
         (
-            {"manifest_version": 1, "relational_schema_version": 2},
+            {"manifest_version": 1, "relational_schema_version": 3},
             False,
             CompatibilityMode.NORMAL,
         ),
@@ -28,12 +28,12 @@ from snaketracker.bootstrap.compatibility import (
         (None, True, CompatibilityMode.BOOTSTRAP_ALLOWED),
         (None, False, CompatibilityMode.RECOVERY_REQUIRED),
         (
-            {"manifest_version": 2, "relational_schema_version": 2},
+            {"manifest_version": 2, "relational_schema_version": 3},
             False,
             CompatibilityMode.RECOVERY_REQUIRED,
         ),
         (
-            {"manifest_version": 1, "relational_schema_version": 3},
+            {"manifest_version": 1, "relational_schema_version": 4},
             False,
             CompatibilityMode.RECOVERY_REQUIRED,
         ),
@@ -74,10 +74,27 @@ def test_known_alembic_revision_is_compatible(tmp_path) -> None:
         with engine.begin() as connection:
             connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
             connection.execute(
-                text("INSERT INTO alembic_version VALUES ('0002_identity_household')")
+                text("INSERT INTO alembic_version VALUES ('0003_phase2_review_hardening')")
             )
 
         assert inspect_database_compatibility(engine).mode is CompatibilityMode.NORMAL
+    finally:
+        engine.dispose()
+
+
+def test_previous_phase_two_revision_requires_forward_migration(tmp_path) -> None:
+    database = tmp_path / "previous.sqlite3"
+    engine = create_engine(f"sqlite+pysqlite:///{database}")
+    try:
+        with engine.begin() as connection:
+            connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
+            connection.execute(
+                text("INSERT INTO alembic_version VALUES ('0002_identity_household')")
+            )
+
+        report = inspect_database_compatibility(engine)
+        assert report.mode is CompatibilityMode.MIGRATION_REQUIRED
+        assert report.reason_code == "relational_schema_upgrade_required"
     finally:
         engine.dispose()
 
@@ -152,7 +169,7 @@ def test_startup_compatibility_accepts_supported_runtime_and_schema(tmp_path) ->
         with engine.begin() as connection:
             connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
             connection.execute(
-                text("INSERT INTO alembic_version VALUES ('0002_identity_household')")
+                text("INSERT INTO alembic_version VALUES ('0003_phase2_review_hardening')")
             )
             connection.execute(
                 text(

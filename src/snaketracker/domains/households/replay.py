@@ -27,6 +27,8 @@ def replay_household(events: list[DomainEvent]) -> HouseholdState:
     timezone: str | None = None
     owners: set[UUID] = set()
     for expected_version, event in enumerate(events, start=1):
+        if event.household_id != household_id:
+            raise ValueError("Household event payload has a mismatched household identity.")
         if event.stream_version != expected_version:
             raise ValueError("Household stream versions must be contiguous.")
         if event.stream_type != "household" or event.stream_id != household_id:

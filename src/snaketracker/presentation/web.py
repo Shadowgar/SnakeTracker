@@ -18,6 +18,7 @@ from snaketracker.application.household_bootstrap import (
     AlreadyBootstrappedError,
     BootstrapCommand,
     BootstrapConflictError,
+    BootstrapValidationError,
     HouseholdBootstrapService,
 )
 from snaketracker.application.identity import (
@@ -187,7 +188,7 @@ def create_web_router(
                     correlation_id=uuid4(),
                 )
             )
-        except ValueError as error:
+        except BootstrapValidationError as error:
             return _new_form_response(
                 request,
                 "setup.html",
@@ -277,11 +278,26 @@ def create_web_router(
         principal = principal_for(request, audit_denial=True)
         if principal is None:
             return RedirectResponse("/login", status_code=303)
-        return templates.TemplateResponse(
+        csrf_token = request.cookies.get(CSRF_COOKIE)
+        issued = None
+        if csrf_token is None:
+            client_ip, user_agent = _client_context(request)
+            issued = identity_service.rotate_session(
+                request.cookies[SESSION_COOKIE],
+                client_ip=client_ip,
+                user_agent=user_agent,
+                correlation_id=uuid4(),
+            )
+            csrf_token = issued.csrf_token
+        response = templates.TemplateResponse(
             request,
             "home.html",
-            {"principal": principal, "csrf_token": request.cookies.get(CSRF_COOKIE, "")},
+            {"principal": principal, "csrf_token": csrf_token},
         )
+        if issued is not None:
+            _set_cookie(response, SESSION_COOKIE, issued.token, secure_cookie)
+            _set_cookie(response, CSRF_COOKIE, issued.csrf_token, secure_cookie)
+        return response
 
     @router.post("/logout")
     async def logout(request: Request) -> Response:

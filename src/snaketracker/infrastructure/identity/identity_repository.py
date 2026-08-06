@@ -110,6 +110,7 @@ class SQLAlchemyIdentityRepository:
             )
             self._audit(
                 connection,
+                now=now,
                 action="login",
                 outcome="failure",
                 correlation_id=correlation_id,
@@ -150,6 +151,7 @@ class SQLAlchemyIdentityRepository:
             )
             self._audit(
                 connection,
+                now=write.created_at,
                 action="login",
                 outcome="success",
                 correlation_id=correlation_id,
@@ -231,6 +233,7 @@ class SQLAlchemyIdentityRepository:
             )
             self._audit(
                 connection,
+                now=now,
                 action="logout",
                 outcome="success",
                 correlation_id=correlation_id,
@@ -241,6 +244,7 @@ class SQLAlchemyIdentityRepository:
     def record_access_denied(
         self,
         *,
+        now: datetime,
         correlation_id: UUID,
         client_ip: str | None,
         user_agent: str | None,
@@ -248,6 +252,7 @@ class SQLAlchemyIdentityRepository:
         with self._engine.begin() as connection:
             self._audit(
                 connection,
+                now=now,
                 action="protected_request",
                 outcome="denied",
                 correlation_id=correlation_id,
@@ -267,6 +272,7 @@ class SQLAlchemyIdentityRepository:
             )
             self._audit(
                 connection,
+                now=now,
                 action="sessions_invalidated",
                 outcome="success",
                 correlation_id=correlation_id,
@@ -277,6 +283,7 @@ class SQLAlchemyIdentityRepository:
     def _audit(
         connection: Connection,
         *,
+        now: datetime,
         action: str,
         outcome: str,
         correlation_id: UUID,
@@ -295,7 +302,7 @@ class SQLAlchemyIdentityRepository:
             ),
             {
                 "audit_id": str(uuid4()),
-                "now": _timestamp(datetime.now(UTC)),
+                "now": _timestamp(now),
                 "action": action,
                 "outcome": outcome,
                 "actor": str(actor_user_id) if actor_user_id else None,

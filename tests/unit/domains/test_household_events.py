@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -75,6 +76,22 @@ def test_household_registry_deserializes_both_contracts_and_rejects_shape() -> N
         household_event_registry.deserialize("household.created", 1, {"unexpected": True})
 
 
+@pytest.mark.parametrize(
+    ("event_type", "payload"),
+    [
+        ("household.created", {"household_name": 7, "timezone": "UTC"}),
+        ("household.created", {"household_name": "Home", "timezone": None}),
+        ("household.owner_added", {"user_id": str(uuid4()), "role": "viewer"}),
+        ("household.owner_added", {"user_id": 7, "role": "owner"}),
+    ],
+)
+def test_household_registry_rejects_invalid_stored_field_values(
+    event_type: str, payload: dict[str, object]
+) -> None:
+    with pytest.raises(ValueError, match="does not match"):
+        household_event_registry.deserialize(event_type, 1, payload)
+
+
 def test_event_checksum_is_stable_and_detects_payload_change() -> None:
     created = event(
         "household.created",
@@ -120,3 +137,17 @@ def test_household_replay_rejects_version_gap() -> None:
 
     with pytest.raises(ValueError, match="contiguous"):
         replay_household([created])
+
+
+def test_household_replay_rejects_payload_household_mismatch() -> None:
+    created = event(
+        "household.created",
+        1,
+        HouseholdCreatedV1(household_name="Snake House", timezone="UTC"),
+    )
+    foreign_household = uuid4()
+    candidate = replace(created, stream_id=foreign_household, checksum="")
+    mismatched = candidate.with_checksum(event_checksum(candidate))
+
+    with pytest.raises(ValueError, match="household identity"):
+        replay_household([mismatched])

@@ -7,7 +7,7 @@ from alembic.config import Config
 from sqlalchemy import create_engine, inspect, text
 
 ROOT = Path(__file__).parents[2]
-REVISION = "0002_identity_household"
+REVISION = "0003_phase2_review_hardening"
 PHASE_TWO_TABLES = {
     "alembic_version",
     "authorization_memberships",
@@ -100,9 +100,20 @@ def test_identity_schema_has_required_uniqueness_and_foreign_keys(tmp_path: Path
         assert {item["name"] for item in inspector.get_unique_constraints("sessions")} == {
             "uq_sessions_token_hash"
         }
-        assert len(inspector.get_foreign_keys("authorization_memberships")) == 2
-        assert len(inspector.get_foreign_keys("sessions")) == 2
-        assert len(inspector.get_foreign_keys("event_subjects")) == 1
+        foreign_targets = {
+            table: {
+                foreign_key["referred_table"] for foreign_key in inspector.get_foreign_keys(table)
+            }
+            for table in ("authorization_memberships", "sessions", "event_subjects")
+        }
+        assert foreign_targets == {
+            "authorization_memberships": {"household_summaries", "users"},
+            "sessions": {"household_summaries", "users"},
+            "event_subjects": {"domain_events"},
+        }
+        assert "ix_domain_events_stream" not in {
+            item["name"] for item in inspector.get_indexes("domain_events")
+        }
     finally:
         engine.dispose()
 

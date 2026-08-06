@@ -3,11 +3,13 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
+from snaketracker.application.household_bootstrap import HouseholdBootstrapService
 from snaketracker.bootstrap.application import build_application
 from snaketracker.bootstrap.configuration import Environment, Settings
 
@@ -157,6 +159,7 @@ def test_login_failure_rate_limit_and_unauthenticated_redirect(tmp_path: Path) -
         complete_setup(client)
         home = client.get("/home")
         client.post("/logout", data={"csrf_token": csrf_from(home.text)})
+        statuses: list[int] = []
         for _ in range(6):
             page = client.get("/login")
             failed = client.post(
@@ -167,7 +170,8 @@ def test_login_failure_rate_limit_and_unauthenticated_redirect(tmp_path: Path) -
                     "password": "wrong password value",
                 },
             )
-        assert failed.status_code == 429
+            statuses.append(failed.status_code)
+        assert statuses == [401, 401, 401, 401, 401, 429]
         assert "Too many attempts" in failed.text
         assert client.get("/home", follow_redirects=False).headers["location"] == "/login"
         with client.app.state.database_engine.connect() as connection:
@@ -211,3 +215,48 @@ def test_setup_domain_validation_and_logout_csrf_failure_are_rendered(tmp_path: 
         rejected = client.post("/logout", data={"csrf_token": "incorrect"})
         assert rejected.status_code == 403
         assert "Return home and try again" in rejected.text
+
+
+def test_home_recovers_a_missing_csrf_cookie_by_rotating_the_session(tmp_path: Path) -> None:
+    with client_for(tmp_path) as client:
+        complete_setup(client)
+        original_session = client.cookies.get("snaketracker_session")
+        client.cookies.delete("snaketracker_csrf")
+
+        home = client.get("/home")
+
+        assert home.status_code == 200
+        assert csrf_from(home.text)
+        assert client.cookies.get("snaketracker_csrf")
+        assert client.cookies.get("snaketracker_session") != original_session
+        logout = client.post(
+            "/logout",
+            data={"csrf_token": csrf_from(home.text)},
+            follow_redirects=False,
+        )
+        assert logout.status_code == 303
+        assert logout.headers["location"] == "/login"
+
+
+def test_unexpected_bootstrap_value_error_is_not_exposed_as_validation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def fail_unexpectedly(*_args: object, **_kwargs: object) -> object:
+        raise ValueError("internal adapter detail")
+
+    monkeypatch.setattr(HouseholdBootstrapService, "bootstrap", fail_unexpectedly)
+    with client_for(tmp_path) as client:
+        page = client.get("/setup")
+        with pytest.raises(ValueError, match="internal adapter detail"):
+            client.post(
+                "/setup",
+                data={
+                    "csrf_token": csrf_from(page.text),
+                    "household_name": "Home",
+                    "timezone": "America/New_York",
+                    "display_name": "Owner",
+                    "email": "owner@example.com",
+                    "password": "correct horse battery staple",
+                    "password_confirmation": "correct horse battery staple",
+                },
+            )

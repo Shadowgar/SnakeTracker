@@ -24,6 +24,10 @@ class AlreadyBootstrappedError(RuntimeError):
     """The one-time initial household bootstrap is no longer available."""
 
 
+class BootstrapValidationError(ValueError):
+    """The submitted bootstrap command failed safe domain validation."""
+
+
 @dataclass(frozen=True, slots=True)
 class BootstrapCommand:
     household_name: str
@@ -106,17 +110,17 @@ def _validate(command: BootstrapCommand) -> dict[str, str]:
     display_name = command.owner_display_name.strip()
     email = command.owner_email.strip().casefold()
     if not name or len(name) > 120:
-        raise ValueError("household name is required")
+        raise BootstrapValidationError("household name is required")
     if not display_name or len(display_name) > 120:
-        raise ValueError("owner display name is required")
+        raise BootstrapValidationError("owner display name is required")
     if "@" not in email or len(email) > 320:
-        raise ValueError("a valid owner email is required")
+        raise BootstrapValidationError("a valid owner email is required")
     if len(command.password) < 12 or len(command.password) > 1024:
-        raise ValueError("password must be between 12 and 1024 characters")
+        raise BootstrapValidationError("password must be between 12 and 1024 characters")
     if not command.timezone or len(command.timezone) > 64:
-        raise ValueError("timezone is required")
+        raise BootstrapValidationError("timezone is required")
     if len(command.idempotency_key) < 16 or len(command.idempotency_key) > 128:
-        raise ValueError("idempotency key is invalid")
+        raise BootstrapValidationError("idempotency key is invalid")
     return {
         "household_name": name,
         "timezone": command.timezone,

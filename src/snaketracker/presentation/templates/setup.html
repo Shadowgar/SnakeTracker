@@ -9,13 +9,13 @@
   </div>
   <form class="card form-stack" method="post" action="/setup" novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    {% if errors %}<div class="alert" role="alert"><strong>Please correct the highlighted fields.</strong>{% if errors.form %} {{ errors.form }}{% endif %}</div>{% endif %}
+    {% if errors %}<div class="alert" role="alert"><strong>Please correct the highlighted fields.</strong>{% if errors.get('form') %} {{ errors.form }}{% endif %}</div>{% endif %}
     <label>Household name<input name="household_name" maxlength="120" required autocomplete="organization" value="{{ values.household_name if values else '' }}"></label>
-    <label>Household timezone<input name="timezone" maxlength="64" required value="{{ values.timezone if values else 'America/New_York' }}" aria-describedby="timezone-help"><small id="timezone-help">Use an IANA name such as America/New_York.</small>{% if errors.timezone %}<span class="field-error">{{ errors.timezone }}</span>{% endif %}</label>
+    <label>Household timezone<input name="timezone" maxlength="64" required value="{{ values.timezone if values else 'America/New_York' }}" aria-describedby="timezone-help{% if errors.get('timezone') %} timezone-error{% endif %}"><small id="timezone-help">Use an IANA name such as America/New_York.</small>{% if errors.get('timezone') %}<span id="timezone-error" class="field-error" role="alert">{{ errors.timezone }}</span>{% endif %}</label>
     <label>Your name<input name="display_name" maxlength="120" required autocomplete="name" value="{{ values.display_name if values else '' }}"></label>
     <label>Email<input name="email" type="email" maxlength="320" required autocomplete="username" value="{{ values.email if values else '' }}"></label>
-    <label>Password<input name="password" type="password" minlength="12" maxlength="1024" required autocomplete="new-password"><small>Use at least 12 characters.</small></label>
-    <label>Confirm password<input name="password_confirmation" type="password" required autocomplete="new-password">{% if errors.password_confirmation %}<span class="field-error">{{ errors.password_confirmation }}</span>{% endif %}</label>
+    <label>Password<input name="password" type="password" minlength="12" maxlength="1024" required autocomplete="new-password" aria-describedby="password-help"><small id="password-help">Use at least 12 characters.</small></label>
+    <label>Confirm password<input name="password_confirmation" type="password" required autocomplete="new-password"{% if errors.get('password_confirmation') %} aria-describedby="password-confirmation-error"{% endif %}>{% if errors.get('password_confirmation') %}<span id="password-confirmation-error" class="field-error" role="alert">{{ errors.password_confirmation }}</span>{% endif %}</label>
     <button type="submit">Create household</button>
   </form>
 </section>

@@ -98,6 +98,7 @@ class IdentityRepository(Protocol):
     def record_access_denied(
         self,
         *,
+        now: datetime,
         correlation_id: UUID,
         client_ip: str | None,
         user_agent: str | None,
@@ -232,8 +233,10 @@ class IdentityService:
         correlation_id: UUID,
         client_ip: str | None,
         user_agent: str | None,
+        now: datetime | None = None,
     ) -> None:
         self._repository.record_access_denied(
+            now=now or datetime.now(UTC),
             correlation_id=correlation_id,
             client_ip=client_ip,
             user_agent=user_agent,

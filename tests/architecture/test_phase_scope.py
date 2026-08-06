@@ -3,6 +3,9 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
+
 import snaketracker
 
 ROOT = Path(__file__).parents[2]
@@ -43,7 +46,7 @@ def test_package_exposes_the_project_version() -> None:
 def test_phase_two_has_no_later_phase_packages_or_dependencies() -> None:
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())
     dependencies = {
-        requirement.split("[", 1)[0].split("=", 1)[0].split("<", 1)[0].split(">", 1)[0].lower()
+        canonicalize_name(Requirement(requirement).name)
         for requirement in project["project"]["dependencies"]
     }
 

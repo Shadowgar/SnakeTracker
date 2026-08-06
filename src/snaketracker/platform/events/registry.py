@@ -37,10 +37,21 @@ class HouseholdEventRegistry:
         if set(data) != allowed:
             raise ValueError("Stored household event payload does not match its contract.")
         if payload_type is HouseholdOwnerAddedV1:
-            return HouseholdOwnerAddedV1(user_id=UUID(str(data["user_id"])), role="owner")
-        return HouseholdCreatedV1(
-            household_name=str(data["household_name"]), timezone=str(data["timezone"])
-        )
+            user_id = data["user_id"]
+            role = data["role"]
+            if not isinstance(user_id, str) or role != "owner":
+                raise ValueError("Stored household event payload does not match its contract.")
+            try:
+                return HouseholdOwnerAddedV1(user_id=UUID(user_id), role="owner")
+            except ValueError as error:
+                raise ValueError(
+                    "Stored household event payload does not match its contract."
+                ) from error
+        household_name = data["household_name"]
+        timezone = data["timezone"]
+        if not isinstance(household_name, str) or not isinstance(timezone, str):
+            raise ValueError("Stored household event payload does not match its contract.")
+        return HouseholdCreatedV1(household_name=household_name, timezone=timezone)
 
     @property
     def identities(self) -> frozenset[tuple[str, int]]:

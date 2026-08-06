@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from datetime import timedelta
@@ -32,6 +33,8 @@ from snaketracker.infrastructure.observability.metrics import PlatformMetrics
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 from snaketracker.presentation.health import create_health_router
 from snaketracker.presentation.web import create_web_router
+
+logger = logging.getLogger(__name__)
 
 
 def create_application(
@@ -135,6 +138,13 @@ def build_application(settings: Settings) -> FastAPI:
                     else None
                 ),
             )
+        )
+    elif settings.runtime_secret is None:
+        logger.warning("Browser routes disabled because the runtime secret is not configured.")
+    else:
+        logger.warning(
+            "Browser routes disabled because startup compatibility is not normal.",
+            extra={"context": {"compatibility_reason": compatibility.reason_code}},
         )
     app.state.database_engine = engine
     app.state.compatibility = compatibility
