@@ -10,6 +10,7 @@ import pytest
 from alembic import command
 from alembic.config import Config
 
+import snaketracker.bootstrap.application as application_module
 from snaketracker.bootstrap.application import application_factory, build_application
 from snaketracker.bootstrap.compatibility import CompatibilityMode
 from snaketracker.bootstrap.configuration import load_settings
@@ -164,3 +165,30 @@ def test_application_lifespan_disposes_database_pool(tmp_path: Path) -> None:
     asyncio.run(run_lifespan())
 
     assert app.state.database_engine.pool.checkedin() == 0
+
+
+def test_application_logs_when_browser_routes_are_disabled_without_runtime_secret(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    database = tmp_path / "no-web-routes.sqlite3"
+    migrate(database)
+    settings = load_settings(
+        {
+            "SNAKETRACKER_ENVIRONMENT": "test",
+            "SNAKETRACKER_DATABASE_PATH": str(database),
+        }
+    )
+
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        application_module.logger,
+        "warning",
+        lambda message, **_context: warnings.append(message),
+    )
+    app = build_application(settings)
+
+    assert len(warnings) == 1
+    assert "browser routes disabled" in warnings[0].lower()
+    assert "runtime secret" in warnings[0].lower()
+    app.state.database_engine.dispose()

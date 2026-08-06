@@ -9,8 +9,13 @@ from enum import StrEnum
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
+from snaketracker.platform.events.registry import (
+    UnknownEventContractError,
+    household_event_registry,
+)
+
 CURRENT_MANIFEST_VERSION = 1
-CURRENT_RELATIONAL_SCHEMA_VERSION = 1
+CURRENT_RELATIONAL_SCHEMA_VERSION = 3
 MINIMUM_RELATIONAL_SCHEMA_VERSION = 0
 MINIMUM_SQLITE_VERSION = (3, 35, 0)
 
@@ -115,6 +120,16 @@ def inspect_database_compatibility(engine: Engine) -> CompatibilityReport:
             "compatibility_inspection_failed",
             "Stored data could not be inspected safely.",
         )
+    if revision == "0003_phase2_review_hardening":
+        return evaluate_compatibility(
+            {"manifest_version": 1, "relational_schema_version": 3},
+            database_is_empty=False,
+        )
+    if revision == "0002_identity_household":
+        return evaluate_compatibility(
+            {"manifest_version": 1, "relational_schema_version": 2},
+            database_is_empty=False,
+        )
     if revision == "0001_phase1_baseline":
         return evaluate_compatibility(
             {"manifest_version": 1, "relational_schema_version": 1},
@@ -171,9 +186,37 @@ def inspect_runtime_compatibility(engine: Engine) -> CompatibilityReport:
     return evaluate_runtime_compatibility(sqlite_version, compile_options)
 
 
+def inspect_household_event_contracts(engine: Engine) -> CompatibilityReport:
+    """Reject startup when persisted household history has an unknown contract."""
+    try:
+        with engine.connect() as connection:
+            contracts = connection.exec_driver_sql(
+                "SELECT DISTINCT event_type, schema_version FROM domain_events "
+                "WHERE stream_type = 'household'"
+            ).all()
+        for event_type, schema_version in contracts:
+            household_event_registry.payload_type(str(event_type), int(schema_version))
+    except UnknownEventContractError:
+        return _report(
+            CompatibilityMode.RECOVERY_REQUIRED,
+            "household_event_contract_unknown",
+            "Stored household history requires a compatible application release.",
+        )
+    except (SQLAlchemyError, TypeError, ValueError):
+        return _report(
+            CompatibilityMode.RECOVERY_REQUIRED,
+            "household_event_contract_inspection_failed",
+            "Stored household history could not be inspected safely.",
+        )
+    return _report(CompatibilityMode.NORMAL, "compatible", "The application is ready.")
+
+
 def inspect_startup_compatibility(engine: Engine) -> CompatibilityReport:
     """Require both the release runtime and stored schema to be compatible."""
     runtime = inspect_runtime_compatibility(engine)
     if not runtime.normal_readiness:
         return runtime
-    return inspect_database_compatibility(engine)
+    database = inspect_database_compatibility(engine)
+    if not database.normal_readiness:
+        return database
+    return inspect_household_event_contracts(engine)

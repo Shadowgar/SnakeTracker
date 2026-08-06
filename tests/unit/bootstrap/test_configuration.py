@@ -19,6 +19,18 @@ def test_development_settings_have_safe_local_defaults(tmp_path: Path) -> None:
     assert settings.environment is Environment.DEVELOPMENT
     assert settings.database_path == tmp_path / "snaketracker.sqlite3"
     assert settings.external_origin is None
+    assert settings.session_cookie_secure is True
+
+
+def test_local_docker_can_explicitly_disable_secure_cookie() -> None:
+    settings = load_settings(
+        {
+            "SNAKETRACKER_ENVIRONMENT": "development",
+            "SNAKETRACKER_SESSION_COOKIE_SECURE": "false",
+        }
+    )
+
+    assert settings.session_cookie_secure is False
 
 
 def test_production_requires_https_origin_and_runtime_secret(tmp_path: Path) -> None:

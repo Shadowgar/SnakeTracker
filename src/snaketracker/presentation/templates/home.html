@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Home · SnakeTracker{% endblock %}
+{% block content %}
+<section class="dashboard" aria-labelledby="page-title">
+  <div>
+    <p class="eyebrow">{{ principal.household_name }}</p>
+    <h1 id="page-title">Welcome home, {{ principal.display_name }}</h1>
+    <p class="lede">Your secure household workspace is ready.</p>
+  </div>
+  <form method="post" action="/logout">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="secondary" type="submit">Log out</button>
+  </form>
+  <div class="card status-card">
+    <span class="status-dot" aria-hidden="true"></span>
+    <div><strong>Household access active</strong><p>Signed in as {{ principal.role }}.</p></div>
+  </div>
+  <div class="empty-state">
+    <h2>Ready for your snakes</h2>
+    <p>Usable animal profiles and snake-tracking features arrive in Phase 4. Identity and household access are now protected.</p>
+  </div>
+</section>
+{% endblock %}

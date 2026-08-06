@@ -28,7 +28,9 @@ def test_compose_services_are_hardened_and_local_only() -> None:
     for service in ("migrate", "web", "worker", "nginx"):
         assert re.search(rf"^  {service}:$", compose, re.MULTILINE)
     assert "cloudflared:" not in compose
-    assert '"127.0.0.1:${SNAKETRACKER_HTTP_PORT:-8080}:8080"' in compose
+    assert (
+        '"${SNAKETRACKER_BIND_ADDRESS:-127.0.0.1}:${SNAKETRACKER_HTTP_PORT:-8080}:8080"' in compose
+    )
     assert "0.0.0.0:8080:8080" not in compose
     assert compose.count("<<: *app-common") == 3
     assert "SNAKETRACKER_UID: ${SNAKETRACKER_UID:-1000}" in compose
@@ -40,6 +42,9 @@ def test_compose_services_are_hardened_and_local_only() -> None:
     assert "healthcheck:" in compose
     assert "SNAKETRACKER_RUNTIME_SECRET_FILE" in compose
     assert "SNAKETRACKER_RUNTIME_SECRET:" not in compose
+    assert "SNAKETRACKER_ENVIRONMENT: development" in compose
+    assert 'SNAKETRACKER_SESSION_COOKIE_SECURE: "false"' in compose
+    assert "SNAKETRACKER_EXTERNAL_ORIGIN:-http://localhost:8080" in compose
     assert 'user: "101:101"' in compose
     assert "/tmp:size=16m,mode=1777,uid=101,gid=101" in compose
 
@@ -60,6 +65,15 @@ def test_nginx_does_not_expose_internal_metrics_or_trust_forwarded_headers() -> 
     assert "proxy_set_header X-Forwarded-Proto $scheme" in nginx
     assert "server_tokens off" in nginx
     assert "X-Content-Type-Options" in nginx
+    assert 'Referrer-Policy "same-origin"' in nginx
+
+
+def test_nginx_reresolves_web_service_after_container_replacement() -> None:
+    nginx = read_project_file("deploy/nginx/nginx.conf")
+
+    assert "resolver 127.0.0.11" in nginx
+    assert "set $snaketracker_web web:8000;" in nginx
+    assert "proxy_pass http://$snaketracker_web;" in nginx
 
 
 def test_container_context_excludes_secrets_and_runtime_state() -> None:
