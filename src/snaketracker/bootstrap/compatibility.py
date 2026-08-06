@@ -11,7 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from snaketracker.platform.events.registry import (
     UnknownEventContractError,
-    household_event_registry,
+    production_event_registry,
 )
 
 CURRENT_MANIFEST_VERSION = 1
@@ -191,29 +191,31 @@ def inspect_runtime_compatibility(engine: Engine) -> CompatibilityReport:
     return evaluate_runtime_compatibility(sqlite_version, compile_options)
 
 
-def inspect_household_event_contracts(engine: Engine) -> CompatibilityReport:
-    """Reject startup when persisted household history has an unknown contract."""
+def inspect_event_contracts(engine: Engine) -> CompatibilityReport:
+    """Reject normal startup when any persisted event contract is unknown."""
     try:
         with engine.connect() as connection:
             contracts = connection.exec_driver_sql(
                 "SELECT DISTINCT event_type, schema_version FROM domain_events "
-                "WHERE stream_type = 'household'"
             ).all()
         for event_type, schema_version in contracts:
-            household_event_registry.payload_type(str(event_type), int(schema_version))
+            production_event_registry.payload_type(str(event_type), int(schema_version))
     except UnknownEventContractError:
         return _report(
             CompatibilityMode.RECOVERY_REQUIRED,
-            "household_event_contract_unknown",
-            "Stored household history requires a compatible application release.",
+            "event_contract_unknown",
+            "Stored event history requires a compatible application release.",
         )
     except (SQLAlchemyError, TypeError, ValueError):
         return _report(
             CompatibilityMode.RECOVERY_REQUIRED,
-            "household_event_contract_inspection_failed",
-            "Stored household history could not be inspected safely.",
+            "event_contract_inspection_failed",
+            "Stored event history could not be inspected safely.",
         )
     return _report(CompatibilityMode.NORMAL, "compatible", "The application is ready.")
+
+
+inspect_household_event_contracts = inspect_event_contracts
 
 
 def inspect_startup_compatibility(engine: Engine) -> CompatibilityReport:
@@ -224,4 +226,4 @@ def inspect_startup_compatibility(engine: Engine) -> CompatibilityReport:
     database = inspect_database_compatibility(engine)
     if not database.normal_readiness:
         return database
-    return inspect_household_event_contracts(engine)
+    return inspect_event_contracts(engine)

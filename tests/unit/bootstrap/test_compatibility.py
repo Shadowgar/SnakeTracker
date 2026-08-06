@@ -178,3 +178,28 @@ def test_startup_compatibility_accepts_supported_runtime_and_schema(tmp_path) ->
         assert inspect_startup_compatibility(engine).mode is CompatibilityMode.NORMAL
     finally:
         engine.dispose()
+
+
+def test_unknown_non_household_contract_requires_restricted_recovery(tmp_path) -> None:
+    database = tmp_path / "unknown-event.sqlite3"
+    engine = create_engine(f"sqlite+pysqlite:///{database}")
+    try:
+        with engine.begin() as connection:
+            connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
+            connection.execute(text("INSERT INTO alembic_version VALUES ('0004_event_platform')"))
+            connection.execute(
+                text(
+                    "CREATE TABLE domain_events ("
+                    "stream_type VARCHAR(64) NOT NULL,event_type VARCHAR(128) NOT NULL,"
+                    "schema_version INTEGER NOT NULL)"
+                )
+            )
+            connection.execute(
+                text("INSERT INTO domain_events VALUES ('future-stream','future.contract',99)")
+            )
+
+        report = inspect_startup_compatibility(engine)
+        assert report.mode is CompatibilityMode.RECOVERY_REQUIRED
+        assert report.reason_code == "event_contract_unknown"
+    finally:
+        engine.dispose()
