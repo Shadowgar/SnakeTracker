@@ -135,6 +135,11 @@ def test_shadow_rebuild_catches_tail_activates_atomically_and_rolls_back(tmp_pat
         first = manager.rebuild(GROUP)
         first_layout = manager.active_layout(GROUP)
         first_table = first_layout.component(name, "data")
+        assert manager.cleanup_failed(GROUP) == 0
+        with pytest.raises(ValueError, match="At least one"):
+            manager.cleanup_retained(GROUP, keep=0)
+        with pytest.raises(RuntimeError, match="No retained"):
+            manager.rollback(GROUP)
         with engine.connect() as connection:
             assert (
                 connection.execute(text(f'SELECT count(*) FROM "{first_table}"')).scalar_one() == 1
@@ -194,6 +199,16 @@ def test_validation_failure_and_interruption_keep_active_generation_and_cleanup(
             manager.rebuild(GROUP, interrupt_after="validate")
         assert manager.active_layout(GROUP).component(name, "data") == active_before
         assert manager.cleanup_failed(GROUP) == 1
+
+        for interruption in ("create", "replay"):
+            with pytest.raises(ProjectionRebuildInterruptedError):
+                manager.rebuild(GROUP, interrupt_after=interruption)
+            assert manager.active_layout(GROUP).component(name, "data") == active_before
+            assert manager.cleanup_failed(GROUP) == 1
+
+        with pytest.raises(ProjectionRebuildInterruptedError):
+            manager.rebuild(GROUP, interrupt_after="activation")
+        assert manager.active_layout(GROUP).component(name, "data") != active_before
     finally:
         engine.dispose()
 

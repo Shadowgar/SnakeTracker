@@ -84,3 +84,42 @@ def test_household_time_requires_explicit_fold_when_dst_time_is_ambiguous() -> N
     assert second == datetime(2026, 11, 1, 6, 30, tzinfo=UTC)
     assert household_report_time(first, "America/New_York").fold == 0
     assert household_report_time(second, "America/New_York").fold == 1
+
+
+def test_envelope_identity_version_idempotency_and_duplicate_subjects_fail_closed() -> None:
+    now = datetime(2026, 8, 6, 12, tzinfo=UTC)
+    event = event_at(occurred_at=now, recorded_at=now)
+    for invalid, message in (
+        (replace(event, event_type="unknown.event"), "contract identity"),
+        (replace(event, stream_version=0), "version and idempotency"),
+        (replace(event, idempotency_key=" "), "version and idempotency"),
+    ):
+        with pytest.raises(EventValidationError, match=message):
+            validate_event_contract(invalid, HOUSEHOLD_CONTRACTS[0])
+    duplicate = replace(
+        event,
+        subjects=(event.subjects[0], replace(event.subjects[0], display_order=1)),
+    )
+    registration = replace(
+        HOUSEHOLD_CONTRACTS[0],
+        subject_requirements=(
+            replace(HOUSEHOLD_CONTRACTS[0].subject_requirements[0], maximum_count=2),
+        ),
+    )
+    with pytest.raises(EventValidationError, match="Duplicate"):
+        validate_event_contract(duplicate, registration)
+
+
+def test_household_time_rejects_invalid_fold_zone_nonexistent_and_aware_inputs() -> None:
+    with pytest.raises(EventValidationError, match="naive"):
+        household_local_to_utc(datetime(2026, 1, 1, 12, tzinfo=UTC), "America/New_York")
+    with pytest.raises(EventValidationError, match="zero or one"):
+        household_local_to_utc(datetime(2026, 1, 1, 12), "UTC", fold=2)
+    with pytest.raises(EventValidationError, match="not registered"):
+        household_local_to_utc(datetime(2026, 1, 1, 12), "Not/A-Timezone")
+    with pytest.raises(EventValidationError, match="does not exist"):
+        household_local_to_utc(datetime(2026, 3, 8, 2, 30), "America/New_York", fold=0)
+    with pytest.raises(EventValidationError, match="timezone-aware UTC"):
+        household_report_time(datetime(2026, 1, 1, 12), "UTC")
+    with pytest.raises(EventValidationError, match="not registered"):
+        household_report_time(datetime(2026, 1, 1, 12, tzinfo=UTC), "Not/A-Timezone")

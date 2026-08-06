@@ -220,3 +220,154 @@ def test_synthetic_correction_contracts_require_explicit_test_registry() -> None
     )
     assert isinstance(payload, SyntheticCounterCorrectedV1)
     assert payload.value == 7
+
+
+def test_correction_policy_rejects_invalid_targets_contracts_and_lineage() -> None:
+    correlation_id = uuid4()
+    original = make_event(
+        cast(EventPayload, SyntheticCounterChangedV2(5, "original")),
+        "__snaketracker_test__.counter.changed",
+        1,
+        correlation_id=correlation_id,
+    )
+    correction = make_event(
+        cast(EventPayload, SyntheticCounterCorrectedV1(original.event_id, 8)),
+        "__snaketracker_test__.counter.corrected",
+        2,
+        correlation_id=correlation_id,
+        causation_id=original.event_id,
+    )
+    with pytest.raises(CorrectionPolicyError, match="does not permit"):
+        validate_correction(
+            CorrectionAction.CORRECT,
+            original,
+            correction,
+            CorrectionCapabilities(required_role="owner"),
+            "owner",
+            (),
+        )
+    with pytest.raises(CorrectionPolicyError, match="same stream"):
+        validate_correction(
+            CorrectionAction.CORRECT,
+            original,
+            replace(correction, stream_id=uuid4()),
+            capabilities(),
+            "owner",
+            (),
+        )
+    wrong_target = replace(
+        correction,
+        payload=cast(EventPayload, SyntheticCounterCorrectedV1(uuid4(), 8)),
+    )
+    with pytest.raises(CorrectionPolicyError, match="identify its target"):
+        validate_correction(
+            CorrectionAction.CORRECT, original, wrong_target, capabilities(), "owner", ()
+        )
+    with pytest.raises(CorrectionPolicyError, match="correlation"):
+        validate_correction(
+            CorrectionAction.CORRECT,
+            original,
+            replace(correction, correlation_id=uuid4()),
+            capabilities(),
+            "owner",
+            (),
+        )
+    with pytest.raises(CorrectionPolicyError, match="not permitted"):
+        validate_correction(
+            CorrectionAction.CORRECT,
+            original,
+            replace(correction, event_type="event.voided"),
+            capabilities(),
+            "owner",
+            (),
+        )
+    with pytest.raises(CorrectionPolicyError, match="causation"):
+        validate_correction(
+            CorrectionAction.CORRECT,
+            original,
+            replace(correction, causation_id=uuid4()),
+            capabilities(),
+            "owner",
+            (),
+        )
+
+
+def test_control_payload_and_compensation_lineage_fail_closed() -> None:
+    correlation_id = uuid4()
+    original = make_event(
+        cast(EventPayload, SyntheticCounterChangedV2(5, "material")),
+        "__snaketracker_test__.counter.changed",
+        1,
+        correlation_id=correlation_id,
+    )
+    correction = make_event(
+        cast(EventPayload, SyntheticCounterCorrectedV1(original.event_id, 8)),
+        "__snaketracker_test__.counter.corrected",
+        2,
+        correlation_id=correlation_id,
+        causation_id=original.event_id,
+    )
+    with pytest.raises(CorrectionPolicyError, match=r"event\.voided"):
+        validate_correction(
+            CorrectionAction.VOID, original, correction, capabilities(), "owner", ()
+        )
+    void = replace(
+        correction,
+        event_type="event.voided",
+        payload=cast(EventPayload, EventVoidedV1(original.event_id, "reverse")),
+    )
+    with pytest.raises(CorrectionPolicyError, match="Void causation"):
+        validate_correction(
+            CorrectionAction.VOID,
+            original,
+            replace(void, causation_id=uuid4()),
+            capabilities(),
+            "owner",
+            (),
+        )
+    with pytest.raises(CorrectionPolicyError, match=r"event\.reinstated"):
+        validate_correction(
+            CorrectionAction.REINSTATE, original, void, capabilities(), "owner", (void,)
+        )
+    reinstate = replace(
+        void,
+        event_type="event.reinstated",
+        payload=cast(EventPayload, EventReinstatedV1(original.event_id, "verified")),
+    )
+    with pytest.raises(CorrectionPolicyError, match="active void"):
+        validate_correction(
+            CorrectionAction.REINSTATE,
+            original,
+            replace(reinstate, causation_id=uuid4()),
+            capabilities(),
+            "owner",
+            (void,),
+        )
+
+    valid_compensation = make_event(
+        cast(EventPayload, SyntheticCompensationV1(original.event_id, -5)),
+        "__snaketracker_test__.counter.compensated",
+        3,
+        correlation_id=correlation_id,
+        causation_id=void.event_id,
+    )
+    invalid_compensations = (
+        replace(valid_compensation, household_id=uuid4()),
+        replace(valid_compensation, correlation_id=uuid4()),
+        replace(valid_compensation, causation_id=uuid4()),
+    )
+    for invalid, message in zip(
+        invalid_compensations,
+        ("target household", "correlation", "causation"),
+        strict=True,
+    ):
+        with pytest.raises(CorrectionPolicyError, match=message):
+            validate_correction(
+                CorrectionAction.VOID,
+                original,
+                void,
+                capabilities(requires_compensation=True),
+                "owner",
+                (),
+                compensations=(invalid,),
+            )
