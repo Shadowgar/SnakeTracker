@@ -124,6 +124,7 @@ def test_csrf_and_validation_errors_are_usable_and_security_headers_are_strict(
         assert "Please correct the highlighted fields" in invalid.text
         assert "default-src 'self'" in invalid.headers["content-security-policy"]
         assert invalid.headers["x-content-type-options"] == "nosniff"
+        assert invalid.headers["referrer-policy"] == "same-origin"
         assert "unsafe-inline" not in invalid.headers["content-security-policy"]
         assert client.get("/static/favicon.svg").headers["content-type"] == "image/svg+xml"
 

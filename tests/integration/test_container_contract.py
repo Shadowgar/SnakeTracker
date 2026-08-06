@@ -65,6 +65,7 @@ def test_nginx_does_not_expose_internal_metrics_or_trust_forwarded_headers() -> 
     assert "proxy_set_header X-Forwarded-Proto $scheme" in nginx
     assert "server_tokens off" in nginx
     assert "X-Content-Type-Options" in nginx
+    assert 'Referrer-Policy "same-origin"' in nginx
 
 
 def test_nginx_reresolves_web_service_after_container_replacement() -> None:
