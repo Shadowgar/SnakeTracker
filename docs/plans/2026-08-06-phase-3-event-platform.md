@@ -86,7 +86,8 @@ changing the architecture.
    transaction crash, stored-response compatibility, and concurrent duplicate submission.
 6. **Add rebuildable snapshots.** Store schema/implementation versions, stream version, boundary
    event, checksum, and state; use the measurable policy from the architecture. Test compatible
-   load, incompatible/corrupt deletion or ignore, replay fallback, and equivalence with full replay.
+   load, incompatible/corrupt quarantine with diagnostics, replay fallback, and equivalence with
+   full replay. Normal aggregate loading never silently deletes an invalid snapshot.
 7. **Add typed subject validation and time rules.** Register subject resolvers owned by application
    ports; verify registration, existence, household ownership, permission, required roles, UTC
    microsecond precision, household-time interpretation, DST ambiguity, and future-skew rejection.

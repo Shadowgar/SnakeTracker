@@ -13,7 +13,7 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import text
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 
 from snaketracker.application.household_bootstrap import (
@@ -48,6 +48,22 @@ from tests.support.synthetic_events import (
     SyntheticCounterChangedV2,
     SyntheticSubjectValidator,
 )
+
+
+class RecordingProjection:
+    def apply(self, transaction: object, events: tuple[DomainEvent, ...]) -> None:
+        connection = cast(Connection, transaction)
+        connection.execute(
+            text("INSERT INTO sync_projection_test(event_count) VALUES (:count)"),
+            {"count": len(events)},
+        )
+
+
+class FailingProjection:
+    def apply(self, transaction: object, events: tuple[DomainEvent, ...]) -> None:
+        del transaction, events
+        raise RuntimeError("injected synchronous projection failure")
+
 
 ROOT = Path(__file__).parents[2]
 SECRET = b"phase3-atomic-append-test-secret-32-bytes"
@@ -259,6 +275,69 @@ def test_outbox_failure_rolls_back_all_streams_and_idempotency(tmp_path: Path) -
                 ).scalar_one()
                 == 0
             )
+    finally:
+        engine.dispose()
+
+
+def test_synchronous_projection_commits_with_append_or_rolls_everything_back(
+    tmp_path: Path,
+) -> None:
+    store, engine, bootstrap = store_with_household(tmp_path)
+    with engine.begin() as connection:
+        connection.execute(text("CREATE TABLE sync_projection_test(event_count INTEGER NOT NULL)"))
+    successful = replace(request_for(bootstrap), synchronous_projections=(RecordingProjection(),))
+    try:
+        store.append_many(successful)
+        with engine.connect() as connection:
+            assert (
+                connection.execute(
+                    text("SELECT event_count FROM sync_projection_test")
+                ).scalar_one()
+                == 2
+            )
+
+        failing = request_for(bootstrap)
+        failing = replace(
+            failing,
+            idempotency=replace(
+                failing.idempotency,
+                idempotency_key="projection-failure",
+                command_hash="b" * 64,
+            ),
+            streams=tuple(
+                replace(
+                    item,
+                    expected_version=item.expected_version + 1,
+                    events=tuple(
+                        replace(event, stream_version=event.stream_version + 1, checksum="")
+                        for event in item.events
+                    ),
+                )
+                for item in failing.streams
+            ),
+            synchronous_projections=(FailingProjection(),),
+        )
+        failing = replace(
+            failing,
+            streams=tuple(
+                replace(
+                    item,
+                    events=tuple(
+                        event.with_checksum(event_checksum(event)) for event in item.events
+                    ),
+                )
+                for item in failing.streams
+            ),
+        )
+        with pytest.raises(RuntimeError, match="injected synchronous projection failure"):
+            store.append_many(failing)
+        with engine.connect() as connection:
+            assert connection.execute(text("SELECT count(*) FROM domain_events")).scalar_one() == 4
+            assert (
+                connection.execute(text("SELECT count(*) FROM sync_projection_test")).scalar_one()
+                == 1
+            )
+            assert connection.execute(text("SELECT count(*) FROM outbox_items")).scalar_one() == 1
     finally:
         engine.dispose()
 

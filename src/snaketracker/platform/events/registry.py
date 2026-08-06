@@ -9,6 +9,7 @@ from typing import Literal
 from uuid import UUID
 
 from snaketracker.domains.households.contracts import HouseholdCreatedV1, HouseholdOwnerAddedV1
+from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
 from snaketracker.platform.events.envelope import (
     DomainEvent,
     EventPayload,
@@ -38,6 +39,7 @@ class CorrectionCapabilities:
     requires_compensation: bool = False
     required_role: str = "owner"
     maximum_age_days: int | None = None
+    correction_event_types: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -198,8 +200,43 @@ HOUSEHOLD_CONTRACTS = (
     ),
 )
 
+
+def _deserialize_historical_control(
+    payload_type: type[EventVoidedV1] | type[EventReinstatedV1], data: Mapping[str, object]
+) -> EventPayload:
+    _require_exact_fields(payload_type, data)
+    target_event_id = data["target_event_id"]
+    reason = data["reason"]
+    if not isinstance(target_event_id, str) or not isinstance(reason, str) or not reason.strip():
+        raise ValueError("Stored historical-control payload does not match its contract.")
+    try:
+        target = UUID(target_event_id)
+    except ValueError as error:
+        raise ValueError("Stored historical-control target is invalid.") from error
+    return payload_type(target_event_id=target, reason=reason)
+
+
+HISTORICAL_CONTROL_CONTRACTS = (
+    EventContractRegistration(
+        event_type="event.voided",
+        schema_version=1,
+        owner="platform",
+        payload_type=EventVoidedV1,
+        deserialize_payload=lambda data: _deserialize_historical_control(EventVoidedV1, data),
+        subject_requirements=(),
+    ),
+    EventContractRegistration(
+        event_type="event.reinstated",
+        schema_version=1,
+        owner="platform",
+        payload_type=EventReinstatedV1,
+        deserialize_payload=lambda data: _deserialize_historical_control(EventReinstatedV1, data),
+        subject_requirements=(),
+    ),
+)
+
 household_event_registry = EventRegistry(HOUSEHOLD_CONTRACTS)
-production_event_registry = household_event_registry
+production_event_registry = EventRegistry((*HOUSEHOLD_CONTRACTS, *HISTORICAL_CONTROL_CONTRACTS))
 
 
 def deserialize_event_record(

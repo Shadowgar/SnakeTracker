@@ -160,6 +160,9 @@ class SQLAlchemyEventStore:
                     for event in item.events:
                         self._insert_event(connection, event)
                     self._update_stream(connection, item.key, item.events[-1])
+                committed_events = tuple(event for item in ordered for event in item.events)
+                for projection in request.synchronous_projections:
+                    projection.apply(connection, committed_events)
                 for handoff in request.outbox:
                     self._insert_outbox(connection, handoff)
                 result = AtomicAppendResult(

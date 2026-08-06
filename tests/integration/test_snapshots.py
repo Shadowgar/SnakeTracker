@@ -15,9 +15,9 @@ from tests.integration.test_event_store import migrated_store
 
 def test_snapshot_port_and_sqlite_adapter_are_available() -> None:
     assert importlib.util.find_spec("snaketracker.platform.events.snapshots") is not None
-    assert importlib.util.find_spec(
-        "snaketracker.infrastructure.events.sqlite_snapshots"
-    ) is not None
+    assert (
+        importlib.util.find_spec("snaketracker.infrastructure.events.sqlite_snapshots") is not None
+    )
 
 
 def test_valid_snapshot_round_trips_and_corruption_quarantines_with_replay_fallback(
@@ -93,8 +93,9 @@ def test_incompatible_snapshot_is_quarantined_not_deleted(tmp_path: Path) -> Non
         assert loaded.snapshot is None
         assert loaded.diagnostics == ("snapshot_schema_incompatible",)
         with engine.connect() as connection:
-            assert connection.execute(
-                text("SELECT count(*) FROM aggregate_snapshots")
-            ).scalar_one() == 1
+            assert (
+                connection.execute(text("SELECT count(*) FROM aggregate_snapshots")).scalar_one()
+                == 1
+            )
     finally:
         engine.dispose()

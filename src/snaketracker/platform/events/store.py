@@ -62,11 +62,18 @@ class IdempotencyContext:
     expires_at: datetime
 
 
+class SynchronousProjection(Protocol):
+    """A correctness projection applied inside the append transaction."""
+
+    def apply(self, transaction: object, events: tuple[DomainEvent, ...]) -> None: ...
+
+
 @dataclass(frozen=True, slots=True)
 class AtomicAppendRequest:
     streams: tuple[StreamAppend, ...]
     idempotency: IdempotencyContext
     outbox: tuple[OutboxHandoff, ...] = ()
+    synchronous_projections: tuple[SynchronousProjection, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

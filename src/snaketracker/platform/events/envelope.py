@@ -10,8 +10,9 @@ from datetime import datetime
 from uuid import UUID
 
 from snaketracker.domains.households.contracts import HouseholdCreatedV1, HouseholdOwnerAddedV1
+from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
 
-type EventPayload = HouseholdCreatedV1 | HouseholdOwnerAddedV1
+type EventPayload = HouseholdCreatedV1 | HouseholdOwnerAddedV1 | EventVoidedV1 | EventReinstatedV1
 
 
 @dataclass(frozen=True, slots=True)
