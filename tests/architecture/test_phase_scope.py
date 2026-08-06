@@ -52,3 +52,18 @@ def test_phase_two_has_no_later_phase_packages_or_dependencies() -> None:
 
     assert not FORBIDDEN_PHASE_TWO_DEPENDENCIES & dependencies
     assert not [path for path in FORBIDDEN_PHASE_TWO_PATHS if (ROOT / path).exists()]
+
+
+def test_reserved_synthetic_event_namespace_is_absent_from_production_and_migrations() -> None:
+    production_roots = (ROOT / "src", ROOT / "migrations")
+    offending: list[Path] = []
+    for root in production_roots:
+        for path in root.rglob("*"):
+            if (
+                path.is_file()
+                and path.suffix in {".py", ".sql"}
+                and "__snaketracker_test__." in path.read_text(encoding="utf-8")
+            ):
+                offending.append(path.relative_to(ROOT))
+
+    assert offending == []
