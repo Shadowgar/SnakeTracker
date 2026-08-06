@@ -332,18 +332,14 @@ class SQLiteProjectionGenerationManager:
         after_position: int,
         through_position: int,
     ) -> None:
-        rows = (
-            connection.execute(
-                text(
-                    "SELECT global_position,event_type,schema_version,payload_json "
-                    "FROM domain_events WHERE global_position>:after AND global_position<=:through "
-                    "ORDER BY global_position"
-                ),
-                {"after": after_position, "through": through_position},
-            )
-            .mappings()
-            .all()
-        )
+        rows = connection.execute(
+            text(
+                "SELECT global_position,event_type,schema_version,payload_json "
+                "FROM domain_events WHERE global_position>:after AND global_position<=:through "
+                "ORDER BY global_position"
+            ),
+            {"after": after_position, "through": through_position},
+        ).mappings()
         for row in rows:
             event = ProjectionEvent(
                 global_position=int(row["global_position"]),

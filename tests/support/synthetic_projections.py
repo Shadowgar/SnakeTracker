@@ -67,7 +67,9 @@ class FTSStrategy:
         connection = cast(Connection, transaction)
         content = layout.component(self._projection_name, "content")
         fts = layout.component(self._projection_name, "fts")
-        title = str(event.payload.get("household_name", "owner membership"))
+        title = str(
+            event.payload.get("household_name", event.payload.get("label", "owner membership"))
+        )
         parameters = {"position": event.global_position, "title": title}
         connection.execute(
             text(f'INSERT INTO "{content}" (event_id,title) VALUES (:position,:title)'),
