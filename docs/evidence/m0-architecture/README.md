@@ -24,5 +24,5 @@ this directory. See the [2026-08-05 qualification-timing amendment](2026-08-05-q
 The [Phase 2 household-event phase-order amendment](2026-08-05-household-event-phase-order-amendment.md)
 records approval of ADR-0037.
 
-Phase 2 implementation and qualification are complete and under final review. M2 through M8 remain
-unaccepted in the controlling milestone checklist until their respective owner-acceptance gates.
+M2 is accepted in the controlling milestone checklist. M3 through M8 remain unaccepted until their
+respective owner-acceptance gates.

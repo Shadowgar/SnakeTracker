@@ -6,7 +6,8 @@
 - Branch: `phase2/identity-household`
 - Environment: x86_64 WSL2 laptop, Docker Engine, Python 3.13.14
 - Operator: Codex automation in `/home/rocco/SnakeTracker`
-- Milestone status: **implementation qualified; owner acceptance pending**
+- Milestone status: **M2 security boundary proven**
+- Accepted: **August 6, 2026**
 
 ## Outcome
 
@@ -18,7 +19,9 @@ login, home, and logout flows.
 
 The remote-deployment criterion remains unchecked. Trusted-proxy, public-host, TLS-origin, and
 other remote-access controls are still deferred; this evidence does not approve public deployment.
-M2 is not accepted until the owner reviews this branch. Phase 3 has not started.
+The owner accepted the visible setup, login, authenticated-home, and logout experience and then
+authorized M2 acceptance after all required automated reviews and corrections passed. Phase 3 has
+not started.
 
 ## Inventory
 
@@ -31,6 +34,7 @@ M2 is not accepted until the owner reviews this branch. Phase 3 has not started.
 - [Browser and accessibility evidence](browser/README.md)
 - [Mobile authenticated-home screenshot](browser/mobile-home.png)
 - [PR #3 automated-review disposition](reviews/pr-3-review-disposition.md)
+- [M2 owner acceptance](approvals/m2-review.md)
 
 ## Reproduction
 

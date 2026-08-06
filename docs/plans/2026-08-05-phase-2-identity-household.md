@@ -15,8 +15,7 @@ the FastAPI startup layer.
 **Tech stack:** Python 3.13, FastAPI, synchronous SQLAlchemy/SQLite, Alembic, Argon2id, Jinja2,
 plain external CSS, Docker Compose, pytest, and Playwright CLI.
 
-**Status:** Implementation and qualification checklist completed August 6, 2026; final owner
-acceptance remains governed by the M2 milestone record.
+**Status:** Implementation and qualification checklist completed and M2 accepted August 6, 2026.
 
 ## Ordered test-driven checklist
 
@@ -46,7 +45,7 @@ acceptance remains governed by the M2 milestone record.
   exact fresh-install/setup/login/home/protected/logout/relogin/expiry/revocation/rate-limit/CSRF
   Docker flow and retain evidence under `/docs/evidence/m2-security`.
 - [x] Mark only verified M2 RB criteria with evidence. Leave trusted-proxy RD and all M3+ criteria
-  unchecked; record M2 as awaiting owner acceptance.
+  unchecked; record owner acceptance only after the final review passes.
 
 ## Commit sequence
 

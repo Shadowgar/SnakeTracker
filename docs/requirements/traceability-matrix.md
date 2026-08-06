@@ -56,6 +56,6 @@ A mandatory requirement is satisfied only when its governing document is accepte
 
 - **M0 architecture approved** — accepted August 4, 2026; evidence under `m0-architecture`.
 - **M1 development-platform qualified** — accepted August 5, 2026; evidence under `m1-platform`.
-- Phase 2 implementation is locally qualified; M2 owner acceptance and merge remain pending.
+- **M2 security boundary proven** — accepted August 6, 2026; evidence under `m2-security`.
 - Phase 3 has not started; M3 through M8 remain unaccepted.
 - `Raspberry Pi deployment qualified` remains pending under Phase 7/pre-deployment controls.

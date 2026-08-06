@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "milestone": "M2",
-  "status": "implementation-qualified-owner-acceptance-pending",
+  "status": "m2-security-boundary-proven",
   "execution_date": "2026-08-06",
   "implementation_revision": "25d52a34ce3cb343d1678de75118863d844d80b5",
   "branch": "phase2/identity-household",
@@ -26,6 +26,7 @@
     "containers/README.md",
     "browser/README.md",
     "browser/mobile-home.png",
-    "reviews/pr-3-review-disposition.md"
+    "reviews/pr-3-review-disposition.md",
+    "approvals/m2-review.md"
   ]
 }
