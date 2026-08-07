@@ -16,6 +16,7 @@ pending owner acceptance even though its evidence-backed technical criteria are 
 - [Migration lifecycle](operations/migration.md)
 - [Container and ARM64 compatibility](containers/README.md)
 - [One-million-event performance and growth qualification](performance/laptop-container/summary.md)
+- [PR #4 final review disposition](reviews/pr-4-final-review.md)
 - `evidence-manifest.json` records provenance and classification.
 - `checksums.sha256` covers the retained M3 evidence set.
 

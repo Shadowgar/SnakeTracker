@@ -1,6 +1,6 @@
 # M3 Test Evidence
 
-The authoritative local gate passed with 175 tests, line coverage above 95%, branch coverage above
+The authoritative local gate passed with 189 tests, line coverage above 94%, branch coverage above
 85%, Ruff, mypy, architecture boundaries, architecture freeze, documentation links, dependency
 integrity, Compose configuration, and zero known dependency vulnerabilities. The retained
 `quality-gate.log` is the raw result; focused logs make each acceptance boundary independently
@@ -40,8 +40,10 @@ hash mismatch rejection, and concurrent duplicate collapse to one logical result
 ## Snapshots, subjects, and time
 
 `snapshots-subjects-time-corrections.log` proves the measurable snapshot policy, checksum and
-schema/implementation compatibility, diagnostic quarantine, non-deletion, and deterministic full
-replay fallback. It also covers structural subject requirements, in-transaction existence,
+schema/implementation compatibility, diagnostic quarantine, non-deletion, newest-two retention,
+and deterministic full replay fallback. A 10,000-event loader test proves that a valid snapshot at
+version 9,900 reads only the 100-event tail, while corrupt, malformed, incompatible, or invalid-
+boundary snapshots cannot return partial state. It also covers structural subject requirements, in-transaction existence,
 household ownership and current actor permission, UTC storage, five-minute future skew, household
 reporting, nonexistent local times, and explicit DST folds.
 

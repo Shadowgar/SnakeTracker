@@ -41,20 +41,19 @@
       }
     }
   },
-  "buildx.build.ref": "default/default/t65brvlfwvrrukvxg4lehfum1",
-  "containerimage.config.digest": "sha256:dbdb283192f54f15836197be454e0ae44bdd9a2513b6ff4b2f723153534bd85b",
+  "buildx.build.ref": "default/default/hhkwxjnyeu4jo3m5bom0cclpp",
+  "containerimage.config.digest": "sha256:7ea844d4ba0015dc03a772b1b40957b15157de3607739ee7973703a254928f57",
   "containerimage.descriptor": {
     "mediaType": "application/vnd.oci.image.manifest.v1+json",
-    "digest": "sha256:345cfcf16ee3691c76f4e1b09bc098f55ea9633b49b0e1ac5b98b29bbbd72b14",
+    "digest": "sha256:cc59ddab10290b2226b697bb7d5808311be56e55afb95cbe57b7d587fb6deab9",
     "size": 2957,
     "annotations": {
-      "org.opencontainers.image.created": "2026-08-06T08:29:43Z"
+      "org.opencontainers.image.created": "2026-08-07T06:49:38Z"
     },
     "platform": {
       "architecture": "arm64",
       "os": "linux"
     }
   },
-  "containerimage.digest": "sha256:345cfcf16ee3691c76f4e1b09bc098f55ea9633b49b0e1ac5b98b29bbbd72b14",
-  "image.name": "docker.io/library/snaketracker:phase3-arm64"
+  "containerimage.digest": "sha256:cc59ddab10290b2226b697bb7d5808311be56e55afb95cbe57b7d587fb6deab9"
 }

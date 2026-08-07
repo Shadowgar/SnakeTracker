@@ -1,2 +1,7 @@
-.....                                                                    [100%]
-5 passed in 1.13s
+2026-08-07 Phase 3 final-review migration lifecycle
+PASS upgrade: base -> 0001_phase1_baseline -> 0002_identity_household -> 0003_phase2_review_hardening -> 0004_event_platform
+PASS downgrade: 0004_event_platform -> 0003_phase2_review_hardening
+PASS re-upgrade: 0003_phase2_review_hardening -> 0004_event_platform
+Final Alembic head: 0004_event_platform
+PRAGMA foreign_key_check: []
+Phase 2 compatibility fixture suite: 40 passed, 6 deselected

@@ -6,5 +6,7 @@ checkpoint storage. It does not alter accepted Phase 2 migrations or introduce p
 
 `migration-lifecycle.log` proves fresh upgrade, downgrade, re-upgrade, constraints, minimum SQLite
 schema compatibility, absence of upcasters from Alembic, and exact preservation of existing Phase
-2 household event and subject rows across the forward migration. The isolated Compose lifecycle
-also finished at `0004_event_platform`.
+2 household event and subject rows across the forward migration. The final review additionally
+proves composite projection/generation ownership foreign keys and an empty
+`PRAGMA foreign_key_check` after upgrade/downgrade/re-upgrade. The isolated Compose lifecycle also
+finished at `0004_event_platform`.
