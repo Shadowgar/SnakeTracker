@@ -53,7 +53,8 @@ Accepted: August 6, 2026
 
 ## Phase 3 / M3 — Event integrity proven
 
-Status: M3 implementation-qualified; owner acceptance pending
+Status: M3 event integrity proven
+Accepted: August 7, 2026
 
 - [x] RB General event platform extends and replays the Phase 2 household contracts without rewriting stored events. Evidence: [contract and migration results](../evidence/m3-event-integrity/tests/README.md#phase-2-compatibility).
 - [x] RB Historical fixtures replay deterministically. Evidence: [AT-EVT-02](../evidence/m3-event-integrity/tests/README.md#at-evt-02-contracts-and-replay).

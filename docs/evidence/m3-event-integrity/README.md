@@ -1,16 +1,17 @@
 # M3 Event Integrity Evidence
 
-Status: M3 implementation-qualified; owner acceptance pending
+Status: M3 event integrity proven
+Accepted: August 7, 2026
 
 This evidence proves the Phase 3 general event platform on the approved laptop/Docker development
 environment. It does not grant Raspberry Pi deployment qualification and does not authorize Phase
 4 functionality.
 
-## Result
+## Owner acceptance
 
-All applicable M3 release blockers and the development qualification target pass. The controlling
-[milestone checklist](../../roadmap/milestones.md#phase-3--m3--event-integrity-proven) remains
-pending owner acceptance even though its evidence-backed technical criteria are checked.
+The owner accepts M3 based on the completed, evidence-backed release-blocker checklist in the
+authoritative [milestone record](../../roadmap/milestones.md#phase-3--m3--event-integrity-proven).
+All applicable M3 release blockers and the development qualification target pass.
 
 - [Tests and requirement mapping](tests/README.md)
 - [Migration lifecycle](operations/migration.md)
