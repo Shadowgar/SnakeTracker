@@ -53,15 +53,18 @@ Accepted: August 6, 2026
 
 ## Phase 3 / M3 — Event integrity proven
 
-- [ ] RB General event platform extends and replays the Phase 2 household contracts without rewriting stored events.
-- [ ] RB Historical fixtures replay deterministically.
-- [ ] RB Unknown event contracts enter restricted recovery mode.
-- [ ] RB Atomic multi-stream failures leave no partial state.
-- [ ] RB Equivalent duplicate commands return one stored logical result.
-- [ ] RB Snapshot incompatibility/corruption falls back to replay.
-- [ ] RB Corrections, voids, reinstatements, and compensations produce correct effective state.
-- [ ] RB Projection rebuild, interruption, rollback, FTS swap, and cleanup tests pass.
-- [ ] QT Replay, append, and rebuild measurements are retained on the pinned development environment.
+Status: M3 event integrity proven
+Accepted: August 7, 2026
+
+- [x] RB General event platform extends and replays the Phase 2 household contracts without rewriting stored events. Evidence: [contract and migration results](../evidence/m3-event-integrity/tests/README.md#phase-2-compatibility).
+- [x] RB Historical fixtures replay deterministically. Evidence: [AT-EVT-02](../evidence/m3-event-integrity/tests/README.md#at-evt-02-contracts-and-replay).
+- [x] RB Unknown event contracts enter restricted recovery mode. Evidence: [compatibility results](../evidence/m3-event-integrity/tests/README.md#unknown-contract-recovery).
+- [x] RB Atomic multi-stream failures leave no partial state. Evidence: [AT-EVT-04](../evidence/m3-event-integrity/tests/README.md#at-evt-04-atomic-multi-stream-append).
+- [x] RB Equivalent duplicate commands return one stored logical result. Evidence: [AT-EVT-05](../evidence/m3-event-integrity/tests/README.md#at-evt-05-idempotency).
+- [x] RB Snapshot incompatibility/corruption falls back to replay. Evidence: [snapshot results](../evidence/m3-event-integrity/tests/README.md#snapshots-subjects-and-time).
+- [x] RB Corrections, voids, reinstatements, and compensations produce correct effective state. Evidence: [AT-EVT-03](../evidence/m3-event-integrity/tests/README.md#at-evt-03-correction-controls).
+- [x] RB Projection rebuild, interruption, rollback, FTS swap, and cleanup tests pass. Evidence: [AT-PRJ-03](../evidence/m3-event-integrity/tests/README.md#at-prj-03-projection-recovery).
+- [x] QT Replay, append, and rebuild measurements are retained on the pinned development environment. Evidence: [one-million-event qualification](../evidence/m3-event-integrity/performance/laptop-container/summary.md).
 
 ## Phase 4 / M4 — Internal minimum usable baseline
 

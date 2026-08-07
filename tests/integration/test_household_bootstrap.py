@@ -178,5 +178,5 @@ def test_unknown_household_contract_forces_safe_recovery_mode(tmp_path: Path) ->
     report = inspect_startup_compatibility(engine)
 
     assert report.mode is CompatibilityMode.RECOVERY_REQUIRED
-    assert report.reason_code == "household_event_contract_unknown"
+    assert report.reason_code == "event_contract_unknown"
     engine.dispose()

@@ -1,14 +1,26 @@
 from __future__ import annotations
 
 from pathlib import Path
+from uuid import uuid4
 
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import create_engine, inspect, text
 
+from snaketracker.application.household_bootstrap import (
+    BootstrapCommand,
+    HouseholdBootstrapService,
+)
+from snaketracker.infrastructure.database.engine import create_sqlite_engine
+from snaketracker.infrastructure.identity.bootstrap_repository import (
+    SQLAlchemyHouseholdBootstrapRepository,
+)
+from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
+
 ROOT = Path(__file__).parents[2]
-REVISION = "0003_phase2_review_hardening"
-PHASE_TWO_TABLES = {
+REVISION = "0004_event_platform"
+PHASE_THREE_TABLES = {
+    "aggregate_snapshots",
     "alembic_version",
     "authorization_memberships",
     "domain_events",
@@ -17,6 +29,10 @@ PHASE_TWO_TABLES = {
     "household_summaries",
     "idempotency_operations",
     "login_rate_limits",
+    "outbox_items",
+    "projection_checkpoints",
+    "projection_definitions",
+    "projection_generations",
     "security_audit",
     "sessions",
     "users",
@@ -57,7 +73,7 @@ def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -
 
     engine = create_engine(f"sqlite+pysqlite:///{database}")
     try:
-        assert set(inspect(engine).get_table_names()) == PHASE_TWO_TABLES
+        assert set(inspect(engine).get_table_names()) == PHASE_THREE_TABLES
     finally:
         engine.dispose()
 
@@ -68,7 +84,7 @@ def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -
     assert current_revision(database) == REVISION
 
 
-def test_migrations_contain_no_event_upcasters_or_later_phase_tables() -> None:
+def test_migrations_contain_no_event_upcasters_or_phase_four_tables() -> None:
     migration_root = ROOT / "migrations"
     assert not list(migration_root.rglob("*upcaster*"))
 
@@ -82,8 +98,6 @@ def test_migrations_contain_no_event_upcasters_or_later_phase_tables() -> None:
         "expenses",
         "jobs",
         "notifications",
-        "snapshots",
-        "projection_generations",
     }
     assert not {name for name in forbidden if name in migration_text}
 
@@ -114,6 +128,26 @@ def test_identity_schema_has_required_uniqueness_and_foreign_keys(tmp_path: Path
         assert "ix_domain_events_stream" not in {
             item["name"] for item in inspector.get_indexes("domain_events")
         }
+        assert {item["name"] for item in inspector.get_unique_constraints("outbox_items")} == {
+            "uq_outbox_logical_handoff"
+        }
+        assert {
+            item["name"] for item in inspector.get_unique_constraints("aggregate_snapshots")
+        } == {"uq_snapshot_stream_version_schema"}
+        definition_foreign_keys = inspector.get_foreign_keys("projection_definitions")
+        assert any(
+            foreign_key["constrained_columns"] == ["projection_name", "active_generation_id"]
+            and foreign_key["referred_table"] == "projection_generations"
+            and foreign_key["referred_columns"] == ["projection_name", "generation_id"]
+            for foreign_key in definition_foreign_keys
+        )
+        checkpoint_foreign_keys = inspector.get_foreign_keys("projection_checkpoints")
+        assert any(
+            foreign_key["constrained_columns"] == ["projection_name", "generation_id"]
+            and foreign_key["referred_table"] == "projection_generations"
+            and foreign_key["referred_columns"] == ["projection_name", "generation_id"]
+            for foreign_key in checkpoint_foreign_keys
+        )
     finally:
         engine.dispose()
 
@@ -133,3 +167,70 @@ def test_schema_avoids_json_functions_unsafe_on_minimum_sqlite(tmp_path: Path) -
         assert "json_valid(" not in schema
     finally:
         engine.dispose()
+
+
+def test_phase_two_household_events_are_unchanged_by_phase_three_migration(
+    tmp_path: Path,
+) -> None:
+    database = tmp_path / "phase2-upgrade.sqlite3"
+    config = alembic_config(database)
+    command.upgrade(config, "0003_phase2_review_hardening")
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    try:
+        HouseholdBootstrapService(
+            SQLAlchemyHouseholdBootstrapRepository(engine),
+            Argon2PasswordHasher.for_testing(),
+            command_hash_secret=b"phase3-migration-test-secret-32-bytes",
+        ).bootstrap(
+            BootstrapCommand(
+                household_name="Migration Home",
+                timezone="UTC",
+                owner_email="migration@example.com",
+                owner_display_name="Migration Owner",
+                password="correct horse battery staple",
+                idempotency_key="phase3-migration-fixture",
+                correlation_id=uuid4(),
+            )
+        )
+        with engine.connect() as connection:
+            events_before = (
+                connection.execute(text("SELECT * FROM domain_events ORDER BY global_position"))
+                .mappings()
+                .all()
+            )
+            subjects_before = (
+                connection.execute(
+                    text(
+                        "SELECT * FROM event_subjects "
+                        "ORDER BY event_id,subject_type,subject_id,relationship"
+                    )
+                )
+                .mappings()
+                .all()
+            )
+    finally:
+        engine.dispose()
+
+    command.upgrade(config, "head")
+    upgraded = create_engine(f"sqlite+pysqlite:///{database}")
+    try:
+        with upgraded.connect() as connection:
+            assert (
+                connection.execute(text("SELECT * FROM domain_events ORDER BY global_position"))
+                .mappings()
+                .all()
+                == events_before
+            )
+            assert (
+                connection.execute(
+                    text(
+                        "SELECT * FROM event_subjects "
+                        "ORDER BY event_id,subject_type,subject_id,relationship"
+                    )
+                )
+                .mappings()
+                .all()
+                == subjects_before
+            )
+    finally:
+        upgraded.dispose()

@@ -1,0 +1,8 @@
+2026-08-07 Phase 3 final-review linux/arm64 OCI build
+Prerequisite: tonistiigi/binfmt sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0 installed arm64 emulation.
+Command: docker buildx build --platform linux/arm64 --build-arg SNAKETRACKER_UID=1001 --output type=oci,dest=/tmp/snaketracker-phase3-review-arm64.oci.tar --metadata-file /tmp/snaketracker-phase3-review-arm64-metadata.json .
+Result: PASS
+Descriptor: sha256:cc59ddab10290b2226b697bb7d5808311be56e55afb95cbe57b7d587fb6deab9
+Archive SHA-256: bf931412dbf57aec024b14513fb45373114923d09a3b7190ecbebbefdac13bf1
+Archive bytes: 108296704
+Note: An initial attempt failed with exec format error because binfmt registration was absent; installing the pinned local binfmt image restored the declared builder prerequisite.

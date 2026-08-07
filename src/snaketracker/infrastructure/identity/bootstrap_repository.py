@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
 from datetime import timedelta
 from typing import Any
 from uuid import uuid4
@@ -18,6 +17,7 @@ from snaketracker.application.household_bootstrap import (
     BootstrapResult,
     BootstrapWrite,
 )
+from snaketracker.domains.households.contracts import HouseholdCreatedV1
 from snaketracker.platform.events.envelope import DomainEvent, canonical_event_data
 
 
@@ -152,7 +152,9 @@ class SQLAlchemyHouseholdBootstrapRepository:
         connection: Connection, write: BootstrapWrite, global_position: int
     ) -> None:
         event = write.events[0]
-        payload = asdict(event.payload)
+        payload = event.payload
+        if not isinstance(payload, HouseholdCreatedV1):
+            raise TypeError("Household bootstrap requires a household-created payload.")
         timestamp = write.recorded_at.isoformat(timespec="microseconds")
         connection.execute(
             text(
@@ -163,8 +165,8 @@ class SQLAlchemyHouseholdBootstrapRepository:
             ),
             {
                 "household_id": str(write.result.household_id),
-                "name": payload["household_name"],
-                "timezone": payload["timezone"],
+                "name": payload.household_name,
+                "timezone": payload.timezone,
                 "position": global_position,
                 "now": timestamp,
             },
