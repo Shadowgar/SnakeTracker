@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, is_dataclass
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal, cast
 from uuid import UUID
 
 from snaketracker.domains.households.contracts import HouseholdCreatedV1, HouseholdOwnerAddedV1
@@ -40,6 +40,7 @@ class CorrectionCapabilities:
     required_role: str = "owner"
     maximum_age_days: int | None = None
     correction_event_types: tuple[str, ...] = ()
+    compensation_event_types: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -149,7 +150,9 @@ class EventRegistry:
 
 
 def _require_exact_fields(payload_type: type[EventPayload], data: Mapping[str, object]) -> None:
-    allowed = {field.name for field in fields(payload_type)}
+    if not is_dataclass(payload_type):
+        raise TypeError("Registered event payload types must be dataclasses.")
+    allowed = {field.name for field in fields(cast(Any, payload_type))}
     if set(data) != allowed:
         raise ValueError("Stored event payload does not match its contract.")
 

@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
-from snaketracker.platform.events.store import StreamKey
+from snaketracker.platform.events.envelope import DomainEvent
+from snaketracker.platform.events.store import EventStreamIntegrityError, StreamKey
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,6 +87,107 @@ class SnapshotRepository(Protocol):
         snapshot_schema_version: int,
         aggregate_implementation_version: int,
     ) -> SnapshotLoadResult: ...
+
+    def quarantine(self, snapshot_id: UUID, reason: str) -> None: ...
+
+
+class SnapshotEventReader(Protocol):
+    def load_stream(
+        self,
+        key: StreamKey,
+        *,
+        after_version: int = 0,
+        expected_boundary_event_id: UUID | None = None,
+    ) -> tuple[DomainEvent, ...]: ...
+
+
+@dataclass(frozen=True, slots=True)
+class AggregateLoadResult[AggregateState]:
+    state: AggregateState
+    stream_version: int
+    replayed_event_count: int
+    used_snapshot: bool
+    diagnostics: tuple[str, ...]
+
+
+class AggregateLoader[AggregateState]:
+    """Restore a compatible snapshot and replay only its authoritative event tail."""
+
+    def __init__(
+        self,
+        *,
+        event_store: SnapshotEventReader,
+        snapshot_repository: SnapshotRepository,
+        initial_state: Callable[[], AggregateState],
+        restore_snapshot: Callable[[dict[str, object]], AggregateState],
+        apply_event: Callable[[AggregateState, DomainEvent], AggregateState],
+        snapshot_schema_version: int,
+        aggregate_implementation_version: int,
+    ) -> None:
+        self._event_store = event_store
+        self._snapshot_repository = snapshot_repository
+        self._initial_state = initial_state
+        self._restore_snapshot = restore_snapshot
+        self._apply_event = apply_event
+        self._snapshot_schema_version = snapshot_schema_version
+        self._aggregate_implementation_version = aggregate_implementation_version
+
+    def load(self, key: StreamKey) -> AggregateLoadResult[AggregateState]:
+        loaded = self._snapshot_repository.load_latest(
+            key,
+            snapshot_schema_version=self._snapshot_schema_version,
+            aggregate_implementation_version=self._aggregate_implementation_version,
+        )
+        snapshot = loaded.snapshot
+        diagnostics = list(loaded.diagnostics)
+        if snapshot is None:
+            state = self._initial_state()
+            after_version = 0
+            boundary_event_id = None
+        else:
+            try:
+                state = self._restore_snapshot(snapshot.state)
+            except (KeyError, TypeError, ValueError):
+                self._snapshot_repository.quarantine(snapshot.snapshot_id, "snapshot_state_invalid")
+                diagnostics.append("snapshot_state_invalid")
+                snapshot = None
+                state = self._initial_state()
+                after_version = 0
+                boundary_event_id = None
+            else:
+                after_version = snapshot.stream_version
+                boundary_event_id = snapshot.boundary_event_id
+
+        try:
+            events = self._event_store.load_stream(
+                key,
+                after_version=after_version,
+                expected_boundary_event_id=boundary_event_id,
+            )
+        except EventStreamIntegrityError:
+            if snapshot is None:
+                raise
+            self._snapshot_repository.quarantine(snapshot.snapshot_id, "snapshot_boundary_invalid")
+            diagnostics.append("snapshot_boundary_invalid")
+            snapshot = None
+            state = self._initial_state()
+            after_version = 0
+            events = self._event_store.load_stream(key)
+        expected_version = after_version + 1
+        for event in events:
+            if event.stream_version != expected_version:
+                raise EventStreamIntegrityError(
+                    "Aggregate replay requires contiguous stream versions."
+                )
+            state = self._apply_event(state, event)
+            expected_version += 1
+        return AggregateLoadResult(
+            state=state,
+            stream_version=expected_version - 1,
+            replayed_event_count=len(events),
+            used_snapshot=snapshot is not None,
+            diagnostics=tuple(diagnostics),
+        )
 
 
 def snapshot_checksum(snapshot: AggregateSnapshot) -> str:

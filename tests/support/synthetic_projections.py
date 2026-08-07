@@ -19,7 +19,8 @@ class OrdinaryCounterStrategy:
         connection = cast(Connection, transaction)
         table = layout.component(self._projection_name, "data")
         connection.exec_driver_sql(
-            f'CREATE TABLE "{table}" (event_id INTEGER PRIMARY KEY, value INTEGER NOT NULL)'
+            f'CREATE TABLE "{table}" (event_id INTEGER PRIMARY KEY, value INTEGER NOT NULL,'
+            "household_id TEXT NOT NULL,stream_type TEXT NOT NULL,stream_id TEXT NOT NULL)"
         )
 
     def apply(self, transaction: object, layout: GenerationLayout, event: ProjectionEvent) -> None:
@@ -28,8 +29,18 @@ class OrdinaryCounterStrategy:
         value = event.payload.get("value")
         stored_value = value if type(value) is int else event.global_position
         connection.execute(
-            text(f'INSERT INTO "{table}" (event_id,value) VALUES (:position,:value)'),
-            {"position": event.global_position, "value": stored_value},
+            text(
+                f'INSERT INTO "{table}" '
+                "(event_id,value,household_id,stream_type,stream_id) "
+                "VALUES (:position,:value,:household_id,:stream_type,:stream_id)"
+            ),
+            {
+                "position": event.global_position,
+                "value": stored_value,
+                "household_id": str(event.household_id),
+                "stream_type": event.stream_type,
+                "stream_id": str(event.stream_id),
+            },
         )
 
     def validate(self, transaction: object, layout: GenerationLayout) -> Mapping[str, object]:

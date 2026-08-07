@@ -12,6 +12,7 @@ import sqlite3
 import statistics
 import time
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
@@ -41,10 +42,11 @@ from snaketracker.platform.events.envelope import (
     DomainEvent,
     EventPayload,
     EventSubject,
+    canonical_event_checksum,
     event_checksum,
 )
 from snaketracker.platform.events.registry import HOUSEHOLD_CONTRACTS, EventRegistry
-from snaketracker.platform.events.snapshots import AggregateSnapshot
+from snaketracker.platform.events.snapshots import AggregateLoader, AggregateSnapshot
 from snaketracker.platform.events.store import StreamKey
 from snaketracker.platform.projections.definitions import (
     ProjectionDefinition,
@@ -169,7 +171,7 @@ def bulk_seed(
 ) -> dict[str, object]:
     started = time.perf_counter()
     maximum_wal = 0
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         connection.execute("PRAGMA foreign_keys=ON")
         connection.execute("PRAGMA journal_mode=WAL")
         connection.execute("PRAGMA synchronous=FULL")
@@ -232,11 +234,7 @@ def bulk_seed(
                     "metadata": {"source": "qualification"},
                     "notes": None,
                 }
-                checksum = hashlib.sha256(
-                    json.dumps(
-                        canonical, sort_keys=True, separators=(",", ":"), ensure_ascii=True
-                    ).encode()
-                ).hexdigest()
+                checksum = canonical_event_checksum(canonical)
                 event_rows.append(
                     (
                         str(event_id),
@@ -342,10 +340,8 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         database.unlink()
     engine, bootstrap, store = initialize_database(database)
     append_latencies: list[float] = []
-    busy_failures = 0
 
-    def append_one(index: int) -> None:
-        nonlocal busy_failures
+    def append_one(index: int) -> tuple[float | None, bool]:
         stream_id = UUID(int=5_000_000 + index)
         event = make_event(
             bootstrap.household_id,
@@ -363,13 +359,14 @@ def run(args: argparse.Namespace) -> dict[str, object]:
             )
         except Exception as error:
             if "locked" in str(error).lower() or "busy" in str(error).lower():
-                busy_failures += 1
-                return
+                return None, True
             raise
-        append_latencies.append((time.perf_counter() - started) * 1000)
+        return (time.perf_counter() - started) * 1000, False
 
     with ThreadPoolExecutor(max_workers=args.concurrency) as executor:
-        list(executor.map(append_one, range(args.append_samples)))
+        append_results = list(executor.map(append_one, range(args.append_samples)))
+    append_latencies.extend(latency for latency, _busy in append_results if latency is not None)
+    busy_failures = sum(1 for _latency, busy in append_results if busy)
 
     seed = bulk_seed(
         database,
@@ -387,26 +384,38 @@ def run(args: argparse.Namespace) -> dict[str, object]:
 
     long_events = store.load_stream(long_key)
     snapshot_store = SQLAlchemySnapshotRepository(engine)
+    snapshot_boundary = 9_900
     snapshot_store.save(
         AggregateSnapshot.create(
             snapshot_id=uuid4(),
             key=long_key,
-            stream_version=10_000,
+            stream_version=snapshot_boundary,
             snapshot_schema_version=1,
             aggregate_implementation_version=1,
-            boundary_event_id=long_events[-1].event_id,
-            state={"value": 9_999, "label": "document representative note"},
+            boundary_event_id=long_events[snapshot_boundary - 1].event_id,
+            state={"value": snapshot_boundary - 1},
             created_at=datetime.now(UTC),
         )
     )
+    aggregate_loader = AggregateLoader(
+        event_store=store,
+        snapshot_repository=snapshot_store,
+        initial_state=lambda: -1,
+        restore_snapshot=lambda state: cast(int, state["value"]),
+        apply_event=lambda _state, event: cast(SyntheticCounterChangedV2, event.payload).value,
+        snapshot_schema_version=1,
+        aggregate_implementation_version=1,
+    )
     snapshot_samples: list[float] = []
+    snapshot_replayed_events: list[int] = []
     for _index in range(30):
         started = time.perf_counter()
-        loaded = snapshot_store.load_latest(
-            long_key, snapshot_schema_version=1, aggregate_implementation_version=1
-        )
-        assert loaded.snapshot is not None
+        loaded = aggregate_loader.load(long_key)
         snapshot_samples.append((time.perf_counter() - started) * 1000)
+        snapshot_replayed_events.append(loaded.replayed_event_count)
+        assert loaded.used_snapshot
+        assert loaded.stream_version == 10_000
+        assert loaded.state == 9_999
 
     registry = ProjectionRegistry(projection_definitions(), allow_reserved_test_namespace=True)
     manager = SQLiteProjectionGenerationManager(engine, registry)
@@ -466,13 +475,17 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         connection.exec_driver_sql("PRAGMA wal_checkpoint(TRUNCATE)")
     final_bytes = _size(database)
     free_bytes = os.statvfs(database.parent).f_bavail * os.statvfs(database.parent).f_frsize
+    with engine.connect() as connection:
+        actual_events = int(
+            connection.execute(text("SELECT count(*) FROM domain_events")).scalar_one()
+        )
     result: dict[str, object] = {
         "schema_version": 1,
         "classification": "M3 development-platform qualification",
         "dataset": {
             "id": DATASET_ID,
             "target_events": args.events,
-            "actual_events": args.events,
+            "actual_events": actual_events,
             "synthetic_contracts_test_only": True,
             "distribution": {name: percentage for percentage, name in CATEGORIES},
             **seed,
@@ -499,6 +512,8 @@ def run(args: argparse.Namespace) -> dict[str, object]:
             "busy_failure_percent": busy_failures / args.append_samples * 100,
             "full_10000_event_replay_ms": _summary(replay_samples),
             "snapshot_load_ms": _summary(snapshot_samples),
+            "snapshot_boundary_stream_version": snapshot_boundary,
+            "snapshot_replayed_event_counts": snapshot_replayed_events,
             "fts_query_ms": _summary(fts_latencies),
             "rebuilds": rebuilds,
             "database_bytes_before_projections": dataset_bytes,
@@ -522,6 +537,8 @@ def run(args: argparse.Namespace) -> dict[str, object]:
 
 
 def _summary(samples: list[float]) -> dict[str, float | int]:
+    if not samples:
+        return {"count": 0, "min": 0.0, "median": 0.0, "p95": float("inf"), "max": 0.0}
     return {
         "count": len(samples),
         "min": min(samples),
@@ -533,11 +550,13 @@ def _summary(samples: list[float]) -> dict[str, float | int]:
 
 def evaluate_targets(result: dict[str, object]) -> dict[str, bool]:
     measurements = cast(dict[str, object], result["measurements"])
+    dataset = cast(dict[str, object], result["dataset"])
     append = cast(dict[str, float], measurements["append_ms"])
     snapshot = cast(dict[str, float], measurements["snapshot_load_ms"])
     fts = cast(dict[str, float], measurements["fts_query_ms"])
     rebuilds = cast(list[dict[str, object]], measurements["rebuilds"])
     return {
+        "event_count_matches_target": dataset["actual_events"] == dataset["target_events"],
         "command_p95_at_most_400_ms": append["p95"] <= 400,
         "busy_failures_at_most_0_1_percent": (
             cast(float, measurements["busy_failure_percent"]) <= 0.1

@@ -134,6 +134,20 @@ def test_identity_schema_has_required_uniqueness_and_foreign_keys(tmp_path: Path
         assert {
             item["name"] for item in inspector.get_unique_constraints("aggregate_snapshots")
         } == {"uq_snapshot_stream_version_schema"}
+        definition_foreign_keys = inspector.get_foreign_keys("projection_definitions")
+        assert any(
+            foreign_key["constrained_columns"] == ["projection_name", "active_generation_id"]
+            and foreign_key["referred_table"] == "projection_generations"
+            and foreign_key["referred_columns"] == ["projection_name", "generation_id"]
+            for foreign_key in definition_foreign_keys
+        )
+        checkpoint_foreign_keys = inspector.get_foreign_keys("projection_checkpoints")
+        assert any(
+            foreign_key["constrained_columns"] == ["projection_name", "generation_id"]
+            and foreign_key["referred_table"] == "projection_generations"
+            and foreign_key["referred_columns"] == ["projection_name", "generation_id"]
+            for foreign_key in checkpoint_foreign_keys
+        )
     finally:
         engine.dispose()
 

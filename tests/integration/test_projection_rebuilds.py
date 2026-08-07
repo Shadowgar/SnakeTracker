@@ -155,6 +155,17 @@ def test_shadow_rebuild_catches_tail_activates_atomically_and_rolls_back(tmp_pat
             assert (
                 connection.execute(text(f'SELECT count(*) FROM "{second_table}"')).scalar_one() == 2
             )
+            identity = connection.execute(
+                text(
+                    f'SELECT household_id,stream_type,stream_id FROM "{second_table}" '
+                    "ORDER BY event_id LIMIT 1"
+                )
+            ).one()
+            assert tuple(identity) == (
+                str(household.household_id),
+                "household",
+                str(household.household_id),
+            )
             statuses = (
                 connection.execute(
                     text(
@@ -209,6 +220,44 @@ def test_validation_failure_and_interruption_keep_active_generation_and_cleanup(
         with pytest.raises(ProjectionRebuildInterruptedError):
             manager.rebuild(GROUP, interrupt_after="activation")
         assert manager.active_layout(GROUP).component(name, "data") != active_before
+    finally:
+        engine.dispose()
+
+
+def test_one_cleanup_removes_all_failed_generations(tmp_path: Path) -> None:
+    engine, _household = migrated_household(tmp_path)
+    name = "__snaketracker_test__.all_failures"
+    failing = definition(name, "test_all_failures", FailingValidationStrategy(name))
+    manager = SQLiteProjectionGenerationManager(
+        engine, ProjectionRegistry((failing,), allow_reserved_test_namespace=True)
+    )
+    try:
+        for _attempt in range(2):
+            with pytest.raises(ValueError, match="injected projection validation failure"):
+                manager.rebuild(GROUP)
+
+        assert manager.cleanup_failed(GROUP) == 2
+        with engine.connect() as connection:
+            assert (
+                connection.execute(
+                    text(
+                        "SELECT count(*) FROM projection_generations "
+                        "WHERE projection_name=:name AND status='failed'"
+                    ),
+                    {"name": name},
+                ).scalar_one()
+                == 0
+            )
+            assert (
+                connection.execute(
+                    text(
+                        "SELECT count(*) FROM projection_generations "
+                        "WHERE projection_name=:name AND status='cleanup'"
+                    ),
+                    {"name": name},
+                ).scalar_one()
+                == 2
+            )
     finally:
         engine.dispose()
 

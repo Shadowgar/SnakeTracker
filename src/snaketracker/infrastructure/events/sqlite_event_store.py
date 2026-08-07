@@ -23,6 +23,7 @@ from snaketracker.platform.events.store import (
     AppendResult,
     AtomicAppendRequest,
     AtomicAppendResult,
+    EventStreamIntegrityError,
     ExpectedVersionConflictError,
     IdempotencyConflictError,
     OutboxHandoff,
@@ -47,20 +48,61 @@ class SQLAlchemyEventStore:
         self._registry = registry
         self._subject_validator = subject_validator or SQLAlchemySubjectReferenceValidator()
 
-    def load_stream(self, key: StreamKey) -> tuple[DomainEvent, ...]:
+    def load_stream(
+        self,
+        key: StreamKey,
+        *,
+        after_version: int = 0,
+        expected_boundary_event_id: UUID | None = None,
+    ) -> tuple[DomainEvent, ...]:
+        if after_version < 0:
+            raise ValueError("The replay boundary cannot be negative.")
+        if (after_version == 0) != (expected_boundary_event_id is None):
+            raise ValueError("A nonzero replay boundary requires its event identity.")
         with self._engine.connect() as connection:
+            stored_head = connection.execute(
+                text(
+                    "SELECT current_version FROM event_streams "
+                    "WHERE household_id=:household_id AND stream_type=:stream_type "
+                    "AND stream_id=:stream_id"
+                ),
+                _stream_parameters(key),
+            ).scalar_one_or_none()
+            current_version = int(stored_head) if stored_head is not None else 0
+            if after_version > current_version:
+                raise EventStreamIntegrityError(
+                    "Replay boundary is newer than the authoritative stream head."
+                )
+            if expected_boundary_event_id is not None:
+                actual_boundary = connection.execute(
+                    text(
+                        "SELECT event_id FROM domain_events WHERE household_id=:household_id "
+                        "AND stream_type=:stream_type AND stream_id=:stream_id "
+                        "AND stream_version=:after_version"
+                    ),
+                    {**_stream_parameters(key), "after_version": after_version},
+                ).scalar_one_or_none()
+                if actual_boundary != str(expected_boundary_event_id):
+                    raise EventStreamIntegrityError(
+                        "Snapshot boundary does not match the authoritative stream."
+                    )
             rows = (
                 connection.execute(
                     text(
                         "SELECT * FROM domain_events WHERE household_id=:household_id "
                         "AND stream_type=:stream_type AND stream_id=:stream_id "
+                        "AND stream_version>:after_version "
                         "ORDER BY stream_version"
                     ),
-                    _stream_parameters(key),
+                    {**_stream_parameters(key), "after_version": after_version},
                 )
                 .mappings()
                 .all()
             )
+            if len(rows) != current_version - after_version:
+                raise EventStreamIntegrityError(
+                    "Stored events do not match the authoritative stream head."
+                )
             return tuple(self._deserialize_row(connection, row) for row in rows)
 
     def append(

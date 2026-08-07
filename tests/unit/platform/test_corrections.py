@@ -82,6 +82,7 @@ def capabilities(*, requires_compensation: bool = False) -> CorrectionCapabiliti
         required_role="owner",
         maximum_age_days=30,
         correction_event_types=("__snaketracker_test__.counter.corrected",),
+        compensation_event_types=("__snaketracker_test__.counter.compensated",),
     )
 
 
@@ -146,6 +147,18 @@ def test_role_age_duplicate_void_and_reinstatement_rules_fail_closed() -> None:
         validate_correction(CorrectionAction.VOID, old, void, capabilities(), "viewer", ())
     with pytest.raises(CorrectionPolicyError, match="age"):
         validate_correction(CorrectionAction.VOID, old, void, capabilities(), "owner", ())
+
+    just_over_boundary = replace(
+        void,
+        recorded_at=old.recorded_at + timedelta(days=30, microseconds=1),
+    )
+    with pytest.raises(CorrectionPolicyError, match="age"):
+        validate_correction(
+            CorrectionAction.VOID, old, just_over_boundary, capabilities(), "owner", ()
+        )
+    predated = replace(void, recorded_at=old.recorded_at - timedelta(microseconds=1))
+    with pytest.raises(CorrectionPolicyError, match="predate"):
+        validate_correction(CorrectionAction.VOID, old, predated, capabilities(), "owner", ())
 
     timely = replace(void, recorded_at=old.recorded_at + timedelta(days=1), checksum="")
     timely = timely.with_checksum(event_checksum(timely))
@@ -355,10 +368,15 @@ def test_control_payload_and_compensation_lineage_fail_closed() -> None:
         replace(valid_compensation, household_id=uuid4()),
         replace(valid_compensation, correlation_id=uuid4()),
         replace(valid_compensation, causation_id=uuid4()),
+        replace(
+            valid_compensation,
+            payload=cast(EventPayload, SyntheticCompensationV1(uuid4(), -5)),
+        ),
+        replace(valid_compensation, event_type="__snaketracker_test__.counter.corrected"),
     )
     for invalid, message in zip(
         invalid_compensations,
-        ("target household", "correlation", "causation"),
+        ("target household", "correlation", "causation", "target event", "contract"),
         strict=True,
     ):
         with pytest.raises(CorrectionPolicyError, match=message):
@@ -371,3 +389,37 @@ def test_control_payload_and_compensation_lineage_fail_closed() -> None:
                 (),
                 compensations=(invalid,),
             )
+
+
+def test_void_and_reinstatement_apply_to_the_complete_correction_chain() -> None:
+    correlation_id = uuid4()
+    original = make_event(
+        cast(EventPayload, SyntheticCounterChangedV2(5, "original")),
+        "__snaketracker_test__.counter.changed",
+        1,
+        correlation_id=correlation_id,
+    )
+    correction = make_event(
+        cast(EventPayload, SyntheticCounterCorrectedV1(original.event_id, 8)),
+        "__snaketracker_test__.counter.corrected",
+        2,
+        correlation_id=correlation_id,
+        causation_id=original.event_id,
+    )
+    void = make_event(
+        cast(EventPayload, EventVoidedV1(correction.event_id, "correction was wrong")),
+        "event.voided",
+        3,
+        correlation_id=correlation_id,
+        causation_id=correction.event_id,
+    )
+    reinstate = make_event(
+        cast(EventPayload, EventReinstatedV1(correction.event_id, "correction verified")),
+        "event.reinstated",
+        4,
+        correlation_id=correlation_id,
+        causation_id=void.event_id,
+    )
+
+    assert evaluate_effective_events((original, correction, void)) == ()
+    assert evaluate_effective_events((original, correction, void, reinstate)) == (correction,)

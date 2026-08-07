@@ -86,6 +86,11 @@ def upgrade() -> None:
         sa.Column("active_generation_id", sa.String(36)),
         sa.Column("updated_at", sa.String(32), nullable=False),
         sa.UniqueConstraint("physical_identifier", name="uq_projection_physical_identifier"),
+        sa.ForeignKeyConstraint(
+            ["projection_name", "active_generation_id"],
+            ["projection_generations.projection_name", "projection_generations.generation_id"],
+            name="fk_projection_active_generation_owner",
+        ),
         sa.CheckConstraint(
             "consistency_class IN ('synchronous', 'asynchronous')",
             name="ck_projection_consistency",
@@ -115,14 +120,18 @@ def upgrade() -> None:
         sa.Column("generation_id", sa.String(36), primary_key=True),
         sa.Column("last_global_position", sa.Integer(), nullable=False),
         sa.Column("updated_at", sa.String(32), nullable=False),
-        sa.ForeignKeyConstraint(["projection_name"], ["projection_definitions.projection_name"]),
-        sa.ForeignKeyConstraint(["generation_id"], ["projection_generations.generation_id"]),
+        sa.ForeignKeyConstraint(
+            ["projection_name", "generation_id"],
+            ["projection_generations.projection_name", "projection_generations.generation_id"],
+            name="fk_projection_checkpoint_generation_owner",
+        ),
         sa.CheckConstraint("last_global_position >= 0", name="ck_projection_checkpoint_position"),
     )
 
 
 def downgrade() -> None:
     op.drop_table("projection_checkpoints")
+    op.execute("UPDATE projection_definitions SET active_generation_id=NULL")
     op.drop_table("projection_generations")
     op.drop_table("projection_definitions")
     op.drop_table("aggregate_snapshots")

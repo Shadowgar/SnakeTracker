@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from enum import StrEnum
 
 from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
@@ -46,9 +47,11 @@ def validate_correction(
         raise CorrectionPolicyError(
             "Correction target must belong to the same stream and household."
         )
-    if (
-        capabilities.maximum_age_days is not None
-        and (control.recorded_at - target.recorded_at).days > capabilities.maximum_age_days
+    correction_age = control.recorded_at - target.recorded_at
+    if correction_age < timedelta(0):
+        raise CorrectionPolicyError("Correction cannot predate its target event.")
+    if capabilities.maximum_age_days is not None and correction_age > timedelta(
+        days=capabilities.maximum_age_days
     ):
         raise CorrectionPolicyError("Correction exceeds the target contract age policy.")
     payload_target = getattr(control.payload, "target_event_id", None)
@@ -92,6 +95,10 @@ def validate_correction(
                 raise CorrectionPolicyError(
                     "Compensation causation must identify the control event."
                 )
+            if compensation.event_type not in capabilities.compensation_event_types:
+                raise CorrectionPolicyError("Compensation contract is not permitted for target.")
+            if getattr(compensation.payload, "target_event_id", None) != target.event_id:
+                raise CorrectionPolicyError("Compensation must identify the target event.")
 
 
 def evaluate_effective_events(events: tuple[DomainEvent, ...]) -> tuple[DomainEvent, ...]:
@@ -110,9 +117,18 @@ def evaluate_effective_events(events: tuple[DomainEvent, ...]) -> tuple[DomainEv
             replacements[target_id] = event
         else:
             base.append(event)
-    return tuple(
-        replacements.get(event.event_id, event) for event in base if event.event_id not in voided
-    )
+    effective: list[DomainEvent] = []
+    for event in base:
+        current = event
+        seen: set[object] = set()
+        while current.event_id in replacements:
+            if current.event_id in seen:
+                raise CorrectionPolicyError("Correction replacement chain contains a cycle.")
+            seen.add(current.event_id)
+            current = replacements[current.event_id]
+        if event.event_id not in voided and current.event_id not in voided:
+            effective.append(current)
+    return tuple(effective)
 
 
 def _active_void(target_event_id: object, controls: tuple[DomainEvent, ...]) -> DomainEvent | None:

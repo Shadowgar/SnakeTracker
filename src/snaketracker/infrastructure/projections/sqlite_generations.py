@@ -206,36 +206,46 @@ class SQLiteProjectionGenerationManager:
 
     def cleanup_failed(self, group_name: str) -> int:
         definitions = self._registry.rebuild_group(group_name)
-        failed: dict[str, UUID] = {}
+        failed: dict[str, tuple[UUID, ...]] = {}
         with self._engine.connect() as connection:
             for definition in definitions:
-                value = connection.execute(
-                    text(
-                        "SELECT generation_id FROM projection_generations "
-                        "WHERE projection_name=:name AND status='failed' "
-                        "ORDER BY created_at DESC LIMIT 1"
-                    ),
-                    {"name": definition.name},
-                ).scalar_one_or_none()
-                if value is not None:
-                    failed[definition.name] = UUID(str(value))
+                values = (
+                    connection.execute(
+                        text(
+                            "SELECT generation_id FROM projection_generations "
+                            "WHERE projection_name=:name AND status='failed' "
+                            "ORDER BY created_at DESC"
+                        ),
+                        {"name": definition.name},
+                    )
+                    .scalars()
+                    .all()
+                )
+                failed[definition.name] = tuple(UUID(str(value)) for value in values)
         if not failed:
             return 0
-        layout = self._layout(
-            tuple(definition for definition in definitions if definition.name in failed), failed
-        )
-        with self._engine.begin() as connection:
-            for definition in reversed(definitions):
-                if definition.name in failed:
+        cleanup_count = 0
+        maximum = max((len(values) for values in failed.values()), default=0)
+        for index in range(maximum):
+            selected = {
+                name: values[index] for name, values in failed.items() if index < len(values)
+            }
+            selected_definitions = tuple(
+                definition for definition in definitions if definition.name in selected
+            )
+            layout = self._layout(selected_definitions, selected)
+            with self._engine.begin() as connection:
+                for definition in reversed(selected_definitions):
                     definition.strategy.drop(connection, layout)
                     connection.execute(
                         text(
                             "UPDATE projection_generations SET status='cleanup' "
                             "WHERE generation_id=:generation_id"
                         ),
-                        {"generation_id": str(failed[definition.name])},
+                        {"generation_id": str(selected[definition.name])},
                     )
-        return len(failed)
+                    cleanup_count += 1
+        return cleanup_count
 
     def cleanup_retained(self, group_name: str, *, keep: int = 1) -> int:
         """Remove old retained generations while preserving the configured rollback depth."""
@@ -334,7 +344,8 @@ class SQLiteProjectionGenerationManager:
     ) -> None:
         rows = connection.execute(
             text(
-                "SELECT global_position,event_type,schema_version,payload_json "
+                "SELECT global_position,household_id,stream_type,stream_id,event_type,"
+                "schema_version,payload_json "
                 "FROM domain_events WHERE global_position>:after AND global_position<=:through "
                 "ORDER BY global_position"
             ),
@@ -343,6 +354,9 @@ class SQLiteProjectionGenerationManager:
         for row in rows:
             event = ProjectionEvent(
                 global_position=int(row["global_position"]),
+                household_id=UUID(str(row["household_id"])),
+                stream_type=str(row["stream_type"]),
+                stream_id=UUID(str(row["stream_id"])),
                 event_type=str(row["event_type"]),
                 schema_version=int(row["schema_version"]),
                 payload=json.loads(str(row["payload_json"])),
@@ -424,7 +438,7 @@ class SQLiteProjectionGenerationManager:
             }
             for definition in definitions
         }
-        return GenerationLayout(generation_id=uuid4().hex, tables=tables)
+        return GenerationLayout(tables=tables)
 
     def _mark_failed(self, generation_ids: Mapping[str, UUID], reason: str) -> None:
         with self._engine.begin() as connection:

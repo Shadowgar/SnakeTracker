@@ -92,8 +92,18 @@ class IdempotencyConflictError(RuntimeError):
     """An idempotency key was reused with a different canonical command hash."""
 
 
+class EventStreamIntegrityError(RuntimeError):
+    """Stored stream data cannot produce a complete, contiguous aggregate state."""
+
+
 class EventStore(Protocol):
-    def load_stream(self, key: StreamKey) -> tuple[DomainEvent, ...]: ...
+    def load_stream(
+        self,
+        key: StreamKey,
+        *,
+        after_version: int = 0,
+        expected_boundary_event_id: UUID | None = None,
+    ) -> tuple[DomainEvent, ...]: ...
 
     def append(
         self, key: StreamKey, *, expected_version: int, events: tuple[DomainEvent, ...]

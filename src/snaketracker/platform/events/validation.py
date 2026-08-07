@@ -79,7 +79,7 @@ def household_local_to_utc(
         raise EventValidationError("DST fold must be zero or one.")
     try:
         timezone = ZoneInfo(timezone_name)
-    except ZoneInfoNotFoundError as error:
+    except (ValueError, ZoneInfoNotFoundError) as error:
         raise EventValidationError("Household timezone is not registered.") from error
     first = wall_time.replace(tzinfo=timezone, fold=0)
     second = wall_time.replace(tzinfo=timezone, fold=1)
@@ -99,5 +99,5 @@ def household_report_time(instant: datetime, timezone_name: str) -> datetime:
         raise EventValidationError("Reporting instant must be timezone-aware UTC.")
     try:
         return instant.astimezone(ZoneInfo(timezone_name))
-    except ZoneInfoNotFoundError as error:
+    except (ValueError, ZoneInfoNotFoundError) as error:
         raise EventValidationError("Household timezone is not registered.") from error

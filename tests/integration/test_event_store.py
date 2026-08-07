@@ -23,7 +23,11 @@ from snaketracker.infrastructure.identity.bootstrap_repository import (
 )
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 from snaketracker.platform.events.envelope import DomainEvent, EventSubject, event_checksum
-from snaketracker.platform.events.store import ExpectedVersionConflictError, StreamKey
+from snaketracker.platform.events.store import (
+    EventStreamIntegrityError,
+    ExpectedVersionConflictError,
+    StreamKey,
+)
 from snaketracker.platform.events.validation import EventValidationError
 
 ROOT = Path(__file__).parents[2]
@@ -110,6 +114,29 @@ def test_loads_phase2_household_events_and_appends_at_expected_version(tmp_path:
         assert outcome.stream_version == 3
         assert len(outcome.global_positions) == 1
         assert store.load_stream(key)[-1] == appended
+    finally:
+        engine.dispose()
+
+
+def test_load_fails_if_stream_head_claims_an_event_that_is_missing(tmp_path: Path) -> None:
+    store, engine, key, _result = migrated_store(tmp_path)
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "UPDATE event_streams SET current_version=3 "
+                    "WHERE household_id=:household_id AND stream_type=:stream_type "
+                    "AND stream_id=:stream_id"
+                ),
+                {
+                    "household_id": str(key.household_id),
+                    "stream_type": key.stream_type,
+                    "stream_id": str(key.stream_id),
+                },
+            )
+
+        with pytest.raises(EventStreamIntegrityError, match="head"):
+            store.load_stream(key)
     finally:
         engine.dispose()
 

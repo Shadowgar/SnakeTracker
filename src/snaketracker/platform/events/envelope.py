@@ -5,14 +5,14 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Mapping
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, is_dataclass, replace
 from datetime import datetime
+from typing import Protocol, cast
 from uuid import UUID
 
-from snaketracker.domains.households.contracts import HouseholdCreatedV1, HouseholdOwnerAddedV1
-from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
 
-type EventPayload = HouseholdCreatedV1 | HouseholdOwnerAddedV1 | EventVoidedV1 | EventReinstatedV1
+class EventPayload(Protocol):
+    """Structural marker for payload types owned by registered event contracts."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,7 +94,7 @@ def canonical_event_data(event: DomainEvent) -> dict[str, object]:
         ],
         "title": event.title,
         "description": event.description,
-        "payload": _json_safe(asdict(event.payload)),
+        "payload": _json_safe(_payload_data(event.payload)),
         "metadata": dict(event.metadata),
         "notes": event.notes,
     }
@@ -110,8 +110,17 @@ def _json_safe(value: object) -> object:
     return value
 
 
+def _payload_data(payload: EventPayload) -> dict[str, object]:
+    if not is_dataclass(payload) or isinstance(payload, type):
+        raise TypeError("Event payloads must be dataclass contract instances.")
+    return cast(dict[str, object], asdict(payload))
+
+
 def event_checksum(event: DomainEvent) -> str:
-    canonical = json.dumps(
-        canonical_event_data(event), sort_keys=True, separators=(",", ":"), ensure_ascii=True
-    ).encode()
+    return canonical_event_checksum(canonical_event_data(event))
+
+
+def canonical_event_checksum(data: Mapping[str, object]) -> str:
+    """Hash already-canonical event data using the permanent storage algorithm."""
+    canonical = json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()
     return hashlib.sha256(canonical).hexdigest()

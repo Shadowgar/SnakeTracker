@@ -20,8 +20,11 @@ MAX_SNAPSHOT_BYTES = 1024 * 1024
 
 
 class SQLAlchemySnapshotRepository:
-    def __init__(self, engine: Engine) -> None:
+    def __init__(self, engine: Engine, *, retained_valid_snapshots: int = 2) -> None:
+        if retained_valid_snapshots < 1:
+            raise ValueError("At least one valid snapshot must be retained.")
         self._engine = engine
+        self._retained_valid_snapshots = retained_valid_snapshots
 
     def save(self, snapshot: AggregateSnapshot) -> None:
         state_json = json.dumps(snapshot.state, sort_keys=True, separators=(",", ":"))
@@ -54,6 +57,22 @@ class SQLAlchemySnapshotRepository:
                     "created_at": snapshot.created_at.isoformat(timespec="microseconds"),
                 },
             )
+            connection.execute(
+                text(
+                    "DELETE FROM aggregate_snapshots WHERE snapshot_id IN ("
+                    "SELECT snapshot_id FROM aggregate_snapshots "
+                    "WHERE household_id=:household_id AND stream_type=:stream_type "
+                    "AND stream_id=:stream_id AND status='active' "
+                    "ORDER BY stream_version DESC,created_at DESC "
+                    "LIMIT -1 OFFSET :retained)"
+                ),
+                {
+                    "household_id": str(snapshot.key.household_id),
+                    "stream_type": snapshot.key.stream_type,
+                    "stream_id": str(snapshot.key.stream_id),
+                    "retained": self._retained_valid_snapshots,
+                },
+            )
 
     def load_latest(
         self,
@@ -81,7 +100,13 @@ class SQLAlchemySnapshotRepository:
                 .all()
             )
             for row in rows:
-                snapshot = self._from_row(key, row)
+                try:
+                    snapshot = self._from_row(key, row)
+                except (KeyError, TypeError, ValueError):
+                    diagnostic = "snapshot_deserialization_invalid"
+                    diagnostics.append(diagnostic)
+                    self._quarantine(connection, str(row["snapshot_id"]), diagnostic)
+                    continue
                 reason: str | None = None
                 if snapshot.snapshot_schema_version != snapshot_schema_version:
                     reason = "snapshot_schema_incompatible"
@@ -95,6 +120,10 @@ class SQLAlchemySnapshotRepository:
                     continue
                 return SnapshotLoadResult(snapshot, tuple(diagnostics))
         return SnapshotLoadResult(None, tuple(diagnostics))
+
+    def quarantine(self, snapshot_id: UUID, reason: str) -> None:
+        with self._engine.begin() as connection:
+            self._quarantine(connection, snapshot_id, reason)
 
     @staticmethod
     def _from_row(key: StreamKey, row: RowMapping) -> AggregateSnapshot:
@@ -111,7 +140,7 @@ class SQLAlchemySnapshotRepository:
         )
 
     @staticmethod
-    def _quarantine(connection: Connection, snapshot_id: UUID, reason: str) -> None:
+    def _quarantine(connection: Connection, snapshot_id: UUID | str, reason: str) -> None:
         connection.execute(
             text(
                 "UPDATE aggregate_snapshots SET status='quarantined',quarantine_reason=:reason,"

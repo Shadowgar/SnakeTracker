@@ -6,6 +6,7 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Literal, Protocol
+from uuid import UUID
 
 SAFE_IDENTIFIER = re.compile(r"^[a-z][a-z0-9_]{0,62}$")
 TEST_PROJECTION_PREFIX = "__snaketracker_" + "test__."
@@ -14,6 +15,9 @@ TEST_PROJECTION_PREFIX = "__snaketracker_" + "test__."
 @dataclass(frozen=True, slots=True)
 class ProjectionEvent:
     global_position: int
+    household_id: UUID
+    stream_type: str
+    stream_id: UUID
     event_type: str
     schema_version: int
     payload: Mapping[str, object]
@@ -21,7 +25,6 @@ class ProjectionEvent:
 
 @dataclass(frozen=True, slots=True)
 class GenerationLayout:
-    generation_id: str
     tables: Mapping[str, Mapping[str, str]]
 
     def component(self, projection_name: str, component: str) -> str:

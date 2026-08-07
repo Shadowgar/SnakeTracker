@@ -123,3 +123,7 @@ def test_household_time_rejects_invalid_fold_zone_nonexistent_and_aware_inputs()
         household_report_time(datetime(2026, 1, 1, 12), "UTC")
     with pytest.raises(EventValidationError, match="not registered"):
         household_report_time(datetime(2026, 1, 1, 12, tzinfo=UTC), "Not/A-Timezone")
+    with pytest.raises(EventValidationError, match="not registered"):
+        household_local_to_utc(datetime(2026, 1, 1, 12), "../UTC")
+    with pytest.raises(EventValidationError, match="not registered"):
+        household_report_time(datetime(2026, 1, 1, 12, tzinfo=UTC), "../UTC")
