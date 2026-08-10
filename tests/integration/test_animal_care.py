@@ -4,11 +4,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
 from alembic import command
 from alembic.config import Config
 
 from snaketracker.application.animals import (
     AnimalService,
+    AnimalValidationError,
     CorrectFeedingCommand,
     CorrectLengthCommand,
     CorrectShedCommand,
@@ -204,6 +206,21 @@ def test_measurements_shed_bath_and_feeding_correction_share_effective_history(
                 notes=None,
             )
         )
+        with pytest.raises(AnimalValidationError, match="Completed sheds require"):
+            service.record_shed(
+                RecordShedCommand(
+                    household_id=bootstrap.household_id,
+                    actor_user_id=bootstrap.user_id,
+                    animal_id=animal.animal_id,
+                    correlation_id=uuid4(),
+                    idempotency_key="phase4-history-invalid-shed",
+                    occurred_at=base_time,
+                    blue_state=False,
+                    completed=False,
+                    result="complete",
+                    notes=None,
+                )
+            )
         service.record_shed(
             RecordShedCommand(
                 household_id=bootstrap.household_id,
@@ -362,6 +379,23 @@ def test_care_corrections_and_void_reinstatement_preserve_effective_history(
                 notes=None,
             )
         )
+
+        with pytest.raises(AnimalValidationError, match="Completed sheds require"):
+            service.correct_shed(
+                CorrectShedCommand(
+                    household_id=bootstrap.household_id,
+                    actor_user_id=bootstrap.user_id,
+                    actor_role="owner",
+                    animal_id=animal.animal_id,
+                    target_event_id=shed.event.event_id,
+                    idempotency_key="phase4-control-invalid-shed-correction",
+                    occurred_at=occurred_at,
+                    blue_state=False,
+                    completed=True,
+                    result=None,
+                    notes=None,
+                )
+            )
 
         corrected_weight = service.correct_weight(
             CorrectWeightCommand(

@@ -118,6 +118,22 @@ def test_animal_correction_contracts_are_typed_and_replayable() -> None:
             },
         ),
         (
+            "animal.registered",
+            {
+                "animal_id": str(uuid4()),
+                "name": "Nyx",
+                "species": "Python regius",
+                "morph": None,
+                "genetics": None,
+                "sex": None,
+                "birth_hatch_date": None,
+                "acquisition_date": None,
+                "breeder_source": None,
+                "status": "escaped",
+                "notes": None,
+            },
+        ),
+        (
             "animal.profile_corrected",
             {
                 "name": 42,
