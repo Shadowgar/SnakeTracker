@@ -38,14 +38,17 @@ class LocalBackupWorker:
                 return None
             heartbeat_stop = threading.Event()
             lease_lost = threading.Event()
-            heartbeat = threading.Thread(
-                target=self._renew_lease,
-                args=(heartbeat_stop, lease_lost),
-                name="backup-lease-heartbeat",
-                daemon=True,
-            )
-            heartbeat.start()
+            heartbeat: threading.Thread | None = None
+            heartbeat_started = False
             try:
+                heartbeat = threading.Thread(
+                    target=self._renew_lease,
+                    args=(heartbeat_stop, lease_lost),
+                    name="backup-lease-heartbeat",
+                    daemon=True,
+                )
+                heartbeat.start()
+                heartbeat_started = True
                 archive = self._pipeline.create(run)
                 heartbeat_stop.set()
                 heartbeat.join()
@@ -68,7 +71,8 @@ class LocalBackupWorker:
                 return self._repository.fail_run(run, str(error), datetime.now(UTC))
             finally:
                 heartbeat_stop.set()
-                heartbeat.join()
+                if heartbeat_started and heartbeat is not None:
+                    heartbeat.join()
         finally:
             self._repository.release_global_lease(self._holder_id)
 

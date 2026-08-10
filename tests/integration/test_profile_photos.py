@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import base64
+import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from io import BytesIO
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from alembic import command
@@ -17,6 +19,7 @@ from snaketracker.application.attachments import (
     AttachmentValidationError,
     FinalizeProfilePhotoCommand,
     SelectProfilePhotoCommand,
+    StagedProfilePhoto,
     StageProfilePhotoCommand,
 )
 from snaketracker.application.household_bootstrap import (
@@ -40,7 +43,9 @@ ONE_PIXEL_PNG = base64.b64decode(
 )
 
 
-def test_profile_photo_is_staged_finalized_immutably_and_selected(tmp_path: Path) -> None:
+def test_profile_photo_is_staged_finalized_immutably_and_selected(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     database = tmp_path / "profile-photos.sqlite3"
     config = Config(ROOT / "alembic.ini")
     config.set_main_option("script_location", str(ROOT / "migrations"))
@@ -84,25 +89,55 @@ def test_profile_photo_is_staged_finalized_immutably_and_selected(tmp_path: Path
             )
         )
         storage = LocalAttachmentStorage(tmp_path / "attachments")
+        repository = SQLAlchemyAttachmentRepository(engine)
         attachments = AttachmentService(
             animals=animals,
-            repository=SQLAlchemyAttachmentRepository(engine),
+            repository=repository,
             storage=storage,
         )
 
-        staged = attachments.stage_profile_photo(
-            StageProfilePhotoCommand(
-                household_id=bootstrap.household_id,
-                actor_user_id=bootstrap.user_id,
-                animal_id=animal.animal_id,
-                idempotency_key="stage-nyx-photo",
-                content=ONE_PIXEL_PNG,
-                declared_media_type="image/png",
-            )
+        stage_command = StageProfilePhotoCommand(
+            household_id=bootstrap.household_id,
+            actor_user_id=bootstrap.user_id,
+            animal_id=animal.animal_id,
+            idempotency_key="stage-nyx-photo",
+            content=ONE_PIXEL_PNG,
+            declared_media_type="image/png",
         )
+        original_lookup = repository.staged_by_idempotency
+
+        def delayed_missing_lookup(
+            household_id: UUID, actor_user_id: UUID, idempotency_key: str
+        ) -> StagedProfilePhoto | None:
+            existing = original_lookup(household_id, actor_user_id, idempotency_key)
+            if existing is None:
+                time.sleep(0.1)
+            return existing
+
+        monkeypatch.setattr(repository, "staged_by_idempotency", delayed_missing_lookup)
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            staged_results = tuple(
+                executor.map(lambda _: attachments.stage_profile_photo(stage_command), range(2))
+            )
+        assert staged_results[0] == staged_results[1]
+        staged = staged_results[0]
         assert staged.media_type == "image/png"
         assert (staged.width, staged.height) == (1, 1)
         assert storage.staged_exists(staged.staged_attachment_id)
+        assert storage.staged_attachment_ids() == frozenset({staged.staged_attachment_id})
+        different_photo = BytesIO()
+        Image.new("RGB", (2, 1)).save(different_photo, format="PNG")
+        with pytest.raises(AttachmentValidationError, match="Idempotency key conflicts"):
+            attachments.stage_profile_photo(
+                StageProfilePhotoCommand(
+                    household_id=bootstrap.household_id,
+                    actor_user_id=bootstrap.user_id,
+                    animal_id=animal.animal_id,
+                    idempotency_key="stage-nyx-photo",
+                    content=different_photo.getvalue(),
+                    declared_media_type="image/png",
+                )
+            )
 
         finalized = attachments.finalize_profile_photo(
             FinalizeProfilePhotoCommand(

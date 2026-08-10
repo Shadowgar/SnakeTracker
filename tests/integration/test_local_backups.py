@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import sqlite3
+import threading
 import time
 from contextlib import closing
 from datetime import UTC, datetime, timedelta
@@ -317,7 +318,7 @@ def test_due_backup_schedule_runs_only_after_worker_acquires_global_lease(
 
 
 def test_backup_request_idempotency_and_expired_lease_takeover_are_safe(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     database = tmp_path / "backup-coordination.sqlite3"
     config = Config(ROOT / "alembic.ini")
@@ -349,6 +350,29 @@ def test_backup_request_idempotency_and_expired_lease_takeover_are_safe(
             )
 
         now = datetime(2026, 8, 7, 12, tzinfo=UTC)
+        worker = LocalBackupWorker(
+            repository=repository,
+            pipeline=LocalBackupPipeline(
+                source_database=database,
+                attachment_storage=LocalAttachmentStorage(tmp_path / "attachments"),
+                backup_root=tmp_path / "backups",
+                encryption_key=BACKUP_KEY,
+                encryption_key_id="m4-local-test-key",
+            ),
+            holder_id="startup-failure-worker",
+            lease_duration=timedelta(minutes=5),
+        )
+
+        def fail_heartbeat_start(_thread: threading.Thread) -> None:
+            raise RuntimeError("heartbeat thread unavailable")
+
+        monkeypatch.setattr(threading.Thread, "start", fail_heartbeat_start)
+        failed_run = worker.run_once(now=now)
+        assert failed_run is not None
+        assert failed_run.status == "failed"
+        assert repository.recent_requests(household_id, limit=1)[0].status == "failed"
+        assert repository.recent_runs(household_id, limit=1)[0].status == "failed"
+
         expires_at = now + timedelta(minutes=5)
         assert repository.acquire_global_lease("worker-a", now, expires_at)
         assert not repository.acquire_global_lease(

@@ -186,15 +186,6 @@ class AttachmentService:
             raise AttachmentValidationError("Animal does not exist in this household.")
         metadata = _validate_profile_photo(command.content, command.declared_media_type)
         command_hash = _stage_command_hash(command.animal_id, metadata)
-        existing = self._repository.staged_by_idempotency(
-            command.household_id, command.actor_user_id, command.idempotency_key
-        )
-        if existing is not None:
-            if existing.command_hash != command_hash:
-                raise AttachmentValidationError(
-                    "Idempotency key conflicts with a different profile-photo upload."
-                )
-            return existing
         staged = StagedProfilePhoto(
             staged_attachment_id=uuid4(),
             household_id=command.household_id,
@@ -206,12 +197,30 @@ class AttachmentService:
             staged_at=datetime.now(UTC),
         )
         with self._storage.lifecycle_lock():
+            existing = self._repository.staged_by_idempotency(
+                command.household_id, command.actor_user_id, command.idempotency_key
+            )
+            if existing is not None:
+                if existing.command_hash != command_hash:
+                    raise AttachmentValidationError(
+                        "Idempotency key conflicts with a different profile-photo upload."
+                    )
+                return existing
             self._storage.stage(staged.staged_attachment_id, command.content)
             try:
                 self._repository.create_staged(staged)
-            except Exception:
+            except Exception as error:
                 self._storage.discard_staged(staged.staged_attachment_id)
-                raise
+                winner = self._repository.staged_by_idempotency(
+                    command.household_id, command.actor_user_id, command.idempotency_key
+                )
+                if winner is None:
+                    raise
+                if winner.command_hash != command_hash:
+                    raise AttachmentValidationError(
+                        "Idempotency key conflicts with a different profile-photo upload."
+                    ) from error
+                return winner
         return staged
 
     def finalize_profile_photo(self, command: FinalizeProfilePhotoCommand) -> FinalizedProfilePhoto:
