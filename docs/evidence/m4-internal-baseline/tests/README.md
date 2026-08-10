@@ -19,7 +19,7 @@ Final August 10 result:
 - Architecture freeze: pass, 37 accepted ADRs.
 - Documentation links: pass, 108 files checked after the final evidence refresh.
 - mypy strict: pass, 77 source files.
-- pytest: **247 passed** in 24.52 seconds.
+- pytest: **247 passed** in 26.88 seconds.
 - coverage: **94.41% lines**, **85.08% branches**; both gates pass.
 - pip-audit: no known vulnerabilities after upgrading cryptography to 50.0.0 and Pillow to 12.3.0.
 - Compose configuration: pass.
