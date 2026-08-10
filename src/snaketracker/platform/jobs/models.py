@@ -29,3 +29,17 @@ class JobRecord:
     causation_id: UUID | None
     external_operation_id: str | None
     safe_error: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class DeliveryAttempt:
+    attempt_id: UUID
+    job_id: UUID
+    attempt_number: int
+    lease_token: str
+    provider_idempotency_key: str
+    provider_operation_id: str | None
+    status: str
+    safe_outcome: str | None
+    started_at: datetime
+    completed_at: datetime | None

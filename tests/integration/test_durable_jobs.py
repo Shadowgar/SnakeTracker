@@ -17,6 +17,10 @@ from snaketracker.infrastructure.jobs.repository import (
     JobLeaseConflictError,
     SQLAlchemyJobRepository,
 )
+from snaketracker.platform.jobs.operations import (
+    JobOperationsAuthorizationError,
+    JobOperationsService,
+)
 
 ROOT = Path(__file__).parents[2]
 
@@ -135,5 +139,165 @@ def test_claim_validates_worker_and_lease_duration(tmp_path: Path) -> None:
             repository.claim(worker_id=" ", now=now, lease_duration=timedelta(seconds=30))
         with pytest.raises(ValueError, match="lease duration"):
             repository.claim(worker_id="worker", now=now, lease_duration=timedelta(0))
+    finally:
+        engine.dispose()
+
+
+def test_retry_waits_until_available_and_records_each_attempt(tmp_path: Path) -> None:
+    engine, repository, job_id, now = _setup(tmp_path)
+    try:
+        first = repository.claim(worker_id="worker", now=now, lease_duration=timedelta(seconds=30))
+        assert first is not None and first.lease_token is not None
+        repository.start_attempt(
+            job_id,
+            first.lease_token,
+            provider_idempotency_key=first.idempotency_key,
+            now=now,
+        )
+        retried = repository.schedule_retry(
+            job_id,
+            first.lease_token,
+            safe_error="Temporary local provider failure.",
+            now=now + timedelta(seconds=1),
+            delay=timedelta(seconds=20),
+        )
+        assert retried.status == "retry"
+        assert retried.available_at == now + timedelta(seconds=21)
+        assert (
+            repository.claim(
+                worker_id="early",
+                now=now + timedelta(seconds=20),
+                lease_duration=timedelta(seconds=30),
+            )
+            is None
+        )
+        second = repository.claim(
+            worker_id="next",
+            now=now + timedelta(seconds=21),
+            lease_duration=timedelta(seconds=30),
+        )
+        assert second is not None and second.attempt_count == 2
+        attempts = repository.attempts_for(job_id)
+        assert len(attempts) == 1
+        assert attempts[0].status == "failed"
+        assert attempts[0].safe_outcome == "Temporary local provider failure."
+    finally:
+        engine.dispose()
+
+
+def test_fifth_failure_becomes_visible_dead_letter(tmp_path: Path) -> None:
+    engine, repository, job_id, now = _setup(tmp_path)
+    try:
+        for number in range(1, 6):
+            attempt_at = now + timedelta(minutes=number)
+            claimed = repository.claim(
+                worker_id=f"worker-{number}",
+                now=attempt_at,
+                lease_duration=timedelta(seconds=30),
+            )
+            assert claimed is not None and claimed.lease_token is not None
+            repository.start_attempt(
+                job_id,
+                claimed.lease_token,
+                provider_idempotency_key=claimed.idempotency_key,
+                now=attempt_at,
+            )
+            result = repository.schedule_retry(
+                job_id,
+                claimed.lease_token,
+                safe_error=f"Transient failure {number}",
+                now=attempt_at + timedelta(seconds=1),
+                delay=timedelta(0),
+            )
+        assert result.status == "dead_letter"
+        assert result.attempt_count == 5
+        assert result.safe_error == "Transient failure 5"
+        assert (
+            repository.claim(
+                worker_id="sixth",
+                now=now + timedelta(hours=1),
+                lease_duration=timedelta(seconds=30),
+            )
+            is None
+        )
+        assert repository.dead_letters() == (result,)
+        assert len(repository.attempts_for(job_id)) == 5
+    finally:
+        engine.dispose()
+
+
+def test_uncertain_result_requires_authorized_reconciliation_before_retry(tmp_path: Path) -> None:
+    engine, repository, job_id, now = _setup(tmp_path)
+    try:
+        claimed = repository.claim(
+            worker_id="worker", now=now, lease_duration=timedelta(seconds=10)
+        )
+        assert claimed is not None and claimed.lease_token is not None
+        repository.start_attempt(
+            job_id,
+            claimed.lease_token,
+            provider_idempotency_key=claimed.idempotency_key,
+            now=now,
+        )
+        uncertain = repository.require_reconciliation(
+            job_id,
+            claimed.lease_token,
+            safe_error="Provider result is uncertain.",
+            now=now + timedelta(seconds=1),
+        )
+        assert uncertain.status == "reconciliation_required"
+        assert (
+            repository.claim(
+                worker_id="blind-retry",
+                now=now + timedelta(minutes=5),
+                lease_duration=timedelta(seconds=30),
+            )
+            is None
+        )
+
+        operations = JobOperationsService(repository)
+        with pytest.raises(JobOperationsAuthorizationError):
+            operations.resolve_not_delivered(
+                job_id=job_id,
+                actor_user_id=uuid4(),
+                actor_role="caretaker",
+                correlation_id=uuid4(),
+                reason="Provider lookup found no delivery.",
+                now=now + timedelta(minutes=6),
+            )
+        resolved = operations.resolve_not_delivered(
+            job_id=job_id,
+            actor_user_id=uuid4(),
+            actor_role="owner",
+            correlation_id=uuid4(),
+            reason="Provider lookup found no delivery.",
+            now=now + timedelta(minutes=6),
+        )
+        assert resolved.status == "retry"
+        assert (
+            repository.claim(
+                worker_id="reconciled-retry",
+                now=now + timedelta(minutes=6),
+                lease_duration=timedelta(seconds=30),
+            )
+            is not None
+        )
+        with engine.connect() as connection:
+            audit = (
+                connection.execute(
+                    text(
+                        "SELECT category,action,outcome,target_id FROM security_audit "
+                        "WHERE category='job_operation'"
+                    )
+                )
+                .mappings()
+                .one()
+            )
+        assert dict(audit) == {
+            "category": "job_operation",
+            "action": "job.reconciliation_not_delivered",
+            "outcome": "success",
+            "target_id": str(job_id),
+        }
     finally:
         engine.dispose()

@@ -5,15 +5,16 @@ from __future__ import annotations
 import json
 import secrets
 from datetime import UTC, datetime, timedelta
-from uuid import UUID, uuid5
+from uuid import UUID, uuid4, uuid5
 
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine, RowMapping
 
 from snaketracker.infrastructure.notifications.repository import REMINDER_DUE_CONTRACT
-from snaketracker.platform.jobs.models import JobRecord
+from snaketracker.platform.jobs.models import DeliveryAttempt, JobRecord
 
 JOB_NAMESPACE = UUID("a7e13132-aa0a-58a1-8db7-51f596775238")
+ATTEMPT_NAMESPACE = UUID("9efe0125-bbdd-5431-b6ed-18b54bb765dc")
 NOTIFICATION_JOB_TYPE = "notification.delivery"
 
 
@@ -195,6 +196,272 @@ class SQLAlchemyJobRepository:
             raise RuntimeError("Heartbeat durable job disappeared after commit.")
         return job
 
+    def start_attempt(
+        self,
+        job_id: UUID,
+        lease_token: str,
+        *,
+        provider_idempotency_key: str,
+        now: datetime,
+    ) -> DeliveryAttempt:
+        started_at = _utc(now)
+        provider_key = provider_idempotency_key.strip()
+        if not provider_key or len(provider_key) > 200:
+            raise ValueError("Provider idempotency key is invalid.")
+        with self._engine.begin() as connection:
+            job = self._require_live_lease(connection, job_id, lease_token, started_at)
+            attempt_id = uuid5(
+                ATTEMPT_NAMESPACE,
+                f"{job_id}:{job.attempt_count}:{lease_token}",
+            )
+            connection.execute(
+                text(
+                    "INSERT OR IGNORE INTO delivery_attempts "
+                    "(attempt_id,job_id,attempt_number,lease_token,provider_idempotency_key,"
+                    "status,started_at) VALUES "
+                    "(:attempt_id,:job_id,:number,:token,:provider_key,'started',:started_at)"
+                ),
+                {
+                    "attempt_id": str(attempt_id),
+                    "job_id": str(job_id),
+                    "number": job.attempt_count,
+                    "token": lease_token,
+                    "provider_key": provider_key,
+                    "started_at": _timestamp(started_at),
+                },
+            )
+            attempt = self._attempt(connection, attempt_id)
+            if attempt is None:
+                raise RuntimeError("Delivery attempt did not persist.")
+            return attempt
+
+    def schedule_retry(
+        self,
+        job_id: UUID,
+        lease_token: str,
+        *,
+        safe_error: str,
+        now: datetime,
+        delay: timedelta,
+    ) -> JobRecord:
+        failed_at = _utc(now)
+        if delay < timedelta(0) or delay > timedelta(days=1):
+            raise ValueError("Retry delay must be between zero and one day.")
+        error = _safe_text(safe_error, "Job failure")
+        with self._engine.begin() as connection:
+            job = self._require_live_lease(connection, job_id, lease_token, failed_at)
+            self._finish_current_attempt(
+                connection,
+                job,
+                lease_token,
+                status="failed",
+                safe_outcome=error,
+                completed_at=failed_at,
+            )
+            exhausted = job.attempt_count >= job.max_attempts
+            connection.execute(
+                text(
+                    "UPDATE jobs SET status=:status,available_at=:available_at,"
+                    "safe_error=:safe_error,lease_owner=NULL,lease_token=NULL,"
+                    "lease_acquired_at=NULL,heartbeat_at=NULL,lease_expires_at=NULL,"
+                    "updated_at=:now,completed_at=:completed_at WHERE job_id=:job_id"
+                ),
+                {
+                    "status": "dead_letter" if exhausted else "retry",
+                    "available_at": _timestamp(failed_at + delay),
+                    "safe_error": error,
+                    "now": _timestamp(failed_at),
+                    "completed_at": _timestamp(failed_at) if exhausted else None,
+                    "job_id": str(job_id),
+                },
+            )
+        stored = self.get(job_id)
+        if stored is None:
+            raise RuntimeError("Retried durable job disappeared after commit.")
+        return stored
+
+    def require_reconciliation(
+        self,
+        job_id: UUID,
+        lease_token: str,
+        *,
+        safe_error: str,
+        now: datetime,
+        provider_operation_id: str | None = None,
+    ) -> JobRecord:
+        uncertain_at = _utc(now)
+        error = _safe_text(safe_error, "Uncertain job outcome")
+        with self._engine.begin() as connection:
+            job = self._require_live_lease(connection, job_id, lease_token, uncertain_at)
+            self._finish_current_attempt(
+                connection,
+                job,
+                lease_token,
+                status="uncertain",
+                safe_outcome=error,
+                completed_at=uncertain_at,
+                provider_operation_id=provider_operation_id,
+            )
+            connection.execute(
+                text(
+                    "UPDATE jobs SET status='reconciliation_required',safe_error=:safe_error,"
+                    "external_operation_id=:external_id,lease_owner=NULL,lease_token=NULL,"
+                    "lease_acquired_at=NULL,heartbeat_at=NULL,lease_expires_at=NULL,"
+                    "updated_at=:now "
+                    "WHERE job_id=:job_id"
+                ),
+                {
+                    "safe_error": error,
+                    "external_id": provider_operation_id,
+                    "now": _timestamp(uncertain_at),
+                    "job_id": str(job_id),
+                },
+            )
+        stored = self.get(job_id)
+        if stored is None:
+            raise RuntimeError("Uncertain durable job disappeared after commit.")
+        return stored
+
+    def resolve_not_delivered(
+        self,
+        job_id: UUID,
+        *,
+        actor_user_id: UUID,
+        correlation_id: UUID,
+        reason: str,
+        now: datetime,
+    ) -> JobRecord:
+        resolved_at = _utc(now)
+        safe_reason = _safe_text(reason, "Reconciliation reason")
+        with self._engine.begin() as connection:
+            result = connection.execute(
+                text(
+                    "UPDATE jobs SET status='retry',available_at=:now,safe_error=:reason,"
+                    "updated_at=:now WHERE job_id=:job_id AND status='reconciliation_required'"
+                ),
+                {
+                    "now": _timestamp(resolved_at),
+                    "reason": safe_reason,
+                    "job_id": str(job_id),
+                },
+            )
+            if result.rowcount != 1:
+                raise JobLeaseConflictError("Job is not awaiting reconciliation.")
+            connection.execute(
+                text(
+                    "INSERT INTO security_audit "
+                    "(audit_id,recorded_at,category,action,outcome,actor_user_id,target_type,"
+                    "target_id,correlation_id,details_json) VALUES "
+                    "(:audit_id,:now,'job_operation','job.reconciliation_not_delivered',"
+                    "'success',:actor,'job',:job_id,:correlation,:details)"
+                ),
+                {
+                    "audit_id": str(uuid4()),
+                    "now": _timestamp(resolved_at),
+                    "actor": str(actor_user_id),
+                    "job_id": str(job_id),
+                    "correlation": str(correlation_id),
+                    "details": json.dumps({"reason": safe_reason}, sort_keys=True),
+                },
+            )
+        stored = self.get(job_id)
+        if stored is None:
+            raise RuntimeError("Reconciled durable job disappeared after commit.")
+        return stored
+
+    def attempts_for(self, job_id: UUID) -> tuple[DeliveryAttempt, ...]:
+        with self._engine.connect() as connection:
+            rows = (
+                connection.execute(
+                    text(
+                        "SELECT * FROM delivery_attempts WHERE job_id=:job_id "
+                        "ORDER BY attempt_number,started_at"
+                    ),
+                    {"job_id": str(job_id)},
+                )
+                .mappings()
+                .all()
+            )
+        return tuple(_delivery_attempt(row) for row in rows)
+
+    def dead_letters(self, household_id: UUID | None = None) -> tuple[JobRecord, ...]:
+        with self._engine.connect() as connection:
+            if household_id is None:
+                statement = text(
+                    "SELECT * FROM jobs WHERE status='dead_letter' ORDER BY updated_at,job_id"
+                )
+                parameters: dict[str, object] = {}
+            else:
+                statement = text(
+                    "SELECT * FROM jobs WHERE status='dead_letter' "
+                    "AND household_id=:household_id ORDER BY updated_at,job_id"
+                )
+                parameters = {"household_id": str(household_id)}
+            rows = connection.execute(statement, parameters).mappings().all()
+        return tuple(_job_record(row) for row in rows)
+
+    @staticmethod
+    def _require_live_lease(
+        connection: Connection, job_id: UUID, lease_token: str, now: datetime
+    ) -> JobRecord:
+        row = (
+            connection.execute(
+                text(
+                    "SELECT * FROM jobs WHERE job_id=:job_id AND status='leased' "
+                    "AND lease_token=:token AND lease_expires_at>:now"
+                ),
+                {"job_id": str(job_id), "token": lease_token, "now": _timestamp(now)},
+            )
+            .mappings()
+            .one_or_none()
+        )
+        if row is None:
+            raise JobLeaseConflictError("Durable job lease is stale, expired, or fenced.")
+        return _job_record(row)
+
+    @staticmethod
+    def _attempt(connection: Connection, attempt_id: UUID) -> DeliveryAttempt | None:
+        row = (
+            connection.execute(
+                text("SELECT * FROM delivery_attempts WHERE attempt_id=:attempt_id"),
+                {"attempt_id": str(attempt_id)},
+            )
+            .mappings()
+            .one_or_none()
+        )
+        return _delivery_attempt(row) if row is not None else None
+
+    @staticmethod
+    def _finish_current_attempt(
+        connection: Connection,
+        job: JobRecord,
+        lease_token: str,
+        *,
+        status: str,
+        safe_outcome: str,
+        completed_at: datetime,
+        provider_operation_id: str | None = None,
+    ) -> None:
+        result = connection.execute(
+            text(
+                "UPDATE delivery_attempts SET status=:status,safe_outcome=:outcome,"
+                "provider_operation_id=:provider_id,completed_at=:completed_at "
+                "WHERE job_id=:job_id AND attempt_number=:number AND lease_token=:token "
+                "AND status='started'"
+            ),
+            {
+                "status": status,
+                "outcome": safe_outcome,
+                "provider_id": provider_operation_id,
+                "completed_at": _timestamp(completed_at),
+                "job_id": str(job.job_id),
+                "number": job.attempt_count,
+                "token": lease_token,
+            },
+        )
+        if result.rowcount != 1:
+            raise JobLeaseConflictError("Current delivery attempt is missing or already completed.")
+
     @staticmethod
     def _job(connection: Connection, job_id: UUID) -> JobRecord | None:
         row = (
@@ -283,6 +550,32 @@ def _job_record(row: RowMapping) -> JobRecord:
         ),
         safe_error=str(row["safe_error"]) if row["safe_error"] else None,
     )
+
+
+def _delivery_attempt(row: RowMapping) -> DeliveryAttempt:
+    return DeliveryAttempt(
+        attempt_id=UUID(str(row["attempt_id"])),
+        job_id=UUID(str(row["job_id"])),
+        attempt_number=int(row["attempt_number"]),
+        lease_token=str(row["lease_token"]),
+        provider_idempotency_key=str(row["provider_idempotency_key"]),
+        provider_operation_id=(
+            str(row["provider_operation_id"]) if row["provider_operation_id"] else None
+        ),
+        status=str(row["status"]),
+        safe_outcome=str(row["safe_outcome"]) if row["safe_outcome"] else None,
+        started_at=datetime.fromisoformat(str(row["started_at"])),
+        completed_at=(
+            datetime.fromisoformat(str(row["completed_at"])) if row["completed_at"] else None
+        ),
+    )
+
+
+def _safe_text(value: str, label: str) -> str:
+    cleaned = " ".join(value.strip().split())
+    if not cleaned:
+        raise ValueError(f"{label} is required.")
+    return cleaned[:500]
 
 
 def _utc(value: datetime) -> datetime:
