@@ -9,6 +9,8 @@ Result: **Pass**
   and cross-household access;
 - stages separately, finalizes to immutable randomized storage keys, checksums bytes, and cleans
   orphaned staging records and untracked crash-window files;
+- serializes the idempotency lookup with staging so concurrent identical uploads return one stored
+  result without leaking a losing staged file or exposing a uniqueness error;
 - serializes staging, finalization, and cleanup with a cross-process filesystem lock so cleanup
   cannot remove an in-progress immutable version;
 - selects only finalized versions owned by the same household and animal; and

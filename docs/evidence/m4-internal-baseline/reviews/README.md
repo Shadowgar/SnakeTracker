@@ -27,6 +27,11 @@ the accepted event contract. The single-worker local Compose
 topology is qualified; stronger multi-worker SQLite lease-claim serialization is deferred with
 remote/production hardening.
 
+The final incremental CodeRabbit review raised two required corrections. The attachment-staging
+idempotency lookup is now inside the filesystem lifecycle lock with deterministic winner recovery,
+and backup heartbeat startup failures now pass through durable run/request failure handling. Both
+findings have focused regression tests and are included in the full gate.
+
 GitHub Quality, Container, and GitGuardian checks are required on the final evidence commit. The
-external CodeRabbit incremental rerun was rate-limited after reviewing the final correction files;
-that provider limitation is not treated as a successful substantive review.
+external CodeRabbit incremental rerun completed successfully after reviewing the final correction
+files.

@@ -10,9 +10,9 @@ canonical local mapping is `127.0.0.1:8081 -> nginx:8080`; the external URL is
 The same Dockerfile and lockfile produced a linux/arm64 OCI image under the pinned local binfmt
 emulator:
 
-- final descriptor: `sha256:cd43e8c4775433cb3ed8c81d4b587d4c700f96e29312889b83a66f3be3423218`;
-- final OCI archive SHA-256: `99aa108973dcb39105a819b9d496f001c40db452c72963b59c206ffa6392cb36`;
-- final archive size: 133,098,496 bytes; and
+- final descriptor: `sha256:aae7d71ddaa7a6bee1aed501111c56b59f7e8d8545d328821e2067474b415ba5`;
+- final OCI archive SHA-256: `7b4e560dd596722ebcb1ec08f218573b351b87681ed9af0666f6b2d17172c90f`;
+- final archive size: 133,100,032 bytes; and
 - descriptor platform: `linux/arm64`.
 
 The final amd64 Compose image restarted successfully with persisted data, web and worker ran as
@@ -27,8 +27,8 @@ docker run --privileged --rm \
   tonistiigi/binfmt@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0 \
   --install arm64
 docker buildx build --platform linux/arm64 --build-arg SNAKETRACKER_UID=1001 \
-  --output type=oci,dest=output/snaketracker-phase4-arm64-enclosure.oci.tar \
-  --metadata-file output/arm64-enclosure-build-metadata.json .
+  --output type=oci,dest=output/snaketracker-phase4-arm64-final-review.oci.tar \
+  --metadata-file output/arm64-final-review-build-metadata.json .
 ```
 
 This is ARM64 compatibility evidence only. It is not native Raspberry Pi execution, SSD/ext4,

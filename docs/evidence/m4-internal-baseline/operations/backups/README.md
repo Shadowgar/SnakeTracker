@@ -28,6 +28,10 @@ The final review-hardened image repeated the complete path. Run
 `0008_local_backups`, and zero copied sessions. Worker qualification also proves periodic lease
 renewal while a backup exceeds its initial lease interval.
 
+Heartbeat startup is inside the run failure boundary. If the renewal thread cannot start, the
+request and run are durably marked `failed` and the global lease is released; no request remains
+stranded in `running`.
+
 Operator rehearsal command:
 
 ```sh

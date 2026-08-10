@@ -19,8 +19,8 @@ Final August 10 result:
 - Architecture freeze: pass, 37 accepted ADRs.
 - Documentation links: pass, 108 files checked after the final evidence refresh.
 - mypy strict: pass, 77 source files.
-- pytest: **247 passed** in 26.88 seconds.
-- coverage: **94.41% lines**, **85.08% branches**; both gates pass.
+- pytest: **247 passed** in 29.76 seconds.
+- coverage: **94.52% lines**, **85.05% branches**; both gates pass.
 - pip-audit: no known vulnerabilities after upgrading cryptography to 50.0.0 and Pillow to 12.3.0.
 - Compose configuration: pass.
 - `git diff --check`: pass.
@@ -37,6 +37,10 @@ A focused migration, Phase 2/3 compatibility, unknown-contract, attachment, and 
 all **60 tests** after the corrected keeper UX was built. Trivy 0.69.3 reported zero fixed high or
 critical vulnerabilities in the final amd64 image. The final review hardening also exercised a
 deliberately slow backup with repeated durable-lease renewal.
+
+The final CodeRabbit review added regression coverage for two verified failure modes: concurrent
+identical photo-stage commands now converge on one staged record, and a backup heartbeat startup
+failure moves both the run and request from `running` to `failed` before releasing the lease.
 
 The final enclosure-history regression ran 29 focused enclosure, care-control, and browser tests,
 plus 7 projection rebuild/registry tests. They verify first assignment, reassignment, current
