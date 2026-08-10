@@ -78,11 +78,20 @@ from snaketracker.platform.events.control_contracts import EventReinstatedV1, Ev
 from snaketracker.platform.events.envelope import DomainEvent
 from snaketracker.platform.events.registry import production_event_registry
 from snaketracker.platform.events.validation import household_local_to_utc
+from snaketracker.presentation.animal_care_views import present_care_events
 
 SESSION_COOKIE = "snaketracker_session"
 CSRF_COOKIE = "snaketracker_csrf"
 PACKAGE_DIR = Path(__file__).parent
 templates = Jinja2Templates(directory=PACKAGE_DIR / "templates")
+
+CARE_FORM_DETAILS: dict[str, tuple[str, str, str]] = {
+    "feeding": ("Record feeding", "Add the offered prey and observed outcome.", "feedings"),
+    "weight": ("Record weight", "Add the animal's measured weight in grams.", "weights"),
+    "length": ("Record length", "Add the animal's measured length in millimetres.", "lengths"),
+    "shed": ("Record shed", "Add the observed shed state or completed result.", "sheds"),
+    "bath": ("Record bath", "Add a completed bath or soak.", "baths"),
+}
 
 
 class FormValidationError(ValueError):
@@ -123,6 +132,10 @@ def _form_idempotency_key(form: Any) -> str:
     return str(form.get("idempotency_key") or form["csrf_token"])
 
 
+def _form_values(form: Any) -> dict[str, str]:
+    return {str(key): str(value) for key, value in form.items()}
+
+
 def _timeline_action_ids(events: tuple[DomainEvent, ...]) -> dict[str, frozenset[UUID]]:
     active_voids: set[UUID] = set()
     for event in events:
@@ -155,8 +168,8 @@ def _timeline_context(
 ) -> dict[str, Any]:
     audit_events = animal_service.audit_history(household_id, animal_id)
     return {
-        "events": animal_service.effective_history(household_id, animal_id),
-        "audit_events": audit_events,
+        "events": present_care_events(animal_service.effective_history(household_id, animal_id)),
+        "audit_events": present_care_events(audit_events),
         "errors": {},
         **_timeline_action_ids(audit_events),
     }
@@ -1042,16 +1055,75 @@ def create_web_router(
                 },
                 status_code=404,
             )
+        enclosures = enclosure_service.list_profiles(principal.household_id)
+        current_enclosure = next(
+            (
+                enclosure
+                for enclosure in enclosures
+                if enclosure.enclosure_id == profile.current_enclosure_id
+            ),
+            None,
+        )
+        recent_events = present_care_events(
+            animal_service.effective_history(principal.household_id, profile.animal_id)
+        )
         return protected_page(
             request,
             "animal_profile.html",
             principal,
             context={
                 "animal": profile,
-                "enclosures": enclosure_service.list_profiles(principal.household_id),
+                "enclosures": enclosures,
+                "current_enclosure": current_enclosure,
+                "recent_events": tuple(reversed(recent_events[-5:])),
                 "animal_statuses": tuple(sorted(ANIMAL_STATUSES)),
             },
         )
+
+    def care_form_response(
+        request: Request,
+        animal_id: str,
+        care_kind: str,
+        *,
+        principal: Principal | None = None,
+        status_code: int = 200,
+        error: str | None = None,
+        values: dict[str, str] | None = None,
+    ) -> Response:
+        current_principal = principal or principal_for(request, audit_denial=True)
+        if current_principal is None:
+            return RedirectResponse("/login", status_code=303)
+        return _animal_care_form_page(
+            request,
+            animal_id,
+            care_kind,
+            principal=current_principal,
+            protected_page=protected_page,
+            animal_service=animal_service,
+            status_code=status_code,
+            error=error,
+            values=values,
+        )
+
+    @router.get("/animals/{animal_id}/feedings/new", response_class=HTMLResponse)
+    async def animal_feeding_new(request: Request, animal_id: str) -> Response:
+        return care_form_response(request, animal_id, "feeding")
+
+    @router.get("/animals/{animal_id}/weights/new", response_class=HTMLResponse)
+    async def animal_weight_new(request: Request, animal_id: str) -> Response:
+        return care_form_response(request, animal_id, "weight")
+
+    @router.get("/animals/{animal_id}/lengths/new", response_class=HTMLResponse)
+    async def animal_length_new(request: Request, animal_id: str) -> Response:
+        return care_form_response(request, animal_id, "length")
+
+    @router.get("/animals/{animal_id}/sheds/new", response_class=HTMLResponse)
+    async def animal_shed_new(request: Request, animal_id: str) -> Response:
+        return care_form_response(request, animal_id, "shed")
+
+    @router.get("/animals/{animal_id}/baths/new", response_class=HTMLResponse)
+    async def animal_bath_new(request: Request, animal_id: str) -> Response:
+        return care_form_response(request, animal_id, "bath")
 
     @router.post("/animals/{animal_id}/photo", response_class=HTMLResponse)
     async def animal_photo_upload(request: Request, animal_id: str) -> Response:
@@ -1294,7 +1366,15 @@ def create_web_router(
                 )
             )
         except (AnimalValidationError, FormValidationError, ValueError) as error:
-            return _animal_form_error(request, principal, animal_id, str(error), animal_service)
+            return care_form_response(
+                request,
+                animal_id,
+                "feeding",
+                principal=principal,
+                status_code=422,
+                error=str(error),
+                values=_form_values(form),
+            )
         return RedirectResponse(f"/animals/{animal_id}", status_code=303)
 
     @router.post("/animals/{animal_id}/weights", response_class=HTMLResponse)
@@ -1323,7 +1403,15 @@ def create_web_router(
                 )
             )
         except (AnimalValidationError, FormValidationError, ValueError) as error:
-            return _animal_form_error(request, principal, animal_id, str(error), animal_service)
+            return care_form_response(
+                request,
+                animal_id,
+                "weight",
+                principal=principal,
+                status_code=422,
+                error=str(error),
+                values=_form_values(form),
+            )
         return RedirectResponse(f"/animals/{animal_id}", status_code=303)
 
     @router.post("/animals/{animal_id}/lengths", response_class=HTMLResponse)
@@ -1352,7 +1440,15 @@ def create_web_router(
                 )
             )
         except (AnimalValidationError, FormValidationError, ValueError) as error:
-            return _animal_form_error(request, principal, animal_id, str(error), animal_service)
+            return care_form_response(
+                request,
+                animal_id,
+                "length",
+                principal=principal,
+                status_code=422,
+                error=str(error),
+                values=_form_values(form),
+            )
         return RedirectResponse(f"/animals/{animal_id}", status_code=303)
 
     @router.post("/animals/{animal_id}/sheds", response_class=HTMLResponse)
@@ -1383,7 +1479,15 @@ def create_web_router(
                 )
             )
         except (AnimalValidationError, FormValidationError, ValueError) as error:
-            return _animal_form_error(request, principal, animal_id, str(error), animal_service)
+            return care_form_response(
+                request,
+                animal_id,
+                "shed",
+                principal=principal,
+                status_code=422,
+                error=str(error),
+                values=_form_values(form),
+            )
         return RedirectResponse(f"/animals/{animal_id}", status_code=303)
 
     @router.post("/animals/{animal_id}/baths", response_class=HTMLResponse)
@@ -1413,7 +1517,15 @@ def create_web_router(
                 )
             )
         except (AnimalValidationError, FormValidationError, ValueError) as error:
-            return _animal_form_error(request, principal, animal_id, str(error), animal_service)
+            return care_form_response(
+                request,
+                animal_id,
+                "bath",
+                principal=principal,
+                status_code=422,
+                error=str(error),
+                values=_form_values(form),
+            )
         return RedirectResponse(f"/animals/{animal_id}", status_code=303)
 
     @router.get("/animals/{animal_id}/events/{event_id}/correct", response_class=HTMLResponse)
@@ -1885,7 +1997,7 @@ def _animal_history_page(
         )
     context = _timeline_context(animal_service, principal.household_id, animal_uuid)
     context["events"] = tuple(
-        event for event in context["events"] if event.event_type in event_types
+        event for event in context["events"] if event.event.event_type in event_types
     )
     return protected_page(
         request,
@@ -1897,5 +2009,49 @@ def _animal_history_page(
             "page_description": page_description,
             "empty_message": empty_message,
             **context,
+        },
+    )
+
+
+def _animal_care_form_page(
+    request: Request,
+    animal_id: str,
+    care_kind: str,
+    *,
+    principal: Principal,
+    protected_page: Callable[..., HTMLResponse],
+    animal_service: AnimalService,
+    status_code: int = 200,
+    error: str | None = None,
+    values: dict[str, str] | None = None,
+) -> Response:
+    try:
+        animal = animal_service.profile_for(principal.household_id, UUID(animal_id))
+    except ValueError:
+        animal = None
+    if animal is None:
+        return templates.TemplateResponse(
+            request,
+            "error.html",
+            {
+                "title": "Animal not found",
+                "message": "Return to your animal list and try again.",
+            },
+            status_code=404,
+        )
+    title, description, route = CARE_FORM_DETAILS[care_kind]
+    return protected_page(
+        request,
+        "animal_care_form.html",
+        principal,
+        status_code=status_code,
+        context={
+            "animal": animal,
+            "care_kind": care_kind,
+            "page_title": title,
+            "page_description": description,
+            "action": f"/animals/{animal_id}/{route}",
+            "errors": {"form": error} if error else {},
+            "values": values or {},
         },
     )

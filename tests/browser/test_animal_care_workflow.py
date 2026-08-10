@@ -409,6 +409,194 @@ def test_authenticated_keeper_can_upload_and_view_an_immutable_profile_photo(
         assert client.get("/attachments/00000000-0000-0000-0000-000000000000").status_code == 404
 
 
+def test_animal_list_and_profile_present_a_focused_keeper_experience(tmp_path: Path) -> None:
+    with client_for(tmp_path) as client:
+        setup_and_sign_in(client)
+        new_animal = client.get("/animals/new")
+        created = client.post(
+            "/animals",
+            data={
+                "csrf_token": csrf_from(new_animal.text),
+                "idempotency_key": "keeper-ux-animal",
+                "name": "Nyx",
+                "species": "Python regius",
+                "sex": "female",
+                "morph": "Pastel",
+            },
+            follow_redirects=False,
+        )
+        profile_url = created.headers["location"]
+        profile = client.get(profile_url)
+        uploaded = client.post(
+            f"{profile_url}/photo",
+            data={
+                "csrf_token": csrf_from(profile.text),
+                "idempotency_key": "keeper-ux-photo",
+            },
+            files={"photo": ("nyx.png", ONE_PIXEL_PNG, "image/png")},
+            follow_redirects=False,
+        )
+        assert uploaded.status_code == 303
+
+        animal_list = client.get("/animals")
+        assert animal_list.status_code == 200
+        assert "Nyx" in animal_list.text
+        assert "Python regius" in animal_list.text
+        assert "Pastel" in animal_list.text
+        assert "Active" in animal_list.text
+        assert 'alt="Profile photo of Nyx"' in animal_list.text
+
+        profile = client.get(profile_url)
+        assert "Care actions" in profile.text
+        assert f'href="{profile_url}/feedings/new"' in profile.text
+        assert f'href="{profile_url}/weights/new"' in profile.text
+        assert f'action="{profile_url}/feedings"' not in profile.text
+        assert f'action="{profile_url}/weights"' not in profile.text
+
+        care_pages = {
+            "feedings/new": ("Record feeding", f"{profile_url}/feedings"),
+            "weights/new": ("Record weight", f"{profile_url}/weights"),
+            "lengths/new": ("Record length", f"{profile_url}/lengths"),
+            "sheds/new": ("Record shed", f"{profile_url}/sheds"),
+            "baths/new": ("Record bath", f"{profile_url}/baths"),
+        }
+        for route, (title, action) in care_pages.items():
+            page = client.get(f"{profile_url}/{route}")
+            assert page.status_code == 200, route
+            assert title in page.text
+            assert f'action="{action}"' in page.text
+            assert 'href="' + profile_url + '"' in page.text
+
+
+def test_keeper_histories_show_effective_values_and_hide_voided_facts(tmp_path: Path) -> None:
+    occurred_value = (datetime.now(UTC) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+    with client_for(tmp_path) as client:
+        setup_and_sign_in(client)
+        new_animal = client.get("/animals/new")
+        created = client.post(
+            "/animals",
+            data={
+                "csrf_token": csrf_from(new_animal.text),
+                "idempotency_key": "effective-history-animal",
+                "name": "Nyx",
+                "species": "Python regius",
+                "sex": "female",
+            },
+            follow_redirects=False,
+        )
+        profile_url = created.headers["location"]
+        csrf = csrf_from(client.get(profile_url).text)
+        records = (
+            (
+                "feedings",
+                {
+                    "prey_type": "mouse",
+                    "prey_size": "medium",
+                    "prey_weight_grams": "28",
+                    "preparation_method": "frozen_thawed",
+                    "quantity": "2",
+                    "outcome": "accepted",
+                    "notes": "Original feeding.",
+                },
+            ),
+            ("weights", {"weight_grams": "510", "notes": "Original weight."}),
+            ("lengths", {"length_mm": "925", "notes": "Measured relaxed."}),
+        )
+        for index, (route, facts) in enumerate(records):
+            response = client.post(
+                f"{profile_url}/{route}",
+                data={
+                    "csrf_token": csrf,
+                    "idempotency_key": f"effective-history-{index}",
+                    "occurred_at": occurred_value,
+                    **facts,
+                },
+                follow_redirects=False,
+            )
+            assert response.status_code == 303
+
+        feeding_history = client.get(f"{profile_url}/feedings")
+        effective_feeding = feeding_history.text.split('<details class="technical-audit"', 1)[0]
+        assert "2 medium mouse" in effective_feeding
+        assert "28 g" in effective_feeding
+        assert "Frozen thawed" in effective_feeding
+        assert "Accepted" in effective_feeding
+
+        measurement_history = client.get(f"{profile_url}/measurements")
+        effective_measurements = measurement_history.text.split(
+            '<details class="technical-audit"', 1
+        )[0]
+        assert "510 g" in effective_measurements
+        assert "925 mm" in effective_measurements
+
+        animal_id = profile_url.rsplit("/", 1)[-1]
+        with client.app.state.database_engine.connect() as connection:
+            stored_events = dict(
+                connection.execute(
+                    text(
+                        "SELECT event_type,event_id FROM domain_events "
+                        "WHERE stream_id=:animal_id AND event_type IN "
+                        "('animal.feeding_recorded','animal.weight_recorded')"
+                    ),
+                    {"animal_id": animal_id},
+                ).all()
+            )
+
+        correction_url = f"{profile_url}/events/{stored_events['animal.feeding_recorded']}/correct"
+        correction_form = client.get(correction_url)
+        corrected = client.post(
+            correction_url,
+            data={
+                "csrf_token": csrf_from(correction_form.text),
+                "idempotency_key": "effective-history-correction",
+                "occurred_at": occurred_value,
+                "prey_type": "rat",
+                "prey_size": "large",
+                "prey_weight_grams": "50",
+                "preparation_method": "other",
+                "quantity": "1",
+                "outcome": "refused",
+                "notes": "Corrected feeding.",
+            },
+            follow_redirects=False,
+        )
+        assert corrected.status_code == 303
+
+        timeline = client.get(f"{profile_url}/timeline")
+        voided = client.post(
+            f"{profile_url}/events/{stored_events['animal.weight_recorded']}/void",
+            data={
+                "csrf_token": csrf_from(timeline.text),
+                "idempotency_key": "effective-history-void",
+                "reason": "Wrong animal.",
+            },
+            follow_redirects=False,
+        )
+        assert voided.status_code == 303
+
+        feeding_history = client.get(f"{profile_url}/feedings")
+        effective_feeding = feeding_history.text.split('<details class="technical-audit"', 1)[0]
+        assert "1 large rat" in effective_feeding
+        assert "50 g" in effective_feeding
+        assert "Refused" in effective_feeding
+        assert "2 medium mouse" not in effective_feeding
+
+        measurement_history = client.get(f"{profile_url}/measurements")
+        effective_measurements = measurement_history.text.split(
+            '<details class="technical-audit"', 1
+        )[0]
+        assert "510 g" not in effective_measurements
+        assert "925 mm" in effective_measurements
+
+        timeline = client.get(f"{profile_url}/timeline")
+        effective_timeline = timeline.text.split('<details class="technical-audit"', 1)[0]
+        assert "1 large rat" in effective_timeline
+        assert "925 mm" in effective_timeline
+        assert "510 g" not in effective_timeline
+        assert "Technical audit" in timeline.text
+        assert "event type" in timeline.text.lower()
+
+
 def test_authenticated_keeper_can_correct_void_and_reinstate_a_care_entry(tmp_path: Path) -> None:
     occurred_at = (datetime.now(UTC) - timedelta(days=1)).replace(microsecond=0)
     with client_for(tmp_path) as client:
@@ -676,6 +864,11 @@ def test_phase4_pages_and_commands_require_a_current_session(tmp_path: Path) -> 
             "/animals/new",
             f"/animals/{resource_id}",
             f"/animals/{resource_id}/edit",
+            f"/animals/{resource_id}/feedings/new",
+            f"/animals/{resource_id}/weights/new",
+            f"/animals/{resource_id}/lengths/new",
+            f"/animals/{resource_id}/sheds/new",
+            f"/animals/{resource_id}/baths/new",
             f"/animals/{resource_id}/timeline",
             f"/animals/{resource_id}/feedings",
             f"/animals/{resource_id}/measurements",

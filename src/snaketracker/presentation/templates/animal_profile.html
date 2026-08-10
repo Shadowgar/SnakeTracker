@@ -3,112 +3,88 @@
 {% block content %}
 <section class="animal-profile" aria-labelledby="page-title">
   <header class="profile-header">
-    <div>
+    <div class="profile-identity">
+      {% if animal.photo_attachment_version_id %}
+      <img class="profile-photo" src="/attachments/{{ animal.photo_attachment_version_id }}" alt="Profile photo of {{ animal.name }}">
+      {% else %}
+      <span class="profile-photo profile-photo-placeholder" aria-hidden="true">{{ animal.name[0]|upper }}</span>
+      {% endif %}
+      <div>
       <p class="eyebrow">{{ principal.household_name }}</p>
       <h1 id="page-title">{{ animal.name }}</h1>
       <p class="lede">{{ animal.species }}{% if animal.morph %} · {{ animal.morph }}{% endif %} · {{ animal.status|capitalize }}</p>
+      </div>
     </div>
-    {% if animal.photo_attachment_version_id %}
-    <img class="profile-photo" src="/attachments/{{ animal.photo_attachment_version_id }}" alt="Profile photo of {{ animal.name }}">
-    {% endif %}
-    <div class="profile-actions"><a class="button-link secondary-link" href="/animals/{{ animal.animal_id }}/edit">Edit profile</a><a class="button-link secondary-link" href="/animals/{{ animal.animal_id }}/feedings">Feeding history</a><a class="button-link secondary-link" href="/animals/{{ animal.animal_id }}/measurements">Measurements</a><a class="button-link secondary-link" href="/animals/{{ animal.animal_id }}/timeline">View timeline</a></div>
+    <a class="button-link secondary-link" href="/animals">All animals</a>
   </header>
-  <section class="care-grid" aria-label="Care records">
-    {% if errors and errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
-    <form class="card form-stack" method="post" action="/animals/{{ animal.animal_id }}/feedings">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <input type="hidden" name="idempotency_key" value="{{ command_id }}">
-      <h2>Record feeding</h2>
-      <label>When ({{ principal.household_timezone }})<input name="occurred_at" type="datetime-local" required></label>
-      <label>Prey type<input name="prey_type" required></label>
-      <label>Prey size<input name="prey_size" required></label>
-      <label>Prey weight (g)<input name="prey_weight_grams" type="number" min="1"></label>
-      <label>Preparation
-        <select name="preparation_method"><option value="frozen_thawed">Frozen thawed</option><option value="live">Live</option><option value="other">Other</option></select>
-      </label>
-      <label>Quantity<input name="quantity" type="number" min="1" value="1" required></label>
-      <label>Outcome
-        <select name="outcome"><option value="accepted">Accepted</option><option value="refused">Refused</option><option value="regurgitated">Regurgitated</option></select>
-      </label>
-      <label>Notes<textarea name="notes" rows="3" placeholder="Optional"></textarea></label>
-      <button type="submit">Save feeding</button>
-    </form>
-    <form class="card form-stack" method="post" action="/animals/{{ animal.animal_id }}/weights">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <input type="hidden" name="idempotency_key" value="{{ command_id }}-weight">
-      <h2>Record weight</h2>
-      <label>When ({{ principal.household_timezone }})<input name="occurred_at" type="datetime-local" required></label>
-      <label>Weight (g)<input name="weight_grams" type="number" min="1" required></label>
-      <label>Notes<textarea name="notes" rows="3" placeholder="Optional"></textarea></label>
-      <button type="submit">Save weight</button>
-    </form>
-    <form class="card form-stack" method="post" action="/animals/{{ animal.animal_id }}/lengths">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <input type="hidden" name="idempotency_key" value="{{ command_id }}-length">
-      <h2>Record length</h2>
-      <label>When ({{ principal.household_timezone }})<input name="occurred_at" type="datetime-local" required></label>
-      <label>Length (mm)<input name="length_mm" type="number" min="1" required></label>
-      <label>Notes<textarea name="notes" rows="3" placeholder="Optional"></textarea></label>
-      <button type="submit">Save length</button>
-    </form>
-    <form class="card form-stack" method="post" action="/animals/{{ animal.animal_id }}/sheds">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <input type="hidden" name="idempotency_key" value="{{ command_id }}-shed">
-      <h2>Record shed</h2>
-      <label>When ({{ principal.household_timezone }})<input name="occurred_at" type="datetime-local" required></label>
-      <label>In blue state<select name="blue_state"><option value="false">No</option><option value="true">Yes</option></select></label>
-      <label>Completed<select name="completed"><option value="true">Yes</option><option value="false">No</option></select></label>
-      <label>Result<select name="result"><option value="">Not recorded</option><option value="complete">Complete</option><option value="incomplete">Incomplete</option></select></label>
-      <label>Notes<textarea name="notes" rows="3" placeholder="Optional"></textarea></label>
-      <button type="submit">Save shed</button>
-    </form>
-    <form class="card form-stack" method="post" action="/animals/{{ animal.animal_id }}/baths">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <input type="hidden" name="idempotency_key" value="{{ command_id }}-bath">
-      <h2>Record bath</h2>
-      <label>When ({{ principal.household_timezone }})<input name="occurred_at" type="datetime-local" required></label>
-      <label>Duration (minutes)<input name="duration_minutes" type="number" min="1" required></label>
-      <label>Reason<input name="reason" required></label>
-      <label>Notes<textarea name="notes" rows="3" placeholder="Optional"></textarea></label>
-      <button type="submit">Save bath</button>
-    </form>
+  {% if errors and errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+
+  <section aria-labelledby="care-actions-title">
+    <div class="section-heading"><div><p class="eyebrow">Quick entry</p><h2 id="care-actions-title">Care actions</h2></div><a href="/animals/{{ animal.animal_id }}/timeline">View full timeline</a></div>
+    <div class="care-actions-grid">
+      <a class="care-action" href="/animals/{{ animal.animal_id }}/feedings/new"><strong>Record feeding</strong><span>Prey and outcome</span></a>
+      <a class="care-action" href="/animals/{{ animal.animal_id }}/weights/new"><strong>Record weight</strong><span>Weight in grams</span></a>
+      <a class="care-action" href="/animals/{{ animal.animal_id }}/lengths/new"><strong>Record length</strong><span>Length in millimetres</span></a>
+      <a class="care-action" href="/animals/{{ animal.animal_id }}/sheds/new"><strong>Record shed</strong><span>State and result</span></a>
+      <a class="care-action" href="/animals/{{ animal.animal_id }}/baths/new"><strong>Record bath</strong><span>Duration and reason</span></a>
+    </div>
   </section>
-  <section class="card photo-form" aria-labelledby="photo-title">
-    <h2 id="photo-title">Profile photo</h2>
-    <form class="form-stack" method="post" action="/animals/{{ animal.animal_id }}/photo" enctype="multipart/form-data">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <input type="hidden" name="idempotency_key" value="{{ command_id }}-photo">
-      <label>JPEG or PNG image<input name="photo" type="file" accept="image/jpeg,image/png" required></label>
-      <button type="submit">Upload profile photo</button>
-    </form>
+
+  <section class="overview-grid" aria-label="Animal overview">
+    <div class="card overview-card">
+      <h2>Profile</h2>
+      <dl class="fact-list">
+        <div><dt>Species</dt><dd>{{ animal.species }}</dd></div>
+        <div><dt>Morph</dt><dd>{{ animal.morph or 'Not recorded' }}</dd></div>
+        <div><dt>Sex</dt><dd>{{ animal.sex|capitalize if animal.sex else 'Not recorded' }}</dd></div>
+        <div><dt>Status</dt><dd>{{ animal.status|capitalize }}</dd></div>
+        <div><dt>Enclosure</dt><dd>{% if current_enclosure %}<a href="/enclosures/{{ current_enclosure.enclosure_id }}">{{ current_enclosure.name }}</a>{% else %}Not assigned{% endif %}</dd></div>
+      </dl>
+      {% if animal.notes %}<p class="keeper-note">{{ animal.notes }}</p>{% endif %}
+      <a href="/animals/{{ animal.animal_id }}/edit">Edit profile details</a>
+    </div>
+    <div class="card overview-card">
+      <div class="section-heading"><h2>Recent care</h2><a href="/animals/{{ animal.animal_id }}/timeline">All history</a></div>
+      {% if recent_events %}
+      <ol class="recent-care-list">
+        {% for item in recent_events %}
+        <li><div><strong>{{ item.title }}</strong><p>{{ item.description }}</p></div><time datetime="{{ item.event.occurred_at.isoformat() }}">{{ item.event.occurred_at.astimezone(household_zone).strftime('%b %d') }}</time></li>
+        {% endfor %}
+      </ol>
+      {% else %}<p class="muted">No care history yet.</p>{% endif %}
+      <div class="history-links"><a href="/animals/{{ animal.animal_id }}/feedings">Feeding history</a><a href="/animals/{{ animal.animal_id }}/measurements">Measurements</a></div>
+    </div>
   </section>
-  <section class="card enclosure-assignment" aria-labelledby="enclosure-title">
-    <h2 id="enclosure-title">Current enclosure</h2>
-    <form class="form-stack" method="post" action="/animals/{{ animal.animal_id }}/enclosure">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <input type="hidden" name="idempotency_key" value="{{ command_id }}-enclosure">
-      <label>Enclosure
-        <select name="enclosure_id" required>
-          <option value="">Choose an enclosure</option>
-          {% for enclosure in enclosures %}
-          <option value="{{ enclosure.enclosure_id }}" {% if enclosure.enclosure_id == animal.current_enclosure_id %}selected{% endif %}>{{ enclosure.name }} · {{ enclosure.enclosure_type }}</option>
-          {% endfor %}
-        </select>
-      </label>
-      <label>When ({{ principal.household_timezone }})<input name="occurred_at" type="datetime-local" required></label>
-      <label>Notes<textarea name="notes" rows="3" placeholder="Optional"></textarea></label>
-      <div class="form-actions"><a href="/enclosures/new">Add enclosure</a><button type="submit">Assign enclosure</button></div>
-    </form>
-  </section>
-  <section class="card status-form" aria-labelledby="status-title">
-    <h2 id="status-title">Animal status</h2>
-    <form class="form-stack" method="post" action="/animals/{{ animal.animal_id }}/status">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <input type="hidden" name="idempotency_key" value="{{ command_id }}-status">
-      <label>Status<select name="status">{% for status in animal_statuses %}<option value="{{ status }}" {% if status == animal.status %}selected{% endif %}>{{ status|capitalize }}</option>{% endfor %}</select></label>
-      <label>Notes<textarea name="notes" rows="2" placeholder="Optional"></textarea></label>
-      <button type="submit">Update status</button>
-    </form>
-  </section>
+
+  <details class="card profile-settings" {% if errors and errors.form %}open{% endif %}>
+    <summary>Profile photo, enclosure, and status</summary>
+    <div class="settings-grid">
+      <section aria-labelledby="photo-title">
+        <h2 id="photo-title">Profile photo</h2>
+        <form class="form-stack" method="post" action="/animals/{{ animal.animal_id }}/photo" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}-photo">
+          <label>JPEG or PNG image<input name="photo" type="file" accept="image/jpeg,image/png" required></label><button type="submit">Upload profile photo</button>
+        </form>
+      </section>
+      <section aria-labelledby="enclosure-title">
+        <h2 id="enclosure-title">Enclosure</h2>
+        <form class="form-stack" method="post" action="/animals/{{ animal.animal_id }}/enclosure">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}-enclosure">
+          <label>Enclosure<select name="enclosure_id" required><option value="">Choose an enclosure</option>{% for enclosure in enclosures %}<option value="{{ enclosure.enclosure_id }}" {% if enclosure.enclosure_id == animal.current_enclosure_id %}selected{% endif %}>{{ enclosure.name }} · {{ enclosure.enclosure_type }}</option>{% endfor %}</select></label>
+          <label>When ({{ principal.household_timezone }})<input name="occurred_at" type="datetime-local" required></label>
+          <label>Notes<textarea name="notes" rows="2" placeholder="Optional"></textarea></label>
+          <div class="form-actions"><a href="/enclosures/new">Add enclosure</a><button type="submit">Assign</button></div>
+        </form>
+      </section>
+      <section aria-labelledby="status-title">
+        <h2 id="status-title">Status</h2>
+        <form class="form-stack" method="post" action="/animals/{{ animal.animal_id }}/status">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}-status">
+          <label>Status<select name="status">{% for status in animal_statuses %}<option value="{{ status }}" {% if status == animal.status %}selected{% endif %}>{{ status|capitalize }}</option>{% endfor %}</select></label>
+          <label>Notes<textarea name="notes" rows="2" placeholder="Optional"></textarea></label><button type="submit">Update status</button>
+        </form>
+      </section>
+    </div>
+  </details>
 </section>
 {% endblock %}

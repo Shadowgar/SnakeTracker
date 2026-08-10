@@ -2,25 +2,42 @@
 {% block title %}Home · SnakeTracker{% endblock %}
 {% block content %}
 <section class="dashboard" aria-labelledby="page-title">
-  <div>
+  <header>
     <p class="eyebrow">{{ principal.household_name }}</p>
     <h1 id="page-title">Your animals</h1>
     <p class="lede">Welcome home, {{ principal.display_name }}. Keep the day-to-day record close at hand.</p>
+  </header>
+  <div class="dashboard-actions">
+    <a class="button-link" href="/animals/new">Add animal</a>
+    <a class="button-link secondary-link" href="/enclosures">Enclosures</a>
+    <a class="button-link secondary-link" href="/settings/backups">Backups</a>
+    <form method="post" action="/logout">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="secondary" type="submit">Log out</button>
+    </form>
   </div>
-  <a class="button-link" href="/animals/new">Add animal</a>
-  <a class="button-link secondary-link" href="/settings/backups">Backups</a>
-  <form method="post" action="/logout">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <button class="secondary" type="submit">Log out</button>
-  </form>
   <div class="card status-card">
     <span class="status-dot" aria-hidden="true"></span>
     <div><strong>Household access active</strong><p>Signed in as {{ principal.role }}.</p></div>
   </div>
   {% if animals %}
-  <ul class="record-list" aria-label="Animals">
+  <ul class="animal-list" aria-label="Animals">
     {% for animal in animals %}
-    <li><a href="/animals/{{ animal.animal_id }}"><strong>{{ animal.name }}</strong><span>{{ animal.species }}</span></a></li>
+    <li>
+      <a class="animal-card" href="/animals/{{ animal.animal_id }}">
+        {% if animal.photo_attachment_version_id %}
+        <img class="animal-card-photo" src="/attachments/{{ animal.photo_attachment_version_id }}" alt="Profile photo of {{ animal.name }}">
+        {% else %}
+        <span class="animal-card-placeholder" aria-hidden="true">{{ animal.name[0]|upper }}</span>
+        {% endif %}
+        <span class="animal-card-copy">
+          <strong>{{ animal.name }}</strong>
+          <span>{{ animal.species }}{% if animal.morph %} · {{ animal.morph }}{% endif %}</span>
+          <span class="status-label">{{ animal.status|capitalize }}</span>
+        </span>
+        <span class="animal-card-open" aria-hidden="true">View</span>
+      </a>
+    </li>
     {% endfor %}
   </ul>
   {% else %}
