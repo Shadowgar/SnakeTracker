@@ -16,6 +16,11 @@ The isolated Docker qualification run completed one manual backup:
 - copied relational revision: `0008_local_backups`; and
 - restore result: `verified`, with a readable restored SQLite database and one restored attachment.
 
+The corrected-UX image repeated the browser-to-worker path with selected-photo data. Run
+`51e10d20-ac49-4872-b994-efc1c9a0e486` completed with manifest checksum
+`943c429eacdb58065edd894565a60a1ec3296f3a4f5c1766eed265739f848730`; SQLite returned
+`integrity_check=ok`, and the operator rehearsal returned `status=verified` with one attachment.
+
 Operator rehearsal command:
 
 ```sh

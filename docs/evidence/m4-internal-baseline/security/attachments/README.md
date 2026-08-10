@@ -22,3 +22,7 @@ uv run pytest tests/integration/test_profile_photos.py \
 
 Result: 3 tests passed after qualification against Pillow 12.3.0. Attachment manifests used by the
 backup pipeline are derived from the completed SQLite copy, not the changing live database.
+
+The corrected real-browser run also selected a finalized PNG through the authenticated profile
+flow, rendered its descriptive alternative text on the profile, displayed that selected version on
+the animal listing, and included exactly one attachment in the verified backup/restore rehearsal.

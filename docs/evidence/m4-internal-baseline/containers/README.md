@@ -10,10 +10,15 @@ canonical local mapping is `127.0.0.1:8081 -> nginx:8080`; the external URL is
 The same Dockerfile and lockfile produced a linux/arm64 OCI image under the pinned local binfmt
 emulator:
 
-- descriptor: `sha256:4d5fc2bb8e20671a52e1a95720967d129dd04c1e85b9041c53ca8509e7a14f7c`;
-- OCI archive SHA-256: `e3d3cab6bf12c0334dbefb5dc285e17844a8119947d33819c3997bb23d594c33`;
-- archive size: 133,036,544 bytes; and
+- corrected-UX descriptor: `sha256:397646919b1b06d2d7a6693ad99672761fad55541a37137fbe9081481dcccd98`;
+- corrected-UX OCI archive SHA-256: `18fa4c47d5fe2f498dfb0e1de8a31771e200b7cd027cccc46b06d77843b130bb`;
+- corrected-UX archive size: 133,067,264 bytes; and
 - descriptor platform: `linux/arm64`.
+
+The final amd64 Compose image restarted successfully with persisted data, web and worker ran as
+non-root `snaketracker`, Nginx ran as `101:101`, all three services became healthy, SQLite returned
+`integrity_check=ok`, and the live mapping remained `127.0.0.1:8081`. Trivy 0.69.3 found zero fixed
+high or critical vulnerabilities.
 
 Reproduction:
 

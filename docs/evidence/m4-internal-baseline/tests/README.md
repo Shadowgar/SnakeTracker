@@ -13,14 +13,14 @@ Authoritative command:
 
 Final August 10 result:
 
-- Ruff format: pass, 237 files formatted.
+- Ruff format: pass, 248 files checked.
 - Ruff lint: pass.
 - Architecture dependency validation: pass.
 - Architecture freeze: pass, 37 accepted ADRs.
-- Documentation links: pass, 97 files before M4 evidence was added.
-- mypy strict: pass, 76 source files.
-- pytest: **243 passed** in 28.72 seconds.
-- coverage: **94.52% lines**, **85.00% branches**; both gates pass.
+- Documentation links: pass, 107 files checked before this evidence refresh.
+- mypy strict: pass, 77 source files.
+- pytest: **245 passed** in 29.53 seconds.
+- coverage: **94.55% lines**, **85.34% branches**; both gates pass.
 - pip-audit: no known vulnerabilities after upgrading cryptography to 50.0.0 and Pillow to 12.3.0.
 - Compose configuration: pass.
 - `git diff --check`: pass.
@@ -32,3 +32,7 @@ future dependency-compatibility update.
 Migration coverage is part of `tests/integration/test_alembic_lifecycle.py`: a fresh database
 upgrades through `0008_local_backups`, downgrades to base, and re-upgrades to the same head while
 the Phase 2 household-event compatibility fixture remains unchanged.
+
+A focused migration, Phase 2/3 compatibility, unknown-contract, attachment, and backup run passed
+all **40 tests** after the corrected keeper UX was built. Trivy 0.69.3 reported zero fixed high or
+critical vulnerabilities in the final amd64 image.
