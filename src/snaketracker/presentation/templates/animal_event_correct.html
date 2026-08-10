@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Correct {{ target.title }} · SnakeTracker{% endblock %}
+{% block content %}
+<section class="form-page" aria-labelledby="page-title">
+  <div>
+    <p class="eyebrow">{{ animal.name }}</p>
+    <h1 id="page-title">Correct care record</h1>
+    <p class="lede">The original entry remains in the audit trail. This adds the corrected effective record.</p>
+  </div>
+  <form class="card form-stack" method="post" action="/animals/{{ animal.animal_id }}/events/{{ target.event_id }}/correct" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="idempotency_key" value="{{ command_id }}">
+    {% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+    <label>When ({{ principal.household_timezone }})<input name="occurred_at" type="datetime-local" value="{{ target.occurred_at.astimezone(household_zone).strftime('%Y-%m-%dT%H:%M') }}" required></label>
+    {% if target.event_type == "animal.feeding_recorded" %}
+    <label>Prey type<input name="prey_type" value="{{ target.payload.prey_type }}" required></label>
+    <label>Prey size<input name="prey_size" value="{{ target.payload.prey_size }}" required></label>
+    <label>Prey weight (g)<input name="prey_weight_grams" type="number" min="1" value="{{ target.payload.prey_weight_grams or '' }}"></label>
+    <label>Preparation<select name="preparation_method">{% for option in ("frozen_thawed", "live", "other") %}<option value="{{ option }}" {% if target.payload.preparation_method == option %}selected{% endif %}>{{ option|replace('_', ' ')|capitalize }}</option>{% endfor %}</select></label>
+    <label>Quantity<input name="quantity" type="number" min="1" value="{{ target.payload.quantity }}" required></label>
+    <label>Outcome<select name="outcome">{% for option in ("accepted", "refused", "regurgitated") %}<option value="{{ option }}" {% if target.payload.outcome == option %}selected{% endif %}>{{ option|capitalize }}</option>{% endfor %}</select></label>
+    {% elif target.event_type == "animal.weight_recorded" %}
+    <label>Weight (g)<input name="weight_grams" type="number" min="1" value="{{ target.payload.weight_grams }}" required></label>
+    {% elif target.event_type == "animal.length_recorded" %}
+    <label>Length (mm)<input name="length_mm" type="number" min="1" value="{{ target.payload.length_mm }}" required></label>
+    {% elif target.event_type == "animal.shed_recorded" %}
+    <label>In blue state<select name="blue_state"><option value="false" {% if not target.payload.blue_state %}selected{% endif %}>No</option><option value="true" {% if target.payload.blue_state %}selected{% endif %}>Yes</option></select></label>
+    <label>Completed<select name="completed"><option value="true" {% if target.payload.completed %}selected{% endif %}>Yes</option><option value="false" {% if not target.payload.completed %}selected{% endif %}>No</option></select></label>
+    <label>Result<select name="result"><option value="">Not recorded</option>{% for option in ("complete", "incomplete") %}<option value="{{ option }}" {% if target.payload.result == option %}selected{% endif %}>{{ option|capitalize }}</option>{% endfor %}</select></label>
+    {% endif %}
+    <label>Notes<textarea name="notes" rows="3">{{ target.notes or '' }}</textarea></label>
+    <div class="form-actions"><a href="/animals/{{ animal.animal_id }}/timeline">Cancel</a><button type="submit">Save correction</button></div>
+  </form>
+</section>
+{% endblock %}

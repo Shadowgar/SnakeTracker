@@ -1,3 +1,47 @@
 # M4 Internal Baseline Evidence
 
-Store secure-access, animal/profile, feeding, measurement, shed, enclosure, cleaning, timeline, basic-backup, UX, and internal-release approval evidence here.
+Status: **M4 internal minimum usable baseline accepted**
+
+- Qualification date: August 10, 2026
+- Accepted: August 10, 2026
+- Source branch: `phase4/animal-care`
+- Qualified source before final evidence refresh: `c62f02f659140de9840ce98ffe9524abc924743a`
+
+This package proves the internal, local-only Phase 4 keeper baseline on the approved laptop/Docker
+development environment. It does not approve remote/public access, production launch, or Raspberry
+Pi deployment. M5 through M8 remain outside this work.
+
+The August 10 keeper-UX requalification preserves the same event, attachment, backup, migration,
+and authorization implementation while replacing the oversized profile form surface with a concise
+overview, focused care-entry pages, payload-derived effective histories, and a collapsed technical
+audit.
+
+The final enclosure-history correction resolves each immutable assignment through the
+household-scoped enclosure projection, presents first assignments and reassignments with their
+actual enclosure names, retains target identifiers in the technical audit, and withholds the
+assignment Void control until projection-aware effective-state rebuilding is designed.
+
+## Evidence inventory
+
+- [Core keeper workflows](core-workflows/README.md)
+- [Automated quality and migration results](tests/README.md)
+- [Domain-boundary evidence](tests/domain-boundaries/README.md)
+- [Attachment security](security/attachments/README.md)
+- [Backup and restore rehearsal](operations/backups/README.md)
+- [Docker and ARM64 compatibility](containers/README.md)
+- [Real-browser evidence](browser/README.md)
+- [Accessibility evidence](accessibility/README.md)
+- [Final review disposition](reviews/README.md)
+- [Owner acceptance](approvals/2026-08-10-owner-acceptance.md)
+- [Release disposition](approvals/release/README.md)
+
+## Milestone disposition
+
+All applicable M4 release blockers have implementation evidence, and the owner accepted the
+internal minimum usable baseline on August 10, 2026. The remote/public-deployment item remains
+unchecked and deferred. This acceptance does not approve production launch, remote/public access,
+or Raspberry Pi deployment. M5 through M8 remain unchecked.
+
+The retained databases, generated archives, test credentials, and local browser tooling state stay
+under ignored `runtime/`, `output/`, `.playwright-cli/`, and `secrets/` paths. They are deliberately
+not part of the repository evidence set.

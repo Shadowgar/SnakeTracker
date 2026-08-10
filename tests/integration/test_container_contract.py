@@ -29,9 +29,9 @@ def test_compose_services_are_hardened_and_local_only() -> None:
         assert re.search(rf"^  {service}:$", compose, re.MULTILINE)
     assert "cloudflared:" not in compose
     assert (
-        '"${SNAKETRACKER_BIND_ADDRESS:-127.0.0.1}:${SNAKETRACKER_HTTP_PORT:-8080}:8080"' in compose
+        '"${SNAKETRACKER_BIND_ADDRESS:-127.0.0.1}:${SNAKETRACKER_HTTP_PORT:-8081}:8080"' in compose
     )
-    assert "0.0.0.0:8080:8080" not in compose
+    assert "0.0.0.0:8081:8080" not in compose
     assert compose.count("<<: *app-common") == 3
     assert "SNAKETRACKER_UID: ${SNAKETRACKER_UID:-1000}" in compose
     assert compose.count("read_only: true") == 2
@@ -42,9 +42,12 @@ def test_compose_services_are_hardened_and_local_only() -> None:
     assert "healthcheck:" in compose
     assert "SNAKETRACKER_RUNTIME_SECRET_FILE" in compose
     assert "SNAKETRACKER_RUNTIME_SECRET:" not in compose
+    assert "SNAKETRACKER_BACKUP_ENCRYPTION_KEY_FILE" in compose
+    assert "SNAKETRACKER_BACKUP_ENCRYPTION_KEY:" not in compose
+    assert "SNAKETRACKER_IMAGE_TAG:-phase4" in compose
     assert "SNAKETRACKER_ENVIRONMENT: development" in compose
     assert 'SNAKETRACKER_SESSION_COOKIE_SECURE: "false"' in compose
-    assert "SNAKETRACKER_EXTERNAL_ORIGIN:-http://localhost:8080" in compose
+    assert "SNAKETRACKER_EXTERNAL_ORIGIN:-http://localhost:8081" in compose
     assert 'user: "101:101"' in compose
     assert "/tmp:size=16m,mode=1777,uid=101,gid=101" in compose
 
@@ -79,5 +82,5 @@ def test_nginx_reresolves_web_service_after_container_replacement() -> None:
 def test_container_context_excludes_secrets_and_runtime_state() -> None:
     ignored = read_project_file(".dockerignore")
 
-    for pattern in (".env", "secrets/", "data/", "backups/", ".git/"):
+    for pattern in (".env", "secrets/", "data/", "runtime/", "output/", "backups/", ".git/"):
         assert pattern in ignored

@@ -68,19 +68,24 @@ Accepted: August 7, 2026
 
 ## Phase 4 / M4 — Internal minimum usable baseline
 
+Status: M4 internal minimum usable baseline accepted
+Accepted: August 10, 2026
+
 This is an internal operational release, not final production and not approval for remote/public deployment.
 
-- [ ] RB Secure local household access works for approved internal users.
-- [ ] RB Animal profiles and lifecycle are usable.
-- [ ] RB Feedings, weight/length measurements, and sheds are recorded and corrected safely.
-- [ ] RB Enclosures, assignment, and cleaning are usable.
-- [ ] RB Animal timeline accurately reflects effective history.
-- [ ] RB Basic on-demand and scheduled database/attachment backup works and verifies.
-- [ ] RB Feature slices use animal-owned ports with no circular domain imports.
-- [ ] RB Attachment active-content and resource-exhaustion tests pass for included upload flows.
-- [ ] RB Core mobile, keyboard, and screen-reader workflows meet acceptance criteria.
-- [ ] RB Internal operator completes a basic restore rehearsal.
+- [x] RB Secure local household access works for approved internal users. Evidence: [core workflows](../evidence/m4-internal-baseline/core-workflows/README.md).
+- [x] RB Animal profiles and lifecycle are usable. Evidence: [core workflows](../evidence/m4-internal-baseline/core-workflows/README.md).
+- [x] RB Feedings, weight/length measurements, and sheds are recorded and corrected safely. Evidence: [core workflows](../evidence/m4-internal-baseline/core-workflows/README.md).
+- [x] RB Enclosures, assignment, and cleaning are usable, including correct current occupancy after reassignment. Evidence: [core workflows](../evidence/m4-internal-baseline/core-workflows/README.md).
+- [x] RB Animal timeline accurately reflects effective history and identifies enclosure-assignment targets. Evidence: [browser timeline](../evidence/m4-internal-baseline/browser/README.md).
+- [x] RB Basic on-demand and scheduled database/attachment backup works and verifies. Evidence: [backup drill](../evidence/m4-internal-baseline/operations/backups/README.md).
+- [x] RB Feature slices use animal-owned ports with no circular domain imports. Evidence: [domain boundaries](../evidence/m4-internal-baseline/tests/domain-boundaries/README.md).
+- [x] RB Attachment active-content and resource-exhaustion tests pass for included upload flows. Evidence: [attachment security](../evidence/m4-internal-baseline/security/attachments/README.md).
+- [x] RB Core mobile, keyboard, and screen-reader workflows meet acceptance criteria. Evidence: [accessibility](../evidence/m4-internal-baseline/accessibility/README.md).
+- [x] RB Internal operator completes a basic restore rehearsal. Evidence: [restore rehearsal](../evidence/m4-internal-baseline/operations/backups/README.md).
 - [ ] RD Remote access remains disabled until all RD controls through M7 are accepted.
+
+Owner acceptance: [August 10, 2026 owner acceptance record](../evidence/m4-internal-baseline/approvals/2026-08-10-owner-acceptance.md).
 
 ## Phase 5 / M5 — Operational workflows reliable
 

@@ -391,7 +391,7 @@ def test_control_payload_and_compensation_lineage_fail_closed() -> None:
             )
 
 
-def test_void_and_reinstatement_apply_to_the_complete_correction_chain() -> None:
+def test_voiding_a_correction_restores_its_predecessor_until_reinstated() -> None:
     correlation_id = uuid4()
     original = make_event(
         cast(EventPayload, SyntheticCounterChangedV2(5, "original")),
@@ -421,5 +421,5 @@ def test_void_and_reinstatement_apply_to_the_complete_correction_chain() -> None
         causation_id=void.event_id,
     )
 
-    assert evaluate_effective_events((original, correction, void)) == ()
+    assert evaluate_effective_events((original, correction, void)) == (original,)
     assert evaluate_effective_events((original, correction, void, reinstate)) == (correction,)

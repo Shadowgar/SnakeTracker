@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Enclosures · SnakeTracker{% endblock %}
+{% block content %}
+<section class="dashboard" aria-labelledby="page-title">
+  <div>
+    <p class="eyebrow">{{ principal.household_name }}</p>
+    <h1 id="page-title">Enclosures</h1>
+    <p class="lede">Current housing and keeper-maintenance records.</p>
+  </div>
+  <a class="button-link" href="/enclosures/new">Add enclosure</a>
+  <a class="button-link secondary-link" href="/animals">Animals</a>
+  {% if enclosures %}
+  <ul class="record-list" aria-label="Enclosures">
+    {% for enclosure in enclosures %}
+    <li><a href="/enclosures/{{ enclosure.enclosure_id }}"><strong>{{ enclosure.name }}</strong><span>{{ enclosure.enclosure_type|capitalize }} · {{ enclosure.status|capitalize }}</span></a></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="empty-state"><h2>No enclosures yet</h2><p>Add an enclosure before assigning an animal.</p></div>
+  {% endif %}
+</section>
+{% endblock %}

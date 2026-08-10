@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}{{ animal.name }} · SnakeTracker{% endblock %}
+{% block content %}
+<section class="animal-profile" aria-labelledby="page-title">
+  <header class="profile-header">
+    <div class="profile-identity">
+      {% if animal.photo_attachment_version_id %}
+      <img class="profile-photo" src="/attachments/{{ animal.photo_attachment_version_id }}" alt="Profile photo of {{ animal.name }}">
+      {% else %}
+      <span class="profile-photo profile-photo-placeholder" aria-hidden="true">{{ animal.name[0]|upper }}</span>
+      {% endif %}
+      <div>
+      <p class="eyebrow">{{ principal.household_name }}</p>
+      <h1 id="page-title">{{ animal.name }}</h1>
+      <p class="lede">{{ animal.species }}{% if animal.morph %} · {{ animal.morph }}{% endif %} · {{ animal.status|capitalize }}</p>
+      </div>
+    </div>
+    <a class="button-link secondary-link" href="/animals">All animals</a>
+  </header>
+  {% if errors and errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+
+  <section aria-labelledby="care-actions-title">
+    <div class="section-heading"><div><p class="eyebrow">Quick entry</p><h2 id="care-actions-title">Care actions</h2></div><a href="/animals/{{ animal.animal_id }}/timeline">View full timeline</a></div>
+    <div class="care-actions-grid">
+      <a class="care-action" href="/animals/{{ animal.animal_id }}/feedings/new"><strong>Record feeding</strong><span>Prey and outcome</span></a>
+      <a class="care-action" href="/animals/{{ animal.animal_id }}/weights/new"><strong>Record weight</strong><span>Weight in grams</span></a>
+      <a class="care-action" href="/animals/{{ animal.animal_id }}/lengths/new"><strong>Record length</strong><span>Length in millimetres</span></a>
+      <a class="care-action" href="/animals/{{ animal.animal_id }}/sheds/new"><strong>Record shed</strong><span>State and result</span></a>
+      <a class="care-action" href="/animals/{{ animal.animal_id }}/baths/new"><strong>Record bath</strong><span>Duration and reason</span></a>
+    </div>
+  </section>
+
+  <section class="overview-grid" aria-label="Animal overview">
+    <div class="card overview-card">
+      <h2>Profile</h2>
+      <dl class="fact-list">
+        <div><dt>Species</dt><dd>{{ animal.species }}</dd></div>
+        <div><dt>Morph</dt><dd>{{ animal.morph or 'Not recorded' }}</dd></div>
+        <div><dt>Sex</dt><dd>{{ animal.sex|capitalize if animal.sex else 'Not recorded' }}</dd></div>
+        <div><dt>Status</dt><dd>{{ animal.status|capitalize }}</dd></div>
+        <div><dt>Enclosure</dt><dd>{% if current_enclosure %}<a href="/enclosures/{{ current_enclosure.enclosure_id }}">{{ current_enclosure.name }}</a>{% else %}Not assigned{% endif %}</dd></div>
+      </dl>
+      {% if animal.notes %}<p class="keeper-note">{{ animal.notes }}</p>{% endif %}
+      <a href="/animals/{{ animal.animal_id }}/edit">Edit profile details</a>
+    </div>
+    <div class="card overview-card">
+      <div class="section-heading"><h2>Recent care</h2><a href="/animals/{{ animal.animal_id }}/timeline">All history</a></div>
+      {% if recent_events %}
+      <ol class="recent-care-list">
+        {% for item in recent_events %}
+        <li><div><strong>{{ item.title }}</strong><p>{{ item.description }}</p></div><time datetime="{{ item.event.occurred_at.isoformat() }}">{{ item.event.occurred_at.astimezone(household_zone).strftime('%b %d') }}</time></li>
+        {% endfor %}
+      </ol>
+      {% else %}<p class="muted">No care history yet.</p>{% endif %}
+      <div class="history-links"><a href="/animals/{{ animal.animal_id }}/feedings">Feeding history</a><a href="/animals/{{ animal.animal_id }}/measurements">Measurements</a></div>
+    </div>
+  </section>
+
+  <details class="card profile-settings" {% if errors and errors.form %}open{% endif %}>
+    <summary>Profile photo, enclosure, and status</summary>
+    <div class="settings-grid">
+      <section aria-labelledby="photo-title">
+        <h2 id="photo-title">Profile photo</h2>
+        <form class="form-stack" method="post" action="/animals/{{ animal.animal_id }}/photo" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}-photo">
+          <label>JPEG or PNG image<input name="photo" type="file" accept="image/jpeg,image/png" required></label><button type="submit">Upload profile photo</button>
+        </form>
+      </section>
+      <section aria-labelledby="enclosure-title">
+        <h2 id="enclosure-title">Enclosure</h2>
+        <form class="form-stack" method="post" action="/animals/{{ animal.animal_id }}/enclosure">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}-enclosure">
+          <label>Enclosure<select name="enclosure_id" required><option value="">Choose an enclosure</option>{% for enclosure in enclosures %}<option value="{{ enclosure.enclosure_id }}" {% if enclosure.enclosure_id == animal.current_enclosure_id %}selected{% endif %}>{{ enclosure.name }} · {{ enclosure.enclosure_type }}</option>{% endfor %}</select></label>
+          <label>When ({{ principal.household_timezone }})<input name="occurred_at" type="datetime-local" required></label>
+          <label>Notes<textarea name="notes" rows="2" placeholder="Optional"></textarea></label>
+          <div class="form-actions"><a href="/enclosures/new">Add enclosure</a><button type="submit">Assign</button></div>
+        </form>
+      </section>
+      <section aria-labelledby="status-title">
+        <h2 id="status-title">Status</h2>
+        <form class="form-stack" method="post" action="/animals/{{ animal.animal_id }}/status">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}-status">
+          <label>Status<select name="status">{% for status in animal_statuses %}<option value="{{ status }}" {% if status == animal.status %}selected{% endif %}>{{ status|capitalize }}</option>{% endfor %}</select></label>
+          <label>Notes<textarea name="notes" rows="2" placeholder="Optional"></textarea></label><button type="submit">Update status</button>
+        </form>
+      </section>
+    </div>
+  </details>
+</section>
+{% endblock %}

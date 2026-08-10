@@ -39,6 +39,7 @@ class Principal:
     household_id: UUID
     display_name: str
     household_name: str
+    household_timezone: str
     role: str
     capabilities: frozenset[str]
 
@@ -209,6 +210,7 @@ class IdentityService:
             household_id=principal.household_id,
             display_name=principal.display_name,
             household_name=principal.household_name,
+            household_timezone=principal.household_timezone,
             role=principal.role,
             capabilities=ROLE_CAPABILITIES.get(principal.role, frozenset()),
         )

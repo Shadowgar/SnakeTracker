@@ -1,7 +1,7 @@
 name: snaketracker
 
 x-app-common: &app-common
-  image: snaketracker:${SNAKETRACKER_IMAGE_TAG:-phase2}
+  image: snaketracker:${SNAKETRACKER_IMAGE_TAG:-phase4}
   build:
     context: .
     args:
@@ -9,11 +9,16 @@ x-app-common: &app-common
   environment: &app-environment
     SNAKETRACKER_ENVIRONMENT: development
     SNAKETRACKER_DATABASE_PATH: /var/lib/snaketracker/snaketracker.sqlite3
-    SNAKETRACKER_EXTERNAL_ORIGIN: ${SNAKETRACKER_EXTERNAL_ORIGIN:-http://localhost:8080}
+    SNAKETRACKER_ATTACHMENT_STORAGE_PATH: /var/lib/snaketracker/attachments
+    SNAKETRACKER_BACKUP_STORAGE_PATH: /var/lib/snaketracker/backups
+    SNAKETRACKER_BACKUP_ENCRYPTION_KEY_ID: ${SNAKETRACKER_BACKUP_ENCRYPTION_KEY_ID:-local-development-v1}
+    SNAKETRACKER_EXTERNAL_ORIGIN: ${SNAKETRACKER_EXTERNAL_ORIGIN:-http://localhost:8081}
     SNAKETRACKER_SESSION_COOKIE_SECURE: "false"
     SNAKETRACKER_RUNTIME_SECRET_FILE: /run/secrets/runtime_secret
+    SNAKETRACKER_BACKUP_ENCRYPTION_KEY_FILE: /run/secrets/backup_encryption_key
   secrets:
     - runtime_secret
+    - backup_encryption_key
   volumes:
     - ${SNAKETRACKER_DATA_DIR:-./runtime/data}:/var/lib/snaketracker
   read_only: true
@@ -79,7 +84,7 @@ services:
       web:
         condition: service_healthy
     ports:
-      - "${SNAKETRACKER_BIND_ADDRESS:-127.0.0.1}:${SNAKETRACKER_HTTP_PORT:-8080}:8080"
+      - "${SNAKETRACKER_BIND_ADDRESS:-127.0.0.1}:${SNAKETRACKER_HTTP_PORT:-8081}:8080"
     volumes:
       - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     read_only: true
@@ -105,3 +110,5 @@ services:
 secrets:
   runtime_secret:
     file: ${SNAKETRACKER_RUNTIME_SECRET_FILE:-./secrets/runtime_secret}
+  backup_encryption_key:
+    file: ${SNAKETRACKER_BACKUP_ENCRYPTION_KEY_FILE:-./secrets/backup_encryption_key}

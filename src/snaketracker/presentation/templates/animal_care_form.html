@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }} · {{ animal.name }} · SnakeTracker{% endblock %}
+{% block content %}
+<section class="form-page care-form-page" aria-labelledby="page-title">
+  <header>
+    <p class="eyebrow">{{ animal.name }}</p>
+    <h1 id="page-title">{{ page_title }}</h1>
+    <p class="lede">{{ page_description }}</p>
+  </header>
+  {% if errors and errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+  <form class="card form-stack" method="post" action="{{ action }}" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="idempotency_key" value="{{ command_id }}">
+    <label>When ({{ principal.household_timezone }})
+      <input name="occurred_at" type="datetime-local" value="{{ values.get('occurred_at', '') }}" required>
+    </label>
+
+    {% if care_kind == 'feeding' %}
+    <label>Prey type<input name="prey_type" value="{{ values.get('prey_type', '') }}" required></label>
+    <label>Prey size<input name="prey_size" value="{{ values.get('prey_size', '') }}" required></label>
+    <label>Prey weight (g)<input name="prey_weight_grams" type="number" min="1" value="{{ values.get('prey_weight_grams', '') }}"></label>
+    <label>Preparation
+      {% set preparation = values.get('preparation_method', 'frozen_thawed') %}
+      <select name="preparation_method"><option value="frozen_thawed" {% if preparation == 'frozen_thawed' %}selected{% endif %}>Frozen thawed</option><option value="live" {% if preparation == 'live' %}selected{% endif %}>Live</option><option value="other" {% if preparation == 'other' %}selected{% endif %}>Other</option></select>
+    </label>
+    <label>Quantity<input name="quantity" type="number" min="1" value="{{ values.get('quantity', '1') }}" required></label>
+    <label>Outcome
+      {% set outcome = values.get('outcome', 'accepted') %}
+      <select name="outcome"><option value="accepted" {% if outcome == 'accepted' %}selected{% endif %}>Accepted</option><option value="refused" {% if outcome == 'refused' %}selected{% endif %}>Refused</option><option value="regurgitated" {% if outcome == 'regurgitated' %}selected{% endif %}>Regurgitated</option></select>
+    </label>
+    {% elif care_kind == 'weight' %}
+    <label>Weight (g)<input name="weight_grams" type="number" min="1" value="{{ values.get('weight_grams', '') }}" required></label>
+    {% elif care_kind == 'length' %}
+    <label>Length (mm)<input name="length_mm" type="number" min="1" value="{{ values.get('length_mm', '') }}" required></label>
+    {% elif care_kind == 'shed' %}
+    {% set blue_state = values.get('blue_state', 'false') %}
+    {% set completed = values.get('completed', 'true') %}
+    {% set result = values.get('result', '') %}
+    <label>In blue state<select name="blue_state"><option value="false" {% if blue_state == 'false' %}selected{% endif %}>No</option><option value="true" {% if blue_state == 'true' %}selected{% endif %}>Yes</option></select></label>
+    <label>Completed<select name="completed"><option value="true" {% if completed == 'true' %}selected{% endif %}>Yes</option><option value="false" {% if completed == 'false' %}selected{% endif %}>No</option></select></label>
+    <label>Result<select name="result"><option value="" {% if result == '' %}selected{% endif %}>Not recorded</option><option value="complete" {% if result == 'complete' %}selected{% endif %}>Complete</option><option value="incomplete" {% if result == 'incomplete' %}selected{% endif %}>Incomplete</option></select></label>
+    {% elif care_kind == 'bath' %}
+    <label>Duration (minutes)<input name="duration_minutes" type="number" min="1" value="{{ values.get('duration_minutes', '') }}" required></label>
+    <label>Reason<input name="reason" value="{{ values.get('reason', '') }}" required></label>
+    {% endif %}
+
+    <label>Notes<textarea name="notes" rows="3" placeholder="Optional">{{ values.get('notes', '') }}</textarea></label>
+    <div class="form-actions">
+      <a href="/animals/{{ animal.animal_id }}">Cancel</a>
+      <button type="submit">Save {{ care_kind }}</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

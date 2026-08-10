@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title|default('Care timeline') }} · {{ animal.name }} · SnakeTracker{% endblock %}
+{% block content %}
+<section class="timeline-page" aria-labelledby="page-title">
+  <header class="profile-header">
+    <div>
+      <p class="eyebrow">{{ animal.name }}</p>
+      <h1 id="page-title">{{ page_title|default('Care timeline') }}</h1>
+      <p class="lede">{{ page_description|default('Effective history, including accepted corrections.') }}</p>
+    </div>
+    <a class="button-link secondary-link" href="/animals/{{ animal.animal_id }}">Back to profile</a>
+  </header>
+  {% if errors and errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+  <section id="effective-history" aria-labelledby="effective-history-title">
+  <h2 id="effective-history-title" class="visually-hidden">Effective history</h2>
+  {% if events %}
+  <ol class="timeline-list">
+    {% for item in events %}
+    <li>
+      <time datetime="{{ item.event.occurred_at.isoformat() }}">{{ item.event.occurred_at.astimezone(household_zone).strftime('%Y-%m-%d %H:%M') }} {{ principal.household_timezone }}</time>
+      <div><strong>{{ item.title }}</strong><p>{{ item.description }}</p>{% if item.event.notes %}<p class="keeper-note">{{ item.event.notes }}</p>{% endif %}</div>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}<p class="muted">{{ empty_message|default('No care records yet.') }}</p>{% endif %}
+  </section>
+  <details class="technical-audit">
+    <summary>Technical audit</summary>
+    <section class="audit-section" aria-labelledby="audit-title">
+    <div><h2 id="audit-title">Immutable event audit</h2><p class="muted">Technical identifiers and correction controls are retained here for troubleshooting and review.</p></div>
+    <ol class="audit-list">
+      {% for item in audit_events %}
+      <li id="event-{{ item.event.event_id }}">
+        <div>
+          <strong>{{ item.title }}</strong><p>{{ item.description }}</p>
+          <dl class="technical-facts">
+            {% for label, value in item.technical_facts %}<div><dt>{{ label }}</dt><dd><code>{{ value }}</code></dd></div>{% endfor %}
+            <div><dt>Event type</dt><dd><code>{{ item.event.event_type }} v{{ item.event.schema_version }}</code></dd></div>
+            <div><dt>Event ID</dt><dd><code>{{ item.event.event_id }}</code></dd></div>
+            <div><dt>Stream version</dt><dd>{{ item.event.stream_version }}</dd></div>
+            <div><dt>Recorded</dt><dd>{{ item.event.recorded_at.astimezone(household_zone).strftime('%Y-%m-%d %H:%M') }} {{ principal.household_timezone }}</dd></div>
+            <div><dt>Correlation ID</dt><dd><code>{{ item.event.correlation_id }}</code></dd></div>
+            {% if item.event.causation_id %}<div><dt>Causation ID</dt><dd><code>{{ item.event.causation_id }}</code></dd></div>{% endif %}
+          </dl>
+          {% if item.event.notes %}<p>{{ item.event.notes }}</p>{% endif %}
+        </div>
+        <div class="audit-actions">
+          {% if item.event.event_id in correctable_event_ids %}<a class="button-link secondary-link" href="/animals/{{ animal.animal_id }}/events/{{ item.event.event_id }}/correct">Correct</a>{% endif %}
+          {% if item.event.event_id in voidable_event_ids %}
+          <form method="post" action="/animals/{{ animal.animal_id }}/events/{{ item.event.event_id }}/void">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="idempotency_key" value="{{ command_id }}-void-{{ item.event.event_id }}">
+            <label>Void reason<input name="reason" required></label>
+            <button type="submit" class="secondary">Void</button>
+          </form>
+          {% endif %}
+          {% if item.event.event_id in reinstatable_event_ids %}
+          <form method="post" action="/animals/{{ animal.animal_id }}/events/{{ item.event.event_id }}/reinstate">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="idempotency_key" value="{{ command_id }}-reinstate-{{ item.event.event_id }}">
+            <label>Reinstatement reason<input name="reason" required></label>
+            <button type="submit">Reinstate</button>
+          </form>
+          {% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
+    </section>
+  </details>
+</section>
+{% endblock %}

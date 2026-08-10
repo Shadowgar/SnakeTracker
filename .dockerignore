@@ -6,6 +6,8 @@
 secrets/
 data/
 runtime/
+output/
+runtime/
 backups/
 uploads/
 media/

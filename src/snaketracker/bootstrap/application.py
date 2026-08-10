@@ -12,14 +12,24 @@ from fastapi import FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.types import Lifespan
 
+from snaketracker.application.animals import AnimalService
+from snaketracker.application.attachments import AttachmentService
+from snaketracker.application.backups import BackupService
+from snaketracker.application.enclosures import EnclosureService
 from snaketracker.application.household_bootstrap import HouseholdBootstrapService
 from snaketracker.application.identity import IdentityService
 from snaketracker.application.ports.readiness import ReadinessPort
 from snaketracker.application.readiness import PlatformReadiness
 from snaketracker.bootstrap.compatibility import inspect_startup_compatibility
 from snaketracker.bootstrap.configuration import Environment, Settings, load_settings
+from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
+from snaketracker.infrastructure.attachments.repository import SQLAlchemyAttachmentRepository
+from snaketracker.infrastructure.attachments.storage import LocalAttachmentStorage
+from snaketracker.infrastructure.backups.repository import SQLAlchemyBackupRepository
 from snaketracker.infrastructure.database.engine import create_sqlite_engine
 from snaketracker.infrastructure.database.health import SQLAlchemyDatabaseHealth
+from snaketracker.infrastructure.enclosures.projections import SQLAlchemyEnclosureCurrentProjection
+from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
 from snaketracker.infrastructure.identity.bootstrap_repository import (
     SQLAlchemyHouseholdBootstrapRepository,
 )
@@ -74,7 +84,7 @@ def create_application(
     ) -> Response:
         response = await call_next(request)
         response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
+            "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; "
             "font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; "
             "frame-ancestors 'none'; form-action 'self'"
         )
@@ -113,6 +123,19 @@ def build_application(settings: Settings) -> FastAPI:
         password_hasher = Argon2PasswordHasher()
         bootstrap_repository = SQLAlchemyHouseholdBootstrapRepository(engine)
         identity_repository = SQLAlchemyIdentityRepository(engine)
+        animal_service = AnimalService(
+            SQLAlchemyEventStore(engine), SQLAlchemyAnimalCurrentProjection(engine)
+        )
+        attachment_service = AttachmentService(
+            animals=animal_service,
+            repository=SQLAlchemyAttachmentRepository(engine),
+            storage=LocalAttachmentStorage(
+                settings.attachment_storage_path or settings.database_path.parent / "attachments"
+            ),
+        )
+        enclosure_service = EnclosureService(
+            SQLAlchemyEventStore(engine), SQLAlchemyEnclosureCurrentProjection(engine)
+        )
         app.include_router(
             create_web_router(
                 bootstrap_service=HouseholdBootstrapService(
@@ -130,6 +153,10 @@ def build_application(settings: Settings) -> FastAPI:
                     rate_window=timedelta(minutes=15),
                     block_duration=timedelta(minutes=15),
                 ),
+                animal_service=animal_service,
+                attachment_service=attachment_service,
+                backup_service=BackupService(SQLAlchemyBackupRepository(engine)),
+                enclosure_service=enclosure_service,
                 is_bootstrapped=identity_repository.has_users,
                 secure_cookie=settings.session_cookie_secure,
                 expected_origin=(

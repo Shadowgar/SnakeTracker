@@ -18,12 +18,20 @@ from snaketracker.infrastructure.identity.bootstrap_repository import (
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 
 ROOT = Path(__file__).parents[2]
-REVISION = "0004_event_platform"
-PHASE_THREE_TABLES = {
+REVISION = "0008_local_backups"
+PHASE_FOUR_TABLES = {
     "aggregate_snapshots",
     "alembic_version",
+    "animal_current",
+    "attachment_staging",
+    "attachment_versions",
     "authorization_memberships",
+    "backup_leases",
+    "backup_requests",
+    "backup_runs",
+    "backup_schedules",
     "domain_events",
+    "enclosure_current",
     "event_streams",
     "event_subjects",
     "household_summaries",
@@ -73,7 +81,7 @@ def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -
 
     engine = create_engine(f"sqlite+pysqlite:///{database}")
     try:
-        assert set(inspect(engine).get_table_names()) == PHASE_THREE_TABLES
+        assert set(inspect(engine).get_table_names()) == PHASE_FOUR_TABLES
     finally:
         engine.dispose()
 
@@ -84,7 +92,7 @@ def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -
     assert current_revision(database) == REVISION
 
 
-def test_migrations_contain_no_event_upcasters_or_phase_four_tables() -> None:
+def test_migrations_contain_no_event_upcasters_or_deferred_phase_tables() -> None:
     migration_root = ROOT / "migrations"
     assert not list(migration_root.rglob("*upcaster*"))
 
@@ -92,8 +100,6 @@ def test_migrations_contain_no_event_upcasters_or_phase_four_tables() -> None:
         path.read_text(encoding="utf-8") for path in migration_root.rglob("*.py")
     ).lower()
     forbidden = {
-        "animals",
-        "enclosures",
         "inventory",
         "expenses",
         "jobs",

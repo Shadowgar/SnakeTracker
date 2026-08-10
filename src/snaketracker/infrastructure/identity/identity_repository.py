@@ -169,7 +169,7 @@ class SQLAlchemyIdentityRepository:
                 connection.execute(
                     text(
                         "SELECT s.session_id,s.user_id,s.absolute_expires_at,u.display_name,"
-                        "m.household_id,m.role,h.name AS household_name "
+                        "m.household_id,m.role,h.name AS household_name,h.timezone "
                         "FROM sessions s JOIN users u ON u.user_id=s.user_id "
                         "JOIN authorization_memberships m ON m.user_id=u.user_id "
                         "AND m.household_id=s.household_id "
@@ -199,12 +199,13 @@ class SQLAlchemyIdentityRepository:
                 },
             )
             return Principal(
-                UUID(row["user_id"]),
-                UUID(row["household_id"]),
-                row["display_name"],
-                row["household_name"],
-                row["role"],
-                frozenset(),
+                user_id=UUID(row["user_id"]),
+                household_id=UUID(row["household_id"]),
+                display_name=row["display_name"],
+                household_name=row["household_name"],
+                household_timezone=row["timezone"],
+                role=row["role"],
+                capabilities=frozenset(),
             )
 
     def csrf_hash_for(self, token_hash: str, *, now: datetime) -> str | None:

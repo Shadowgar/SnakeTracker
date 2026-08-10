@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Add enclosure · SnakeTracker{% endblock %}
+{% block content %}
+<section class="form-page" aria-labelledby="page-title">
+  <div>
+    <p class="eyebrow">{{ principal.household_name }}</p>
+    <h1 id="page-title">Add enclosure</h1>
+    <p class="lede">Name the physical space before assigning an animal to it.</p>
+  </div>
+  <form class="card form-stack" method="post" action="/enclosures" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="idempotency_key" value="{{ command_id }}">
+    {% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+    <label>Name<input name="name" value="{{ values.name|default('') }}" required></label>
+    <label>Type<input name="enclosure_type" value="{{ values.enclosure_type|default('') }}" required></label>
+    <label>Notes<textarea name="notes" rows="4">{{ values.notes|default('') }}</textarea></label>
+    <div class="form-actions"><a href="/home">Cancel</a><button type="submit">Create enclosure</button></div>
+  </form>
+</section>
+{% endblock %}

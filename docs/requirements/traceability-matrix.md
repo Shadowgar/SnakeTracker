@@ -57,7 +57,8 @@ A mandatory requirement is satisfied only when its governing document is accepte
 - **M0 architecture approved** — accepted August 4, 2026; evidence under `m0-architecture`.
 - **M1 development-platform qualified** — accepted August 5, 2026; evidence under `m1-platform`.
 - **M2 security boundary proven** — accepted August 6, 2026; evidence under `m2-security`.
-- Phase 3 is implementation-qualified with owner acceptance pending. M4 through M8 have not
-  started and remain unchecked. Phase 3 evidence is indexed under
-  [`m3-event-integrity`](../evidence/m3-event-integrity/README.md).
+- **M3 event integrity proven** — accepted August 7, 2026; evidence under `m3-event-integrity`.
+- **M4 internal minimum usable baseline accepted** — accepted August 10, 2026; evidence under
+  `m4-internal-baseline`. Remote deployment remains deferred. M5 through M8 have not started and
+  remain unchecked.
 - `Raspberry Pi deployment qualified` remains pending under Phase 7/pre-deployment controls.

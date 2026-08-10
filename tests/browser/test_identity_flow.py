@@ -72,7 +72,8 @@ def test_first_run_login_home_logout_and_login_again(tmp_path: Path) -> None:
         assert home.status_code == 200
         assert "Welcome home, Rocco" in home.text
         assert "Rocco&#39;s Reptiles" in home.text
-        assert "animal profiles and snake-tracking features arrive in Phase 4" in home.text
+        assert "Add animal" in home.text
+        assert "No animals yet" in home.text
         assert "arrive in Phase 3" not in home.text
         assert "viewport" in home.text
 

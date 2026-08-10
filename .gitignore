@@ -30,6 +30,7 @@ test-results/
 playwright-report/
 blob-report/
 .playwright-cli/
+/output/
 
 # Editors and operating-system metadata
 .vscode/
@@ -58,11 +59,12 @@ secrets/
 *.sqlite-wal
 *.sqlite-shm
 data/
+/runtime/
 
 # Attachments, uploads, backups, and generated media
 uploads/
 media/
-backups/
+/backups/
 restore-work/
 staging/
 
