@@ -91,7 +91,7 @@ Owner acceptance: [August 10, 2026 owner acceptance record](../evidence/m4-inter
 
 - [ ] RB Inventory remains correct under concurrency and compensation.
 - [ ] RB Expenses enforce authorization and correction policy.
-- [ ] RB Reminder facts, intent, outbox, jobs, and attempts deduplicate independently.
+- [ ] RB Fixed and event-relative reminder facts recalculate from effective history, remain explainable, and deduplicate independently through intent, outbox, jobs, and attempts.
 - [ ] RB Lease expiry, crash recovery, retry, reconciliation, and dead letters pass.
 - [ ] RB External side-effect strategies handle the uncertain crash window.
 
@@ -104,6 +104,9 @@ Owner acceptance: [August 10, 2026 owner acceptance record](../evidence/m4-inter
 - [ ] RB PWA performs no offline writes and persists only allow-listed drafts.
 - [ ] RB Critical journeys meet WCAG 2.2 AA.
 - [ ] QT Dashboard, search, UI, memory, and storage meet development-environment targets.
+- [ ] RB Weight/length trends, husbandry-frequency statistics, feeding and shed intervals, and due/overdue care are presented from effective history.
+- [ ] RB Suggested feeding and shed windows use sufficient effective history, expose deterministic provenance, and are labeled as estimates rather than requirements.
+- [ ] RB Optional species/life-stage husbandry reference profiles are curated and versioned with sources, prefer ranges, never invent missing guidance, and never silently replace owner schedules.
 
 ## Phase 7 / M7 — Recovery and compatibility proven
 

@@ -24,10 +24,10 @@ The authoritative exit criteria are the five unchecked M5 release blockers in
 [the milestone roadmap](../roadmap/milestones.md#phase-5--m5--operational-workflows-reliable).
 Implementation is governed primarily by ADR-0002, ADR-0004, ADR-0005, ADR-0006, ADR-0007,
 ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0023, ADR-0025, ADR-0030, ADR-0031,
-ADR-0032, ADR-0034, and ADR-0035.
+ADR-0032, ADR-0034, ADR-0035, and ADR-0038.
 
 The relevant traceability requirements are R-002, R-004 through R-006, R-011 through R-014,
-R-016, R-024, R-031 through R-035, R-039, and R-041. M5 will add evidence links for its
+R-016, R-024, R-031 through R-035, R-039, R-041, and R-044. M5 will add evidence links for its
 roadmap-specific inventory and expense acceptance procedures without changing their accepted
 aggregate or event-catalog decisions.
 
@@ -86,6 +86,15 @@ health, breeding, plugins, and all other M6+ work.
   selection, and uses the existing rule-created, rule-changed, and rule-disabled contracts.
 - `reminder_rule_current` is synchronous. Rebuildable `reminder_facts` derive factual due occurrences
   from current rules and authoritative care projections; a fact is not a notification request.
+- Rules support fixed intervals and event-relative schedules, per-animal owner configuration,
+  enable/disable state, and an explicit due-date or interval override. M5 encodes no species advice.
+- Event-relative rules use latest effective qualifying history: accepted feeding, weight, length,
+  bath/soak, enclosure cleaning, or water change. Refused and regurgitated feedings do not reset an
+  accepted-feeding schedule. Corrections replace the source, voids fall back to the previous
+  effective source, and reinstatements restore the source when it is again effective.
+- Each due/overdue fact retains rule/version, schedule kind, configured interval/override, source
+  kind and effective occurrence time, calculated due time, and a technical source reference. Normal
+  keeper views render that provenance as an explanation without exposing raw event identifiers.
 - A notification intent is operational and unique by rule occurrence, recipient, and channel.
   Its outbox handoff is unique by intent and payload contract. The durable job is unique by handler
   type and logical operation. Each delivery attempt is unique by job, attempt number, and lease
@@ -164,15 +173,18 @@ Test recording, correction, voiding, effective totals, immutable history, reason
 household denial, current-capability checks, CSRF, idempotency, expected versions, and safe audit
 details before implementing the keeper-facing expense list and focused forms.
 
-### Task 6: Reminder-rule contracts and factual occurrences
+### Task 6: Reminder-rule contracts and effective-history factual occurrences
 
 **Files:** create `src/snaketracker/domains/reminders/contracts.py`,
 `src/snaketracker/application/reminders.py`,
 `src/snaketracker/infrastructure/reminders/projections.py`, and clock-controlled tests.
 
-Test household-timezone and DST behavior, five-minute future-skew policy, rule changes/disablement,
-subject tenancy, deterministic occurrence keys, rebuild, and repeated scheduler scans before adding
-rule management and factual due-state reads.
+Test fixed-interval rules; event-relative rules; per-animal intervals; enable/disable and owner
+overrides; last effective accepted-feeding semantics; refusal and regurgitation behavior; corrected,
+voided, and reinstated effective care history; weight, length, bath, enclosure-cleaning, and
+water-change facts; due/overdue provenance; household-timezone and DST behavior; five-minute
+future-skew policy; subject tenancy; deterministic occurrence keys; rule changes; rebuild; and
+repeated scheduler scans before adding rule management and factual due-state reads.
 
 ### Task 7: Notification intent and atomic outbox-to-job handoff
 
@@ -219,7 +231,9 @@ registered.
 
 Test desktop/mobile navigation, values and units, correction/compensation explanations, conflict
 pages, keyboard/focus/error summaries, dead-letter/reconciliation status, protected routes, CSRF,
-and no leakage across households. Do not add M6 dashboards, charts, search, or PWA behavior.
+and no leakage across households. Reminder views must explain calculations such as “10 days after
+last accepted feeding” while keeping event IDs behind technical disclosure. Do not add M6
+dashboards, charts, search, predictions, recommendations, or PWA behavior.
 
 ### Task 12: M5 qualification and evidence
 
@@ -229,6 +243,10 @@ accessibility checks, dependency audit, architecture freeze, documentation links
 Container/Trivy, GitGuardian, and substantive review. Record M5 as implementation-qualified with
 owner acceptance pending; do not mark it accepted or merge until owner review.
 
+Qualification must prove event-relative scheduling remains correct across correction, void,
+reinstatement, authoritative replay/rebuild, repeated scans, worker restart, and duplicate
+execution. The accepted M3/M4 fixtures remain byte-for-byte unchanged.
+
 ## Requirements-to-tests and evidence mapping
 
 | M5 criterion | Requirements / ADRs | Acceptance tests | Proposed evidence |
@@ -236,6 +254,7 @@ owner acceptance pending; do not mark it accepted or merge until owner review.
 | Inventory correct under concurrency and compensation | R-005, R-006, R-011, R-012; ADR-0006, 0007, 0011, 0012 | `AT-INV-01` balance/concurrency; `AT-INV-02` feeding compensation | `docs/evidence/m5-operations/tests/inventory.md` |
 | Expenses enforce authorization and correction policy | R-005, R-016, R-032, R-033; ADR-0006, 0015, 0031, 0032 | `AT-EXP-01` capability/tenancy; `AT-EXP-02` effective correction/void | `docs/evidence/m5-operations/tests/expenses.md`, `security/authorization.md` |
 | Pipeline stages deduplicate independently | R-012, R-014; ADR-0012, 0014 | `AT-NOT-01` fact/intent/outbox/job/attempt boundary matrix | `docs/evidence/m5-operations/tests/notifications.md` |
+| Reminder schedules use effective history and explain their due facts | R-005, R-031, R-044; ADR-0006, 0014, 0030, 0038 | `AT-REM-01` fixed/event-relative correction/void/reinstate/rebuild matrix | `docs/evidence/m5-operations/tests/reminders.md` |
 | Lease expiry, crash recovery, retry, reconciliation, dead letters | R-013, R-024; ADR-0013, 0023 | `AT-JOB-01` lease/fencing/crash matrix; `AT-JOB-02` retry/dead-letter/reconcile | `docs/evidence/m5-operations/tests/jobs.md`, `operations/crash-recovery.md` |
 | External uncertain crash window is controlled | R-013, R-014; TM-11; ADR-0013, 0014 | `AT-EXT-01` accepted-effect crash and recovery | `docs/evidence/m5-operations/tests/external-effects.md` |
 | Existing platform and keeper history remain compatible | R-002, R-004, R-034, R-039 | `AT-COMP-M5-01` Phase 2/3/4 fixtures and migration lifecycle | `docs/evidence/m5-operations/operations/compatibility.md` |
@@ -267,14 +286,28 @@ Rollback before acceptance is a normal revert of the affected commit; schema rol
 tested Alembic downgrade only after stopping workers and confirming no newer M5 data must be kept.
 Existing M3/M4 events are never rewritten as a rollback technique.
 
-## Owner decisions requested before implementation
+## Owner-approved implementation decisions
 
-1. Approve the initial expense policy: Owner/Administrator only, mandatory correction/void reason,
-   no age cutoff, and no reinstatement in M5.
-2. Approve the deterministic local qualification provider for M5. It proves the real at-least-once,
+1. The expense policy is Owner/Administrator only, requires a correction/void reason, has no age
+   cutoff, and does not support reinstatement in M5.
+2. The deterministic local qualification provider proves the real at-least-once,
    provider-idempotency, external-operation-ID, and reconciliation contracts without selecting or
    contacting a production email/SMS provider.
-3. Approve five maximum delivery attempts with bounded exponential backoff and injected jitter,
+3. Delivery uses five maximum attempts with bounded exponential backoff and injected jitter,
    matching the accepted runtime-operations default.
 
-No Phase 5 application implementation begins until these plan decisions receive owner approval.
+## M6 extension points retained without M6 implementation
+
+M6 consumes Reminder Rules, effective reminder facts, effective feeding/measurement/shed/bath
+history, and enclosure cleaning/water-change history. It may add weight and length trends, feeding
+outcome/interval statistics, shed and other husbandry-frequency statistics, due/overdue dashboard
+presentation, and explainable estimated feeding or shed windows when sufficient history exists.
+
+Optional species/life-stage reference profiles are curated, sourced, versioned reference data.
+They prefer ranges, leave unsupported combinations empty, and never silently replace the owner’s
+schedule. M6 analytics, recommendations, and reference profiles remain read-side components with no
+new prediction/statistics/recommendation aggregate. These deterministic extensions are not the
+deferred AI assistant.
+
+The owner approved these decisions and the scheduling amendment on August 10, 2026. Phase 5
+implementation may proceed; Phase 6 remains prohibited.
