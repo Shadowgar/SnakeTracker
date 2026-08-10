@@ -405,6 +405,7 @@ def create_web_router(
         max_files: int = 1000,
         max_fields: int = 1000,
         max_part_size: int = 1024 * 1024,
+        parse_error_message: str = "The submitted form could not be processed. Try again.",
     ) -> tuple[Principal | None, Any | None, Response | None]:
         if not _form_request_valid(request, expected_origin):
             return (
@@ -437,8 +438,8 @@ def create_web_router(
                     request,
                     "error.html",
                     {
-                        "title": "Upload could not be processed",
-                        "message": "Choose a smaller profile photo and try again.",
+                        "title": "Form could not be processed",
+                        "message": parse_error_message,
                     },
                     status_code=422,
                 ),
@@ -1137,6 +1138,7 @@ def create_web_router(
             max_files=1,
             max_fields=8,
             max_part_size=MAX_PROFILE_PHOTO_BYTES,
+            parse_error_message="Choose a smaller profile photo and try again.",
         )
         if rejection is not None:
             return rejection

@@ -252,6 +252,8 @@ def _deserialize_animal_registered(data: Mapping[str, object]) -> EventPayload:
         parsed_animal_id = UUID(animal_id)
     except ValueError as error:
         raise ValueError("Stored animal registration payload is invalid.") from error
+    if data["status"] not in ANIMAL_STATUSES:
+        raise ValueError("Stored animal registration payload is invalid.")
     return AnimalRegisteredV1(
         animal_id=parsed_animal_id,
         name=cast(str, data["name"]),
@@ -262,7 +264,7 @@ def _deserialize_animal_registered(data: Mapping[str, object]) -> EventPayload:
         birth_hatch_date=cast(str | None, data["birth_hatch_date"]),
         acquisition_date=cast(str | None, data["acquisition_date"]),
         breeder_source=cast(str | None, data["breeder_source"]),
-        status=cast(str, data["status"]),
+        status=data["status"],
         notes=cast(str | None, data["notes"]),
     )
 

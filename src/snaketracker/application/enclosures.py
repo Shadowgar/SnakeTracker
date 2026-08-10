@@ -131,8 +131,8 @@ class EnclosureService:
         self._projection = projection
 
     def register(self, command: RegisterEnclosureCommand) -> EnclosureRegistrationResult:
-        name = _required_text(command.name, "name")
-        enclosure_type = _required_text(command.enclosure_type, "type")
+        name = _required_text(command.name, "name", maximum_length=200)
+        enclosure_type = _required_text(command.enclosure_type, "type", maximum_length=100)
         enclosure_id = uuid4()
         recorded_at = datetime.now(UTC)
         key = StreamKey(command.household_id, "enclosure", enclosure_id)
@@ -191,8 +191,8 @@ class EnclosureService:
         )
 
     def update_profile(self, command: UpdateEnclosureProfileCommand) -> DomainEvent:
-        name = _required_text(command.name, "name")
-        enclosure_type = _required_text(command.enclosure_type, "type")
+        name = _required_text(command.name, "name", maximum_length=200)
+        enclosure_type = _required_text(command.enclosure_type, "type", maximum_length=100)
         notes = _optional_text(command.notes, "enclosure notes")
         return self._append_state_event(
             household_id=command.household_id,
@@ -426,10 +426,14 @@ def _idempotency(
     )
 
 
-def _required_text(value: str, label: str) -> str:
+def _required_text(value: str, label: str, *, maximum_length: int) -> str:
     normalized = value.strip()
-    if not normalized or len(normalized) > 200:
+    if not normalized:
         raise EnclosureValidationError(f"Enclosure {label} is required.")
+    if len(normalized) > maximum_length:
+        raise EnclosureValidationError(
+            f"Enclosure {label} must be at most {maximum_length} characters."
+        )
     return normalized
 
 

@@ -173,10 +173,15 @@ class LocalBackupPipeline:
                     (run.archive_path / relative_path).read_bytes(), relative_path
                 )
                 _verify_plaintext_artifact(artifact, content)
-                if artifact["kind"] == "database":
+                kind = _artifact_string(artifact, "kind")
+                if kind == "database":
                     database_path = restore_directory / "snaketracker.sqlite3"
                     _write_private_file(database_path, content)
                     continue
+                if kind != "attachment":
+                    raise BackupVerificationError(
+                        "Backup manifest contains an unsupported artifact."
+                    )
                 storage_key = _artifact_uuid(artifact, "storage_key")
                 media_type = _artifact_media_type(artifact)
                 attachment_storage.restore_finalized(storage_key, media_type, content)
@@ -351,9 +356,10 @@ class LocalBackupPipeline:
                 raise BackupVerificationError("Encrypted backup artifact checksum does not match.")
             content = self._decrypt_artifact(encrypted, relative_path)
             _verify_plaintext_artifact(artifact, content)
-            if artifact["kind"] == "database":
+            kind = _artifact_string(artifact, "kind")
+            if kind == "database":
                 database_content = content
-            elif artifact["kind"] == "attachment":
+            elif kind == "attachment":
                 _artifact_uuid(artifact, "storage_key")
                 _artifact_media_type(artifact)
                 attachment_count += 1

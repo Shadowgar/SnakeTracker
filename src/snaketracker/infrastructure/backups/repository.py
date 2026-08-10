@@ -41,11 +41,11 @@ class SQLAlchemyBackupRepository:
             )
         return _request_from_row(row) if row is not None else None
 
-    def create_request(self, request: BackupRequest) -> None:
+    def create_request(self, request: BackupRequest) -> BackupRequest:
         with self._engine.begin() as connection:
             connection.execute(
                 text(
-                    "INSERT INTO backup_requests "
+                    "INSERT OR IGNORE INTO backup_requests "
                     "(request_id,household_id,actor_user_id,idempotency_key,command_hash,source,status,"
                     "requested_at,started_at,completed_at,error_message) "
                     "VALUES (:request_id,:household_id,:actor_user_id,:idempotency_key,"
@@ -63,6 +63,21 @@ class SQLAlchemyBackupRepository:
                     "requested_at": request.requested_at.isoformat(timespec="microseconds"),
                 },
             )
+            row = (
+                connection.execute(
+                    text(
+                        "SELECT * FROM backup_requests WHERE household_id=:household_id "
+                        "AND idempotency_key=:idempotency_key"
+                    ),
+                    {
+                        "household_id": str(request.household_id),
+                        "idempotency_key": request.idempotency_key,
+                    },
+                )
+                .mappings()
+                .one()
+            )
+        return _request_from_row(row)
 
     def configure_schedule(self, schedule: BackupSchedule) -> BackupSchedule:
         with self._engine.begin() as connection:

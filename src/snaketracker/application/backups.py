@@ -79,7 +79,7 @@ class BackupRepository(Protocol):
         self, household_id: UUID, idempotency_key: str
     ) -> BackupRequest | None: ...
 
-    def create_request(self, request: BackupRequest) -> None: ...
+    def create_request(self, request: BackupRequest) -> BackupRequest: ...
 
     def configure_schedule(self, schedule: BackupSchedule) -> BackupSchedule: ...
 
@@ -137,8 +137,12 @@ class BackupService:
             status="queued",
             requested_at=datetime.now(UTC),
         )
-        self._repository.create_request(request)
-        return request
+        stored = self._repository.create_request(request)
+        if stored.command_hash != command_hash:
+            raise BackupValidationError(
+                "Idempotency key conflicts with a different backup request."
+            )
+        return stored
 
     def health(self, household_id: UUID) -> BackupHealth:
         """Return current schedule and bounded recent activity for one household."""

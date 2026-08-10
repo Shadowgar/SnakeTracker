@@ -8,7 +8,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from uuid import UUID
 
-from snaketracker.bootstrap.configuration import Settings, load_settings
+from snaketracker.bootstrap.configuration import Environment, Settings, load_settings
 from snaketracker.infrastructure.attachments.storage import LocalAttachmentStorage
 from snaketracker.infrastructure.backups.pipeline import LocalBackupPipeline, RestoreRehearsal
 from snaketracker.infrastructure.backups.repository import SQLAlchemyBackupRepository
@@ -23,7 +23,10 @@ def run_restore_rehearsal(settings: Settings, run_id: UUID, restore_root: Path) 
     attachment_root = (
         settings.attachment_storage_path or settings.database_path.parent / "attachments"
     )
-    engine = create_sqlite_engine(settings.database_path, require_local_storage=False)
+    engine = create_sqlite_engine(
+        settings.database_path,
+        require_local_storage=settings.environment is Environment.PRODUCTION,
+    )
     try:
         run = SQLAlchemyBackupRepository(engine).run_by_id(run_id)
     finally:

@@ -543,6 +543,10 @@ class AnimalService:
             raise AnimalValidationError("Shed state values are invalid.")
         if command.result not in {None, "complete", "incomplete"}:
             raise AnimalValidationError("Shed result is invalid.")
+        if command.completed != (command.result in {"complete", "incomplete"}):
+            raise AnimalValidationError(
+                "Completed sheds require a result; incomplete observations cannot have one."
+            )
         return AnimalEventResult(
             self._append_animal_event(
                 household_id=command.household_id,
@@ -695,6 +699,10 @@ class AnimalService:
             raise AnimalValidationError("Shed state values are invalid.")
         if command.result not in {None, "complete", "incomplete"}:
             raise AnimalValidationError("Shed result is invalid.")
+        if command.completed != (command.result in {"complete", "incomplete"}):
+            raise AnimalValidationError(
+                "Completed sheds require a result; incomplete observations cannot have one."
+            )
         return AnimalEventResult(
             self._correct_animal_event(
                 household_id=command.household_id,

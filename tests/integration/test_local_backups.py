@@ -283,7 +283,7 @@ def test_due_backup_schedule_runs_only_after_worker_acquires_global_lease(
             repository=repository,
             pipeline=pipeline,
             holder_id="scheduled-worker",
-            lease_duration=timedelta(milliseconds=60),
+            lease_duration=timedelta(milliseconds=300),
         )
         assert repository.acquire_global_lease(
             "other-worker", schedule.next_run_at, schedule.next_run_at + timedelta(minutes=5)
@@ -296,7 +296,7 @@ def test_due_backup_schedule_runs_only_after_worker_acquires_global_lease(
         renewals = 0
 
         def slow_create(run: BackupRun) -> BackupArchive:
-            time.sleep(0.15)
+            time.sleep(0.75)
             return original_create(run)
 
         def track_renewal(holder_id: str, now: datetime, expires_at: datetime) -> bool:
