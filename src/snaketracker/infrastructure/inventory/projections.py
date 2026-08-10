@@ -8,7 +8,11 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine, RowMapping
 
-from snaketracker.application.inventory import InventoryBalance, InventoryValidationError
+from snaketracker.application.inventory import (
+    InventoryBalance,
+    InventoryConsumptionLink,
+    InventoryValidationError,
+)
 from snaketracker.domains.inventory.contracts import (
     InventoryConsumptionReversedV1,
     InventoryItemRegisteredV1,
@@ -56,6 +60,26 @@ class SQLAlchemyInventoryBalanceProjection:
                     raise InventoryValidationError("Insufficient available inventory to consume.")
                 on_hand -= payload.quantity
                 consumed += payload.quantity
+                if payload.source_event_id is not None:
+                    connection.execute(
+                        text(
+                            "INSERT INTO inventory_consumption_links "
+                            "(household_id,source_event_id,item_id,consumption_event_id,quantity,"
+                            "status,reversal_event_id) VALUES "
+                            "(:household_id,:source_event_id,:item_id,:consumption_event_id,"
+                            ":quantity,'active',NULL) ON CONFLICT(household_id,source_event_id) "
+                            "DO UPDATE SET item_id=excluded.item_id,"
+                            "consumption_event_id=excluded.consumption_event_id,"
+                            "quantity=excluded.quantity,status='active',reversal_event_id=NULL"
+                        ),
+                        {
+                            "household_id": str(event.household_id),
+                            "source_event_id": str(payload.source_event_id),
+                            "item_id": str(event.stream_id),
+                            "consumption_event_id": str(event.event_id),
+                            "quantity": payload.quantity,
+                        },
+                    )
             elif isinstance(payload, InventoryConsumptionReversedV1):
                 if consumed < payload.quantity:
                     raise InventoryValidationError(
@@ -63,6 +87,18 @@ class SQLAlchemyInventoryBalanceProjection:
                     )
                 on_hand += payload.quantity
                 consumed -= payload.quantity
+                connection.execute(
+                    text(
+                        "UPDATE inventory_consumption_links SET status='reversed',"
+                        "reversal_event_id=:reversal_event_id WHERE household_id=:household_id "
+                        "AND consumption_event_id=:consumption_event_id AND status='active'"
+                    ),
+                    {
+                        "reversal_event_id": str(event.event_id),
+                        "household_id": str(event.household_id),
+                        "consumption_event_id": str(payload.target_event_id),
+                    },
+                )
             elif isinstance(payload, InventoryStockAdjustedV1):
                 on_hand += payload.quantity_delta
                 if on_hand < reserved:
@@ -121,6 +157,35 @@ class SQLAlchemyInventoryBalanceProjection:
                 .all()
             )
         return tuple(_balance(row) for row in rows)
+
+    def consumption_for_source(
+        self, household_id: UUID, source_event_id: UUID
+    ) -> InventoryConsumptionLink | None:
+        with self._engine.connect() as connection:
+            row = (
+                connection.execute(
+                    text(
+                        "SELECT * FROM inventory_consumption_links "
+                        "WHERE household_id=:household_id AND source_event_id=:source_event_id"
+                    ),
+                    {
+                        "household_id": str(household_id),
+                        "source_event_id": str(source_event_id),
+                    },
+                )
+                .mappings()
+                .one_or_none()
+            )
+        if row is None:
+            return None
+        return InventoryConsumptionLink(
+            household_id=UUID(str(row["household_id"])),
+            source_event_id=UUID(str(row["source_event_id"])),
+            item_id=UUID(str(row["item_id"])),
+            consumption_event_id=UUID(str(row["consumption_event_id"])),
+            quantity=int(row["quantity"]),
+            status=str(row["status"]),
+        )
 
     @staticmethod
     def _row(connection: Connection, household_id: UUID, item_id: UUID) -> RowMapping | None:

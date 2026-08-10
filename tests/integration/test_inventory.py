@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
 from pathlib import Path
 from threading import Barrier
 from uuid import uuid4
@@ -9,6 +10,14 @@ import pytest
 from alembic import command
 from alembic.config import Config
 
+from snaketracker.application.animals import (
+    AnimalService,
+    CorrectFeedingCommand,
+    RecordFeedingCommand,
+    RegisterAnimalCommand,
+    ReinstateAnimalEventCommand,
+    VoidAnimalEventCommand,
+)
 from snaketracker.application.household_bootstrap import BootstrapCommand, HouseholdBootstrapService
 from snaketracker.application.inventory import (
     AdjustStockCommand,
@@ -20,6 +29,7 @@ from snaketracker.application.inventory import (
     RegisterInventoryItemCommand,
     ReverseConsumptionCommand,
 )
+from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
 from snaketracker.infrastructure.database.engine import create_sqlite_engine
 from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
 from snaketracker.infrastructure.identity.bootstrap_repository import (
@@ -353,5 +363,289 @@ def test_inventory_idempotency_key_rejects_different_command_hash(tmp_path: Path
                     None,
                 )
             )
+    finally:
+        engine.dispose()
+
+
+def test_stock_linked_feeding_void_and_reinstatement_compensate_atomically(tmp_path: Path) -> None:
+    engine, bootstrap, store, inventory, projection = _setup(tmp_path)
+    try:
+        item = inventory.register(
+            RegisterInventoryItemCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                uuid4(),
+                "linked-register-stock",
+                "Medium rats",
+                "item",
+                None,
+            )
+        )
+        inventory.receive(
+            ReceiveStockCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                item.item_id,
+                uuid4(),
+                "linked-receive-stock",
+                1,
+                5,
+                None,
+            )
+        )
+        animals = AnimalService(
+            store,
+            SQLAlchemyAnimalCurrentProjection(engine),
+            inventory_projection=projection,
+        )
+        animal = animals.register(
+            RegisterAnimalCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                uuid4(),
+                "linked-register-animal",
+                "Nyx",
+                "Python regius",
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+        )
+        feeding = animals.record_feeding(
+            RecordFeedingCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                animal.animal_id,
+                uuid4(),
+                "linked-feeding",
+                datetime(2026, 8, 10, 12, tzinfo=UTC),
+                "rat",
+                "medium",
+                None,
+                "frozen_thawed",
+                1,
+                "accepted",
+                None,
+                inventory_item_id=item.item_id,
+                inventory_expected_stream_version=2,
+                inventory_quantity=2,
+            )
+        )
+        balance = projection.balance_for(bootstrap.household_id, item.item_id)
+        assert balance is not None and balance.on_hand_quantity == 3
+
+        animals.void_event(
+            VoidAnimalEventCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                "owner",
+                animal.animal_id,
+                feeding.event.event_id,
+                "linked-feeding-void",
+                "Entered against the wrong animal.",
+            )
+        )
+        balance = projection.balance_for(bootstrap.household_id, item.item_id)
+        assert balance is not None and balance.on_hand_quantity == 5
+
+        animals.reinstate_event(
+            ReinstateAnimalEventCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                "owner",
+                animal.animal_id,
+                feeding.event.event_id,
+                "linked-feeding-reinstate",
+                "The original animal was correct.",
+            )
+        )
+        balance = projection.balance_for(bootstrap.household_id, item.item_id)
+        assert balance is not None and balance.on_hand_quantity == 3
+        assert [
+            event.event_type
+            for event in store.load_stream(
+                StreamKey(bootstrap.household_id, "inventory-item", item.item_id)
+            )
+        ] == [
+            "inventory.item_registered",
+            "inventory.stock_received",
+            "inventory.stock_consumed",
+            "inventory.consumption_reversed",
+            "inventory.stock_consumed",
+        ]
+    finally:
+        engine.dispose()
+
+
+def test_stock_linked_feeding_rolls_back_when_inventory_is_insufficient(tmp_path: Path) -> None:
+    engine, bootstrap, store, inventory, projection = _setup(tmp_path)
+    try:
+        item = inventory.register(
+            RegisterInventoryItemCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                uuid4(),
+                "rollback-register-stock",
+                "Large rats",
+                "item",
+                None,
+            )
+        )
+        animals = AnimalService(
+            store,
+            SQLAlchemyAnimalCurrentProjection(engine),
+            inventory_projection=projection,
+        )
+        animal = animals.register(
+            RegisterAnimalCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                uuid4(),
+                "rollback-register-animal",
+                "Sol",
+                "Boa imperator",
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+        )
+
+        with pytest.raises(InventoryValidationError, match="Insufficient available inventory"):
+            animals.record_feeding(
+                RecordFeedingCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    animal.animal_id,
+                    uuid4(),
+                    "rollback-linked-feeding",
+                    datetime(2026, 8, 10, 12, tzinfo=UTC),
+                    "rat",
+                    "large",
+                    None,
+                    "frozen_thawed",
+                    1,
+                    "accepted",
+                    None,
+                    inventory_item_id=item.item_id,
+                    inventory_expected_stream_version=1,
+                    inventory_quantity=1,
+                )
+            )
+
+        animal_events = store.load_stream(
+            StreamKey(bootstrap.household_id, "animal", animal.animal_id)
+        )
+        assert [event.event_type for event in animal_events] == ["animal.registered"]
+    finally:
+        engine.dispose()
+
+
+def test_stock_linked_feeding_correction_replaces_consumption_atomically(tmp_path: Path) -> None:
+    engine, bootstrap, store, inventory, projection = _setup(tmp_path)
+    try:
+        item = inventory.register(
+            RegisterInventoryItemCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                uuid4(),
+                "correct-register-stock",
+                "Rat pups",
+                "item",
+                None,
+            )
+        )
+        inventory.receive(
+            ReceiveStockCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                item.item_id,
+                uuid4(),
+                "correct-receive-stock",
+                1,
+                5,
+                None,
+            )
+        )
+        animals = AnimalService(
+            store,
+            SQLAlchemyAnimalCurrentProjection(engine),
+            inventory_projection=projection,
+        )
+        animal = animals.register(
+            RegisterAnimalCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                uuid4(),
+                "correct-register-animal",
+                "Luna",
+                "Python regius",
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+        )
+        feeding = animals.record_feeding(
+            RecordFeedingCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                animal.animal_id,
+                uuid4(),
+                "correct-linked-feeding",
+                datetime(2026, 8, 10, 12, tzinfo=UTC),
+                "rat",
+                "pup",
+                None,
+                "frozen_thawed",
+                2,
+                "accepted",
+                None,
+                inventory_item_id=item.item_id,
+                inventory_expected_stream_version=2,
+                inventory_quantity=2,
+            )
+        )
+
+        correction = animals.correct_feeding(
+            CorrectFeedingCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                "owner",
+                animal.animal_id,
+                feeding.event.event_id,
+                "correct-linked-feeding-replacement",
+                datetime(2026, 8, 10, 13, tzinfo=UTC),
+                "rat",
+                "pup",
+                None,
+                "frozen_thawed",
+                1,
+                "accepted",
+                "Corrected quantity.",
+                inventory_quantity=1,
+            )
+        )
+
+        balance = projection.balance_for(bootstrap.household_id, item.item_id)
+        assert balance is not None and balance.on_hand_quantity == 4
+        link = projection.consumption_for_source(bootstrap.household_id, correction.event.event_id)
+        assert link is not None and (link.quantity, link.status) == (1, "active")
+        assert [
+            event.event_type
+            for event in store.load_stream(
+                StreamKey(bootstrap.household_id, "inventory-item", item.item_id)
+            )
+        ][-2:] == ["inventory.consumption_reversed", "inventory.stock_consumed"]
     finally:
         engine.dispose()

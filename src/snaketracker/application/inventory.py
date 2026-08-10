@@ -50,10 +50,24 @@ class InventoryBalance:
     stream_version: int
 
 
+@dataclass(frozen=True, slots=True)
+class InventoryConsumptionLink:
+    household_id: UUID
+    source_event_id: UUID
+    item_id: UUID
+    consumption_event_id: UUID
+    quantity: int
+    status: str
+
+
 class InventoryBalanceProjection(SynchronousProjection, Protocol):
     def balance_for(self, household_id: UUID, item_id: UUID) -> InventoryBalance | None: ...
 
     def list_for(self, household_id: UUID) -> tuple[InventoryBalance, ...]: ...
+
+    def consumption_for_source(
+        self, household_id: UUID, source_event_id: UUID
+    ) -> InventoryConsumptionLink | None: ...
 
 
 @dataclass(frozen=True, slots=True)

@@ -39,6 +39,7 @@ PHASE_FIVE_TABLES = {
     "household_summaries",
     "idempotency_operations",
     "inventory_balance",
+    "inventory_consumption_links",
     "jobs",
     "login_rate_limits",
     "local_notification_operations",
