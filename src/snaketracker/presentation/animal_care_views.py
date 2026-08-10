@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
+from uuid import UUID
 
 from snaketracker.domains.animals.contracts import (
     AnimalBathRecordedV1,
@@ -31,10 +33,18 @@ class CareEventView:
     event: DomainEvent
     title: str
     description: str
+    technical_facts: tuple[tuple[str, str], ...] = ()
 
 
-def present_care_event(event: DomainEvent) -> CareEventView:
+def present_care_event(
+    event: DomainEvent,
+    *,
+    enclosure_names: Mapping[UUID, str] | None = None,
+    previous_enclosure_id: UUID | None = None,
+) -> CareEventView:
     payload = event.payload
+    title = event.title
+    technical_facts: tuple[tuple[str, str], ...] = ()
     if isinstance(payload, AnimalRegisteredV1):
         description = f"{payload.name} was added as {payload.species}."
     elif isinstance(payload, AnimalProfileCorrectedV1):
@@ -62,7 +72,30 @@ def present_care_event(event: DomainEvent) -> CareEventView:
     elif isinstance(payload, AnimalBathRecordedV1):
         description = f"{payload.duration_minutes} minutes · {payload.reason}"
     elif isinstance(payload, AnimalEnclosureAssignedV1):
-        description = "Moved to the selected enclosure."
+        names = enclosure_names or {}
+        target_name = names.get(payload.enclosure_id)
+        target_label = target_name or f"enclosure {payload.enclosure_id}"
+        previous_name = names.get(previous_enclosure_id) if previous_enclosure_id else None
+        title = "Moved enclosure"
+        description = (
+            f"{previous_name} → {target_label}"
+            if previous_name is not None
+            else f"Moved to {target_label}."
+        )
+        target_reference = (
+            f"{target_name} ({payload.enclosure_id})" if target_name else str(payload.enclosure_id)
+        )
+        technical_facts = (("Target enclosure", target_reference),)
+        if previous_enclosure_id is not None:
+            previous_reference = (
+                f"{previous_name} ({previous_enclosure_id})"
+                if previous_name
+                else str(previous_enclosure_id)
+            )
+            technical_facts = (
+                ("Previous enclosure", previous_reference),
+                *technical_facts,
+            )
     elif isinstance(payload, AnimalPhotoSelectedV1):
         description = "Selected a finalized profile photo."
     elif isinstance(payload, EventVoidedV1):
@@ -71,25 +104,50 @@ def present_care_event(event: DomainEvent) -> CareEventView:
         description = "Restored the targeted record to effective keeper history."
     else:
         description = event.description or event.title
-    return CareEventView(event=event, title=event.title, description=description)
+    return CareEventView(
+        event=event,
+        title=title,
+        description=description,
+        technical_facts=technical_facts,
+    )
 
 
-def present_care_events(events: tuple[DomainEvent, ...]) -> tuple[CareEventView, ...]:
-    return tuple(present_care_event(event) for event in events)
+def present_care_events(
+    events: tuple[DomainEvent, ...],
+    *,
+    enclosure_names: Mapping[UUID, str] | None = None,
+) -> tuple[CareEventView, ...]:
+    previous_enclosures: dict[UUID, UUID | None] = {}
+    previous_enclosure_id: UUID | None = None
+    for event in sorted(events, key=lambda item: item.stream_version):
+        if not isinstance(event.payload, AnimalEnclosureAssignedV1):
+            continue
+        previous_enclosures[event.event_id] = previous_enclosure_id
+        previous_enclosure_id = event.payload.enclosure_id
+    return tuple(
+        present_care_event(
+            event,
+            enclosure_names=enclosure_names,
+            previous_enclosure_id=previous_enclosures.get(event.event_id),
+        )
+        for event in events
+    )
 
 
 def present_effective_care_events(
     events: tuple[DomainEvent, ...],
+    *,
+    enclosure_names: Mapping[UUID, str] | None = None,
 ) -> tuple[CareEventView, ...]:
     """Present effective keeper history newest occurrence first."""
-    ordered = tuple(
+    presented = present_care_events(events, enclosure_names=enclosure_names)
+    return tuple(
         sorted(
-            events,
-            key=lambda event: (event.occurred_at, event.stream_version),
+            presented,
+            key=lambda item: (item.event.occurred_at, item.event.stream_version),
             reverse=True,
         )
     )
-    return present_care_events(ordered)
 
 
 def _label(value: str) -> str:

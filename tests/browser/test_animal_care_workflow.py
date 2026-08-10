@@ -223,7 +223,7 @@ def test_authenticated_keeper_can_track_animal_care_and_enclosure_workflow(
             "Length recorded",
             "Shed recorded",
             "Bath recorded",
-            "Enclosure assigned",
+            "Moved enclosure",
         ):
             assert text in timeline.text
 
@@ -251,6 +251,100 @@ def test_authenticated_keeper_can_track_animal_care_and_enclosure_workflow(
         assert invalid_photo.status_code == 422
         assert "Rack A-03" in invalid_photo.text
         assert "925 mm" in invalid_photo.text
+
+
+def test_enclosure_reassignment_is_identified_and_only_current_occupancy_is_shown(
+    tmp_path: Path,
+) -> None:
+    first_move = (datetime.now(UTC) - timedelta(hours=2)).replace(microsecond=0)
+    second_move = first_move + timedelta(hours=1)
+    with client_for(tmp_path) as client:
+        setup_and_sign_in(client)
+
+        animal_form = client.get("/animals/new")
+        created_animal = client.post(
+            "/animals",
+            data={
+                "csrf_token": csrf_from(animal_form.text),
+                "name": "Nyx",
+                "species": "Python regius",
+                "sex": "female",
+                "morph": "",
+                "genetics": "",
+                "birth_hatch_date": "",
+                "acquisition_date": "",
+                "breeder_source": "",
+                "notes": "",
+            },
+            follow_redirects=False,
+        )
+        animal_url = created_animal.headers["location"]
+
+        enclosure_urls: list[str] = []
+        for index, name in enumerate(("55 Gallon Tank", "10 Gallon Tank"), start=1):
+            enclosure_form = client.get("/enclosures/new")
+            created_enclosure = client.post(
+                "/enclosures",
+                data={
+                    "csrf_token": csrf_from(enclosure_form.text),
+                    "idempotency_key": f"browser-enclosure-reassignment-create-{index}",
+                    "name": name,
+                    "enclosure_type": "vivarium",
+                    "notes": "",
+                },
+                follow_redirects=False,
+            )
+            assert created_enclosure.status_code == 303
+            enclosure_urls.append(created_enclosure.headers["location"])
+
+        for index, (enclosure_url, occurred_at) in enumerate(
+            zip(enclosure_urls, (first_move, second_move), strict=True), start=1
+        ):
+            profile = client.get(animal_url)
+            assigned = client.post(
+                f"{animal_url}/enclosure",
+                data={
+                    "csrf_token": csrf_from(profile.text),
+                    "idempotency_key": f"browser-enclosure-reassignment-assign-{index}",
+                    "enclosure_id": enclosure_url.rsplit("/", 1)[-1],
+                    "occurred_at": occurred_at.strftime("%Y-%m-%dT%H:%M"),
+                    "notes": "",
+                },
+                follow_redirects=False,
+            )
+            assert assigned.status_code == 303
+
+        current_enclosure_id = enclosure_urls[1].rsplit("/", 1)[-1]
+        profile = client.get(animal_url)
+        assert f'<a href="/enclosures/{current_enclosure_id}">10 Gallon Tank</a>' in profile.text
+
+        first_enclosure = client.get(enclosure_urls[0])
+        second_enclosure = client.get(enclosure_urls[1])
+        assert "No animals are assigned here." in first_enclosure.text
+        assert "Nyx" not in first_enclosure.text
+        assert "Nyx" in second_enclosure.text
+
+        timeline = client.get(f"{animal_url}/timeline")
+        assert timeline.status_code == 200
+        effective_history = timeline.text.split('<details class="technical-audit"', 1)[0]
+        assert "Moved to 55 Gallon Tank" in effective_history
+        assert "55 Gallon Tank → 10 Gallon Tank" in effective_history
+
+        assignment_audits = [
+            item
+            for item in re.findall(r'<li id="event-[^"]+">.*?</li>', timeline.text, re.DOTALL)
+            if "animal.enclosure_assigned v1" in item
+        ]
+        assert len(assignment_audits) == 2
+        for item, name, enclosure_url in zip(
+            assignment_audits,
+            ("55 Gallon Tank", "10 Gallon Tank"),
+            enclosure_urls,
+            strict=True,
+        ):
+            assert name in item
+            assert enclosure_url.rsplit("/", 1)[-1] in item
+            assert "/void" not in item
 
 
 def test_authenticated_keeper_can_edit_profile_and_reactivate_an_animal(tmp_path: Path) -> None:

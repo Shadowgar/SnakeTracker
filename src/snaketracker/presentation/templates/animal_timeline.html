@@ -34,6 +34,7 @@
         <div>
           <strong>{{ item.title }}</strong><p>{{ item.description }}</p>
           <dl class="technical-facts">
+            {% for label, value in item.technical_facts %}<div><dt>{{ label }}</dt><dd><code>{{ value }}</code></dd></div>{% endfor %}
             <div><dt>Event type</dt><dd><code>{{ item.event.event_type }} v{{ item.event.schema_version }}</code></dd></div>
             <div><dt>Event ID</dt><dd><code>{{ item.event.event_id }}</code></dd></div>
             <div><dt>Stream version</dt><dd>{{ item.event.stream_version }}</dd></div>

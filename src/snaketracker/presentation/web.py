@@ -18,6 +18,7 @@ from starlette.datastructures import UploadFile
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from snaketracker.application.animals import (
+    CONTROLLABLE_ANIMAL_EVENT_TYPES,
     AnimalService,
     AnimalValidationError,
     AssignEnclosureCommand,
@@ -155,9 +156,10 @@ def _timeline_action_ids(events: tuple[DomainEvent, ...]) -> dict[str, frozenset
         ).correction
         if capabilities.correctable:
             correctable.add(event.event_id)
-        if capabilities.voidable and event.event_id not in active_voids:
+        controls_supported = event.event_type in CONTROLLABLE_ANIMAL_EVENT_TYPES
+        if capabilities.voidable and controls_supported and event.event_id not in active_voids:
             voidable.add(event.event_id)
-        if capabilities.reinstatable and event.event_id in active_voids:
+        if capabilities.reinstatable and controls_supported and event.event_id in active_voids:
             reinstatable.add(event.event_id)
     return {
         "correctable_event_ids": frozenset(correctable),
@@ -167,14 +169,22 @@ def _timeline_action_ids(events: tuple[DomainEvent, ...]) -> dict[str, frozenset
 
 
 def _timeline_context(
-    animal_service: AnimalService, household_id: UUID, animal_id: UUID
+    animal_service: AnimalService,
+    enclosure_service: EnclosureService,
+    household_id: UUID,
+    animal_id: UUID,
 ) -> dict[str, Any]:
     audit_events = animal_service.audit_history(household_id, animal_id)
+    enclosure_names = {
+        enclosure.enclosure_id: enclosure.name
+        for enclosure in enclosure_service.list_profiles(household_id)
+    }
     return {
         "events": present_effective_care_events(
-            animal_service.effective_history(household_id, animal_id)
+            animal_service.effective_history(household_id, animal_id),
+            enclosure_names=enclosure_names,
         ),
-        "audit_events": present_care_events(audit_events),
+        "audit_events": present_care_events(audit_events, enclosure_names=enclosure_names),
         "errors": {},
         **_timeline_action_ids(audit_events),
     }
@@ -1071,7 +1081,8 @@ def create_web_router(
             None,
         )
         recent_events = present_effective_care_events(
-            animal_service.effective_history(principal.household_id, profile.animal_id)
+            animal_service.effective_history(principal.household_id, profile.animal_id),
+            enclosure_names={enclosure.enclosure_id: enclosure.name for enclosure in enclosures},
         )
         return protected_page(
             request,
@@ -1655,7 +1666,14 @@ def create_web_router(
                 )
             )
         except (AnimalValidationError, FormValidationError, ValueError) as error:
-            return _animal_timeline_error(request, principal, animal_id, str(error), animal_service)
+            return _animal_timeline_error(
+                request,
+                principal,
+                animal_id,
+                str(error),
+                animal_service,
+                enclosure_service,
+            )
         return RedirectResponse(f"/animals/{animal_id}/timeline", status_code=303)
 
     @router.post("/animals/{animal_id}/events/{event_id}/reinstate", response_class=HTMLResponse)
@@ -1684,7 +1702,14 @@ def create_web_router(
                 )
             )
         except (AnimalValidationError, FormValidationError, ValueError) as error:
-            return _animal_timeline_error(request, principal, animal_id, str(error), animal_service)
+            return _animal_timeline_error(
+                request,
+                principal,
+                animal_id,
+                str(error),
+                animal_service,
+                enclosure_service,
+            )
         return RedirectResponse(f"/animals/{animal_id}/timeline", status_code=303)
 
     @router.get("/animals/{animal_id}/timeline", response_class=HTMLResponse)
@@ -1713,7 +1738,12 @@ def create_web_router(
             principal,
             context={
                 "animal": profile,
-                **_timeline_context(animal_service, principal.household_id, animal_uuid),
+                **_timeline_context(
+                    animal_service,
+                    enclosure_service,
+                    principal.household_id,
+                    animal_uuid,
+                ),
             },
         )
 
@@ -1725,6 +1755,7 @@ def create_web_router(
             principal_for=principal_for,
             protected_page=protected_page,
             animal_service=animal_service,
+            enclosure_service=enclosure_service,
             event_types=frozenset({"animal.feeding_recorded", "animal.feeding_corrected"}),
             page_title="Feeding history",
             page_description="Effective feeding history, including accepted corrections.",
@@ -1739,6 +1770,7 @@ def create_web_router(
             principal_for=principal_for,
             protected_page=protected_page,
             animal_service=animal_service,
+            enclosure_service=enclosure_service,
             event_types=frozenset(
                 {
                     "animal.weight_recorded",
@@ -1818,7 +1850,8 @@ def _animal_form_error(
         None,
     )
     recent_events = present_effective_care_events(
-        animal_service.effective_history(principal.household_id, profile.animal_id)
+        animal_service.effective_history(principal.household_id, profile.animal_id),
+        enclosure_names={enclosure.enclosure_id: enclosure.name for enclosure in enclosures},
     )
     return templates.TemplateResponse(
         request,
@@ -1878,6 +1911,7 @@ def _animal_timeline_error(
     animal_id: str,
     message: str,
     animal_service: AnimalService,
+    enclosure_service: EnclosureService,
 ) -> HTMLResponse:
     try:
         animal_uuid = UUID(animal_id)
@@ -1892,7 +1926,9 @@ def _animal_timeline_error(
             {"title": "Animal not found", "message": "Return to your animal list and try again."},
             status_code=404,
         )
-    context = _timeline_context(animal_service, principal.household_id, animal_uuid)
+    context = _timeline_context(
+        animal_service, enclosure_service, principal.household_id, animal_uuid
+    )
     context["animal"] = animal
     context["errors"] = {"form": message}
     return templates.TemplateResponse(
@@ -1992,6 +2028,7 @@ def _animal_history_page(
     principal_for: Callable[..., Principal | None],
     protected_page: Callable[..., HTMLResponse],
     animal_service: AnimalService,
+    enclosure_service: EnclosureService,
     event_types: frozenset[str],
     page_title: str,
     page_description: str,
@@ -2016,7 +2053,9 @@ def _animal_history_page(
             },
             status_code=404,
         )
-    context = _timeline_context(animal_service, principal.household_id, animal_uuid)
+    context = _timeline_context(
+        animal_service, enclosure_service, principal.household_id, animal_uuid
+    )
     context["events"] = tuple(
         event for event in context["events"] if event.event.event_type in event_types
     )

@@ -47,7 +47,7 @@ from snaketracker.platform.events.store import (
     canonical_command_hash,
 )
 
-_CONTROLLABLE_CARE_EVENT_TYPES = frozenset(
+CONTROLLABLE_ANIMAL_EVENT_TYPES = frozenset(
     {
         "animal.feeding_recorded",
         "animal.feeding_corrected",
@@ -980,7 +980,7 @@ class AnimalService:
             raise AnimalValidationError(
                 "Control target does not exist in this animal stream."
             ) from error
-        if target.event_type not in _CONTROLLABLE_CARE_EVENT_TYPES:
+        if target.event_type not in CONTROLLABLE_ANIMAL_EVENT_TYPES:
             raise AnimalValidationError("Only animal care records can be voided or reinstated.")
         recorded_at = datetime.now(UTC)
         active_void = _active_void_for(target_event_id, existing)
