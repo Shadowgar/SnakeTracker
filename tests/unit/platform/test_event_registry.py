@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -116,3 +117,70 @@ def test_registry_rejects_duplicate_identity_and_noncontiguous_upcaster_chain() 
     )
     with pytest.raises(ValueError, match="contiguous"):
         registry_module.EventRegistry((invalid,), allow_reserved_test_namespace=True)
+
+
+def test_deserialization_rejects_malformed_or_corrupt_stored_envelopes() -> None:
+    fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    original = fixture["events"][0]
+    malformed: list[dict[str, object]] = []
+
+    for field, value in (
+        ("payload", []),
+        ("subjects", {}),
+        ("description", 7),
+        ("notes", 7),
+        ("event_id", 7),
+        ("stream_version", "1"),
+    ):
+        candidate = deepcopy(original)
+        candidate[field] = value
+        malformed.append(candidate)
+
+    invalid_subject = deepcopy(original)
+    invalid_subject["subjects"] = ["animal"]
+    malformed.append(invalid_subject)
+    invalid_order = deepcopy(original)
+    invalid_order["subjects"][0]["display_order"] = "first"
+    malformed.append(invalid_order)
+    corrupt = deepcopy(original)
+    corrupt["checksum"] = "0" * 64
+    malformed.append(corrupt)
+
+    for candidate in malformed:
+        with pytest.raises(ValueError, match="Stored event"):
+            registry_module.deserialize_event_record(candidate)
+
+
+def test_registry_rejects_incomplete_contracts_and_unknown_historical_versions() -> None:
+    incomplete = registry_module.EventContractRegistration(
+        event_type="example.invalid",
+        schema_version=0,
+        owner="",
+        payload_type=registry_module.HouseholdCreatedV1,
+        deserialize_payload=lambda data: registry_module.HouseholdCreatedV1(
+            str(data["household_name"]), str(data["timezone"])
+        ),
+        subject_requirements=(),
+    )
+    with pytest.raises(ValueError, match="incomplete"):
+        registry_module.EventRegistry((incomplete,))
+
+    with pytest.raises(registry_module.UnknownEventContractError, match="newer compatible"):
+        registry_module.production_event_registry.deserialize_for_replay(
+            "animal.future_contract", 1, {}
+        )
+
+
+def test_historical_controls_require_a_reason_and_valid_target() -> None:
+    with pytest.raises(ValueError, match="does not match"):
+        registry_module.production_event_registry.deserialize(
+            "event.voided",
+            1,
+            {"target_event_id": str(registry_module.UUID(int=1)), "reason": " "},
+        )
+    with pytest.raises(ValueError, match="target is invalid"):
+        registry_module.production_event_registry.deserialize(
+            "event.reinstated",
+            1,
+            {"target_event_id": "not-a-uuid", "reason": "Reviewed"},
+        )

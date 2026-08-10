@@ -11,8 +11,6 @@ import snaketracker
 ROOT = Path(__file__).parents[2]
 
 FORBIDDEN_PHASE_TWO_PATHS = (
-    "src/snaketracker/domains/animals",
-    "src/snaketracker/domains/enclosures",
     "src/snaketracker/domains/inventory",
     "src/snaketracker/domains/expenses",
     "src/snaketracker/domains/reminders",
@@ -67,3 +65,10 @@ def test_reserved_synthetic_event_namespace_is_absent_from_production_and_migrat
                 offending.append(path.relative_to(ROOT))
 
     assert offending == []
+
+
+def test_runtime_backup_adapter_is_not_hidden_by_artifact_ignore_rule() -> None:
+    ignore_rules = (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
+
+    assert "backups/" not in ignore_rules
+    assert "/backups/" in ignore_rules

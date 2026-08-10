@@ -50,6 +50,42 @@ class SQLAlchemySubjectReferenceValidator:
                         "household_id": str(event.household_id),
                     },
                 ).scalar_one_or_none()
+            elif subject.subject_type == "animal":
+                if (
+                    event.event_type == "animal.registered"
+                    and subject.relationship == "primary"
+                    and subject.subject_id == event.stream_id
+                ):
+                    exists = 1
+                else:
+                    exists = connection.execute(
+                        text(
+                            "SELECT 1 FROM animal_current WHERE household_id=:household_id "
+                            "AND animal_id=:subject_id"
+                        ),
+                        {
+                            "subject_id": str(subject.subject_id),
+                            "household_id": str(event.household_id),
+                        },
+                    ).scalar_one_or_none()
+            elif subject.subject_type == "enclosure":
+                if (
+                    event.event_type == "enclosure.registered"
+                    and subject.relationship == "primary"
+                    and subject.subject_id == event.stream_id
+                ):
+                    exists = 1
+                else:
+                    exists = connection.execute(
+                        text(
+                            "SELECT 1 FROM enclosure_current WHERE household_id=:household_id "
+                            "AND enclosure_id=:subject_id"
+                        ),
+                        {
+                            "subject_id": str(subject.subject_id),
+                            "household_id": str(event.household_id),
+                        },
+                    ).scalar_one_or_none()
             else:
                 raise EventValidationError("Event subject type is not registered.")
             if exists is None:
