@@ -194,13 +194,11 @@ class LocalBackupPipeline:
             raise
 
     def _copy_database(self, destination: Path) -> None:
-        source = sqlite3.connect(self._source_database)
-        copied = sqlite3.connect(destination)
-        try:
+        with (
+            closing(sqlite3.connect(self._source_database)) as source,
+            closing(sqlite3.connect(destination)) as copied,
+        ):
             source.backup(copied)
-        finally:
-            copied.close()
-            source.close()
 
     @staticmethod
     def _remove_sessions(copied_database: Path) -> None:

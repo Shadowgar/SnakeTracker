@@ -892,22 +892,24 @@ def test_owner_can_request_and_schedule_basic_local_backups(tmp_path: Path) -> N
             "/settings/backups/schedule",
             data={
                 "csrf_token": csrf_from(settings.text),
-                "enabled": "true",
-                "interval_seconds": "21600",
+                "enabled": "false",
+                "interval_seconds": "43200",
             },
             follow_redirects=False,
         )
         assert scheduled.status_code == 303
         settings = client.get("/settings/backups")
-        assert "Schedule enabled" in settings.text
-        assert "Every 6 hours" in settings.text
+        assert "Schedule disabled" in settings.text
+        assert "Every 12 hours" in settings.text
+        assert '<option value="false" selected>Disabled</option>' in settings.text
+        assert '<option value="43200" selected>Every 12 hours</option>' in settings.text
         with client.app.state.database_engine.connect() as connection:
             assert (
                 connection.execute(text("SELECT count(*) FROM backup_requests")).scalar_one() == 1
             )
             assert connection.execute(
                 text("SELECT enabled,interval_seconds FROM backup_schedules")
-            ).one() == (1, 21600)
+            ).one() == (0, 43200)
 
 
 def test_phase4_pages_and_commands_require_a_current_session(tmp_path: Path) -> None:

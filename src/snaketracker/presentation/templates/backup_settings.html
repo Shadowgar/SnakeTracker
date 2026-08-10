@@ -21,18 +21,19 @@
     </form>
     <form class="card form-stack" method="post" action="/settings/backups/schedule">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      {% set schedule = backup_health.schedule %}
       <h2>Local schedule</h2>
       <label>Schedule
         <select name="enabled">
-          <option value="true">Enabled</option>
-          <option value="false">Disabled</option>
+          <option value="true" {% if not schedule or schedule.enabled %}selected{% endif %}>Enabled</option>
+          <option value="false" {% if schedule and not schedule.enabled %}selected{% endif %}>Disabled</option>
         </select>
       </label>
       <label>Interval
         <select name="interval_seconds">
-          <option value="21600">Every 6 hours</option>
-          <option value="43200">Every 12 hours</option>
-          <option value="86400">Daily</option>
+          <option value="21600" {% if not schedule or schedule.interval_seconds == 21600 %}selected{% endif %}>Every 6 hours</option>
+          <option value="43200" {% if schedule and schedule.interval_seconds == 43200 %}selected{% endif %}>Every 12 hours</option>
+          <option value="86400" {% if schedule and schedule.interval_seconds == 86400 %}selected{% endif %}>Daily</option>
         </select>
       </label>
       <button type="submit">Save schedule</button>

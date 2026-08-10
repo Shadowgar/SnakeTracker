@@ -147,10 +147,13 @@ class SQLAlchemyBackupRepository:
             for schedule in schedules:
                 due_at = datetime.fromisoformat(str(schedule["next_run_at"]))
                 household_id = UUID(str(schedule["household_id"]))
+                interval_seconds = int(schedule["interval_seconds"])
+                if interval_seconds <= 0:
+                    continue
                 idempotency_key = f"scheduled:{due_at.isoformat(timespec='microseconds')}"
                 command_hash = _scheduled_command_hash(
                     household_id,
-                    int(schedule["interval_seconds"]),
+                    interval_seconds,
                     due_at,
                 )
                 inserted = connection.execute(
@@ -170,7 +173,6 @@ class SQLAlchemyBackupRepository:
                     },
                 )
                 queued += int(inserted.rowcount == 1)
-                interval_seconds = int(schedule["interval_seconds"])
                 next_run_at = due_at
                 while next_run_at <= now:
                     next_run_at += timedelta(seconds=interval_seconds)
@@ -243,6 +245,23 @@ class SQLAlchemyBackupRepository:
                 ),
                 {"lease_name": _LEASE_NAME, "holder_id": holder_id},
             )
+
+    def renew_global_lease(self, holder_id: str, now: datetime, expires_at: datetime) -> bool:
+        with self._engine.begin() as connection:
+            updated = connection.execute(
+                text(
+                    "UPDATE backup_leases SET expires_at=:expires_at "
+                    "WHERE lease_name=:lease_name AND holder_id=:holder_id "
+                    "AND expires_at>:now"
+                ),
+                {
+                    "lease_name": _LEASE_NAME,
+                    "holder_id": holder_id,
+                    "now": now.isoformat(timespec="microseconds"),
+                    "expires_at": expires_at.isoformat(timespec="microseconds"),
+                },
+            )
+        return updated.rowcount == 1
 
     def start_next_run(self, now: datetime) -> BackupRun | None:
         with self._engine.begin() as connection:

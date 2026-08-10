@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import sqlite3
+import time
 from contextlib import closing
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -19,6 +20,7 @@ from snaketracker.application.attachments import (
     StageProfilePhotoCommand,
 )
 from snaketracker.application.backups import (
+    BackupRun,
     BackupService,
     BackupValidationError,
     ConfigureBackupScheduleCommand,
@@ -34,6 +36,7 @@ from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurr
 from snaketracker.infrastructure.attachments.repository import SQLAlchemyAttachmentRepository
 from snaketracker.infrastructure.attachments.storage import LocalAttachmentStorage
 from snaketracker.infrastructure.backups.pipeline import (
+    BackupArchive,
     BackupVerificationError,
     LocalBackupPipeline,
 )
@@ -232,7 +235,9 @@ def test_worker_creates_encrypted_verified_backup_and_rehearses_restore(tmp_path
         engine.dispose()
 
 
-def test_due_backup_schedule_runs_only_after_worker_acquires_global_lease(tmp_path: Path) -> None:
+def test_due_backup_schedule_runs_only_after_worker_acquires_global_lease(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     database = tmp_path / "scheduled-source.sqlite3"
     config = Config(ROOT / "alembic.ini")
     config.set_main_option("script_location", str(ROOT / "migrations"))
@@ -278,7 +283,7 @@ def test_due_backup_schedule_runs_only_after_worker_acquires_global_lease(tmp_pa
             repository=repository,
             pipeline=pipeline,
             holder_id="scheduled-worker",
-            lease_duration=timedelta(minutes=5),
+            lease_duration=timedelta(milliseconds=60),
         )
         assert repository.acquire_global_lease(
             "other-worker", schedule.next_run_at, schedule.next_run_at + timedelta(minutes=5)
@@ -286,9 +291,26 @@ def test_due_backup_schedule_runs_only_after_worker_acquires_global_lease(tmp_pa
         assert worker.run_once(now=schedule.next_run_at) is None
         repository.release_global_lease("other-worker")
 
-        run = worker.run_once(now=schedule.next_run_at)
+        original_create = pipeline.create
+        original_renew = repository.renew_global_lease
+        renewals = 0
+
+        def slow_create(run: BackupRun) -> BackupArchive:
+            time.sleep(0.15)
+            return original_create(run)
+
+        def track_renewal(holder_id: str, now: datetime, expires_at: datetime) -> bool:
+            nonlocal renewals
+            renewals += 1
+            return original_renew(holder_id, now, expires_at)
+
+        monkeypatch.setattr(pipeline, "create", slow_create)
+        monkeypatch.setattr(repository, "renew_global_lease", track_renewal)
+
+        run = worker.run_once()
         assert run is not None
         assert run.status == "completed"
+        assert renewals >= 2
         assert pipeline.verify(run).attachment_count == 0
     finally:
         engine.dispose()

@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import fcntl
 import os
 import shutil
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from uuid import UUID
 
@@ -71,6 +74,32 @@ class LocalAttachmentStorage:
                 continue
             keys.add((storage_key, media_type))
         return frozenset(keys)
+
+    def staged_attachment_ids(self) -> frozenset[UUID]:
+        if not self._staging_root.is_dir():
+            return frozenset()
+        keys: set[UUID] = set()
+        for path in self._staging_root.iterdir():
+            if not path.is_file():
+                continue
+            try:
+                keys.add(UUID(hex=path.name))
+            except ValueError:
+                continue
+        return frozenset(keys)
+
+    @contextmanager
+    def lifecycle_lock(self) -> Iterator[None]:
+        """Serialize file discovery with staging and finalization across processes."""
+        lock_path = self._staging_root.parent / ".attachment-lifecycle.lock"
+        self._ensure_parent(lock_path)
+        descriptor = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o600)
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX)
+            yield
+        finally:
+            fcntl.flock(descriptor, fcntl.LOCK_UN)
+            os.close(descriptor)
 
     def staged_exists(self, staged_attachment_id: UUID) -> bool:
         return self._staged_path(staged_attachment_id).is_file()

@@ -191,6 +191,13 @@ class SQLAlchemyAttachmentRepository:
                 (UUID(str(row["storage_key"])), str(row["media_type"])) for row in rows
             )
 
+    def staged_attachment_ids(self) -> frozenset[UUID]:
+        with self._engine.connect() as connection:
+            rows = connection.execute(
+                text("SELECT staged_attachment_id FROM attachment_staging")
+            ).scalars()
+            return frozenset(UUID(str(staged_attachment_id)) for staged_attachment_id in rows)
+
 
 def _staged_from_row(row: RowMapping) -> StagedProfilePhoto:
     return StagedProfilePhoto(

@@ -13,9 +13,12 @@ container.
 Create the ignored local state and secrets once:
 
 ```sh
+umask 077
 mkdir -p runtime/data secrets
 openssl rand -hex 32 > secrets/runtime_secret
 openssl rand -hex 32 > secrets/backup_encryption_key
+chmod 700 runtime/data secrets
+chmod 600 secrets/runtime_secret secrets/backup_encryption_key
 ```
 
 Then build and start SnakeTracker:

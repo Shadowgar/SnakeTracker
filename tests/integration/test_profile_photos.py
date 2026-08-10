@@ -152,7 +152,9 @@ def test_profile_photo_is_staged_finalized_immutably_and_selected(tmp_path: Path
         engine.dispose()
 
 
-def test_profile_photo_policy_is_tenant_scoped_and_cleans_orphans(tmp_path: Path) -> None:
+def test_profile_photo_policy_is_tenant_scoped_and_cleans_orphans(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     database = tmp_path / "profile-photo-policy.sqlite3"
     config = Config(ROOT / "alembic.ini")
     config.set_main_option("script_location", str(ROOT / "migrations"))
@@ -221,17 +223,23 @@ def test_profile_photo_policy_is_tenant_scoped_and_cleans_orphans(tmp_path: Path
 
         oversized = BytesIO()
         Image.new("RGB", (4097, 1)).save(oversized, format="PNG")
-        with pytest.raises(AttachmentValidationError):
-            attachments.stage_profile_photo(
-                StageProfilePhotoCommand(
-                    household_id=bootstrap.household_id,
-                    actor_user_id=bootstrap.user_id,
-                    animal_id=animal.animal_id,
-                    idempotency_key="rejected-dimensions",
-                    content=oversized.getvalue(),
-                    declared_media_type="image/png",
-                )
+        with monkeypatch.context() as image_patch:
+            image_patch.setattr(
+                Image.Image,
+                "load",
+                lambda self: (_ for _ in ()).throw(AssertionError("oversized image decoded")),
             )
+            with pytest.raises(AttachmentValidationError, match="dimensions exceed"):
+                attachments.stage_profile_photo(
+                    StageProfilePhotoCommand(
+                        household_id=bootstrap.household_id,
+                        actor_user_id=bootstrap.user_id,
+                        animal_id=animal.animal_id,
+                        idempotency_key="rejected-dimensions",
+                        content=oversized.getvalue(),
+                        declared_media_type="image/png",
+                    )
+                )
 
         staged = attachments.stage_profile_photo(
             StageProfilePhotoCommand(
@@ -248,11 +256,14 @@ def test_profile_photo_policy_is_tenant_scoped_and_cleans_orphans(tmp_path: Path
         orphan_storage_key = uuid4()
         storage.finalize(staged.staged_attachment_id, orphan_storage_key, "image/png")
         assert storage.finalized_exists(orphan_storage_key, "image/png")
+        untracked_staging_id = uuid4()
+        storage.stage(untracked_staging_id, ONE_PIXEL_PNG)
 
         cleanup = attachments.cleanup_orphans(now=datetime.now(UTC) + timedelta(days=2))
-        assert cleanup.discarded_staging_count == 1
+        assert cleanup.discarded_staging_count == 2
         assert cleanup.discarded_orphan_version_count == 1
         assert not storage.staged_exists(staged.staged_attachment_id)
+        assert not storage.staged_exists(untracked_staging_id)
         assert not storage.finalized_exists(orphan_storage_key, "image/png")
     finally:
         engine.dispose()

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import os
 import signal
 import socket
 import threading
 from datetime import timedelta
 from types import FrameType
+from uuid import uuid4
 
 from snaketracker.application.readiness import PlatformReadiness
 from snaketracker.bootstrap.compatibility import inspect_startup_compatibility
@@ -82,7 +84,7 @@ def _backup_worker(settings: Settings, engine: object) -> LocalBackupWorker | No
             encryption_key=bytes.fromhex(settings.backup_encryption_key.get_secret_value()),
             encryption_key_id=settings.backup_encryption_key_id,
         ),
-        holder_id=f"{socket.gethostname()}-{id(engine)}",
+        holder_id=f"{socket.gethostname()}-{os.getpid()}-{uuid4().hex}",
         lease_duration=timedelta(minutes=5),
     )
 

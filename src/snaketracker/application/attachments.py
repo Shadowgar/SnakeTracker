@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import warnings
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from io import BytesIO
@@ -143,6 +144,8 @@ class AttachmentRepository(Protocol):
 
     def finalized_storage_keys(self) -> frozenset[tuple[UUID, str]]: ...
 
+    def staged_attachment_ids(self) -> frozenset[UUID]: ...
+
 
 class AttachmentStorage(Protocol):
     """Private local storage for unserved staging files and immutable versions."""
@@ -158,6 +161,10 @@ class AttachmentStorage(Protocol):
     def read_finalized(self, storage_key: UUID, media_type: str) -> bytes: ...
 
     def finalized_storage_keys(self) -> frozenset[tuple[UUID, str]]: ...
+
+    def staged_attachment_ids(self) -> frozenset[UUID]: ...
+
+    def lifecycle_lock(self) -> AbstractContextManager[None]: ...
 
 
 class AttachmentService:
@@ -198,12 +205,13 @@ class AttachmentService:
             metadata=metadata,
             staged_at=datetime.now(UTC),
         )
-        self._storage.stage(staged.staged_attachment_id, command.content)
-        try:
-            self._repository.create_staged(staged)
-        except Exception:
-            self._storage.discard_staged(staged.staged_attachment_id)
-            raise
+        with self._storage.lifecycle_lock():
+            self._storage.stage(staged.staged_attachment_id, command.content)
+            try:
+                self._repository.create_staged(staged)
+            except Exception:
+                self._storage.discard_staged(staged.staged_attachment_id)
+                raise
         return staged
 
     def finalize_profile_photo(self, command: FinalizeProfilePhotoCommand) -> FinalizedProfilePhoto:
@@ -225,21 +233,26 @@ class AttachmentService:
             metadata=staged.metadata,
             finalized_at=datetime.now(UTC),
         )
-        self._storage.finalize(
-            staged.staged_attachment_id,
-            finalized.storage_key,
-            finalized.metadata.media_type,
-        )
-        try:
-            _verify_finalized_content(
-                finalized,
-                self._storage.read_finalized(finalized.storage_key, finalized.metadata.media_type),
+        with self._storage.lifecycle_lock():
+            self._storage.finalize(
+                staged.staged_attachment_id,
+                finalized.storage_key,
+                finalized.metadata.media_type,
             )
-            self._repository.create_finalized(finalized)
-        except Exception:
-            self._storage.discard_finalized(finalized.storage_key, finalized.metadata.media_type)
-            raise
-        self._storage.discard_staged(staged.staged_attachment_id)
+            try:
+                _verify_finalized_content(
+                    finalized,
+                    self._storage.read_finalized(
+                        finalized.storage_key, finalized.metadata.media_type
+                    ),
+                )
+                self._repository.create_finalized(finalized)
+            except Exception:
+                self._storage.discard_finalized(
+                    finalized.storage_key, finalized.metadata.media_type
+                )
+                raise
+            self._storage.discard_staged(staged.staged_attachment_id)
         return finalized
 
     def select_profile_photo(self, command: SelectProfilePhotoCommand) -> AnimalEventResult:
@@ -282,17 +295,22 @@ class AttachmentService:
         return ProfilePhotoDelivery(finalized=finalized, content=content)
 
     def cleanup_orphans(self, *, now: datetime) -> AttachmentCleanupResult:
-        cutoff = now - STAGING_RETENTION
-        expired = self._repository.expired_unfinalized_staging(cutoff)
-        for staged in expired:
-            self._storage.discard_staged(staged.staged_attachment_id)
-            self._repository.delete_staged(staged.staged_attachment_id)
-        known_storage_keys = self._repository.finalized_storage_keys()
-        orphaned_storage_keys = self._storage.finalized_storage_keys() - known_storage_keys
-        for storage_key, media_type in orphaned_storage_keys:
-            self._storage.discard_finalized(storage_key, media_type)
+        with self._storage.lifecycle_lock():
+            cutoff = now - STAGING_RETENTION
+            expired = self._repository.expired_unfinalized_staging(cutoff)
+            for staged in expired:
+                self._storage.discard_staged(staged.staged_attachment_id)
+                self._repository.delete_staged(staged.staged_attachment_id)
+            known_staging_ids = self._repository.staged_attachment_ids()
+            untracked_staging_ids = self._storage.staged_attachment_ids() - known_staging_ids
+            for staged_attachment_id in untracked_staging_ids:
+                self._storage.discard_staged(staged_attachment_id)
+            known_storage_keys = self._repository.finalized_storage_keys()
+            orphaned_storage_keys = self._storage.finalized_storage_keys() - known_storage_keys
+            for storage_key, media_type in orphaned_storage_keys:
+                self._storage.discard_finalized(storage_key, media_type)
         return AttachmentCleanupResult(
-            discarded_staging_count=len(expired),
+            discarded_staging_count=len(expired) + len(untracked_staging_ids),
             discarded_orphan_version_count=len(orphaned_storage_keys),
         )
 
@@ -310,8 +328,6 @@ def _validate_profile_photo(content: bytes, declared_media_type: str) -> Profile
                 detected_format = image.format
                 width, height = image.size
                 image.verify()
-            with Image.open(BytesIO(content)) as image:
-                image.load()
     except (
         Image.DecompressionBombError,
         Image.DecompressionBombWarning,
@@ -321,11 +337,6 @@ def _validate_profile_photo(content: bytes, declared_media_type: str) -> Profile
         ValueError,
     ) as error:
         raise AttachmentValidationError("Profile photo is not a valid supported image.") from error
-    detected_media_type = _MEDIA_TYPE_BY_FORMAT.get(detected_format or "")
-    if detected_media_type is None:
-        raise AttachmentValidationError("Profile photo must be a JPEG or PNG image.")
-    if normalized_declared_type != detected_media_type:
-        raise AttachmentValidationError("Declared profile photo type does not match its content.")
     if (
         width < 1
         or height < 1
@@ -334,6 +345,16 @@ def _validate_profile_photo(content: bytes, declared_media_type: str) -> Profile
         or width * height > MAX_PROFILE_PHOTO_PIXELS
     ):
         raise AttachmentValidationError("Profile photo dimensions exceed the allowed limit.")
+    try:
+        with Image.open(BytesIO(content)) as image:
+            image.load()
+    except (OSError, SyntaxError, UnidentifiedImageError, ValueError) as error:
+        raise AttachmentValidationError("Profile photo is not a valid supported image.") from error
+    detected_media_type = _MEDIA_TYPE_BY_FORMAT.get(detected_format or "")
+    if detected_media_type is None:
+        raise AttachmentValidationError("Profile photo must be a JPEG or PNG image.")
+    if normalized_declared_type != detected_media_type:
+        raise AttachmentValidationError("Declared profile photo type does not match its content.")
     return ProfilePhotoMetadata(
         media_type=detected_media_type,
         content_sha256=hashlib.sha256(content).hexdigest(),
