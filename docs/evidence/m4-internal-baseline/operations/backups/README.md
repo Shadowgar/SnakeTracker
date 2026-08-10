@@ -1,0 +1,39 @@
+# M4 Backup and Restore Evidence
+
+Result: **Pass for the basic local M4 path**
+
+The worker is the only backup-data initiator. Browser commands create idempotent requests or update
+the schedule; one global lease excludes overlap. The pipeline creates a consistent SQLite online
+copy, captures its schema revision/event head/attachment references, invalidates copied sessions,
+copies referenced finalized attachments, encrypts artifacts, writes a versioned manifest with an
+independently identified key, and verifies checksums before completion.
+
+The isolated Docker qualification run completed one manual backup:
+
+- request status: `completed`;
+- run ID: `be34f59a-da28-48a8-99d1-917074b6b842`;
+- copied attachment count: 1;
+- copied relational revision: `0008_local_backups`; and
+- restore result: `verified`, with a readable restored SQLite database and one restored attachment.
+
+Operator rehearsal command:
+
+```sh
+SNAKETRACKER_DATA_DIR=./runtime/m4-qualification \
+SNAKETRACKER_HTTP_PORT=18083 \
+SNAKETRACKER_EXTERNAL_ORIGIN=http://127.0.0.1:18083 \
+docker compose -p snaketracker-m4-qualification exec -T web \
+  python -m snaketracker.operations.backup_restore \
+  --run-id be34f59a-da28-48a8-99d1-917074b6b842 \
+  --restore-root /var/lib/snaketracker/restore-rehearsal
+```
+
+Observed output:
+
+```json
+{"attachment_count": 1, "database_path": "/var/lib/snaketracker/restore-rehearsal/be34f59ada2848a899d1917074b6b842/snaketracker.sqlite3", "status": "verified"}
+```
+
+Reproduce the automated failure, lease, manifest, encryption, verification, and restore matrix with
+`uv run pytest tests/integration/test_local_backups.py -q`. Off-device retention, independent
+production-key recovery, recovery objectives, and native Pi behavior remain Phase 7 work.
