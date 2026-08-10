@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ enclosure.name }} · SnakeTracker{% endblock %}
+{% block content %}
+<section class="form-page" aria-labelledby="page-title">
+  <header>
+    <p class="eyebrow">Enclosure profile</p>
+    <h1 id="page-title">Edit {{ enclosure.name }}</h1>
+    <p class="lede">Correct the current enclosure profile without rewriting its history.</p>
+  </header>
+  {% if errors and errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+  <form class="card form-stack" method="post" action="/enclosures/{{ enclosure.enclosure_id }}/edit">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="idempotency_key" value="{{ command_id }}-profile">
+    <label>Name<input name="name" value="{{ enclosure.name }}" required maxlength="200"></label>
+    <label>Type<input name="enclosure_type" value="{{ enclosure.enclosure_type }}" required maxlength="200"></label>
+    <label>Notes<textarea name="notes" rows="4">{{ enclosure.notes or '' }}</textarea></label>
+    <div class="form-actions"><a href="/enclosures/{{ enclosure.enclosure_id }}">Cancel</a><button type="submit">Save enclosure</button></div>
+  </form>
+</section>
+{% endblock %}

@@ -28,8 +28,10 @@ a { color: inherit; }
 .card { border: 1px solid var(--line); border-radius: 1.1rem; background: var(--surface-raised); box-shadow: 0 1.5rem 4rem rgba(0,0,0,.22); padding: clamp(1.25rem, 4vw, 2rem); }
 .form-stack { display: grid; gap: 1rem; }
 label { display: grid; gap: .4rem; font-weight: 700; }
-input { width: 100%; border: 1px solid #607568; border-radius: .65rem; background: #101915; color: var(--ink); padding: .8rem .9rem; font: inherit; }
-input:focus, button:focus, a:focus { outline: 3px solid var(--accent); outline-offset: 3px; }
+input, select, textarea { width: 100%; border: 1px solid #607568; border-radius: .65rem; background: #101915; color: var(--ink); padding: .8rem .9rem; font: inherit; }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
+textarea { resize: vertical; }
+input:focus, select:focus, textarea:focus, button:focus, a:focus { outline: 3px solid var(--accent); outline-offset: 3px; }
 small { color: var(--muted); font-weight: 400; }
 button, .button-link { border: 0; border-radius: .7rem; background: var(--accent); color: var(--accent-ink); padding: .85rem 1.1rem; font: inherit; font-weight: 800; cursor: pointer; text-decoration: none; }
 button.secondary { background: transparent; color: var(--ink); border: 1px solid var(--line); }
@@ -43,6 +45,42 @@ button.secondary { background: transparent; color: var(--ink); border: 1px solid
 .empty-state { border: 1px dashed var(--line); border-radius: 1rem; padding: 1.5rem; color: var(--muted); }
 .empty-state h2 { color: var(--ink); }
 .error-page { max-width: 38rem; }
+.form-page { display: grid; gap: 2rem; max-width: 48rem; }
+.form-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.record-list { display: grid; gap: .75rem; margin: 0; padding: 0; list-style: none; }
+.record-list a { display: flex; justify-content: space-between; gap: 1rem; border: 1px solid var(--line); border-radius: .6rem; background: var(--surface-raised); padding: 1rem; text-decoration: none; }
+.record-list span { color: var(--muted); }
+.animal-profile { display: grid; gap: 2rem; }
+.profile-header { display: flex; justify-content: space-between; align-items: start; gap: 1rem; }
+.profile-header h1 { margin: .3rem 0; font-size: 2.6rem; letter-spacing: 0; }
+.profile-actions { display: flex; flex-wrap: wrap; gap: .65rem; }
+.profile-actions .button-link { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; }
+.profile-photo { width: 7rem; aspect-ratio: 1; object-fit: cover; border: 1px solid var(--line); border-radius: .65rem; background: var(--surface-raised); }
+.secondary-link { align-self: center; background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.care-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); }
+.care-grid h2 { margin: 0; font-size: 1.2rem; }
+.muted { color: var(--muted); }
+.timeline-page { display: grid; gap: 2rem; }
+.timeline-list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; border-left: 2px solid var(--line); }
+.timeline-list li { display: grid; grid-template-columns: minmax(8rem, .5fr) 1fr; gap: 1rem; padding: 0 0 1.5rem 1.25rem; position: relative; }
+.timeline-list li::before { content: ""; width: .7rem; height: .7rem; border-radius: 50%; background: var(--accent); position: absolute; left: -.4rem; top: .2rem; }
+.timeline-list time { color: var(--muted); font-size: .9rem; }
+.timeline-list p { color: var(--muted); margin: .25rem 0 0; }
+.audit-section { display: grid; gap: 1rem; }
+.audit-section h2 { margin: 0; font-size: 1.3rem; }
+.audit-list { display: grid; gap: 1rem; margin: 0; padding: 0; list-style: none; }
+.audit-list > li { display: grid; gap: 1rem; border: 1px solid var(--line); border-radius: .6rem; padding: 1rem; }
+.audit-list p { margin: .3rem 0 0; }
+.audit-actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: end; }
+.audit-actions form { display: flex; flex-wrap: wrap; gap: .5rem; align-items: end; }
+.audit-actions label { font-size: .85rem; }
+.audit-actions input { min-width: 12rem; padding: .55rem .65rem; }
+
+@media (max-width: 560px) {
+  .profile-header { display: grid; }
+  .profile-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .timeline-list li { grid-template-columns: 1fr; gap: .25rem; }
+}
 
 @media (min-width: 760px) {
   .auth-layout { grid-template-columns: minmax(0, 1.15fr) minmax(20rem, .85fr); }

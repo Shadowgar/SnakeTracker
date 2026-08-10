@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Backups · SnakeTracker{% endblock %}
+{% block content %}
+<section class="dashboard" aria-labelledby="page-title">
+  <header class="profile-header">
+    <div>
+      <p class="eyebrow">Household settings</p>
+      <h1 id="page-title">Backup and restore</h1>
+      <p class="lede">Queue a verified local backup or set the worker schedule.</p>
+    </div>
+    <a class="button-link secondary-link" href="/home">Back to animals</a>
+  </header>
+  {% if errors and errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+  <section class="care-grid" aria-label="Backup controls">
+    <form class="card form-stack" method="post" action="/settings/backups/run">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="idempotency_key" value="{{ command_id }}-backup-now">
+      <h2>Back up now</h2>
+      <p>The worker creates and verifies the encrypted database and selected profile-photo set.</p>
+      <button type="submit">Queue backup</button>
+    </form>
+    <form class="card form-stack" method="post" action="/settings/backups/schedule">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <h2>Local schedule</h2>
+      <label>Schedule
+        <select name="enabled">
+          <option value="true">Enabled</option>
+          <option value="false">Disabled</option>
+        </select>
+      </label>
+      <label>Interval
+        <select name="interval_seconds">
+          <option value="21600">Every 6 hours</option>
+          <option value="43200">Every 12 hours</option>
+          <option value="86400">Daily</option>
+        </select>
+      </label>
+      <button type="submit">Save schedule</button>
+    </form>
+  </section>
+  <section class="card" aria-labelledby="backup-health-title">
+    <h2 id="backup-health-title">Backup health</h2>
+    {% if backup_health.schedule %}
+      <p><strong>Schedule {{ "enabled" if backup_health.schedule.enabled else "disabled" }}</strong></p>
+      <p class="muted">
+        {% if backup_health.schedule.interval_seconds == 21600 %}Every 6 hours
+        {% elif backup_health.schedule.interval_seconds == 43200 %}Every 12 hours
+        {% elif backup_health.schedule.interval_seconds == 86400 %}Daily
+        {% else %}Every {{ backup_health.schedule.interval_seconds }} seconds{% endif %}
+        · next run {{ backup_health.schedule.next_run_at.astimezone(household_zone).strftime('%Y-%m-%d %H:%M') }} {{ principal.household_timezone }}
+      </p>
+    {% else %}
+      <p class="muted">No local schedule has been configured.</p>
+    {% endif %}
+    <h3>Recent requests</h3>
+    {% if backup_health.recent_requests %}
+      <ul class="timeline-list">
+      {% for item in backup_health.recent_requests %}
+        <li><strong>{{ item.status|title }}</strong> · {{ item.source|title }} · {{ item.requested_at.astimezone(household_zone).strftime('%Y-%m-%d %H:%M') }} {{ principal.household_timezone }}</li>
+      {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No backup requests yet.</p>
+    {% endif %}
+    {% if backup_health.recent_runs %}
+      <h3>Recovery points</h3>
+      <ul class="timeline-list">
+      {% for run in backup_health.recent_runs %}
+        <li><strong>{{ run.status|title }}</strong> · started {{ run.started_at.astimezone(household_zone).strftime('%Y-%m-%d %H:%M') }} {{ principal.household_timezone }}</li>
+      {% endfor %}
+      </ul>
+    {% endif %}
+  </section>
+  <p class="muted">Restore rehearsal remains an operator command and is never exposed as a web action.</p>
+</section>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ animal.name }} · SnakeTracker{% endblock %}
+{% block content %}
+<section class="form-page" aria-labelledby="page-title">
+  <div>
+    <p class="eyebrow">{{ animal.name }}</p>
+    <h1 id="page-title">Edit profile</h1>
+    <p class="lede">Update current profile details while retaining the original registration history.</p>
+  </div>
+  <form class="card form-stack" method="post" action="/animals/{{ animal.animal_id }}/edit" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="idempotency_key" value="{{ command_id }}">
+    {% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+    <label>Name<input name="name" value="{{ animal.name }}" required></label>
+    <label>Species<input name="species" value="{{ animal.species }}" required></label>
+    <label>Sex
+      <select name="sex">
+        <option value="">Not recorded</option>
+        {% for option in ('female', 'male', 'unknown') %}
+        <option value="{{ option }}" {% if animal.sex == option %}selected{% endif %}>{{ option|capitalize }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Morph<input name="morph" value="{{ animal.morph or '' }}"></label>
+    <label>Genetics<input name="genetics" value="{{ animal.genetics or '' }}"></label>
+    <label>Birth or hatch date<input name="birth_hatch_date" type="date" value="{{ animal.birth_hatch_date or '' }}"></label>
+    <label>Acquisition date<input name="acquisition_date" type="date" value="{{ animal.acquisition_date or '' }}"></label>
+    <label>Breeder or source<input name="breeder_source" value="{{ animal.breeder_source or '' }}"></label>
+    <label>Notes<textarea name="notes" rows="4">{{ animal.notes or '' }}</textarea></label>
+    <div class="form-actions"><a href="/animals/{{ animal.animal_id }}">Cancel</a><button type="submit">Save profile</button></div>
+  </form>
+</section>
+{% endblock %}

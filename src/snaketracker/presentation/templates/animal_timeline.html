@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title|default('Care timeline') }} · {{ animal.name }} · SnakeTracker{% endblock %}
+{% block content %}
+<section class="timeline-page" aria-labelledby="page-title">
+  <header class="profile-header">
+    <div>
+      <p class="eyebrow">{{ animal.name }}</p>
+      <h1 id="page-title">{{ page_title|default('Care timeline') }}</h1>
+      <p class="lede">{{ page_description|default('Effective history, including accepted corrections.') }}</p>
+    </div>
+    <a class="button-link secondary-link" href="/animals/{{ animal.animal_id }}">Back to profile</a>
+  </header>
+  {% if errors and errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+  {% if events %}
+  <ol class="timeline-list">
+    {% for event in events %}
+    <li>
+      <time datetime="{{ event.occurred_at.isoformat() }}">{{ event.occurred_at.astimezone(household_zone).strftime('%Y-%m-%d %H:%M') }} {{ principal.household_timezone }}</time>
+      <div><strong>{{ event.title }}</strong>{% if event.notes %}<p>{{ event.notes }}</p>{% endif %}</div>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}<p class="muted">{{ empty_message|default('No care records yet.') }}</p>{% endif %}
+  <section class="audit-section" aria-labelledby="audit-title">
+    <h2 id="audit-title">Audit trail</h2>
+    <ol class="audit-list">
+      {% for event in audit_events %}
+      <li id="event-{{ event.event_id }}">
+        <div>
+          <strong>{{ event.title }}</strong>
+          <p class="muted">Recorded {{ event.recorded_at.astimezone(household_zone).strftime('%Y-%m-%d %H:%M') }} {{ principal.household_timezone }} · {{ event.event_id }}</p>
+          {% if event.causation_id %}<p class="muted">Follows {{ event.causation_id }}</p>{% endif %}
+          {% if event.notes %}<p>{{ event.notes }}</p>{% endif %}
+        </div>
+        <div class="audit-actions">
+          {% if event.event_id in correctable_event_ids %}<a class="button-link secondary-link" href="/animals/{{ animal.animal_id }}/events/{{ event.event_id }}/correct">Correct</a>{% endif %}
+          {% if event.event_id in voidable_event_ids %}
+          <form method="post" action="/animals/{{ animal.animal_id }}/events/{{ event.event_id }}/void">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="idempotency_key" value="{{ command_id }}-void-{{ event.event_id }}">
+            <label>Void reason<input name="reason" required></label>
+            <button type="submit" class="secondary">Void</button>
+          </form>
+          {% endif %}
+          {% if event.event_id in reinstatable_event_ids %}
+          <form method="post" action="/animals/{{ animal.animal_id }}/events/{{ event.event_id }}/reinstate">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="idempotency_key" value="{{ command_id }}-reinstate-{{ event.event_id }}">
+            <label>Reinstatement reason<input name="reason" required></label>
+            <button type="submit">Reinstate</button>
+          </form>
+          {% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
+  </section>
+</section>
+{% endblock %}

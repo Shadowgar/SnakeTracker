@@ -4,9 +4,11 @@
 <section class="dashboard" aria-labelledby="page-title">
   <div>
     <p class="eyebrow">{{ principal.household_name }}</p>
-    <h1 id="page-title">Welcome home, {{ principal.display_name }}</h1>
-    <p class="lede">Your secure household workspace is ready.</p>
+    <h1 id="page-title">Your animals</h1>
+    <p class="lede">Welcome home, {{ principal.display_name }}. Keep the day-to-day record close at hand.</p>
   </div>
+  <a class="button-link" href="/animals/new">Add animal</a>
+  <a class="button-link secondary-link" href="/settings/backups">Backups</a>
   <form method="post" action="/logout">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <button class="secondary" type="submit">Log out</button>
@@ -15,9 +17,17 @@
     <span class="status-dot" aria-hidden="true"></span>
     <div><strong>Household access active</strong><p>Signed in as {{ principal.role }}.</p></div>
   </div>
+  {% if animals %}
+  <ul class="record-list" aria-label="Animals">
+    {% for animal in animals %}
+    <li><a href="/animals/{{ animal.animal_id }}"><strong>{{ animal.name }}</strong><span>{{ animal.species }}</span></a></li>
+    {% endfor %}
+  </ul>
+  {% else %}
   <div class="empty-state">
-    <h2>Ready for your snakes</h2>
-    <p>Usable animal profiles and snake-tracking features arrive in Phase 4. Identity and household access are now protected.</p>
+    <h2>No animals yet</h2>
+    <p>Add an animal to begin its care record.</p>
   </div>
+  {% endif %}
 </section>
 {% endblock %}
