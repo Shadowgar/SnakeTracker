@@ -123,18 +123,82 @@ class SQLAlchemyJobRepository:
         with self._engine.connect() as connection:
             connection.exec_driver_sql("BEGIN IMMEDIATE")
             try:
-                job_id_value = connection.execute(
-                    text(
-                        "SELECT job_id FROM jobs WHERE attempt_count < max_attempts AND "
-                        "(((status='pending' OR status='retry') AND available_at<=:now) OR "
-                        "(status='leased' AND lease_expires_at<=:now)) "
-                        "ORDER BY priority DESC,available_at,job_id LIMIT 1"
-                    ),
-                    {"now": _timestamp(claimed_at)},
-                ).scalar_one_or_none()
-                if job_id_value is None:
-                    connection.rollback()
+                exhausted = (
+                    connection.execute(
+                        text(
+                            "SELECT job_id,attempt_count,lease_token FROM jobs "
+                            "WHERE status='leased' AND lease_expires_at<=:now "
+                            "AND attempt_count>=max_attempts"
+                        ),
+                        {"now": _timestamp(claimed_at)},
+                    )
+                    .mappings()
+                    .all()
+                )
+                for expired in exhausted:
+                    connection.execute(
+                        text(
+                            "UPDATE delivery_attempts SET status='lease_expired',"
+                            "safe_outcome='Worker lease expired after final allowed attempt.',"
+                            "completed_at=:now WHERE job_id=:job_id AND attempt_number=:number "
+                            "AND lease_token=:token AND status='started'"
+                        ),
+                        {
+                            "now": _timestamp(claimed_at),
+                            "job_id": str(expired["job_id"]),
+                            "number": int(expired["attempt_count"]),
+                            "token": str(expired["lease_token"]),
+                        },
+                    )
+                    connection.execute(
+                        text(
+                            "UPDATE jobs SET status='reconciliation_required',"
+                            "safe_error='Final attempt expired with an uncertain outcome.',"
+                            "lease_owner=NULL,lease_token=NULL,lease_acquired_at=NULL,"
+                            "heartbeat_at=NULL,lease_expires_at=NULL,updated_at=:now "
+                            "WHERE job_id=:job_id AND status='leased'"
+                        ),
+                        {
+                            "now": _timestamp(claimed_at),
+                            "job_id": str(expired["job_id"]),
+                        },
+                    )
+                claim_row = (
+                    connection.execute(
+                        text(
+                            "SELECT job_id,status,attempt_count,lease_token FROM jobs "
+                            "WHERE attempt_count < max_attempts AND "
+                            "(((status='pending' OR status='retry') AND available_at<=:now) OR "
+                            "(status='leased' AND lease_expires_at<=:now)) "
+                            "ORDER BY priority DESC,available_at,job_id LIMIT 1"
+                        ),
+                        {"now": _timestamp(claimed_at)},
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                if claim_row is None:
+                    if exhausted:
+                        connection.commit()
+                    else:
+                        connection.rollback()
                     return None
+                job_id_value = claim_row["job_id"]
+                if claim_row["status"] == "leased" and claim_row["lease_token"]:
+                    connection.execute(
+                        text(
+                            "UPDATE delivery_attempts SET status='lease_expired',"
+                            "safe_outcome='Worker lease expired before local completion.',"
+                            "completed_at=:now WHERE job_id=:job_id AND attempt_number=:number "
+                            "AND lease_token=:token AND status='started'"
+                        ),
+                        {
+                            "now": _timestamp(claimed_at),
+                            "job_id": str(job_id_value),
+                            "number": int(claim_row["attempt_count"]),
+                            "token": str(claim_row["lease_token"]),
+                        },
+                    )
                 result = connection.execute(
                     text(
                         "UPDATE jobs SET status='leased',attempt_count=attempt_count+1,"
@@ -320,6 +384,96 @@ class SQLAlchemyJobRepository:
         stored = self.get(job_id)
         if stored is None:
             raise RuntimeError("Uncertain durable job disappeared after commit.")
+        return stored
+
+    def succeed(
+        self,
+        job_id: UUID,
+        lease_token: str,
+        *,
+        provider_operation_id: str,
+        safe_outcome: str,
+        now: datetime,
+    ) -> JobRecord:
+        completed_at = _utc(now)
+        external_id = _safe_identifier(provider_operation_id, "Provider operation identifier")
+        outcome = _safe_text(safe_outcome, "Delivery outcome")
+        with self._engine.begin() as connection:
+            job = self._require_live_lease(connection, job_id, lease_token, completed_at)
+            self._finish_current_attempt(
+                connection,
+                job,
+                lease_token,
+                status="succeeded",
+                safe_outcome=outcome,
+                completed_at=completed_at,
+                provider_operation_id=external_id,
+            )
+            result_json = json.dumps(
+                {"provider_operation_id": external_id, "outcome": outcome},
+                sort_keys=True,
+            )
+            connection.execute(
+                text(
+                    "UPDATE jobs SET status='succeeded',external_operation_id=:external_id,"
+                    "result_json=:result,result_schema_version=1,safe_error=NULL,"
+                    "lease_owner=NULL,lease_token=NULL,lease_acquired_at=NULL,heartbeat_at=NULL,"
+                    "lease_expires_at=NULL,updated_at=:now,completed_at=:now "
+                    "WHERE job_id=:job_id"
+                ),
+                {
+                    "external_id": external_id,
+                    "result": result_json,
+                    "now": _timestamp(completed_at),
+                    "job_id": str(job_id),
+                },
+            )
+            intent_id = job.payload.get("intent_id")
+            if isinstance(intent_id, str):
+                connection.execute(
+                    text(
+                        "UPDATE notification_intents SET status='delivered' "
+                        "WHERE intent_id=:intent_id"
+                    ),
+                    {"intent_id": intent_id},
+                )
+        stored = self.get(job_id)
+        if stored is None:
+            raise RuntimeError("Completed durable job disappeared after commit.")
+        return stored
+
+    def dead_letter(
+        self,
+        job_id: UUID,
+        lease_token: str,
+        *,
+        safe_error: str,
+        now: datetime,
+    ) -> JobRecord:
+        failed_at = _utc(now)
+        error = _safe_text(safe_error, "Permanent job failure")
+        with self._engine.begin() as connection:
+            job = self._require_live_lease(connection, job_id, lease_token, failed_at)
+            self._finish_current_attempt(
+                connection,
+                job,
+                lease_token,
+                status="permanent_failure",
+                safe_outcome=error,
+                completed_at=failed_at,
+            )
+            connection.execute(
+                text(
+                    "UPDATE jobs SET status='dead_letter',safe_error=:error,"
+                    "lease_owner=NULL,lease_token=NULL,lease_acquired_at=NULL,heartbeat_at=NULL,"
+                    "lease_expires_at=NULL,updated_at=:now,completed_at=:now "
+                    "WHERE job_id=:job_id"
+                ),
+                {"error": error, "now": _timestamp(failed_at), "job_id": str(job_id)},
+            )
+        stored = self.get(job_id)
+        if stored is None:
+            raise RuntimeError("Dead-lettered durable job disappeared after commit.")
         return stored
 
     def resolve_not_delivered(
@@ -576,6 +730,13 @@ def _safe_text(value: str, label: str) -> str:
     if not cleaned:
         raise ValueError(f"{label} is required.")
     return cleaned[:500]
+
+
+def _safe_identifier(value: str, label: str) -> str:
+    cleaned = " ".join(value.strip().split())
+    if not cleaned or len(cleaned) > 200:
+        raise ValueError(f"{label} is invalid.")
+    return cleaned
 
 
 def _utc(value: datetime) -> datetime:
