@@ -4,7 +4,7 @@ Status: **M4 implementation qualified; owner acceptance pending**
 
 - Qualification date: August 10, 2026
 - Source branch: `phase4/animal-care`
-- Qualified source before corrected-UX evidence commit: `e3ac2064b2571f300a8a80586d92c46735011e66`
+- Qualified source before final evidence refresh: `0212fafa9a37d06a8e3658353172775a7988e6ac`
 
 This package proves the internal, local-only Phase 4 keeper baseline on the approved laptop/Docker
 development environment. It does not approve remote/public access, production launch, or Raspberry
@@ -25,6 +25,7 @@ audit.
 - [Docker and ARM64 compatibility](containers/README.md)
 - [Real-browser evidence](browser/README.md)
 - [Accessibility evidence](accessibility/README.md)
+- [Final review disposition](reviews/README.md)
 - [Release disposition](approvals/release/README.md)
 
 ## Milestone disposition

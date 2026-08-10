@@ -17,10 +17,10 @@ Final August 10 result:
 - Ruff lint: pass.
 - Architecture dependency validation: pass.
 - Architecture freeze: pass, 37 accepted ADRs.
-- Documentation links: pass, 107 files checked before this evidence refresh.
+- Documentation links: pass, 108 files checked after the final evidence refresh.
 - mypy strict: pass, 77 source files.
-- pytest: **245 passed** in 29.53 seconds.
-- coverage: **94.55% lines**, **85.34% branches**; both gates pass.
+- pytest: **246 passed** in 29.97 seconds.
+- coverage: **94.38% lines**, **85.00% branches**; both gates pass.
 - pip-audit: no known vulnerabilities after upgrading cryptography to 50.0.0 and Pillow to 12.3.0.
 - Compose configuration: pass.
 - `git diff --check`: pass.
@@ -34,5 +34,6 @@ upgrades through `0008_local_backups`, downgrades to base, and re-upgrades to th
 the Phase 2 household-event compatibility fixture remains unchanged.
 
 A focused migration, Phase 2/3 compatibility, unknown-contract, attachment, and backup run passed
-all **40 tests** after the corrected keeper UX was built. Trivy 0.69.3 reported zero fixed high or
-critical vulnerabilities in the final amd64 image.
+all **60 tests** after the corrected keeper UX was built. Trivy 0.69.3 reported zero fixed high or
+critical vulnerabilities in the final amd64 image. The final review hardening also exercised a
+deliberately slow backup with repeated durable-lease renewal.

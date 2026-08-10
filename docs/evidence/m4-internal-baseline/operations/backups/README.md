@@ -21,6 +21,13 @@ The corrected-UX image repeated the browser-to-worker path with selected-photo d
 `943c429eacdb58065edd894565a60a1ec3296f3a4f5c1766eed265739f848730`; SQLite returned
 `integrity_check=ok`, and the operator rehearsal returned `status=verified` with one attachment.
 
+The final review-hardened image repeated the complete path. Run
+`b9d6e3f8-faed-4525-85c4-110fef83502a` completed with manifest checksum
+`cdf4313d01f6d3adbcbf56459e93bdb0b60c70d60acd795cb202fd7b22ea9941`. Restore returned
+`status=verified`, one immutable attachment, `integrity_check=ok`, revision
+`0008_local_backups`, and zero copied sessions. Worker qualification also proves periodic lease
+renewal while a backup exceeds its initial lease interval.
+
 Operator rehearsal command:
 
 ```sh

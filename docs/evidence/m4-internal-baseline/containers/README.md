@@ -10,9 +10,9 @@ canonical local mapping is `127.0.0.1:8081 -> nginx:8080`; the external URL is
 The same Dockerfile and lockfile produced a linux/arm64 OCI image under the pinned local binfmt
 emulator:
 
-- corrected-UX descriptor: `sha256:397646919b1b06d2d7a6693ad99672761fad55541a37137fbe9081481dcccd98`;
-- corrected-UX OCI archive SHA-256: `18fa4c47d5fe2f498dfb0e1de8a31771e200b7cd027cccc46b06d77843b130bb`;
-- corrected-UX archive size: 133,067,264 bytes; and
+- final descriptor: `sha256:906d0965719d2939430ff8c85a025c8007173b70d8a617c3b947965274116c9c`;
+- final OCI archive SHA-256: `ec029af42555a09f08e3047df21a2cd45048ec0eb1d097883f44843c487782d1`;
+- final archive size: 133,086,208 bytes; and
 - descriptor platform: `linux/arm64`.
 
 The final amd64 Compose image restarted successfully with persisted data, web and worker ran as

@@ -9,6 +9,10 @@ ordered headings, named care actions, labelled values and times, descriptive pho
 text, and a collapsed `Technical audit` group. The browser console contained zero errors and zero
 warnings.
 
+The final review-hardened image repeated all three Pa11y/axe runs: local login, authenticated
+desktop animal overview, and authenticated 390-by-844 measurement history. All returned `No issues
+found`; the final Playwright console again contained zero errors and zero warnings.
+
 ## Earlier implementation evidence
 
 Keyboard/screen-reader structure is asserted in the browser suite: one main landmark, skip link,
