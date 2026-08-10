@@ -1,6 +1,6 @@
 # M4 Final Review Disposition
 
-Result: **Required corrections complete; owner acceptance pending**
+Result: **Required corrections complete; owner accepted August 10, 2026**
 
 The final internal review and CodeRabbit review were evaluated against the implemented Phase 4
 contracts. Required corrections now cover effective correction-chain fallback, occurred-time

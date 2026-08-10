@@ -1,8 +1,9 @@
 # M4 Internal Baseline Evidence
 
-Status: **M4 implementation qualified; owner acceptance pending**
+Status: **M4 internal minimum usable baseline accepted**
 
 - Qualification date: August 10, 2026
+- Accepted: August 10, 2026
 - Source branch: `phase4/animal-care`
 - Qualified source before final evidence refresh: `c62f02f659140de9840ce98ffe9524abc924743a`
 
@@ -31,13 +32,15 @@ assignment Void control until projection-aware effective-state rebuilding is des
 - [Real-browser evidence](browser/README.md)
 - [Accessibility evidence](accessibility/README.md)
 - [Final review disposition](reviews/README.md)
+- [Owner acceptance](approvals/2026-08-10-owner-acceptance.md)
 - [Release disposition](approvals/release/README.md)
 
 ## Milestone disposition
 
-All applicable M4 release blockers have implementation evidence. The remote/public-deployment item
-remains unchecked and deferred. The owner has not yet accepted M4, so the milestone is not recorded
-as accepted and Phase 5 is not authorized.
+All applicable M4 release blockers have implementation evidence, and the owner accepted the
+internal minimum usable baseline on August 10, 2026. The remote/public-deployment item remains
+unchecked and deferred. This acceptance does not approve production launch, remote/public access,
+or Raspberry Pi deployment. M5 through M8 remain unchecked.
 
 The retained databases, generated archives, test credentials, and local browser tooling state stay
 under ignored `runtime/`, `output/`, `.playwright-cli/`, and `secrets/` paths. They are deliberately

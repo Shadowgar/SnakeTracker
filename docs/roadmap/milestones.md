@@ -68,7 +68,8 @@ Accepted: August 7, 2026
 
 ## Phase 4 / M4 — Internal minimum usable baseline
 
-Status: M4 implementation qualified; owner acceptance pending
+Status: M4 internal minimum usable baseline accepted
+Accepted: August 10, 2026
 
 This is an internal operational release, not final production and not approval for remote/public deployment.
 
@@ -83,6 +84,8 @@ This is an internal operational release, not final production and not approval f
 - [x] RB Core mobile, keyboard, and screen-reader workflows meet acceptance criteria. Evidence: [accessibility](../evidence/m4-internal-baseline/accessibility/README.md).
 - [x] RB Internal operator completes a basic restore rehearsal. Evidence: [restore rehearsal](../evidence/m4-internal-baseline/operations/backups/README.md).
 - [ ] RD Remote access remains disabled until all RD controls through M7 are accepted.
+
+Owner acceptance: [August 10, 2026 owner acceptance record](../evidence/m4-internal-baseline/approvals/2026-08-10-owner-acceptance.md).
 
 ## Phase 5 / M5 — Operational workflows reliable
 
