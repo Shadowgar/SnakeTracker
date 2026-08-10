@@ -125,8 +125,11 @@ def evaluate_effective_events(events: tuple[DomainEvent, ...]) -> tuple[DomainEv
             if current.event_id in seen:
                 raise CorrectionPolicyError("Correction replacement chain contains a cycle.")
             seen.add(current.event_id)
-            current = replacements[current.event_id]
-        if event.event_id not in voided and current.event_id not in voided:
+            replacement = replacements[current.event_id]
+            if replacement.event_id in voided:
+                break
+            current = replacement
+        if event.event_id not in voided:
             effective.append(current)
     return tuple(effective)
 

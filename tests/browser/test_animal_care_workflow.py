@@ -240,6 +240,18 @@ def test_authenticated_keeper_can_track_animal_care_and_enclosure_workflow(
         assert "After feeding." in measurement_history.text
         assert "Relaxed measurement." in measurement_history.text
 
+        invalid_photo = client.post(
+            f"{profile_url}/photo",
+            data={
+                "csrf_token": csrf_from(client.get(profile_url).text),
+                "idempotency_key": "browser-invalid-photo-overview",
+            },
+            files={"photo": ("active.svg", b"<svg><script>1</script></svg>", "image/svg+xml")},
+        )
+        assert invalid_photo.status_code == 422
+        assert "Rack A-03" in invalid_photo.text
+        assert "925 mm" in invalid_photo.text
+
 
 def test_authenticated_keeper_can_edit_profile_and_reactivate_an_animal(tmp_path: Path) -> None:
     with client_for(tmp_path) as client:
@@ -470,6 +482,7 @@ def test_animal_list_and_profile_present_a_focused_keeper_experience(tmp_path: P
 
 def test_keeper_histories_show_effective_values_and_hide_voided_facts(tmp_path: Path) -> None:
     occurred_value = (datetime.now(UTC) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+    older_value = (datetime.now(UTC) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M")
     with client_for(tmp_path) as client:
         setup_and_sign_in(client)
         new_animal = client.get("/animals/new")
@@ -489,6 +502,7 @@ def test_keeper_histories_show_effective_values_and_hide_voided_facts(tmp_path: 
         records = (
             (
                 "feedings",
+                occurred_value,
                 {
                     "prey_type": "mouse",
                     "prey_size": "medium",
@@ -499,16 +513,20 @@ def test_keeper_histories_show_effective_values_and_hide_voided_facts(tmp_path: 
                     "notes": "Original feeding.",
                 },
             ),
-            ("weights", {"weight_grams": "510", "notes": "Original weight."}),
-            ("lengths", {"length_mm": "925", "notes": "Measured relaxed."}),
+            ("weights", older_value, {"weight_grams": "510", "notes": "Original weight."}),
+            (
+                "lengths",
+                occurred_value,
+                {"length_mm": "925", "notes": "Measured relaxed."},
+            ),
         )
-        for index, (route, facts) in enumerate(records):
+        for index, (route, event_time, facts) in enumerate(records):
             response = client.post(
                 f"{profile_url}/{route}",
                 data={
                     "csrf_token": csrf,
                     "idempotency_key": f"effective-history-{index}",
-                    "occurred_at": occurred_value,
+                    "occurred_at": event_time,
                     **facts,
                 },
                 follow_redirects=False,
@@ -528,6 +546,9 @@ def test_keeper_histories_show_effective_values_and_hide_voided_facts(tmp_path: 
         )[0]
         assert "510 g" in effective_measurements
         assert "925 mm" in effective_measurements
+        timeline = client.get(f"{profile_url}/timeline")
+        effective_timeline = timeline.text.split('<details class="technical-audit"', 1)[0]
+        assert effective_timeline.index("925 mm") < effective_timeline.index("510 g")
 
         animal_id = profile_url.rsplit("/", 1)[-1]
         with client.app.state.database_engine.connect() as connection:
@@ -561,6 +582,44 @@ def test_keeper_histories_show_effective_values_and_hide_voided_facts(tmp_path: 
             follow_redirects=False,
         )
         assert corrected.status_code == 303
+
+        with client.app.state.database_engine.connect() as connection:
+            correction_event_id = connection.execute(
+                text(
+                    "SELECT event_id FROM domain_events "
+                    "WHERE stream_id=:animal_id AND event_type='animal.feeding_corrected'"
+                ),
+                {"animal_id": animal_id},
+            ).scalar_one()
+
+        timeline = client.get(f"{profile_url}/timeline")
+        correction_voided = client.post(
+            f"{profile_url}/events/{correction_event_id}/void",
+            data={
+                "csrf_token": csrf_from(timeline.text),
+                "idempotency_key": "effective-history-correction-void",
+                "reason": "Correction was wrong.",
+            },
+            follow_redirects=False,
+        )
+        assert correction_voided.status_code == 303
+        effective_feeding = client.get(f"{profile_url}/feedings").text.split(
+            '<details class="technical-audit"', 1
+        )[0]
+        assert "2 medium mouse" in effective_feeding
+        assert "1 large rat" not in effective_feeding
+
+        timeline = client.get(f"{profile_url}/timeline")
+        correction_reinstated = client.post(
+            f"{profile_url}/events/{correction_event_id}/reinstate",
+            data={
+                "csrf_token": csrf_from(timeline.text),
+                "idempotency_key": "effective-history-correction-reinstate",
+                "reason": "Correction was verified.",
+            },
+            follow_redirects=False,
+        )
+        assert correction_reinstated.status_code == 303
 
         timeline = client.get(f"{profile_url}/timeline")
         voided = client.post(

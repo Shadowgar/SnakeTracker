@@ -78,7 +78,10 @@ from snaketracker.platform.events.control_contracts import EventReinstatedV1, Ev
 from snaketracker.platform.events.envelope import DomainEvent
 from snaketracker.platform.events.registry import production_event_registry
 from snaketracker.platform.events.validation import household_local_to_utc
-from snaketracker.presentation.animal_care_views import present_care_events
+from snaketracker.presentation.animal_care_views import (
+    present_care_events,
+    present_effective_care_events,
+)
 
 SESSION_COOKIE = "snaketracker_session"
 CSRF_COOKIE = "snaketracker_csrf"
@@ -168,7 +171,9 @@ def _timeline_context(
 ) -> dict[str, Any]:
     audit_events = animal_service.audit_history(household_id, animal_id)
     return {
-        "events": present_care_events(animal_service.effective_history(household_id, animal_id)),
+        "events": present_effective_care_events(
+            animal_service.effective_history(household_id, animal_id)
+        ),
         "audit_events": present_care_events(audit_events),
         "errors": {},
         **_timeline_action_ids(audit_events),
@@ -1064,7 +1069,7 @@ def create_web_router(
             ),
             None,
         )
-        recent_events = present_care_events(
+        recent_events = present_effective_care_events(
             animal_service.effective_history(principal.household_id, profile.animal_id)
         )
         return protected_page(
@@ -1075,7 +1080,7 @@ def create_web_router(
                 "animal": profile,
                 "enclosures": enclosures,
                 "current_enclosure": current_enclosure,
-                "recent_events": tuple(reversed(recent_events[-5:])),
+                "recent_events": recent_events[:5],
                 "animal_statuses": tuple(sorted(ANIMAL_STATUSES)),
             },
         )
@@ -1797,6 +1802,22 @@ def _animal_form_error(
             {"title": "Animal not found", "message": "Return to your animal list and try again."},
             status_code=404,
         )
+    enclosures = (
+        enclosure_service.list_profiles(principal.household_id)
+        if enclosure_service is not None
+        else ()
+    )
+    current_enclosure = next(
+        (
+            enclosure
+            for enclosure in enclosures
+            if enclosure.enclosure_id == profile.current_enclosure_id
+        ),
+        None,
+    )
+    recent_events = present_effective_care_events(
+        animal_service.effective_history(principal.household_id, profile.animal_id)
+    )
     return templates.TemplateResponse(
         request,
         "animal_profile.html",
@@ -1808,11 +1829,9 @@ def _animal_form_error(
             "animal": profile,
             "errors": {"form": message},
             "animal_statuses": tuple(sorted(ANIMAL_STATUSES)),
-            "enclosures": (
-                enclosure_service.list_profiles(principal.household_id)
-                if enclosure_service is not None
-                else ()
-            ),
+            "enclosures": enclosures,
+            "current_enclosure": current_enclosure,
+            "recent_events": recent_events[:5],
         },
         status_code=422,
     )

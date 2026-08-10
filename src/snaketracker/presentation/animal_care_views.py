@@ -78,5 +78,19 @@ def present_care_events(events: tuple[DomainEvent, ...]) -> tuple[CareEventView,
     return tuple(present_care_event(event) for event in events)
 
 
+def present_effective_care_events(
+    events: tuple[DomainEvent, ...],
+) -> tuple[CareEventView, ...]:
+    """Present effective keeper history newest occurrence first."""
+    ordered = tuple(
+        sorted(
+            events,
+            key=lambda event: (event.occurred_at, event.stream_version),
+            reverse=True,
+        )
+    )
+    return present_care_events(ordered)
+
+
 def _label(value: str) -> str:
     return value.replace("_", " ").capitalize()
