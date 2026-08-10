@@ -73,6 +73,7 @@ Names are stable semantic identifiers; initial schemas begin at version 1.
 | `animal.length_recorded` | Records normalized and entered length |
 | `animal.length_corrected` | Corrects a measurement |
 | `animal.shed_recorded` | Records shed occurrence and quality |
+| `animal.shed_corrected` | Replaces effective shed facts for a same-stream target event |
 | `animal.handling_recorded` | Records handling session |
 | `animal.behavior_recorded` | Records a behavior observation |
 | `animal.bath_recorded` | Records a bath |

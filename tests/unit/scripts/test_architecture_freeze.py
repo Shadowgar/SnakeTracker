@@ -42,3 +42,7 @@ def test_accepted_amendment_paths_cover_adr_0037_phase_order_change() -> None:
         freeze.APPROVED_AMENDMENT_PATHS
     )
     assert freeze.ACCEPTANCE_DATES["0037"] == "2026-08-05"
+
+
+def test_accepted_amendment_paths_cover_m4_shed_correction_catalog() -> None:
+    assert "docs/architecture/event-catalog.md" in freeze.APPROVED_AMENDMENT_PATHS

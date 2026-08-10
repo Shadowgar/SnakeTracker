@@ -19,6 +19,7 @@ APPROVED_AMENDMENT_PATHS = {
     "docs/adr/README.md",
     "docs/adr/0036-development-and-pi-deployment-qualification.md",
     "docs/adr/0037-phase-order-minimal-household-events.md",
+    "docs/architecture/event-catalog.md",
     "docs/architecture/system-architecture.md",
     "docs/operations/runtime-operations.md",
     "docs/quality/representative-dataset.md",
