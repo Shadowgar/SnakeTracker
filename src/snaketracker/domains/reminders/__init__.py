@@ -1,0 +1,1 @@
+"""Reminder Rule aggregate contracts."""

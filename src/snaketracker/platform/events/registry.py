@@ -33,7 +33,27 @@ from snaketracker.domains.enclosures.contracts import (
     EnclosureStatusChangedV1,
     EnclosureWaterChangeRecordedV1,
 )
+from snaketracker.domains.expenses.contracts import (
+    ExpenseCorrectedV1,
+    ExpenseRecordedV1,
+    ExpenseVoidedV1,
+)
 from snaketracker.domains.households.contracts import HouseholdCreatedV1, HouseholdOwnerAddedV1
+from snaketracker.domains.inventory.contracts import (
+    InventoryConsumptionReversedV1,
+    InventoryItemRegisteredV1,
+    InventoryReorderPolicyChangedV1,
+    InventoryStockAdjustedV1,
+    InventoryStockConsumedV1,
+    InventoryStockExpiredV1,
+    InventoryStockReceivedV1,
+    InventoryStockReservedV1,
+)
+from snaketracker.domains.reminders.contracts import (
+    ReminderRuleChangedV1,
+    ReminderRuleCreatedV1,
+    ReminderRuleDisabledV1,
+)
 from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
 from snaketracker.platform.events.envelope import (
     DomainEvent,
@@ -715,6 +735,326 @@ ENCLOSURE_CONTRACTS = (
 )
 
 
+def _required_payload_text(data: Mapping[str, object], field: str, label: str) -> str:
+    value = data[field]
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"Stored {label} payload is invalid.")
+    return value
+
+
+def _optional_payload_text(data: Mapping[str, object], field: str, label: str) -> str | None:
+    value = data[field]
+    if value is not None and not isinstance(value, str):
+        raise ValueError(f"Stored {label} payload is invalid.")
+    return value
+
+
+def _payload_integer(data: Mapping[str, object], field: str, label: str) -> int:
+    value = data[field]
+    if type(value) is not int:
+        raise ValueError(f"Stored {label} payload is invalid.")
+    return value
+
+
+def _deserialize_inventory_item_registered(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryItemRegisteredV1, data)
+    threshold = data["reorder_threshold"]
+    if threshold is not None and type(threshold) is not int:
+        raise ValueError("Stored inventory registration payload is invalid.")
+    return InventoryItemRegisteredV1(
+        _uuid_field(data, "item_id", "inventory registration"),
+        _required_payload_text(data, "name", "inventory registration"),
+        _required_payload_text(data, "unit", "inventory registration"),
+        threshold,
+    )
+
+
+def _deserialize_inventory_stock_received(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryStockReceivedV1, data)
+    return InventoryStockReceivedV1(
+        _payload_integer(data, "quantity", "inventory receipt"),
+        _optional_payload_text(data, "reference", "inventory receipt"),
+    )
+
+
+def _deserialize_inventory_stock_reserved(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryStockReservedV1, data)
+    return InventoryStockReservedV1(
+        _payload_integer(data, "quantity", "inventory reservation"),
+        _required_payload_text(data, "reservation_key", "inventory reservation"),
+    )
+
+
+def _deserialize_inventory_stock_consumed(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryStockConsumedV1, data)
+    source = data["source_event_id"]
+    if source is not None and not isinstance(source, str):
+        raise ValueError("Stored inventory consumption payload is invalid.")
+    try:
+        source_id = UUID(source) if source is not None else None
+    except ValueError as error:
+        raise ValueError("Stored inventory consumption payload is invalid.") from error
+    return InventoryStockConsumedV1(
+        _payload_integer(data, "quantity", "inventory consumption"), source_id
+    )
+
+
+def _deserialize_inventory_consumption_reversed(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryConsumptionReversedV1, data)
+    return InventoryConsumptionReversedV1(
+        _uuid_field(data, "target_event_id", "inventory reversal"),
+        _payload_integer(data, "quantity", "inventory reversal"),
+        _required_payload_text(data, "reason", "inventory reversal"),
+    )
+
+
+def _deserialize_inventory_stock_adjusted(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryStockAdjustedV1, data)
+    return InventoryStockAdjustedV1(
+        _payload_integer(data, "quantity_delta", "inventory adjustment"),
+        _required_payload_text(data, "reason", "inventory adjustment"),
+    )
+
+
+def _deserialize_inventory_stock_expired(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryStockExpiredV1, data)
+    return InventoryStockExpiredV1(
+        _payload_integer(data, "quantity", "inventory expiry"),
+        _required_payload_text(data, "reason", "inventory expiry"),
+    )
+
+
+def _deserialize_inventory_reorder_changed(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryReorderPolicyChangedV1, data)
+    threshold = data["reorder_threshold"]
+    if threshold is not None and type(threshold) is not int:
+        raise ValueError("Stored inventory reorder payload is invalid.")
+    return InventoryReorderPolicyChangedV1(threshold)
+
+
+INVENTORY_CONTRACTS = (
+    EventContractRegistration(
+        "inventory.item_registered",
+        1,
+        "inventory",
+        InventoryItemRegisteredV1,
+        _deserialize_inventory_item_registered,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
+        "inventory.stock_received",
+        1,
+        "inventory",
+        InventoryStockReceivedV1,
+        _deserialize_inventory_stock_received,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
+        "inventory.stock_reserved",
+        1,
+        "inventory",
+        InventoryStockReservedV1,
+        _deserialize_inventory_stock_reserved,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
+        "inventory.stock_consumed",
+        1,
+        "inventory",
+        InventoryStockConsumedV1,
+        _deserialize_inventory_stock_consumed,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
+        "inventory.consumption_reversed",
+        1,
+        "inventory",
+        InventoryConsumptionReversedV1,
+        _deserialize_inventory_consumption_reversed,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
+        "inventory.stock_adjusted",
+        1,
+        "inventory",
+        InventoryStockAdjustedV1,
+        _deserialize_inventory_stock_adjusted,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
+        "inventory.stock_expired",
+        1,
+        "inventory",
+        InventoryStockExpiredV1,
+        _deserialize_inventory_stock_expired,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
+        "inventory.reorder_policy_changed",
+        1,
+        "inventory",
+        InventoryReorderPolicyChangedV1,
+        _deserialize_inventory_reorder_changed,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+)
+
+
+def _expense_fields(
+    data: Mapping[str, object], label: str
+) -> tuple[int, str, str, str | None, str | None]:
+    amount = _payload_integer(data, "amount_minor", label)
+    return (
+        amount,
+        _required_payload_text(data, "currency", label),
+        _required_payload_text(data, "category", label),
+        _optional_payload_text(data, "payee", label),
+        _optional_payload_text(data, "reference", label),
+    )
+
+
+def _deserialize_expense_recorded(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(ExpenseRecordedV1, data)
+    amount, currency, category, payee, reference = _expense_fields(data, "expense")
+    return ExpenseRecordedV1(
+        _uuid_field(data, "expense_id", "expense"), amount, currency, category, payee, reference
+    )
+
+
+def _deserialize_expense_corrected(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(ExpenseCorrectedV1, data)
+    amount, currency, category, payee, reference = _expense_fields(data, "expense correction")
+    return ExpenseCorrectedV1(
+        _uuid_field(data, "target_event_id", "expense correction"),
+        amount,
+        currency,
+        category,
+        payee,
+        reference,
+        _required_payload_text(data, "reason", "expense correction"),
+    )
+
+
+def _deserialize_expense_voided(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(ExpenseVoidedV1, data)
+    return ExpenseVoidedV1(
+        _uuid_field(data, "target_event_id", "expense void"),
+        _required_payload_text(data, "reason", "expense void"),
+    )
+
+
+EXPENSE_CONTRACTS = (
+    EventContractRegistration(
+        "expense.recorded",
+        1,
+        "expenses",
+        ExpenseRecordedV1,
+        _deserialize_expense_recorded,
+        (SubjectRequirement("expense", "primary"),),
+        CorrectionCapabilities(
+            correctable=True,
+            voidable=True,
+            reinstatable=False,
+            required_role="owner",
+            correction_event_types=("expense.corrected",),
+        ),
+    ),
+    EventContractRegistration(
+        "expense.corrected",
+        1,
+        "expenses",
+        ExpenseCorrectedV1,
+        _deserialize_expense_corrected,
+        (SubjectRequirement("expense", "primary"),),
+    ),
+    EventContractRegistration(
+        "expense.voided",
+        1,
+        "expenses",
+        ExpenseVoidedV1,
+        _deserialize_expense_voided,
+        (SubjectRequirement("expense", "primary"),),
+    ),
+)
+
+
+def _reminder_fields(
+    data: Mapping[str, object], label: str
+) -> tuple[str, str, int, str | None, str | None, bool, str]:
+    schedule_kind = _required_payload_text(data, "schedule_kind", label)
+    if schedule_kind not in {"fixed_interval", "event_relative"}:
+        raise ValueError(f"Stored {label} payload is invalid.")
+    enabled = data["enabled"]
+    if type(enabled) is not bool:
+        raise ValueError(f"Stored {label} payload is invalid.")
+    return (
+        _required_payload_text(data, "reminder_type", label),
+        schedule_kind,
+        _payload_integer(data, "interval_days", label),
+        _optional_payload_text(data, "anchor_at", label),
+        _optional_payload_text(data, "override_due_at", label),
+        enabled,
+        _required_payload_text(data, "channel", label),
+    )
+
+
+def _deserialize_reminder_rule_created(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(ReminderRuleCreatedV1, data)
+    reminder_type, kind, interval, anchor, override, enabled, channel = _reminder_fields(
+        data, "reminder rule"
+    )
+    return ReminderRuleCreatedV1(
+        _uuid_field(data, "rule_id", "reminder rule"),
+        _required_payload_text(data, "subject_type", "reminder rule"),
+        _uuid_field(data, "subject_id", "reminder rule"),
+        reminder_type,
+        kind,
+        interval,
+        anchor,
+        override,
+        enabled,
+        channel,
+    )
+
+
+def _deserialize_reminder_rule_changed(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(ReminderRuleChangedV1, data)
+    return ReminderRuleChangedV1(*_reminder_fields(data, "reminder rule change"))
+
+
+def _deserialize_reminder_rule_disabled(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(ReminderRuleDisabledV1, data)
+    return ReminderRuleDisabledV1(_required_payload_text(data, "reason", "reminder disable"))
+
+
+REMINDER_CONTRACTS = (
+    EventContractRegistration(
+        "reminder.rule_created",
+        1,
+        "reminders",
+        ReminderRuleCreatedV1,
+        _deserialize_reminder_rule_created,
+        (SubjectRequirement("reminder_rule", "primary"),),
+    ),
+    EventContractRegistration(
+        "reminder.rule_changed",
+        1,
+        "reminders",
+        ReminderRuleChangedV1,
+        _deserialize_reminder_rule_changed,
+        (SubjectRequirement("reminder_rule", "primary"),),
+    ),
+    EventContractRegistration(
+        "reminder.rule_disabled",
+        1,
+        "reminders",
+        ReminderRuleDisabledV1,
+        _deserialize_reminder_rule_disabled,
+        (SubjectRequirement("reminder_rule", "primary"),),
+    ),
+)
+
+
 def _deserialize_historical_control(
     payload_type: type[EventVoidedV1] | type[EventReinstatedV1], data: Mapping[str, object]
 ) -> EventPayload:
@@ -757,6 +1097,9 @@ production_event_registry = EventRegistry(
         *ANIMAL_PROFILE_CONTRACTS,
         *ANIMAL_HUSBANDRY_CONTRACTS,
         *ENCLOSURE_CONTRACTS,
+        *INVENTORY_CONTRACTS,
+        *EXPENSE_CONTRACTS,
+        *REMINDER_CONTRACTS,
     )
 )
 
