@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+import secrets
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid5
 
 from sqlalchemy import text
@@ -14,6 +15,10 @@ from snaketracker.platform.jobs.models import JobRecord
 
 JOB_NAMESPACE = UUID("a7e13132-aa0a-58a1-8db7-51f596775238")
 NOTIFICATION_JOB_TYPE = "notification.delivery"
+
+
+class JobLeaseConflictError(RuntimeError):
+    """A worker attempted to mutate a job without its current live lease token."""
 
 
 class SQLAlchemyJobRepository:
@@ -98,6 +103,97 @@ class SQLAlchemyJobRepository:
                 connection.rollback()
                 raise
         return tuple(created)
+
+    def get(self, job_id: UUID) -> JobRecord | None:
+        with self._engine.connect() as connection:
+            return self._job(connection, job_id)
+
+    def claim(
+        self, *, worker_id: str, now: datetime, lease_duration: timedelta
+    ) -> JobRecord | None:
+        owner = worker_id.strip()
+        if not owner or len(owner) > 200:
+            raise ValueError("Durable job worker identity is invalid.")
+        if lease_duration <= timedelta(0) or lease_duration > timedelta(hours=1):
+            raise ValueError("Durable job lease duration must be between zero and one hour.")
+        claimed_at = _utc(now)
+        expires_at = claimed_at + lease_duration
+        token = secrets.token_hex(32)
+        with self._engine.connect() as connection:
+            connection.exec_driver_sql("BEGIN IMMEDIATE")
+            try:
+                job_id_value = connection.execute(
+                    text(
+                        "SELECT job_id FROM jobs WHERE attempt_count < max_attempts AND "
+                        "(((status='pending' OR status='retry') AND available_at<=:now) OR "
+                        "(status='leased' AND lease_expires_at<=:now)) "
+                        "ORDER BY priority DESC,available_at,job_id LIMIT 1"
+                    ),
+                    {"now": _timestamp(claimed_at)},
+                ).scalar_one_or_none()
+                if job_id_value is None:
+                    connection.rollback()
+                    return None
+                result = connection.execute(
+                    text(
+                        "UPDATE jobs SET status='leased',attempt_count=attempt_count+1,"
+                        "lease_owner=:owner,lease_token=:token,lease_acquired_at=:now,"
+                        "heartbeat_at=:now,lease_expires_at=:expires,updated_at=:now "
+                        "WHERE job_id=:job_id AND attempt_count < max_attempts AND "
+                        "(((status='pending' OR status='retry') AND available_at<=:now) OR "
+                        "(status='leased' AND lease_expires_at<=:now))"
+                    ),
+                    {
+                        "owner": owner,
+                        "token": token,
+                        "now": _timestamp(claimed_at),
+                        "expires": _timestamp(expires_at),
+                        "job_id": str(job_id_value),
+                    },
+                )
+                if result.rowcount != 1:
+                    connection.rollback()
+                    return None
+                connection.commit()
+                job = self._job(connection, UUID(str(job_id_value)))
+                if job is None:
+                    raise RuntimeError("Claimed durable job disappeared after commit.")
+                return job
+            except Exception:
+                connection.rollback()
+                raise
+
+    def heartbeat(
+        self,
+        job_id: UUID,
+        lease_token: str,
+        *,
+        now: datetime,
+        lease_duration: timedelta,
+    ) -> JobRecord:
+        if lease_duration <= timedelta(0) or lease_duration > timedelta(hours=1):
+            raise ValueError("Durable job lease duration must be between zero and one hour.")
+        heartbeat_at = _utc(now)
+        with self._engine.begin() as connection:
+            result = connection.execute(
+                text(
+                    "UPDATE jobs SET heartbeat_at=:now,lease_expires_at=:expires,updated_at=:now "
+                    "WHERE job_id=:job_id AND status='leased' AND lease_token=:token "
+                    "AND lease_expires_at>:now"
+                ),
+                {
+                    "now": _timestamp(heartbeat_at),
+                    "expires": _timestamp(heartbeat_at + lease_duration),
+                    "job_id": str(job_id),
+                    "token": lease_token,
+                },
+            )
+            if result.rowcount != 1:
+                raise JobLeaseConflictError("Durable job lease is stale, expired, or fenced.")
+        job = self.get(job_id)
+        if job is None:
+            raise RuntimeError("Heartbeat durable job disappeared after commit.")
+        return job
 
     @staticmethod
     def _job(connection: Connection, job_id: UUID) -> JobRecord | None:
