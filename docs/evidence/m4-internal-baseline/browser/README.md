@@ -2,6 +2,15 @@
 
 Result: **Pass after one responsive-layout correction**
 
+## Enclosure-history owner-review correction
+
+The browser regression now assigns Nyx first to `55 Gallon Tank` and then to `10 Gallon Tank`.
+It verifies that the profile links to `10 Gallon Tank`, the former enclosure has no occupant, and
+the current enclosure lists Nyx. The effective timeline renders `Moved to 55 Gallon Tank` followed
+by `55 Gallon Tank → 10 Gallon Tank`. Each technical-audit item includes the target enclosure
+name and UUID, and neither assignment item renders a Void action. The rebuilt development stack is
+healthy at `http://localhost:8081`; its existing household data was preserved.
+
 ## Corrected keeper UX requalification
 
 The owner-required UX correction was rerun against the final amd64 Docker image on August 10. A

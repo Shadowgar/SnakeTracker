@@ -75,8 +75,8 @@ This is an internal operational release, not final production and not approval f
 - [x] RB Secure local household access works for approved internal users. Evidence: [core workflows](../evidence/m4-internal-baseline/core-workflows/README.md).
 - [x] RB Animal profiles and lifecycle are usable. Evidence: [core workflows](../evidence/m4-internal-baseline/core-workflows/README.md).
 - [x] RB Feedings, weight/length measurements, and sheds are recorded and corrected safely. Evidence: [core workflows](../evidence/m4-internal-baseline/core-workflows/README.md).
-- [x] RB Enclosures, assignment, and cleaning are usable. Evidence: [core workflows](../evidence/m4-internal-baseline/core-workflows/README.md).
-- [x] RB Animal timeline accurately reflects effective history. Evidence: [browser timeline](../evidence/m4-internal-baseline/browser/README.md).
+- [x] RB Enclosures, assignment, and cleaning are usable, including correct current occupancy after reassignment. Evidence: [core workflows](../evidence/m4-internal-baseline/core-workflows/README.md).
+- [x] RB Animal timeline accurately reflects effective history and identifies enclosure-assignment targets. Evidence: [browser timeline](../evidence/m4-internal-baseline/browser/README.md).
 - [x] RB Basic on-demand and scheduled database/attachment backup works and verifies. Evidence: [backup drill](../evidence/m4-internal-baseline/operations/backups/README.md).
 - [x] RB Feature slices use animal-owned ports with no circular domain imports. Evidence: [domain boundaries](../evidence/m4-internal-baseline/tests/domain-boundaries/README.md).
 - [x] RB Attachment active-content and resource-exhaustion tests pass for included upload flows. Evidence: [attachment security](../evidence/m4-internal-baseline/security/attachments/README.md).

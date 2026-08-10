@@ -18,9 +18,12 @@ filter; the files are tracked and their links pass repository validation.
 
 Valid non-blocking maintainability suggestions—test-fixture deduplication, helper extraction,
 stylistic cleanup, and broader docstring coverage—are deferred because they do not change M4
-behavior or safety. Projection-aware voiding of `animal.enclosure_assigned` remains unavailable in
-the keeper UI; aligning that registry capability requires an explicit effective-current-enclosure
-design rather than silently changing the accepted event contract. The single-worker local Compose
+behavior or safety. The owner-review correction verifies that assignment history names the actual
+target enclosure and that current occupancy follows the latest assignment. Projection-aware
+voiding of `animal.enclosure_assigned` remains unsupported: the application service rejects it and
+the keeper UI now explicitly withholds Void and Reinstate controls for that contract. Enabling the
+operation requires an explicit effective-current-enclosure design rather than silently changing
+the accepted event contract. The single-worker local Compose
 topology is qualified; stronger multi-worker SQLite lease-claim serialization is deferred with
 remote/production hardening.
 

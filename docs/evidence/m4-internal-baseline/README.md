@@ -4,7 +4,7 @@ Status: **M4 implementation qualified; owner acceptance pending**
 
 - Qualification date: August 10, 2026
 - Source branch: `phase4/animal-care`
-- Qualified source before final evidence refresh: `0212fafa9a37d06a8e3658353172775a7988e6ac`
+- Qualified source before final evidence refresh: `3a82acf01b06043e26f0f351c98a3ea3ab70f489`
 
 This package proves the internal, local-only Phase 4 keeper baseline on the approved laptop/Docker
 development environment. It does not approve remote/public access, production launch, or Raspberry
@@ -14,6 +14,11 @@ The August 10 keeper-UX requalification preserves the same event, attachment, ba
 and authorization implementation while replacing the oversized profile form surface with a concise
 overview, focused care-entry pages, payload-derived effective histories, and a collapsed technical
 audit.
+
+The final enclosure-history correction resolves each immutable assignment through the
+household-scoped enclosure projection, presents first assignments and reassignments with their
+actual enclosure names, retains target identifiers in the technical audit, and withholds the
+assignment Void control until projection-aware effective-state rebuilding is designed.
 
 ## Evidence inventory
 

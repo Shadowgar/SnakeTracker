@@ -13,14 +13,14 @@ Authoritative command:
 
 Final August 10 result:
 
-- Ruff format: pass, 248 files checked.
+- Ruff format: pass, 249 files checked.
 - Ruff lint: pass.
 - Architecture dependency validation: pass.
 - Architecture freeze: pass, 37 accepted ADRs.
 - Documentation links: pass, 108 files checked after the final evidence refresh.
 - mypy strict: pass, 77 source files.
-- pytest: **246 passed** in 29.97 seconds.
-- coverage: **94.38% lines**, **85.00% branches**; both gates pass.
+- pytest: **247 passed** in 24.52 seconds.
+- coverage: **94.41% lines**, **85.08% branches**; both gates pass.
 - pip-audit: no known vulnerabilities after upgrading cryptography to 50.0.0 and Pillow to 12.3.0.
 - Compose configuration: pass.
 - `git diff --check`: pass.
@@ -37,3 +37,8 @@ A focused migration, Phase 2/3 compatibility, unknown-contract, attachment, and 
 all **60 tests** after the corrected keeper UX was built. Trivy 0.69.3 reported zero fixed high or
 critical vulnerabilities in the final amd64 image. The final review hardening also exercised a
 deliberately slow backup with repeated durable-lease renewal.
+
+The final enclosure-history regression ran 29 focused enclosure, care-control, and browser tests,
+plus 7 projection rebuild/registry tests. They verify first assignment, reassignment, current
+profile state, exclusive current occupancy, named timeline transitions, technical target
+references, and suppression of the unsupported enclosure-assignment Void action.
