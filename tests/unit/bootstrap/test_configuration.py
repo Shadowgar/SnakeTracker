@@ -66,6 +66,60 @@ def test_secret_file_is_read_without_exposing_value_in_repr(tmp_path: Path) -> N
     assert "a" * 32 not in repr(settings)
 
 
+def test_backup_key_and_storage_paths_are_loaded_without_exposing_key(tmp_path: Path) -> None:
+    key_file = tmp_path / "backup-key"
+    key_file.write_text("ab" * 32 + "\n")
+
+    settings = load_settings(
+        {
+            "SNAKETRACKER_BACKUP_STORAGE_PATH": str(tmp_path / "backups"),
+            "SNAKETRACKER_BACKUP_ENCRYPTION_KEY_FILE": str(key_file),
+            "SNAKETRACKER_BACKUP_ENCRYPTION_KEY_ID": "operator-key-2026-08",
+        }
+    )
+
+    assert settings.backup_storage_path == tmp_path / "backups"
+    assert settings.backup_encryption_key is not None
+    assert settings.backup_encryption_key.get_secret_value() == "ab" * 32
+    assert settings.backup_encryption_key_id == "operator-key-2026-08"
+    assert "ab" * 32 not in repr(settings)
+
+
+@pytest.mark.parametrize(
+    ("environment_key", "value", "message"),
+    (
+        ("SNAKETRACKER_BACKUP_ENCRYPTION_KEY", "not-hex", "must be hexadecimal"),
+        ("SNAKETRACKER_BACKUP_ENCRYPTION_KEY", "ab" * 8, "exactly 32 bytes"),
+        ("SNAKETRACKER_BACKUP_ENCRYPTION_KEY_ID", "unsafe/key", "identifier is invalid"),
+    ),
+)
+def test_backup_key_configuration_rejects_unsafe_values(
+    environment_key: str, value: str, message: str
+) -> None:
+    with pytest.raises(ValidationError, match=message):
+        load_settings({environment_key: value})
+
+
+@pytest.mark.parametrize(
+    "storage_key",
+    (
+        "SNAKETRACKER_ATTACHMENT_STORAGE_PATH",
+        "SNAKETRACKER_BACKUP_STORAGE_PATH",
+    ),
+)
+def test_production_auxiliary_storage_paths_must_be_absolute(storage_key: str) -> None:
+    with pytest.raises(ValidationError, match="storage path must be absolute"):
+        load_settings(
+            {
+                "SNAKETRACKER_ENVIRONMENT": "production",
+                "SNAKETRACKER_DATABASE_PATH": "/srv/snaketracker/snaketracker.sqlite3",
+                "SNAKETRACKER_EXTERNAL_ORIGIN": "https://snaketracker.example",
+                "SNAKETRACKER_RUNTIME_SECRET": "a" * 32,
+                storage_key: "relative-storage",
+            }
+        )
+
+
 def test_direct_and_file_secret_values_are_ambiguous(tmp_path: Path) -> None:
     secret_file = tmp_path / "runtime-secret"
     secret_file.write_text("b" * 32)

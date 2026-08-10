@@ -15,7 +15,7 @@ from snaketracker.platform.events.registry import (
 )
 
 CURRENT_MANIFEST_VERSION = 1
-CURRENT_RELATIONAL_SCHEMA_VERSION = 4
+CURRENT_RELATIONAL_SCHEMA_VERSION = 8
 MINIMUM_RELATIONAL_SCHEMA_VERSION = 0
 MINIMUM_SQLITE_VERSION = (3, 35, 0)
 
@@ -119,6 +119,26 @@ def inspect_database_compatibility(engine: Engine) -> CompatibilityReport:
             CompatibilityMode.RECOVERY_REQUIRED,
             "compatibility_inspection_failed",
             "Stored data could not be inspected safely.",
+        )
+    if revision == "0008_local_backups":
+        return evaluate_compatibility(
+            {"manifest_version": 1, "relational_schema_version": 8},
+            database_is_empty=False,
+        )
+    if revision == "0007_profile_photos":
+        return evaluate_compatibility(
+            {"manifest_version": 1, "relational_schema_version": 7},
+            database_is_empty=False,
+        )
+    if revision == "0006_enclosures":
+        return evaluate_compatibility(
+            {"manifest_version": 1, "relational_schema_version": 6},
+            database_is_empty=False,
+        )
+    if revision == "0005_animal_profiles":
+        return evaluate_compatibility(
+            {"manifest_version": 1, "relational_schema_version": 5},
+            database_is_empty=False,
         )
     if revision == "0004_event_platform":
         return evaluate_compatibility(

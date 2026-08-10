@@ -4,6 +4,7 @@ import asyncio
 import signal
 import threading
 from pathlib import Path
+from uuid import uuid4
 
 import httpx
 import pytest
@@ -11,9 +12,12 @@ from alembic import command
 from alembic.config import Config
 
 import snaketracker.bootstrap.application as application_module
+from snaketracker.application.backups import BackupService, RequestBackupCommand
 from snaketracker.bootstrap.application import application_factory, build_application
 from snaketracker.bootstrap.compatibility import CompatibilityMode
 from snaketracker.bootstrap.configuration import load_settings
+from snaketracker.infrastructure.backups.repository import SQLAlchemyBackupRepository
+from snaketracker.infrastructure.database.engine import create_sqlite_engine
 from snaketracker.worker.main import (
     EXIT_RECOVERY_REQUIRED,
     install_signal_handlers,
@@ -128,6 +132,50 @@ def test_worker_lifecycle_waits_until_stop_is_requested(tmp_path: Path) -> None:
 
     assert run_worker(settings, stop, poll_interval=0.001) == 0
     assert stop.calls == 2
+
+
+def test_worker_executes_queued_local_backup_when_key_is_configured(tmp_path: Path) -> None:
+    class StopAfterTwoWaits(threading.Event):
+        calls = 0
+
+        def wait(self, timeout: float | None = None) -> bool:
+            self.calls += 1
+            return self.calls >= 2
+
+    database = tmp_path / "backup-worker.sqlite3"
+    migrate(database)
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    try:
+        BackupService(SQLAlchemyBackupRepository(engine)).request_backup(
+            RequestBackupCommand(
+                household_id=uuid4(),
+                actor_user_id=uuid4(),
+                idempotency_key="worker-integration-backup",
+            )
+        )
+    finally:
+        engine.dispose()
+    settings = load_settings(
+        {
+            "SNAKETRACKER_ENVIRONMENT": "test",
+            "SNAKETRACKER_DATABASE_PATH": str(database),
+            "SNAKETRACKER_ATTACHMENT_STORAGE_PATH": str(tmp_path / "attachments"),
+            "SNAKETRACKER_BACKUP_STORAGE_PATH": str(tmp_path / "backups"),
+            "SNAKETRACKER_BACKUP_ENCRYPTION_KEY": "ab" * 32,
+        }
+    )
+
+    assert run_worker(settings, StopAfterTwoWaits(), poll_interval=0.001) == 0
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    try:
+        with engine.connect() as connection:
+            assert (
+                connection.exec_driver_sql("SELECT status FROM backup_requests").scalar_one()
+                == "completed"
+            )
+    finally:
+        engine.dispose()
+    assert len(tuple((tmp_path / "backups").glob("*/manifest.v1.json.enc"))) == 1
 
 
 def test_application_factory_loads_process_environment(
