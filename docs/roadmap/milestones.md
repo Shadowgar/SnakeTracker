@@ -108,7 +108,7 @@ Owner acceptance is not yet recorded. Phase 6 has not started.
 - [ ] RB PWA performs no offline writes and persists only allow-listed drafts.
 - [ ] RB Critical journeys meet WCAG 2.2 AA.
 - [ ] QT Dashboard, search, UI, memory, and storage meet development-environment targets.
-- [ ] RB Weight/length trends, husbandry-frequency statistics, feeding and shed intervals, and due/overdue care are presented from effective history.
+- [ ] RB Weight/length trends, husbandry-frequency statistics, and feeding and shed interval analytics are presented from effective history.
 - [ ] RB Suggested feeding and shed windows use sufficient effective history, expose deterministic provenance, and are labeled as estimates rather than requirements.
 - [ ] RB Optional species/life-stage husbandry reference profiles are curated and versioned with sources, prefer ranges, never invent missing guidance, and never silently replace owner schedules.
 

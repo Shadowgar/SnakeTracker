@@ -665,7 +665,11 @@ class AnimalService:
                     "quantity": feeding.quantity,
                     "outcome": feeding.outcome,
                     "notes": _optional_text(command.notes, "feeding notes"),
-                    "inventory_quantity": command.inventory_quantity,
+                    **(
+                        {"inventory_quantity": command.inventory_quantity}
+                        if command.inventory_quantity is not None
+                        else {}
+                    ),
                 },
                 inventory_quantity=command.inventory_quantity,
             )
@@ -1083,7 +1087,9 @@ class AnimalService:
         if inventory is not None:
             link = inventory.consumption_for_source(household_id, target.event_id)
             if link is not None and link.status == "active":
-                replacement_quantity = inventory_quantity or link.quantity
+                replacement_quantity = (
+                    link.quantity if inventory_quantity is None else inventory_quantity
+                )
                 if replacement_quantity < 1:
                     raise AnimalValidationError("Inventory replacement quantity must be positive.")
                 inventory_key = StreamKey(household_id, "inventory-item", link.item_id)
@@ -1108,7 +1114,7 @@ class AnimalService:
                     inventory_key,
                     len(inventory_events) + 2,
                     "inventory.stock_consumed",
-                    InventoryStockConsumedV1(replacement_quantity, event.event_id),
+                    InventoryStockConsumedV1(replacement_quantity, target.event_id),
                     actor_user_id,
                     target.correlation_id,
                     event.event_id,

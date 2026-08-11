@@ -506,7 +506,8 @@ class SQLAlchemyJobRepository:
             result = connection.execute(
                 text(
                     "UPDATE jobs SET status='retry',available_at=:now,safe_error=:reason,"
-                    "updated_at=:now WHERE job_id=:job_id AND status='reconciliation_required'"
+                    "attempt_count=MIN(attempt_count,max_attempts - 1),updated_at=:now "
+                    "WHERE job_id=:job_id AND status='reconciliation_required'"
                 ),
                 {
                     "now": _timestamp(resolved_at),

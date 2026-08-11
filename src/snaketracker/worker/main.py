@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import signal
 import socket
 import threading
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
+from functools import partial
 from types import FrameType
 from uuid import uuid4
 
@@ -36,6 +39,8 @@ from snaketracker.worker.jobs import NotificationJobWorker
 from snaketracker.worker.reminders import ReminderScheduler
 
 EXIT_RECOVERY_REQUIRED = 2
+LOGGER = logging.getLogger(__name__)
+REMINDER_SWEEP_INTERVAL = timedelta(minutes=1)
 
 
 def install_signal_handlers(stop: threading.Event) -> None:
@@ -87,16 +92,32 @@ def run_worker(settings: Settings, stop: threading.Event, poll_interval: float =
             lease_duration=timedelta(minutes=1),
             jitter_seconds=lambda attempt: attempt % 6,
         )
+        next_reminder_sweep_at: datetime | None = None
         while not stop.wait(poll_interval):
             now = datetime.now(UTC)
-            reminder_scheduler.run_once(now=now)
-            outbox_handoff.run(now=now)
-            notification_worker.run_one(now=now)
+            if next_reminder_sweep_at is None or now >= next_reminder_sweep_at:
+                _run_duty(
+                    "Reminder sweep",
+                    partial(reminder_scheduler.run_once, now=now),
+                )
+                next_reminder_sweep_at = now + REMINDER_SWEEP_INTERVAL
+            _run_duty("Outbox handoff", partial(outbox_handoff.run, now=now))
+            _run_duty(
+                "Notification delivery",
+                partial(notification_worker.run_one, now=now),
+            )
             if backup_worker is not None:
-                backup_worker.run_once()
+                _run_duty("Backup execution", backup_worker.run_once)
         return 0
     finally:
         engine.dispose()
+
+
+def _run_duty(name: str, duty: Callable[[], object]) -> None:
+    try:
+        duty()
+    except Exception:
+        LOGGER.exception("%s failed; the worker will continue other duties.", name)
 
 
 def _backup_worker(settings: Settings, engine: object) -> LocalBackupWorker | None:

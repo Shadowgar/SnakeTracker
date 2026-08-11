@@ -22,7 +22,7 @@ The linux/arm64 OCI build completed with:
 Reproduce:
 
 ```sh
-docker compose up --build -d
+docker compose up --build -d --wait
 docker compose ps
 curl -fsS http://localhost:8081/health/ready
 docker run --privileged --rm \

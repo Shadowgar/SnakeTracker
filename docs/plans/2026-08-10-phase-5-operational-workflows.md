@@ -20,7 +20,7 @@ Playwright, Docker Compose, and the existing `uv` lockfile and quality gate.
 
 ## Scope and governing decisions
 
-The authoritative exit criteria are the five unchecked M5 release blockers in
+The authoritative exit criteria are the five M5 release blockers in
 [the milestone roadmap](../roadmap/milestones.md#phase-5--m5--operational-workflows-reliable).
 Implementation is governed primarily by ADR-0002, ADR-0004, ADR-0005, ADR-0006, ADR-0007,
 ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0023, ADR-0025, ADR-0030, ADR-0031,

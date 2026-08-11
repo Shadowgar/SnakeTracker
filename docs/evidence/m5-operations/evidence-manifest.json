@@ -19,7 +19,7 @@
     "head": "0009_operational_workflows",
     "upgrade_downgrade_reupgrade": "pass",
     "integrity_check": "ok",
-    "phase_2_3_4_compatibility_tests": 38
+    "phase_2_3_4_compatibility_and_regression_tests": 38
   },
   "containers": {
     "amd64_compose": "pass",
@@ -41,7 +41,7 @@
   "commands": [
     "./scripts/quality/check.sh",
     "uv run pytest -q tests/integration/test_inventory.py tests/integration/test_expenses.py tests/integration/test_reminders.py tests/integration/test_notification_pipeline.py tests/integration/test_durable_jobs.py tests/integration/test_notification_delivery.py tests/browser/test_operational_workflows.py",
-    "docker compose up --build -d",
+    "docker compose up --build -d --wait",
     "docker compose ps",
     "docker buildx build --platform linux/arm64 --build-arg SNAKETRACKER_UID=1001 --output type=oci,dest=/tmp/snaketracker-m5-arm64.oci.tar --metadata-file /tmp/snaketracker-m5-arm64-metadata.json .",
     "npx --yes pa11y@9.0.1 --runner axe --standard WCAG2AA http://localhost:8081/login"

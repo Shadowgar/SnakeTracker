@@ -18,4 +18,4 @@ uv run pytest -q tests/integration/test_inventory.py
 uv run pytest -q tests/integration/test_inventory.py tests/browser/test_operational_workflows.py
 ```
 
-The final combined M5 focused run passed 51 tests. The full repository gate passed 305 tests.
+The final combined M5-focused run passed 51 tests. The full repository gate passed 305 tests.

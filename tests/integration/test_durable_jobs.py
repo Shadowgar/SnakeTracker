@@ -336,6 +336,23 @@ def test_expired_final_attempt_moves_to_reconciliation_instead_of_blind_retry(
         assert exhausted is not None
         assert exhausted.status == "reconciliation_required"
         assert repository.attempts_for(job_id)[0].status == "lease_expired"
+
+        resolved = JobOperationsService(repository).resolve_not_delivered(
+            job_id=job_id,
+            actor_user_id=uuid4(),
+            actor_role="owner",
+            correlation_id=uuid4(),
+            reason="Provider reconciliation confirmed no delivery.",
+            now=now + timedelta(seconds=12),
+        )
+        assert resolved.status == "retry"
+        retried = repository.claim(
+            worker_id="reconciled-worker",
+            now=now + timedelta(seconds=12),
+            lease_duration=timedelta(seconds=30),
+        )
+        assert retried is not None
+        assert retried.attempt_count == 1
     finally:
         engine.dispose()
 

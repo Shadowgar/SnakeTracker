@@ -104,10 +104,12 @@ class SQLAlchemyInventoryBalanceProjection:
                         text(
                             "SELECT quantity,reserved_quantity,status FROM "
                             "inventory_consumption_allocations WHERE household_id=:household_id "
+                            "AND item_id=:item_id "
                             "AND consumption_event_id=:consumption_event_id"
                         ),
                         {
                             "household_id": str(event.household_id),
+                            "item_id": str(event.stream_id),
                             "consumption_event_id": str(payload.target_event_id),
                         },
                     )
@@ -133,11 +135,12 @@ class SQLAlchemyInventoryBalanceProjection:
                     text(
                         "UPDATE inventory_consumption_allocations SET status='reversed',"
                         "reversal_event_id=:reversal_event_id WHERE household_id=:household_id "
-                        "AND consumption_event_id=:consumption_event_id"
+                        "AND item_id=:item_id AND consumption_event_id=:consumption_event_id"
                     ),
                     {
                         "reversal_event_id": str(event.event_id),
                         "household_id": str(event.household_id),
+                        "item_id": str(event.stream_id),
                         "consumption_event_id": str(payload.target_event_id),
                     },
                 )
@@ -145,11 +148,13 @@ class SQLAlchemyInventoryBalanceProjection:
                     text(
                         "UPDATE inventory_consumption_links SET status='reversed',"
                         "reversal_event_id=:reversal_event_id WHERE household_id=:household_id "
-                        "AND consumption_event_id=:consumption_event_id AND status='active'"
+                        "AND item_id=:item_id AND consumption_event_id=:consumption_event_id "
+                        "AND status='active'"
                     ),
                     {
                         "reversal_event_id": str(event.event_id),
                         "household_id": str(event.household_id),
+                        "item_id": str(event.stream_id),
                         "consumption_event_id": str(payload.target_event_id),
                     },
                 )

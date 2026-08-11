@@ -103,6 +103,7 @@ from snaketracker.domains.enclosures.contracts import ENCLOSURE_STATUSES
 from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
 from snaketracker.platform.events.envelope import DomainEvent
 from snaketracker.platform.events.registry import production_event_registry
+from snaketracker.platform.events.store import ExpectedVersionConflictError
 from snaketracker.platform.events.validation import household_local_to_utc
 from snaketracker.platform.jobs.models import JobRecord
 from snaketracker.platform.notifications.service import NotificationIntentService
@@ -966,7 +967,12 @@ def create_web_router(
                     str(form.get("reference", "")) or None,
                 )
             )
-        except (InventoryValidationError, FormValidationError, ValueError) as error:
+        except (
+            InventoryValidationError,
+            ExpectedVersionConflictError,
+            FormValidationError,
+            ValueError,
+        ) as error:
             return protected_page(
                 request,
                 "error.html",
@@ -1026,7 +1032,9 @@ def create_web_router(
                     _form_datetime(form.get("occurred_at", ""), principal.household_timezone),
                 )
             )
-        except (ExpenseValidationError, ExpenseAuthorizationError, FormValidationError) as error:
+        except ExpenseAuthorizationError as error:
+            return _access_denied(request, str(error))
+        except (ExpenseValidationError, FormValidationError) as error:
             return protected_page(
                 request,
                 "expense_new.html",
@@ -1081,12 +1089,9 @@ def create_web_router(
                     str(form.get("reason", "")),
                 )
             )
-        except (
-            ExpenseValidationError,
-            ExpenseAuthorizationError,
-            FormValidationError,
-            ValueError,
-        ) as error:
+        except ExpenseAuthorizationError as error:
+            return _access_denied(request, str(error))
+        except (ExpenseValidationError, FormValidationError, ValueError) as error:
             return protected_page(
                 request,
                 "error.html",
@@ -1118,12 +1123,9 @@ def create_web_router(
                     str(form.get("reason", "")),
                 )
             )
-        except (
-            ExpenseValidationError,
-            ExpenseAuthorizationError,
-            FormValidationError,
-            ValueError,
-        ) as error:
+        except ExpenseAuthorizationError as error:
+            return _access_denied(request, str(error))
+        except (ExpenseValidationError, FormValidationError, ValueError) as error:
             return protected_page(
                 request,
                 "error.html",
@@ -1141,20 +1143,6 @@ def create_web_router(
         if "reminder.view" not in principal.capabilities:
             return _access_denied(request, "Reminder access denied")
         now = datetime.now(UTC)
-        rules = reminder_projection.rules_for(principal.household_id)
-        for rule in rules:
-            facts = reminder_fact_service.recalculate_rule(
-                principal.household_id, rule.rule_id, now=now
-            )
-            for fact in facts:
-                notification_intent_service.ensure_for_fact(
-                    household_id=principal.household_id,
-                    fact_id=fact.fact_id,
-                    recipient_user_id=principal.user_id,
-                    channel=rule.channel,
-                    correlation_id=uuid4(),
-                    now=now,
-                )
         animals = animal_service.list_profiles(principal.household_id)
         enclosures = enclosure_service.list_profiles(principal.household_id)
         agenda = _agenda_rows(
@@ -1206,14 +1194,17 @@ def create_web_router(
             schedule_kind = str(form.get("schedule_kind", ""))
             anchor_value = str(form.get("anchor_at", "")).strip()
             override_value = str(form.get("override_due_at", "")).strip()
+            subject_type, separator, subject_id_value = str(form.get("subject", "")).partition(":")
+            if not separator or subject_type not in {"animal", "enclosure"}:
+                raise FormValidationError("Choose a valid reminder subject.")
             result = reminder_rule_service.create(
                 CreateReminderRuleCommand(
                     principal.household_id,
                     principal.user_id,
                     uuid4(),
                     _form_idempotency_key(form),
-                    str(form.get("subject_type", "")),
-                    UUID(str(form.get("subject_id", ""))),
+                    subject_type,
+                    UUID(subject_id_value),
                     str(form.get("reminder_type", "")),
                     schedule_kind,
                     _required_int(form.get("interval_days", ""), "interval"),
@@ -1660,6 +1651,8 @@ def create_web_router(
                 reminder_type,
             )
             interval_value = str(form.get("interval_days", "")).strip()
+            if enabled and not interval_value:
+                raise FormValidationError("Interval is required when the schedule is enabled.")
             interval_days = (
                 _required_int(interval_value, "interval")
                 if interval_value

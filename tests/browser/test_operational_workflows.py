@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+from contextlib import closing
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
@@ -96,6 +97,20 @@ def test_keeper_can_use_inventory_expense_and_reminder_workflows(tmp_path: Path)
         )
         assert received.status_code == 303
         assert "10 item" in client.get(inventory_url).text
+        stale_inventory_page = client.get(inventory_url)
+        stale_receive = client.post(
+            f"{inventory_url}/receive",
+            data={
+                "csrf_token": _csrf(stale_inventory_page.text),
+                "idempotency_key": "stale-inventory-receive",
+                "expected_stream_version": "1",
+                "quantity": "1",
+                "reference": "Stale browser submission",
+            },
+        )
+        assert stale_receive.status_code == 422
+        assert "Expected stream version 1" in stale_receive.text
+        assert "found 2" in stale_receive.text
 
         animal_form = client.get("/animals/new")
         animal = client.post(
@@ -115,6 +130,9 @@ def test_keeper_can_use_inventory_expense_and_reminder_workflows(tmp_path: Path)
             follow_redirects=False,
         )
         animal_url = animal.headers["location"]
+        reminder_form = client.get("/reminders/new")
+        assert 'name="subject_type"' not in reminder_form.text
+        assert f'value="animal:{animal_url.rsplit("/", 1)[-1]}"' in reminder_form.text
         feeding_form = client.get(f"{animal_url}/feedings/new")
         assert "Use inventory" in feeding_form.text
         feeding = client.post(
@@ -307,7 +325,7 @@ def test_operational_routes_fail_closed_for_invalid_and_unauthorized_requests(
             assert client.post(path, data={}).status_code == 403
 
         database = tmp_path / "operations-browser.sqlite3"
-        with sqlite3.connect(database) as connection:
+        with closing(sqlite3.connect(database)) as connection:
             connection.execute("UPDATE authorization_memberships SET role='viewer'")
             connection.commit()
         assert client.get("/inventory").status_code == 200
@@ -372,6 +390,19 @@ def test_animal_profile_manages_care_schedule_and_reminders_is_an_agenda(
         profile = client.get(animal_url)
         assert "Care schedule" in profile.text
         assert "Feeding interval" in profile.text
+        missing_interval = client.post(
+            f"{animal_url}/care-schedule/feeding",
+            data={
+                "csrf_token": _csrf(profile.text),
+                "idempotency_key": "profile-feeding-schedule-missing-interval",
+                "expected_stream_version": "0",
+                "enabled": "true",
+                "interval_days": "",
+                "override_due_at": "",
+            },
+        )
+        assert missing_interval.status_code == 422
+        assert "interval is required" in missing_interval.text.lower()
 
         feeding_form = client.get(f"{animal_url}/feedings/new")
         feeding = client.post(
@@ -594,3 +625,9 @@ def test_care_agenda_groups_overdue_due_today_and_upcoming_schedules(
         assert "Due today" in agenda.text
         assert 'id="agenda-upcoming"' in agenda.text
         assert "Upcoming" in agenda.text
+        database = tmp_path / "operations-browser.sqlite3"
+        with closing(sqlite3.connect(database)) as connection:
+            assert connection.execute("SELECT COUNT(*) FROM reminder_facts").fetchone() == (0,)
+            assert connection.execute("SELECT COUNT(*) FROM notification_intents").fetchone() == (
+                0,
+            )

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from threading import Barrier
@@ -9,9 +10,11 @@ from uuid import uuid4
 import pytest
 from alembic import command
 from alembic.config import Config
+from sqlalchemy import text
 
 from snaketracker.application.animals import (
     AnimalService,
+    AnimalValidationError,
     CorrectFeedingCommand,
     RecordFeedingCommand,
     RegisterAnimalCommand,
@@ -31,6 +34,7 @@ from snaketracker.application.inventory import (
     ReserveStockCommand,
     ReverseConsumptionCommand,
 )
+from snaketracker.domains.inventory.contracts import InventoryConsumptionReversedV1
 from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
 from snaketracker.infrastructure.database.engine import create_sqlite_engine
 from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
@@ -43,6 +47,7 @@ from snaketracker.platform.events.store import (
     ExpectedVersionConflictError,
     IdempotencyConflictError,
     StreamKey,
+    canonical_command_hash,
 )
 
 ROOT = Path(__file__).parents[2]
@@ -232,6 +237,9 @@ def test_inventory_reservation_is_consumed_deterministically_and_policy_changes(
                 None,
             )
         )
+        consumed_balance = projection.balance_for(bootstrap.household_id, item.item_id)
+        assert consumed_balance is not None
+        assert (consumed_balance.on_hand_quantity, consumed_balance.reserved_quantity) == (8, 1)
         service.reverse_consumption(
             ReverseConsumptionCommand(
                 bootstrap.household_id,
@@ -704,7 +712,28 @@ def test_stock_linked_feeding_correction_replaces_consumption_atomically(tmp_pat
             )
         )
 
-        correction = animals.correct_feeding(
+        with pytest.raises(AnimalValidationError, match="replacement quantity must be positive"):
+            animals.correct_feeding(
+                CorrectFeedingCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    "owner",
+                    animal.animal_id,
+                    feeding.event.event_id,
+                    "correct-linked-feeding-zero-replacement",
+                    datetime(2026, 8, 10, 13, tzinfo=UTC),
+                    "rat",
+                    "pup",
+                    None,
+                    "frozen_thawed",
+                    1,
+                    "accepted",
+                    "Invalid zero replacement.",
+                    inventory_quantity=0,
+                )
+            )
+
+        animals.correct_feeding(
             CorrectFeedingCommand(
                 bootstrap.household_id,
                 bootstrap.user_id,
@@ -726,7 +755,7 @@ def test_stock_linked_feeding_correction_replaces_consumption_atomically(tmp_pat
 
         balance = projection.balance_for(bootstrap.household_id, item.item_id)
         assert balance is not None and balance.on_hand_quantity == 4
-        link = projection.consumption_for_source(bootstrap.household_id, correction.event.event_id)
+        link = projection.consumption_for_source(bootstrap.household_id, feeding.event.event_id)
         assert link is not None and (link.quantity, link.status) == (1, "active")
         assert [
             event.event_type
@@ -734,6 +763,151 @@ def test_stock_linked_feeding_correction_replaces_consumption_atomically(tmp_pat
                 StreamKey(bootstrap.household_id, "inventory-item", item.item_id)
             )
         ][-2:] == ["inventory.consumption_reversed", "inventory.stock_consumed"]
+
+        animals.void_event(
+            VoidAnimalEventCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                "owner",
+                animal.animal_id,
+                feeding.event.event_id,
+                "correct-linked-feeding-void-original",
+                "Corrected feeding was voided.",
+            )
+        )
+        compensated = projection.balance_for(bootstrap.household_id, item.item_id)
+        assert compensated is not None and compensated.on_hand_quantity == 5
+        compensated_link = projection.consumption_for_source(
+            bootstrap.household_id, feeding.event.event_id
+        )
+        assert compensated_link is not None and compensated_link.status == "reversed"
+
+        unlinked = animals.record_feeding(
+            RecordFeedingCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                animal.animal_id,
+                uuid4(),
+                "legacy-hash-feeding",
+                datetime(2026, 8, 11, 12, tzinfo=UTC),
+                "mouse",
+                "small",
+                None,
+                "frozen_thawed",
+                1,
+                "accepted",
+                None,
+            )
+        )
+        legacy_command = CorrectFeedingCommand(
+            bootstrap.household_id,
+            bootstrap.user_id,
+            "owner",
+            animal.animal_id,
+            unlinked.event.event_id,
+            "legacy-hash-feeding-correction",
+            datetime(2026, 8, 11, 13, tzinfo=UTC),
+            "mouse",
+            "small",
+            None,
+            "frozen_thawed",
+            1,
+            "accepted",
+            "Corrected time.",
+        )
+        legacy_result = animals.correct_feeding(legacy_command)
+        legacy_hash = canonical_command_hash(
+            {
+                "target_event_id": str(unlinked.event.event_id),
+                "occurred_at": legacy_command.occurred_at.isoformat(),
+                "prey_type": "mouse",
+                "prey_size": "small",
+                "prey_weight_grams": None,
+                "preparation_method": "frozen_thawed",
+                "quantity": 1,
+                "outcome": "accepted",
+                "notes": "Corrected time.",
+            }
+        )
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "UPDATE idempotency_operations SET command_hash=:command_hash "
+                    "WHERE household_id=:household_id AND actor_user_id=:actor_user_id "
+                    "AND operation_scope='animals.correct.animal.feeding_recorded' "
+                    "AND idempotency_key=:idempotency_key"
+                ),
+                {
+                    "command_hash": legacy_hash,
+                    "household_id": str(bootstrap.household_id),
+                    "actor_user_id": str(bootstrap.user_id),
+                    "idempotency_key": legacy_command.idempotency_key,
+                },
+            )
+        replayed = animals.correct_feeding(legacy_command)
+        assert replayed.event.event_id == legacy_result.event.event_id
+    finally:
+        engine.dispose()
+
+
+def test_inventory_projection_rejects_cross_item_reversal_allocation(tmp_path: Path) -> None:
+    engine, bootstrap, _store, service, projection = _setup(tmp_path)
+    try:
+        consumed_events = []
+        for index, name in enumerate(("Mice", "Crickets"), start=1):
+            item = service.register(
+                RegisterInventoryItemCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    uuid4(),
+                    f"cross-item-register-{index}",
+                    name,
+                    "item",
+                    None,
+                )
+            )
+            service.receive(
+                ReceiveStockCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    item.item_id,
+                    uuid4(),
+                    f"cross-item-receive-{index}",
+                    1,
+                    10,
+                    None,
+                )
+            )
+            consumed = service.consume(
+                ConsumeStockCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    item.item_id,
+                    uuid4(),
+                    f"cross-item-consume-{index}",
+                    2,
+                    2,
+                    None,
+                )
+            )
+            consumed_events.append(consumed.event)
+
+        wrong_stream_reversal = replace(
+            consumed_events[1],
+            event_id=uuid4(),
+            stream_version=4,
+            event_type="inventory.consumption_reversed",
+            payload=InventoryConsumptionReversedV1(
+                consumed_events[0].event_id,
+                2,
+                "Cross-item reversal must fail.",
+            ),
+        )
+        with (
+            engine.begin() as connection,
+            pytest.raises(InventoryValidationError, match="missing or inconsistent"),
+        ):
+            projection.apply(connection, (wrong_stream_reversal,))
     finally:
         engine.dispose()
 
@@ -761,6 +935,18 @@ def test_inventory_rejects_invalid_commands_without_changing_balance(tmp_path: P
                     uuid4(),
                     "invalid-name",
                     " ",
+                    "item",
+                    None,
+                )
+            )
+        with pytest.raises(InventoryValidationError, match="Inventory name is too long"):
+            service.register(
+                RegisterInventoryItemCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    uuid4(),
+                    "long-name",
+                    "x" * 201,
                     "item",
                     None,
                 )

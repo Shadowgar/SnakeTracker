@@ -270,6 +270,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # Phase 3 understands only pending outbox items. A downgrade deliberately
+    # returns later operational states to pending so its constraint can be restored.
+    op.execute("UPDATE outbox_items SET state='pending' WHERE state <> 'pending'")
     with op.batch_alter_table("outbox_items", recreate="always") as batch:
         batch.drop_constraint("ck_outbox_state", type_="check")
         batch.drop_column("safe_error")

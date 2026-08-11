@@ -14,6 +14,7 @@ run passed 38 tests in 4.65 seconds.
 Reproduce:
 
 ```sh
+set -euo pipefail
 tmp_dir="$(mktemp -d /tmp/snaketracker-m5-migration.XXXXXX)"
 SNAKETRACKER_DATABASE_PATH="$tmp_dir/migration.sqlite3" uv run alembic upgrade head
 SNAKETRACKER_DATABASE_PATH="$tmp_dir/migration.sqlite3" uv run alembic downgrade base

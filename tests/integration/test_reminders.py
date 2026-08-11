@@ -531,6 +531,14 @@ def test_reminder_schedule_validation_and_empty_fact_states_fail_closed(tmp_path
                 ),
                 "timezone",
             ),
+            (
+                replace(
+                    base,
+                    schedule_kind="fixed_interval",
+                    anchor_at="not-an-instant",
+                ),
+                "valid timestamp",
+            ),
             (replace(base, channel=" "), "channel is required"),
             (replace(base, channel="x" * 33), "channel is too long"),
             (replace(base, idempotency_key=" "), "Idempotency key is required"),
@@ -620,6 +628,42 @@ def test_reminder_schedule_validation_and_empty_fact_states_fail_closed(tmp_path
                 )
             )
         assert projection.facts_for(bootstrap.household_id) == ()
+    finally:
+        engine.dispose()
+
+
+def test_persisted_fact_is_due_for_the_entire_household_local_day(tmp_path: Path) -> None:
+    setup = _setup(tmp_path)
+    (
+        engine,
+        bootstrap,
+        _animals,
+        _enclosures,
+        animal_id,
+        _enclosure_id,
+        rules,
+        facts,
+        _projection,
+    ) = setup
+    try:
+        rule = rules.create(
+            _rule_command(
+                bootstrap,
+                animal_id,
+                reminder_type="weight",
+                schedule_kind="fixed_interval",
+                interval_days=1,
+                anchor_at="2026-08-10T13:00:00+00:00",
+            )
+        )
+        generated = facts.recalculate_rule(
+            bootstrap.household_id,
+            rule.rule_id,
+            now=datetime(2026, 8, 11, 20, 0, tzinfo=UTC),
+        )
+
+        assert generated[0].due_at == datetime(2026, 8, 11, 13, 0, tzinfo=UTC)
+        assert generated[0].status == "due"
     finally:
         engine.dispose()
 

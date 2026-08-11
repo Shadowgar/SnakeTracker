@@ -567,7 +567,16 @@ class ReminderFactService:
             source_event_type=source.event_type if source is not None else None,
             source_occurred_at=source.occurred_at if source is not None else None,
             due_at=due_at,
-            status="due" if calculated_at == due_at else "overdue",
+            status=(
+                "due"
+                if calculated_at.astimezone(
+                    ZoneInfo(self._projection.household_timezone(household_id))
+                ).date()
+                == due_at.astimezone(
+                    ZoneInfo(self._projection.household_timezone(household_id))
+                ).date()
+                else "overdue"
+            ),
             explanation=explanation,
             calculated_at=calculated_at,
         )
@@ -788,7 +797,11 @@ def _command_fields(
 def _optional_instant(value: str | None, label: str) -> str | None:
     if value is None or not value.strip():
         return None
-    instant = _aware_utc(datetime.fromisoformat(value), label)
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError as error:
+        raise ReminderValidationError(f"{label} must be a valid timestamp.") from error
+    instant = _aware_utc(parsed, label)
     return instant.isoformat(timespec="microseconds")
 
 

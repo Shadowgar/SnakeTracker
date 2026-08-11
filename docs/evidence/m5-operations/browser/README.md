@@ -18,6 +18,7 @@ Retained screenshots:
 
 - [Desktop home](desktop-home.png)
 - [Desktop inventory](desktop-inventory.png)
+- [Desktop expense validation](desktop-expenses.png)
 - [Desktop expense detail](desktop-expense-detail.png)
 - [Desktop animal care schedule](desktop-animal-care-schedule.png)
 - [Desktop reminders](desktop-reminders.png)

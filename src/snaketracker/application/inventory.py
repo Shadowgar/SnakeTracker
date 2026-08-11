@@ -481,8 +481,10 @@ def _positive(value: int, label: str) -> int:
 
 def _required_text(value: str, label: str) -> str:
     normalized = value.strip()
-    if not normalized or len(normalized) > 200:
+    if not normalized:
         raise InventoryValidationError(f"{label} is required.")
+    if len(normalized) > 200:
+        raise InventoryValidationError(f"{label} is too long.")
     return normalized
 
 
