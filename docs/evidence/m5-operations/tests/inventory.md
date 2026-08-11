@@ -2,8 +2,8 @@
 
 Result: **Pass**
 
-Source revision: `567887cc95702fa0407cebdf12d33e22b11dd8fb`
-Reviewer: Codex local qualification; owner acceptance pending.
+Source revision: `e1a15025b4b5caa81391866d49c1b5a050f616be`
+Reviewer: Codex final qualification; owner accepted August 11, 2026.
 
 The integration suite verifies household isolation, expected stream versions, command
 idempotency, concurrent receipt and consumption, reservations, expiry, adjustment, reversal, and
@@ -18,4 +18,4 @@ uv run pytest -q tests/integration/test_inventory.py
 uv run pytest -q tests/integration/test_inventory.py tests/browser/test_operational_workflows.py
 ```
 
-The final combined M5-focused run passed 51 tests. The full repository gate passed 305 tests.
+The final combined M5-focused run passed 51 tests. The final full repository gate passed 310 tests.

@@ -1,17 +1,18 @@
 # M5 Operational Workflow Evidence
 
-Status: **M5 implementation-qualified; owner acceptance pending**
+Status: **M5 operational workflows reliable**
 
 - Qualification date: August 11, 2026
 - Source branch: `phase5/operational-workflows`
-- Qualified implementation revision: `567887cc95702fa0407cebdf12d33e22b11dd8fb`
+- Accepted: August 11, 2026
+- Qualified implementation revision: `e1a15025b4b5caa81391866d49c1b5a050f616be`
 - Environment: approved laptop/Docker development environment
 
 This package proves the Phase 5 inventory, expense, reminder, notification-pipeline, and durable-job
 release blockers on the supported local development topology. The corrected keeper workflow now
 configures ordinary care intervals from each animal profile and presents calculated care in an
-overdue/due-today/upcoming agenda. It does not record owner acceptance, authorize M6, approve
-remote/public deployment, or claim Raspberry Pi deployment qualification.
+overdue/due-today/upcoming agenda. Owner acceptance is recorded without authorizing M6, approving
+remote/public deployment, or claiming Raspberry Pi deployment qualification.
 
 ## Evidence inventory
 
@@ -29,6 +30,7 @@ remote/public deployment, or claim Raspberry Pi deployment qualification.
 - [Accessibility](accessibility/README.md)
 - [Review disposition](reviews/README.md)
 - [Release gate](approvals/release/README.md)
+- [Owner acceptance](approvals/2026-08-11-owner-acceptance.md)
 
 `evidence-manifest.json` records the qualification provenance. `checksums.sha256` covers every
 retained evidence artifact except the checksum file itself.
@@ -36,6 +38,6 @@ retained evidence artifact except the checksum file itself.
 ## Qualification disposition
 
 All five applicable M5 release blockers have passing implementation evidence. The authoritative
-roadmap records them as technically complete while explicitly retaining the owner-acceptance gate.
+roadmap records them as accepted by the owner on August 11, 2026.
 M6 through M8 remain unchecked. Native Raspberry Pi execution, SSD/ext4 placement, thermal tests,
 and deployment performance remain deferred to Phase 7/pre-deployment.

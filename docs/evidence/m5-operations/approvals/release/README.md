@@ -1,10 +1,10 @@
 # M5 Release Gate
 
-Status: **Implementation-qualified; owner acceptance pending**
+Status: **M5 operational workflows reliable**
 
-All five M5 technical release blockers have retained evidence. This record deliberately does not
-contain an acceptance date or claim owner acceptance. The branch must not merge until the owner
-reviews the keeper workflows, qualification evidence, hosted checks, and remaining warnings.
+All five M5 technical release blockers have retained evidence. The owner accepted M5 on August 11,
+2026 after keeper-workflow review and final technical-review corrections. The branch may merge only
+after the required hosted checks pass.
 
 M6 through M8 remain unchecked. Remote/public deployment and Raspberry Pi deployment remain
 unapproved.

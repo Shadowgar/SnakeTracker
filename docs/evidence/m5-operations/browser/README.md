@@ -2,9 +2,9 @@
 
 Result: **Pass**
 
-Source revision: `567887cc95702fa0407cebdf12d33e22b11dd8fb`
+Source revision: `e1a15025b4b5caa81391866d49c1b5a050f616be`
 Browser: Playwright Chromium against an isolated fresh Docker database.
-Reviewer: Codex local qualification; owner acceptance pending.
+Reviewer: Codex final qualification; owner accepted August 11, 2026.
 
 The original real-browser run completed first household setup, authentication, inventory creation,
 stock receipt, animal creation, and authorized expense entry. The corrected reminder-UX run used a

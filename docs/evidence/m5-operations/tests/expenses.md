@@ -2,8 +2,8 @@
 
 Result: **Pass**
 
-Source revision: `567887cc95702fa0407cebdf12d33e22b11dd8fb`
-Reviewer: Codex local qualification; owner acceptance pending.
+Source revision: `e1a15025b4b5caa81391866d49c1b5a050f616be`
+Reviewer: Codex final qualification; owner accepted August 11, 2026.
 
 Tests prove Owner and Administrator authorization, household isolation, validation, idempotency,
 append-only correction lineage, effective-value reads, voiding with a reason, and the intentional

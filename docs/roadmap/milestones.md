@@ -89,7 +89,9 @@ Owner acceptance: [August 10, 2026 owner acceptance record](../evidence/m4-inter
 
 ## Phase 5 / M5 — Operational workflows reliable
 
-Status: M5 implementation-qualified; owner acceptance pending
+Status: M5 operational workflows reliable
+
+Accepted: August 11, 2026
 
 - [x] RB Inventory remains correct under concurrency and compensation. Evidence: [inventory correctness](../evidence/m5-operations/tests/inventory.md).
 - [x] RB Expenses enforce authorization and correction policy. Evidence: [expense policy](../evidence/m5-operations/tests/expenses.md) and [authorization](../evidence/m5-operations/security/authorization.md).
@@ -97,7 +99,7 @@ Status: M5 implementation-qualified; owner acceptance pending
 - [x] RB Lease expiry, crash recovery, retry, reconciliation, and dead letters pass. Evidence: [durable jobs](../evidence/m5-operations/tests/jobs.md) and [crash recovery](../evidence/m5-operations/operations/crash-recovery.md).
 - [x] RB External side-effect strategies handle the uncertain crash window. Evidence: [external-effect recovery](../evidence/m5-operations/tests/external-effects.md).
 
-Owner acceptance is not yet recorded. Phase 6 has not started.
+Owner acceptance: [August 11, 2026 owner acceptance record](../evidence/m5-operations/approvals/2026-08-11-owner-acceptance.md). Phase 6 has not started.
 
 ## Phase 6 / M6 — Product experience complete
 

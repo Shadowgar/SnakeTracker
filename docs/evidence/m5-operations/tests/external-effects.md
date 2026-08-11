@@ -2,8 +2,8 @@
 
 Result: **Pass**
 
-Source revision: `567887cc95702fa0407cebdf12d33e22b11dd8fb`
-Reviewer: Codex local qualification; owner acceptance pending.
+Source revision: `e1a15025b4b5caa81391866d49c1b5a050f616be`
+Reviewer: Codex final qualification; owner accepted August 11, 2026.
 
 External execution is explicitly at least once. The local qualification provider records a stable
 provider idempotency key and durable external operation identifier. Tests simulate a crash after

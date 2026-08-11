@@ -2,9 +2,9 @@
 
 Result: **Pass**
 
-Source revision: `567887cc95702fa0407cebdf12d33e22b11dd8fb`
+Source revision: `e1a15025b4b5caa81391866d49c1b5a050f616be`
 Environment: Docker Engine 29.1.3; Compose 2.40.3; WSL2 x86_64 laptop.
-Reviewer: Codex local qualification; owner acceptance pending.
+Reviewer: Codex final qualification; owner accepted August 11, 2026.
 
 The amd64 Compose lifecycle migrated the retained local database to `0009_operational_workflows`.
 `web`, `worker`, and `nginx` were healthy; web and worker ran as `1001:1001`, Nginx as `101:101`;

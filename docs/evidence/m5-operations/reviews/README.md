@@ -1,8 +1,8 @@
 # M5 Review Disposition
 
-Status: **Substantive review corrections complete; requalification in progress**
+Status: **Final substantive review complete; owner accepted**
 
-Source revision: `567887cc95702fa0407cebdf12d33e22b11dd8fb`.
+Source revision: `e1a15025b4b5caa81391866d49c1b5a050f616be`.
 
 Local review concentrated on transaction atomicity, stream versions, inventory compensation,
 tenant authorization, reminder effective history, independent pipeline deduplication, lease
@@ -10,8 +10,8 @@ fencing, dead-letter behavior, and the external-effect uncertain crash window. T
 M5 UX review classified the standalone reminder-management flow as a required correction. The
 keeper workflow was moved to animal-profile care schedules and an overdue/due-today/upcoming
 agenda, with the established reminder engine and delivery pipeline preserved. Required corrections
-and coverage gaps were implemented test-first before requalification. Owner re-review remains
-pending.
+and coverage gaps were implemented test-first before requalification. The owner accepted the
+result on August 11, 2026.
 
 The full gate reports only two non-blocking upstream observations: Starlette's TestClient adapter
 warns about its future `httpx2` transition, and an intermittent SQLAlchemy cleanup ResourceWarning
@@ -19,8 +19,8 @@ may appear during lifecycle tests. Neither changes runtime state or a test resul
 
 CodeRabbit completed a substantive review on PR #6. GitHub Copilot review was requested but was not
 available for this repository. Quality and Container/Trivy were green at the reviewed branch head;
-GitGuardian had no current-head check run to classify. Owner acceptance and merge remain separate
-explicit gates.
+GitGuardian had no current-head check run to classify. Owner acceptance is recorded separately;
+merge remains gated on the required hosted checks.
 
 ## Finding disposition
 
@@ -36,7 +36,7 @@ explicit gates.
 | Required correction | Reminder parsing, local-day status, stale inventory submissions, and enabled blank intervals did not fail consistently. | Typed subject references, service-level timestamp errors, household-local date comparison, `422` conflict handling, and required interval validation are covered by integration/browser tests. |
 | Required correction | Capability-gated actions were rendered without corresponding capability checks. | Home operational links and the expense-create action now follow the current principal capabilities. |
 | Required correction | Evidence reproduction and labels were ambiguous. | Migration commands fail fast, Compose waits for health, screenshot inventory and compatibility labels are explicit, and M6 no longer duplicates M5 due/overdue agenda scope. |
-| False positive | The accepted event envelope required byte-identical SQLite files across phases. | The accepted compatibility rule is semantic contract/replay compatibility, not database-file byte identity; no event contract was changed. |
+| False positive | None. | No substantive reviewer finding was rejected as a false positive. |
 | Valid but deferred | Starlette TestClient `httpx2` deprecation warning. | Upstream adapter transition remains non-blocking and is retained as a warning; runtime application behavior is unaffected. |
 
 No other substantive finding was deferred. Cosmetic suggestions that did not affect correctness were
