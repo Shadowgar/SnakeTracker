@@ -495,6 +495,7 @@ class SQLAlchemyJobRepository:
         self,
         job_id: UUID,
         *,
+        household_id: UUID,
         actor_user_id: UUID,
         correlation_id: UUID,
         reason: str,
@@ -507,12 +508,14 @@ class SQLAlchemyJobRepository:
                 text(
                     "UPDATE jobs SET status='retry',available_at=:now,safe_error=:reason,"
                     "attempt_count=MIN(attempt_count,max_attempts - 1),updated_at=:now "
-                    "WHERE job_id=:job_id AND status='reconciliation_required'"
+                    "WHERE job_id=:job_id AND household_id=:household_id "
+                    "AND status='reconciliation_required'"
                 ),
                 {
                     "now": _timestamp(resolved_at),
                     "reason": safe_reason,
                     "job_id": str(job_id),
+                    "household_id": str(household_id),
                 },
             )
             if result.rowcount != 1:
@@ -554,20 +557,19 @@ class SQLAlchemyJobRepository:
             )
         return tuple(_delivery_attempt(row) for row in rows)
 
-    def dead_letters(self, household_id: UUID | None = None) -> tuple[JobRecord, ...]:
+    def dead_letters(self, household_id: UUID) -> tuple[JobRecord, ...]:
         with self._engine.connect() as connection:
-            if household_id is None:
-                statement = text(
-                    "SELECT * FROM jobs WHERE status='dead_letter' ORDER BY updated_at,job_id"
+            rows = (
+                connection.execute(
+                    text(
+                        "SELECT * FROM jobs WHERE status='dead_letter' "
+                        "AND household_id=:household_id ORDER BY updated_at,job_id"
+                    ),
+                    {"household_id": str(household_id)},
                 )
-                parameters: dict[str, object] = {}
-            else:
-                statement = text(
-                    "SELECT * FROM jobs WHERE status='dead_letter' "
-                    "AND household_id=:household_id ORDER BY updated_at,job_id"
-                )
-                parameters = {"household_id": str(household_id)}
-            rows = connection.execute(statement, parameters).mappings().all()
+                .mappings()
+                .all()
+            )
         return tuple(_job_record(row) for row in rows)
 
     @staticmethod

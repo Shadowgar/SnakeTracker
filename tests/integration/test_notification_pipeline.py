@@ -163,15 +163,51 @@ def test_intent_outbox_and_job_handoff_each_deduplicate_independently(tmp_path: 
 def test_missing_or_cross_household_recipient_fails_without_intent(tmp_path: Path) -> None:
     engine, bootstrap, fact, intents, _jobs, _rules, _facts, _recipients = _setup(tmp_path)
     try:
-        with pytest.raises(NotificationIntentValidationError, match="recipient"):
-            intents.ensure_for_fact(
-                household_id=bootstrap.household_id,
-                fact_id=fact.fact_id,
-                recipient_user_id=uuid4(),
-                channel="local",
-                correlation_id=uuid4(),
-                now=datetime.now(UTC),
+        other_household_id = uuid4()
+        other_user_id = uuid4()
+        timestamp = datetime.now(UTC).isoformat(timespec="microseconds")
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO users (user_id,email_normalized,display_name,password_hash,"
+                    "password_scheme,status,created_at,updated_at) VALUES "
+                    "(:user_id,:email,'Other owner','test-hash','argon2id','active',:now,:now)"
+                ),
+                {"user_id": str(other_user_id), "email": "other@example.com", "now": timestamp},
             )
+            connection.execute(
+                text(
+                    "INSERT INTO household_summaries "
+                    "(household_id,name,timezone,source_stream_version,source_global_position,"
+                    "created_at,updated_at) VALUES "
+                    "(:household_id,'Other home','UTC',1,1,:now,:now)"
+                ),
+                {"household_id": str(other_household_id), "now": timestamp},
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO authorization_memberships "
+                    "(household_id,user_id,role,status,source_stream_version,"
+                    "source_global_position,updated_at) VALUES "
+                    "(:household_id,:user_id,'owner','active',1,1,:now)"
+                ),
+                {
+                    "household_id": str(other_household_id),
+                    "user_id": str(other_user_id),
+                    "now": timestamp,
+                },
+            )
+
+        for invalid_recipient in (uuid4(), other_user_id):
+            with pytest.raises(NotificationIntentValidationError, match="recipient"):
+                intents.ensure_for_fact(
+                    household_id=bootstrap.household_id,
+                    fact_id=fact.fact_id,
+                    recipient_user_id=invalid_recipient,
+                    channel="local",
+                    correlation_id=uuid4(),
+                    now=datetime.now(UTC),
+                )
         with engine.connect() as connection:
             assert (
                 connection.execute(text("SELECT COUNT(*) FROM notification_intents")).scalar_one()

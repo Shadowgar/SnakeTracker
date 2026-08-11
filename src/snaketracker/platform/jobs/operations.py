@@ -20,6 +20,7 @@ class JobOperationsRepository(Protocol):
         self,
         job_id: UUID,
         *,
+        household_id: UUID,
         actor_user_id: UUID,
         correlation_id: UUID,
         reason: str,
@@ -34,6 +35,7 @@ class JobOperationsService:
     def resolve_not_delivered(
         self,
         *,
+        household_id: UUID,
         job_id: UUID,
         actor_user_id: UUID,
         actor_role: str,
@@ -49,6 +51,7 @@ class JobOperationsService:
             raise ValueError("Reconciliation reason is required.")
         return self._repository.resolve_not_delivered(
             job_id,
+            household_id=household_id,
             actor_user_id=actor_user_id,
             correlation_id=correlation_id,
             reason=reason.strip(),

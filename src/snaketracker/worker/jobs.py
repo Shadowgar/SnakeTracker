@@ -15,10 +15,6 @@ from snaketracker.infrastructure.notifications.provider import (
 from snaketracker.platform.jobs.models import JobRecord
 
 
-class SimulatedWorkerCrashError(RuntimeError):
-    """Qualification-only crash after external acceptance and before local completion."""
-
-
 class NotificationJobWorker:
     def __init__(
         self,
@@ -37,9 +33,7 @@ class NotificationJobWorker:
         self._lease_duration = lease_duration
         self._jitter_seconds = jitter_seconds
 
-    def run_one(
-        self, *, now: datetime, crash_after_provider_accept: bool = False
-    ) -> JobRecord | None:
+    def run_one(self, *, now: datetime) -> JobRecord | None:
         job = self._repository.claim(
             worker_id=self._worker_id,
             now=now,
@@ -68,10 +62,6 @@ class NotificationJobWorker:
                     job.idempotency_key,
                     now=now,
                 )
-                if crash_after_provider_accept:
-                    raise SimulatedWorkerCrashError(
-                        "Worker stopped after provider acceptance and before local completion."
-                    )
             return self._repository.succeed(
                 job.job_id,
                 token,
@@ -79,8 +69,6 @@ class NotificationJobWorker:
                 safe_outcome="Provider operation accepted and reconciled.",
                 now=now,
             )
-        except SimulatedWorkerCrashError:
-            raise
         except TransientNotificationError as error:
             return self._repository.schedule_retry(
                 job.job_id,

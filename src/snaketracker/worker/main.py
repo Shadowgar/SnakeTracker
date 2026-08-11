@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import secrets
 import signal
 import socket
 import threading
@@ -90,7 +91,7 @@ def run_worker(settings: Settings, stop: threading.Event, poll_interval: float =
             LocalQualificationNotificationProvider(engine),
             worker_id=f"{socket.gethostname()}-{os.getpid()}-notifications",
             lease_duration=timedelta(minutes=1),
-            jitter_seconds=lambda attempt: attempt % 6,
+            jitter_seconds=lambda _attempt: secrets.randbelow(31),
         )
         next_reminder_sweep_at: datetime | None = None
         while not stop.wait(poll_interval):

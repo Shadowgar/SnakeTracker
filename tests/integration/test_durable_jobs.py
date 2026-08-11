@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from threading import Barrier
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from alembic import command
@@ -23,6 +23,7 @@ from snaketracker.platform.jobs.operations import (
 )
 
 ROOT = Path(__file__).parents[2]
+TEST_HOUSEHOLD_ID = UUID("11111111-1111-4111-8111-111111111111")
 
 
 def _setup(tmp_path: Path):  # type: ignore[no-untyped-def]
@@ -42,11 +43,13 @@ def _setup(tmp_path: Path):  # type: ignore[no-untyped-def]
                 "(job_id,job_type,payload_contract,schema_version,payload_json,household_id,"
                 "priority,available_at,status,attempt_count,max_attempts,logical_key,"
                 "idempotency_key,correlation_id,created_at,updated_at) VALUES "
-                "(:job_id,'notification.delivery','notification.reminder_due',1,:payload,NULL,"
+                "(:job_id,'notification.delivery','notification.reminder_due',1,:payload,"
+                ":household_id,"
                 "100,:now,'pending',0,5,:logical_key,:idempotency_key,:correlation,:now,:now)"
             ),
             {
                 "job_id": str(job_id),
+                "household_id": str(TEST_HOUSEHOLD_ID),
                 "payload": json.dumps({"intent_id": str(uuid4()), "channel": "local"}),
                 "now": now.isoformat(timespec="microseconds"),
                 "logical_key": f"test-job:{job_id}",
@@ -220,7 +223,7 @@ def test_fifth_failure_becomes_visible_dead_letter(tmp_path: Path) -> None:
             )
             is None
         )
-        assert repository.dead_letters() == (result,)
+        assert repository.dead_letters(TEST_HOUSEHOLD_ID) == (result,)
         assert len(repository.attempts_for(job_id)) == 5
     finally:
         engine.dispose()
@@ -258,6 +261,7 @@ def test_uncertain_result_requires_authorized_reconciliation_before_retry(tmp_pa
         operations = JobOperationsService(repository)
         with pytest.raises(JobOperationsAuthorizationError):
             operations.resolve_not_delivered(
+                household_id=TEST_HOUSEHOLD_ID,
                 job_id=job_id,
                 actor_user_id=uuid4(),
                 actor_role="caretaker",
@@ -265,7 +269,21 @@ def test_uncertain_result_requires_authorized_reconciliation_before_retry(tmp_pa
                 reason="Provider lookup found no delivery.",
                 now=now + timedelta(minutes=6),
             )
+        with pytest.raises(JobLeaseConflictError, match="not awaiting reconciliation"):
+            operations.resolve_not_delivered(
+                household_id=uuid4(),
+                job_id=job_id,
+                actor_user_id=uuid4(),
+                actor_role="owner",
+                correlation_id=uuid4(),
+                reason="Cross-household operator must not resolve this job.",
+                now=now + timedelta(minutes=6),
+            )
+        still_uncertain = repository.get(job_id)
+        assert still_uncertain is not None and still_uncertain.status == "reconciliation_required"
+
         resolved = operations.resolve_not_delivered(
+            household_id=TEST_HOUSEHOLD_ID,
             job_id=job_id,
             actor_user_id=uuid4(),
             actor_role="owner",
@@ -338,6 +356,7 @@ def test_expired_final_attempt_moves_to_reconciliation_instead_of_blind_retry(
         assert repository.attempts_for(job_id)[0].status == "lease_expired"
 
         resolved = JobOperationsService(repository).resolve_not_delivered(
+            household_id=TEST_HOUSEHOLD_ID,
             job_id=job_id,
             actor_user_id=uuid4(),
             actor_role="owner",
@@ -418,6 +437,7 @@ def test_job_mutations_validate_lease_inputs_and_safe_operator_text(tmp_path: Pa
         with pytest.raises(ValueError, match="Reconciliation reason is required"):
             repository.resolve_not_delivered(
                 job_id,
+                household_id=TEST_HOUSEHOLD_ID,
                 actor_user_id=uuid4(),
                 correlation_id=uuid4(),
                 reason=" ",
@@ -426,6 +446,7 @@ def test_job_mutations_validate_lease_inputs_and_safe_operator_text(tmp_path: Pa
         with pytest.raises(JobLeaseConflictError, match="not awaiting reconciliation"):
             repository.resolve_not_delivered(
                 job_id,
+                household_id=TEST_HOUSEHOLD_ID,
                 actor_user_id=uuid4(),
                 correlation_id=uuid4(),
                 reason="Provider reported no delivery.",

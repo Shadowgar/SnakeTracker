@@ -19,7 +19,7 @@ from snaketracker.infrastructure.notifications.provider import (
     PermanentNotificationError,
     TransientNotificationError,
 )
-from snaketracker.worker.jobs import NotificationJobWorker, SimulatedWorkerCrashError
+from snaketracker.worker.jobs import NotificationJobWorker
 
 ROOT = Path(__file__).parents[2]
 
@@ -79,10 +79,32 @@ def _setup(tmp_path: Path):  # type: ignore[no-untyped-def]
 
 
 def test_crash_after_provider_acceptance_reconciles_one_logical_effect(tmp_path: Path) -> None:
-    engine, repository, provider, worker, job_id, now = _setup(tmp_path)
+    class SimulatedProcessCrash(BaseException):
+        pass
+
+    class CrashAfterAcceptanceProvider:
+        def __init__(self, delegate: LocalQualificationNotificationProvider) -> None:
+            self._delegate = delegate
+            self.capabilities = delegate.capabilities
+
+        def lookup(self, provider_key: str):  # type: ignore[no-untyped-def]
+            return self._delegate.lookup(provider_key)
+
+        def deliver(self, payload, provider_key: str, *, now: datetime):  # type: ignore[no-untyped-def]
+            self._delegate.deliver(payload, provider_key, now=now)
+            raise SimulatedProcessCrash
+
+    engine, repository, provider, _worker, job_id, now = _setup(tmp_path)
+    worker = NotificationJobWorker(
+        repository,
+        CrashAfterAcceptanceProvider(provider),
+        worker_id="crash-worker",
+        lease_duration=timedelta(seconds=10),
+        jitter_seconds=lambda _attempt: 0,
+    )
     try:
-        with pytest.raises(SimulatedWorkerCrashError):
-            worker.run_one(now=now, crash_after_provider_accept=True)
+        with pytest.raises(SimulatedProcessCrash):
+            worker.run_one(now=now)
         after_crash = repository.get(job_id)
         assert after_crash is not None and after_crash.status == "leased"
         assert provider.operation_count() == 1
@@ -146,6 +168,33 @@ def test_worker_uses_bounded_backoff_and_permanent_failure_dead_letters(tmp_path
         assert dead.attempt_count == 2
         assert dead.safe_error == "Recipient is invalid."
         assert repository.get(job_id) == dead
+    finally:
+        engine.dispose()
+
+
+def test_transient_delivery_exhaustion_dead_letters_after_bounded_attempts(
+    tmp_path: Path,
+) -> None:
+    engine, repository, _provider, _worker, job_id, now = _setup(tmp_path)
+    try:
+        worker = NotificationJobWorker(
+            repository,
+            _TransientProvider(),
+            worker_id="exhaustion-worker",
+            lease_duration=timedelta(seconds=30),
+            jitter_seconds=lambda _attempt: 0,
+        )
+        attempt_at = now
+        result = None
+        for _attempt in range(5):
+            result = worker.run_one(now=attempt_at)
+            assert result is not None
+            attempt_at = result.available_at
+
+        assert result is not None
+        assert result.status == "dead_letter"
+        assert result.attempt_count == 5
+        assert len(repository.attempts_for(job_id)) == 5
     finally:
         engine.dispose()
 
