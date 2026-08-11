@@ -2,7 +2,7 @@
 
 Result: **Pass**
 
-Source revision: `6f1bb5b8f5dc4b5d37dcf8acd839c6b2d05c6972`
+Source revision: `de39d1d17448d0016a0b83e13bcf301c23cc390b`
 Reviewer: Codex final qualification; owner accepted August 11, 2026.
 
 Reminder facts, notification intent, transactional outbox handoff, durable jobs, and delivery

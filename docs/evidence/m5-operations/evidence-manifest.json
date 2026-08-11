@@ -4,7 +4,7 @@
   "status": "M5 operational workflows reliable",
   "accepted_at": "2026-08-11",
   "generated_at": "2026-08-11T17:23:18Z",
-  "implementation_revision": "6f1bb5b8f5dc4b5d37dcf8acd839c6b2d05c6972",
+  "implementation_revision": "de39d1d17448d0016a0b83e13bcf301c23cc390b",
   "environment_classification": "laptop Docker development",
   "native_raspberry_pi_qualification": "deferred to Phase 7/pre-deployment",
   "quality": {

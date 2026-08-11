@@ -5,7 +5,7 @@ Status: **M5 operational workflows reliable**
 - Qualification date: August 11, 2026
 - Source branch: `phase5/operational-workflows`
 - Accepted: August 11, 2026
-- Qualified implementation revision: `6f1bb5b8f5dc4b5d37dcf8acd839c6b2d05c6972`
+- Qualified implementation revision: `de39d1d17448d0016a0b83e13bcf301c23cc390b`
 - Environment: approved laptop/Docker development environment
 
 This package proves the Phase 5 inventory, expense, reminder, notification-pipeline, and durable-job

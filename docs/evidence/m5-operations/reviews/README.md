@@ -2,7 +2,7 @@
 
 Status: **Final substantive review complete; owner accepted**
 
-Source revision: `6f1bb5b8f5dc4b5d37dcf8acd839c6b2d05c6972`.
+Source revision: `de39d1d17448d0016a0b83e13bcf301c23cc390b`.
 
 Local review concentrated on transaction atomicity, stream versions, inventory compensation,
 tenant authorization, reminder effective history, independent pipeline deduplication, lease
@@ -38,6 +38,7 @@ merge remains gated on the required hosted checks.
 | Required correction | Operator job resolution was not explicitly household-scoped. | Resolution and dead-letter reads now require household identity; a cross-household resolution test proves no state transition occurs. |
 | Required correction | External-effect crash qualification depended on a production worker test switch, and transient exhaustion lacked worker-level proof. | The crash is injected by a test-only provider wrapper, production has no crash switch, and five transient attempts are proven to dead-letter. |
 | Required correction | Recipient isolation was tested only with a nonexistent user. | Notification intent tests now include an active owner belonging to a different household and prove no intent or outbox write. |
+| Required correction | CI used a probabilistic plaintext-substring assertion against randomized encrypted bytes. | Backup verification now deterministically checks the encrypted framing, absence of the SQLite plaintext header, ciphertext inequality, authenticated restore, and wrong-key rejection. |
 | Required correction | Evidence reproduction and labels were ambiguous. | Migration commands fail fast, Compose waits for health, screenshot inventory and compatibility labels are explicit, and M6 no longer duplicates M5 due/overdue agenda scope. |
 | False positive | None. | No substantive reviewer finding was rejected as a false positive. |
 | Valid but deferred | Starlette TestClient `httpx2` deprecation warning. | Upstream adapter transition remains non-blocking and is retained as a warning; runtime application behavior is unaffected. |
