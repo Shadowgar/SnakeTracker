@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "milestone": "M5",
+  "status": "implementation-qualified; owner acceptance pending",
+  "generated_at": "2026-08-11T15:55:25Z",
+  "implementation_revision": "f976b4622a0f72bd165c906cdc8ab5d72a399cc6",
+  "environment_classification": "laptop Docker development",
+  "native_raspberry_pi_qualification": "deferred to Phase 7/pre-deployment",
+  "quality": {
+    "tests": 300,
+    "focused_m5_tests": 46,
+    "line_coverage_percent": 94.9,
+    "branch_coverage_percent": 85.04,
+    "dependency_vulnerabilities": 0,
+    "ruff": "pass",
+    "mypy_strict": "pass"
+  },
+  "migration": {
+    "head": "0009_operational_workflows",
+    "upgrade_downgrade_reupgrade": "pass",
+    "integrity_check": "ok",
+    "phase_2_3_4_compatibility_tests": 38
+  },
+  "containers": {
+    "amd64_compose": "pass",
+    "arm64_platform": "linux/arm64",
+    "arm64_image_digest": "sha256:c5bd7bf40915068b67f6f412c62c8c78b263e866ffacdfbacb11eda3b82ea2d7",
+    "arm64_archive_bytes": 133572096,
+    "non_root": true,
+    "live_url": "http://localhost:8081"
+  },
+  "browser": {
+    "fresh_setup_and_m5_workflow": "pass",
+    "mobile_viewport": "390x844",
+    "horizontal_overflow": false,
+    "console_errors": 0,
+    "console_warnings": 0,
+    "pa11y_wcag2aa_login_issues": 0
+  },
+  "commands": [
+    "./scripts/quality/check.sh",
+    "uv run pytest -q tests/integration/test_inventory.py tests/integration/test_expenses.py tests/integration/test_reminders.py tests/integration/test_notification_pipeline.py tests/integration/test_durable_jobs.py tests/integration/test_notification_delivery.py tests/browser/test_operational_workflows.py",
+    "docker compose up --build -d",
+    "docker compose ps",
+    "docker buildx build --platform linux/arm64 --build-arg SNAKETRACKER_UID=1001 --output type=oci,dest=/tmp/snaketracker-m5-arm64.oci.tar --metadata-file /tmp/snaketracker-m5-arm64-metadata.json .",
+    "npx --yes pa11y@9.0.1 --runner axe --standard WCAG2AA http://localhost:8081/login"
+  ]
+}
