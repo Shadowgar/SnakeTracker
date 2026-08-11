@@ -107,6 +107,18 @@ class AnimalProfile:
     def capability_profile_identity(self) -> str:
         return f"{self.animal_type}.v{self.capability_profile_version}"
 
+    @property
+    def type_label(self) -> str:
+        return animal_capability_registry.require(self.capability_profile_identity).label
+
+    @property
+    def care_action_keys(self) -> tuple[str, ...]:
+        return animal_capability_registry.require(self.capability_profile_identity).care_actions
+
+    @property
+    def reminder_kinds(self) -> tuple[str, ...]:
+        return animal_capability_registry.require(self.capability_profile_identity).reminder_kinds
+
 
 class AnimalCurrentProjection(SynchronousProjection, Protocol):
     """Application-owned write/read port for the synchronous animal profile."""
@@ -946,11 +958,20 @@ class AnimalService:
         )
 
     def effective_history(self, household_id: UUID, animal_id: UUID) -> tuple[DomainEvent, ...]:
-        events = self._event_store.load_stream(StreamKey(household_id, "animal", animal_id))
-        return evaluate_effective_events(events)
+        events = self._event_store.load_subject_events(household_id, "animal", animal_id)
+        streams: dict[StreamKey, list[DomainEvent]] = {}
+        for event in events:
+            key = StreamKey(event.household_id, event.stream_type, event.stream_id)
+            streams.setdefault(key, []).append(event)
+        effective_event_ids = {
+            event.event_id
+            for stream_events in streams.values()
+            for event in evaluate_effective_events(tuple(stream_events))
+        }
+        return tuple(event for event in events if event.event_id in effective_event_ids)
 
     def audit_history(self, household_id: UUID, animal_id: UUID) -> tuple[DomainEvent, ...]:
-        return self._event_store.load_stream(StreamKey(household_id, "animal", animal_id))
+        return self._event_store.load_subject_events(household_id, "animal", animal_id)
 
     def last_accepted_feeding_at(self, household_id: UUID, animal_id: UUID) -> datetime | None:
         accepted: datetime | None = None
@@ -965,9 +986,7 @@ class AnimalService:
     def _record_stock_linked_feeding(
         self, command: RecordFeedingCommand, payload: AnimalFeedingRecordedV1
     ) -> DomainEvent:
-        self._require_capability(
-            command.household_id, command.animal_id, AnimalCapability.FEEDING
-        )
+        self._require_capability(command.household_id, command.animal_id, AnimalCapability.FEEDING)
         inventory = self._inventory_projection
         if inventory is None:
             raise AnimalValidationError("Inventory integration is not available.")

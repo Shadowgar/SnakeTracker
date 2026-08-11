@@ -27,6 +27,8 @@
     <label>In blue state<select name="blue_state"><option value="false" {% if not target.payload.blue_state %}selected{% endif %}>No</option><option value="true" {% if target.payload.blue_state %}selected{% endif %}>Yes</option></select></label>
     <label>Completed<select name="completed"><option value="true" {% if target.payload.completed %}selected{% endif %}>Yes</option><option value="false" {% if not target.payload.completed %}selected{% endif %}>No</option></select></label>
     <label>Result<select name="result"><option value="">Not recorded</option>{% for option in ("complete", "incomplete") %}<option value="{{ option }}" {% if target.payload.result == option %}selected{% endif %}>{{ option|capitalize }}</option>{% endfor %}</select></label>
+    {% elif target.event_type == "animal.molt_recorded" %}
+    <label>Result<select name="result">{% for option in ("complete", "partial", "failed") %}<option value="{{ option }}" {% if target.payload.result == option %}selected{% endif %}>{{ option|capitalize }}</option>{% endfor %}</select></label>
     {% endif %}
     <label>Notes<textarea name="notes" rows="3">{{ target.notes or '' }}</textarea></label>
     <div class="form-actions"><a href="/animals/{{ animal.animal_id }}/timeline">Cancel</a><button type="submit">Save correction</button></div>

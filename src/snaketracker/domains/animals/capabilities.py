@@ -108,7 +108,7 @@ animal_capability_registry = AnimalCapabilityRegistry(
                 }
             ),
             care_actions=("feeding", "weight", "length", "shed", "bath"),
-            reminder_kinds=("feeding", "weight", "length", "bath"),
+            reminder_kinds=("feeding", "weight", "length", "bath", "cleaning", "water_change"),
         ),
         CapabilityProfile(
             animal_type=AnimalType.SPIDER,
@@ -123,7 +123,14 @@ animal_capability_registry = AnimalCapabilityRegistry(
                 }
             ),
             care_actions=("feeding", "weight", "molt", "premolt", "misting"),
-            reminder_kinds=("feeding", "weight", "molt", "misting"),
+            reminder_kinds=(
+                "feeding",
+                "weight",
+                "molt",
+                "misting",
+                "cleaning",
+                "water_change",
+            ),
         ),
     )
 )

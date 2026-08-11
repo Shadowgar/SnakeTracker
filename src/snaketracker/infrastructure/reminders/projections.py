@@ -187,6 +187,20 @@ class SQLAlchemyReminderProjection:
             return None
         return f"{row.animal_type}.v{row.capability_profile_version}"
 
+    def enclosure_occupant_capability_profiles(
+        self, household_id: UUID, enclosure_id: UUID
+    ) -> tuple[str, ...]:
+        with self._engine.connect() as connection:
+            rows = connection.execute(
+                text(
+                    "SELECT animal_type,capability_profile_version FROM animal_current "
+                    "WHERE household_id=:household_id AND current_enclosure_id=:enclosure_id "
+                    "ORDER BY animal_id"
+                ),
+                {"household_id": str(household_id), "enclosure_id": str(enclosure_id)},
+            ).all()
+        return tuple(f"{row.animal_type}.v{row.capability_profile_version}" for row in rows)
+
     def household_timezone(self, household_id: UUID) -> str:
         with self._engine.connect() as connection:
             timezone = connection.execute(

@@ -26,11 +26,14 @@ from snaketracker.application.animals import (
     ChangeAnimalStatusCommand,
     CorrectFeedingCommand,
     CorrectLengthCommand,
+    CorrectMoltCommand,
     CorrectShedCommand,
     CorrectWeightCommand,
     RecordBathCommand,
     RecordFeedingCommand,
     RecordLengthCommand,
+    RecordMoltCommand,
+    RecordPremoltCommand,
     RecordShedCommand,
     RecordWeightCommand,
     RegisterAnimalCommand,
@@ -57,6 +60,7 @@ from snaketracker.application.enclosures import (
     EnclosureService,
     EnclosureValidationError,
     RecordCleaningCommand,
+    RecordMistingCommand,
     RecordWaterChangeCommand,
     RegisterEnclosureCommand,
     UpdateEnclosureProfileCommand,
@@ -98,6 +102,7 @@ from snaketracker.application.reminders import (
     ReminderValidationError,
     SaveSubjectScheduleCommand,
 )
+from snaketracker.domains.animals.capabilities import animal_capability_registry
 from snaketracker.domains.animals.contracts import ANIMAL_STATUSES
 from snaketracker.domains.enclosures.contracts import ENCLOSURE_STATUSES
 from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
@@ -123,6 +128,17 @@ CARE_FORM_DETAILS: dict[str, tuple[str, str, str]] = {
     "length": ("Record length", "Add the animal's measured length in millimetres.", "lengths"),
     "shed": ("Record shed", "Add the observed shed state or completed result.", "sheds"),
     "bath": ("Record bath", "Add a completed bath or soak.", "baths"),
+    "molt": ("Record molt", "Add the observed Spider molt result.", "molts"),
+    "premolt": (
+        "Premolt observation",
+        "Record or clear the observed Spider premolt state.",
+        "premolt-observations",
+    ),
+    "misting": (
+        "Record misting",
+        "Add watering or misting care for the current enclosure.",
+        "mistings",
+    ),
 }
 
 CARE_SCHEDULE_CAPABILITIES: dict[str, tuple[str, str, str]] = {
@@ -130,6 +146,8 @@ CARE_SCHEDULE_CAPABILITIES: dict[str, tuple[str, str, str]] = {
     "weight": ("Weight check", "animal", "last weight"),
     "length": ("Length check", "animal", "last length"),
     "bath": ("Bath / soak", "animal", "last bath"),
+    "molt": ("Molt check", "animal", "last molt"),
+    "misting": ("Misting / watering", "enclosure", "last misting"),
     "cleaning": ("Enclosure cleaning", "enclosure", "last qualifying cleaning"),
     "water_change": ("Water change", "enclosure", "last water change"),
 }
@@ -341,6 +359,21 @@ def _correct_animal_event_from_form(
                 blue_state=_form_bool(form.get("blue_state", ""), "blue-state"),
                 completed=_form_bool(form.get("completed", ""), "completion"),
                 result=str(form.get("result", "")).strip() or None,
+            )
+        )
+        return
+    if target.event_type == "animal.molt_recorded":
+        animal_service.correct_molt(
+            CorrectMoltCommand(
+                household_id=principal.household_id,
+                actor_user_id=principal.user_id,
+                actor_role=principal.role,
+                animal_id=animal_id,
+                target_event_id=target.event_id,
+                idempotency_key=idempotency_key,
+                occurred_at=occurred_at,
+                result=str(form.get("result", "")),
+                observation=notes,
             )
         )
         return
@@ -1295,7 +1328,11 @@ def create_web_router(
             request,
             "animal_new.html",
             principal,
-            context={"errors": {}, "values": {}},
+            context={
+                "errors": {},
+                "values": {},
+                "animal_types": _animal_type_options(),
+            },
         )
 
     @router.get("/enclosures/new", response_class=HTMLResponse)
@@ -1540,6 +1577,7 @@ def create_web_router(
                 "notes",
             )
         }
+        values["animal_type"] = str(form.get("animal_type", "snake")).strip()
         try:
             result = animal_service.register(
                 RegisterAnimalCommand(
@@ -1556,7 +1594,11 @@ def create_web_router(
                 "animal_new.html",
                 principal,
                 status_code=422,
-                context={"errors": {"form": str(error)}, "values": values},
+                context={
+                    "errors": {"form": str(error)},
+                    "values": values,
+                    "animal_types": _animal_type_options(),
+                },
             )
         return RedirectResponse(f"/animals/{result.animal_id}", status_code=303)
 
@@ -1601,10 +1643,11 @@ def create_web_router(
                 "enclosures": enclosures,
                 "current_enclosure": current_enclosure,
                 "recent_events": recent_events[:5],
+                "care_actions": _care_action_rows(profile),
                 "animal_statuses": tuple(sorted(ANIMAL_STATUSES)),
                 "care_schedules": _care_schedule_rows(
                     principal.household_id,
-                    profile.animal_id,
+                    profile,
                     current_enclosure,
                     reminder_projection,
                     principal.household_timezone,
@@ -1631,7 +1674,7 @@ def create_web_router(
             if profile is None:
                 raise FormValidationError("Animal not found.")
             capability = CARE_SCHEDULE_CAPABILITIES.get(reminder_type)
-            if capability is None:
+            if capability is None or reminder_type not in profile.reminder_kinds:
                 raise FormValidationError("Care schedule type is not supported.")
             _title, subject_type, _source = capability
             if subject_type == "animal":
@@ -1737,6 +1780,18 @@ def create_web_router(
     @router.get("/animals/{animal_id}/baths/new", response_class=HTMLResponse)
     async def animal_bath_new(request: Request, animal_id: str) -> Response:
         return care_form_response(request, animal_id, "bath")
+
+    @router.get("/animals/{animal_id}/molts/new", response_class=HTMLResponse)
+    async def animal_molt_new(request: Request, animal_id: str) -> Response:
+        return care_form_response(request, animal_id, "molt")
+
+    @router.get("/animals/{animal_id}/premolt-observations/new", response_class=HTMLResponse)
+    async def animal_premolt_new(request: Request, animal_id: str) -> Response:
+        return care_form_response(request, animal_id, "premolt")
+
+    @router.get("/animals/{animal_id}/mistings/new", response_class=HTMLResponse)
+    async def animal_misting_new(request: Request, animal_id: str) -> Response:
+        return care_form_response(request, animal_id, "misting")
 
     @router.post("/animals/{animal_id}/photo", response_class=HTMLResponse)
     async def animal_photo_upload(request: Request, animal_id: str) -> Response:
@@ -2156,6 +2211,116 @@ def create_web_router(
             )
         return RedirectResponse(f"/animals/{animal_id}", status_code=303)
 
+    @router.post("/animals/{animal_id}/molts", response_class=HTMLResponse)
+    async def animal_molt_create(request: Request, animal_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        try:
+            animal_uuid = UUID(animal_id)
+            animal_service.record_molt(
+                RecordMoltCommand(
+                    household_id=principal.household_id,
+                    actor_user_id=principal.user_id,
+                    animal_id=animal_uuid,
+                    correlation_id=uuid4(),
+                    idempotency_key=_form_idempotency_key(form),
+                    occurred_at=_form_datetime(
+                        form.get("occurred_at", ""), principal.household_timezone
+                    ),
+                    result=str(form.get("result", "")),
+                    observation=str(form.get("notes", "")),
+                )
+            )
+        except (AnimalValidationError, FormValidationError, ValueError) as error:
+            return care_form_response(
+                request,
+                animal_id,
+                "molt",
+                principal=principal,
+                status_code=422,
+                error=str(error),
+                values=_form_values(form),
+            )
+        return RedirectResponse(f"/animals/{animal_id}", status_code=303)
+
+    @router.post("/animals/{animal_id}/premolt-observations", response_class=HTMLResponse)
+    async def animal_premolt_create(request: Request, animal_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        try:
+            animal_uuid = UUID(animal_id)
+            animal_service.record_premolt(
+                RecordPremoltCommand(
+                    household_id=principal.household_id,
+                    actor_user_id=principal.user_id,
+                    animal_id=animal_uuid,
+                    correlation_id=uuid4(),
+                    idempotency_key=_form_idempotency_key(form),
+                    occurred_at=_form_datetime(
+                        form.get("occurred_at", ""), principal.household_timezone
+                    ),
+                    observed=_form_bool(form.get("observed", ""), "premolt state"),
+                    observation=str(form.get("notes", "")),
+                )
+            )
+        except (AnimalValidationError, FormValidationError, ValueError) as error:
+            return care_form_response(
+                request,
+                animal_id,
+                "premolt",
+                principal=principal,
+                status_code=422,
+                error=str(error),
+                values=_form_values(form),
+            )
+        return RedirectResponse(f"/animals/{animal_id}", status_code=303)
+
+    @router.post("/animals/{animal_id}/mistings", response_class=HTMLResponse)
+    async def animal_misting_create(request: Request, animal_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        try:
+            animal_uuid = UUID(animal_id)
+            profile = animal_service.profile_for(principal.household_id, animal_uuid)
+            if profile is None:
+                raise FormValidationError("Animal not found.")
+            if profile.current_enclosure_id is None:
+                raise FormValidationError("Assign an enclosure before recording misting care.")
+            enclosure_service.record_misting(
+                RecordMistingCommand(
+                    household_id=principal.household_id,
+                    actor_user_id=principal.user_id,
+                    enclosure_id=profile.current_enclosure_id,
+                    animal_id=animal_uuid,
+                    correlation_id=uuid4(),
+                    idempotency_key=_form_idempotency_key(form),
+                    occurred_at=_form_datetime(
+                        form.get("occurred_at", ""), principal.household_timezone
+                    ),
+                    duration_seconds=_optional_int(
+                        form.get("duration_seconds", ""), "misting duration"
+                    ),
+                    notes=str(form.get("notes", "")),
+                )
+            )
+        except (EnclosureValidationError, FormValidationError, ValueError) as error:
+            return care_form_response(
+                request,
+                animal_id,
+                "misting",
+                principal=principal,
+                status_code=422,
+                error=str(error),
+                values=_form_values(form),
+            )
+        return RedirectResponse(f"/animals/{animal_id}", status_code=303)
+
     @router.get("/animals/{animal_id}/events/{event_id}/correct", response_class=HTMLResponse)
     async def animal_event_correction_form(
         request: Request, animal_id: str, event_id: str
@@ -2478,10 +2643,11 @@ def _animal_form_error(
             "enclosures": enclosures,
             "current_enclosure": current_enclosure,
             "recent_events": recent_events[:5],
+            "care_actions": _care_action_rows(profile),
             "care_schedules": (
                 _care_schedule_rows(
                     principal.household_id,
-                    profile.animal_id,
+                    profile,
                     current_enclosure,
                     reminder_projection,
                     principal.household_timezone,
@@ -2513,16 +2679,17 @@ def _subject_schedule_rule(
 
 def _care_schedule_rows(
     household_id: UUID,
-    animal_id: UUID,
+    animal: Any,
     current_enclosure: Any,
     projection: ReminderProjection,
     timezone_name: str,
 ) -> tuple[dict[str, Any], ...]:
     timezone = ZoneInfo(timezone_name)
     rows: list[dict[str, Any]] = []
-    for reminder_type, (title, subject_type, source_label) in CARE_SCHEDULE_CAPABILITIES.items():
+    for reminder_type in animal.reminder_kinds:
+        title, subject_type, source_label = CARE_SCHEDULE_CAPABILITIES[reminder_type]
         subject_id = (
-            animal_id
+            animal.animal_id
             if subject_type == "animal"
             else current_enclosure.enclosure_id
             if current_enclosure is not None
@@ -2562,6 +2729,30 @@ def _care_schedule_rows(
             }
         )
     return tuple(rows)
+
+
+def _animal_type_options() -> tuple[dict[str, str], ...]:
+    return tuple(
+        {
+            "value": profile.animal_type.value,
+            "label": profile.label,
+            "identity": profile.identity,
+        }
+        for identity in animal_capability_registry.identities
+        for profile in (animal_capability_registry.require(identity),)
+    )
+
+
+def _care_action_rows(animal: Any) -> tuple[dict[str, str], ...]:
+    return tuple(
+        {
+            "key": key,
+            "title": CARE_FORM_DETAILS[key][0],
+            "description": CARE_FORM_DETAILS[key][1],
+            "href": f"/animals/{animal.animal_id}/{CARE_FORM_DETAILS[key][2]}/new",
+        }
+        for key in animal.care_action_keys
+    )
 
 
 def _agenda_rows(
@@ -2837,6 +3028,19 @@ def _animal_care_form_page(
                 "message": "Return to your animal list and try again.",
             },
             status_code=404,
+        )
+    if care_kind not in animal.care_action_keys:
+        return templates.TemplateResponse(
+            request,
+            "error.html",
+            {
+                "title": "Care action not available",
+                "message": (
+                    f"{care_kind.replace('_', ' ').title()} care is not available "
+                    f"for the {animal.type_label} profile."
+                ),
+            },
+            status_code=422,
         )
     title, description, route = CARE_FORM_DETAILS[care_kind]
     return protected_page(

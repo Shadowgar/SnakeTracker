@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from snaketracker.domains.animals.capabilities import legacy_registration_profile
 from snaketracker.domains.households.replay import replay_household
 from snaketracker.platform.events import registry as registry_module
 from snaketracker.platform.events.envelope import canonical_event_data, event_checksum
@@ -16,6 +17,7 @@ from tests.support.synthetic_events import (
 
 ROOT = Path(__file__).parents[3]
 FIXTURE = ROOT / "tests/fixtures/events/phase2-household-v1.json"
+LEGACY_ANIMAL_FIXTURE = ROOT / "tests/fixtures/events/phase4-animal-registered-v1.json"
 
 
 def test_general_event_registry_api_exists_before_household_compatibility_is_moved() -> None:
@@ -73,6 +75,23 @@ def test_phase2_fixture_can_be_deserialized_without_changing_canonical_checksum(
         record["checksum"] for record in fixture["events"]
     ]
     assert replay_household(events).name == "Fixture Household"
+
+
+def test_legacy_animal_registration_fixture_remains_byte_stable_and_maps_to_snake_v1() -> None:
+    fixture = json.loads(LEGACY_ANIMAL_FIXTURE.read_text(encoding="utf-8"))
+    original_bytes = LEGACY_ANIMAL_FIXTURE.read_bytes()
+    record = fixture["events"][0]
+
+    event = registry_module.deserialize_event_record(record)
+
+    assert canonical_event_data(event) == {
+        key: value for key, value in record.items() if key != "checksum"
+    }
+    assert (
+        event_checksum(event) == "13de3916c9f9f934fb99d5e034874b0a2a0953d4f981497abc7aa27c54dd4475"
+    )
+    assert legacy_registration_profile().identity == "snake.v1"
+    assert LEGACY_ANIMAL_FIXTURE.read_bytes() == original_bytes
 
 
 def test_test_registry_requires_explicit_reserved_namespace_opt_in() -> None:

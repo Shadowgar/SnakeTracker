@@ -10,6 +10,7 @@ from uuid import UUID, uuid4, uuid5
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from snaketracker.domains.animals.capabilities import (
+    AnimalCapability,
     UnknownCapabilityProfileError,
     animal_capability_registry,
     required_reminder_capability,
@@ -20,11 +21,14 @@ from snaketracker.domains.animals.contracts import (
     AnimalFeedingRecordedV1,
     AnimalLengthCorrectedV1,
     AnimalLengthRecordedV1,
+    AnimalMoltCorrectedV1,
+    AnimalMoltRecordedV1,
     AnimalWeightCorrectedV1,
     AnimalWeightRecordedV1,
 )
 from snaketracker.domains.enclosures.contracts import (
     EnclosureCleaningRecordedV1,
+    EnclosureMistingRecordedV1,
     EnclosureWaterChangeRecordedV1,
 )
 from snaketracker.domains.reminders.contracts import (
@@ -134,6 +138,10 @@ class ReminderProjection(SynchronousProjection, Protocol):
     def subject_exists(self, household_id: UUID, subject_type: str, subject_id: UUID) -> bool: ...
 
     def animal_capability_profile(self, household_id: UUID, animal_id: UUID) -> str | None: ...
+
+    def enclosure_occupant_capability_profiles(
+        self, household_id: UUID, enclosure_id: UUID
+    ) -> tuple[str, ...]: ...
 
     def household_timezone(self, household_id: UUID) -> str: ...
 
@@ -486,19 +494,29 @@ class ReminderRuleService:
         reminder_type: str,
     ) -> None:
         required = required_reminder_capability(reminder_type)
-        if required is None or subject_type != "animal":
+        if required is None:
             return
-        identity = self._projection.animal_capability_profile(household_id, subject_id)
-        if identity is None:
+        identities = (
+            (self._projection.animal_capability_profile(household_id, subject_id),)
+            if subject_type == "animal"
+            else self._projection.enclosure_occupant_capability_profiles(household_id, subject_id)
+            if subject_type == "enclosure" and required is AnimalCapability.MISTING
+            else ()
+        )
+        supported_identities = tuple(identity for identity in identities if identity is not None)
+        if not supported_identities:
             raise ReminderValidationError("Reminder animal profile is unavailable.")
         try:
-            profile = animal_capability_registry.require(identity)
+            profiles = tuple(
+                animal_capability_registry.require(identity) for identity in supported_identities
+            )
         except UnknownCapabilityProfileError as error:
             raise ReminderValidationError("Reminder animal profile is unsupported.") from error
-        if not profile.permits(required):
+        if not any(profile.permits(required) for profile in profiles):
+            labels = ", ".join(profile.label for profile in profiles)
             raise ReminderValidationError(
                 f"{reminder_type.replace('_', ' ').title()} reminders are not available "
-                f"for the {profile.label} profile."
+                f"for the {labels} profile."
             )
 
     def _append_change(
@@ -732,8 +750,13 @@ def _qualifies(reminder_type: str, event: DomainEvent) -> bool:
             and isinstance(payload, (AnimalLengthRecordedV1, AnimalLengthCorrectedV1))
         )
         or (reminder_type == "bath" and isinstance(payload, AnimalBathRecordedV1))
+        or (
+            reminder_type == "molt"
+            and isinstance(payload, AnimalMoltRecordedV1 | AnimalMoltCorrectedV1)
+        )
         or (reminder_type == "cleaning" and isinstance(payload, EnclosureCleaningRecordedV1))
         or (reminder_type == "water_change" and isinstance(payload, EnclosureWaterChangeRecordedV1))
+        or (reminder_type == "misting" and isinstance(payload, EnclosureMistingRecordedV1))
     )
 
 

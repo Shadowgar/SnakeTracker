@@ -26,6 +26,7 @@ from snaketracker.domains.animals.contracts import (
     AnimalWeightCorrectedV1,
     AnimalWeightRecordedV1,
 )
+from snaketracker.domains.enclosures.contracts import EnclosureMistingRecordedV1
 from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
 from snaketracker.platform.events.envelope import DomainEvent
 
@@ -83,6 +84,19 @@ def present_care_event(
         description = "Premolt observed" if payload.observed else "Premolt cleared"
         if payload.observation:
             description += f" · {payload.observation}"
+    elif isinstance(payload, EnclosureMistingRecordedV1):
+        title = "Misting recorded"
+        facts = (
+            [f"{payload.duration_seconds} seconds"] if payload.duration_seconds is not None else []
+        )
+        if payload.observation:
+            facts.append(payload.observation)
+        description = " · ".join(facts) if facts else "Misting or watering care recorded."
+        enclosure_name = (enclosure_names or {}).get(event.stream_id)
+        enclosure_reference = (
+            f"{enclosure_name} ({event.stream_id})" if enclosure_name else str(event.stream_id)
+        )
+        technical_facts = (("Enclosure", enclosure_reference),)
     elif isinstance(payload, AnimalEnclosureAssignedV1):
         names = enclosure_names or {}
         target_name = names.get(payload.enclosure_id)

@@ -120,6 +120,25 @@ def test_worker_creates_encrypted_verified_backup_and_rehearses_restore(tmp_path
                 notes=None,
             )
         )
+        spider = animals.register(
+            RegisterAnimalCommand(
+                household_id=bootstrap.household_id,
+                actor_user_id=bootstrap.user_id,
+                correlation_id=uuid4(),
+                idempotency_key="backup-register-spider",
+                name="Charlotte",
+                species="Grammostola pulchra",
+                morph=None,
+                genetics=None,
+                sex=None,
+                birth_hatch_date=None,
+                acquisition_date=None,
+                breeder_source=None,
+                notes="Mixed backup fixture.",
+                animal_type="spider",
+            )
+        )
+        assert spider.profile.capability_profile_identity == "spider.v1"
         attachment_storage = LocalAttachmentStorage(tmp_path / "attachments")
         attachments = AttachmentService(
             animals=animals,
@@ -193,8 +212,8 @@ def test_worker_creates_encrypted_verified_backup_and_rehearses_restore(tmp_path
 
         verification = pipeline.verify(run)
         assert verification.attachment_count == 1
-        assert verification.database_schema_revision == "0009_operational_workflows"
-        assert verification.event_global_position >= 3
+        assert verification.database_schema_revision == "0010_multispecies_foundation"
+        assert verification.event_global_position >= 4
         assert verification.encryption_key_id == "m4-local-test-key"
         assert ("animal.photo_selected", 1) in verification.event_contracts
         restored = pipeline.rehearse_restore(run, tmp_path / "restore-rehearsal")
@@ -202,6 +221,10 @@ def test_worker_creates_encrypted_verified_backup_and_rehearses_restore(tmp_path
         with closing(sqlite3.connect(restored.database_path)) as restored_database:
             assert restored_database.execute("PRAGMA integrity_check").fetchone() == ("ok",)
             assert restored_database.execute("SELECT count(*) FROM sessions").fetchone() == (0,)
+            assert restored_database.execute(
+                "SELECT animal_type,count(*) FROM animal_current GROUP BY animal_type "
+                "ORDER BY animal_type"
+            ).fetchall() == [("snake", 1), ("spider", 1)]
         assert restored.attachment_storage.finalized_exists(finalized.storage_key, "image/png")
 
         operator_restore = run_restore_rehearsal(

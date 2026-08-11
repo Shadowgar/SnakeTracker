@@ -36,6 +36,7 @@
         {% endif %}
         <span class="animal-card-copy">
           <strong>{{ animal.name }}</strong>
+          <span class="animal-type-label">{{ animal.type_label }}</span>
           <span>{{ animal.species }}{% if animal.morph %} · {{ animal.morph }}{% endif %}</span>
           <span class="status-label">{{ animal.status|capitalize }}</span>
         </span>

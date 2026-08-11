@@ -105,6 +105,30 @@ class SQLAlchemyEventStore:
                 )
             return tuple(self._deserialize_row(connection, row) for row in rows)
 
+    def load_subject_events(
+        self, household_id: UUID, subject_type: str, subject_id: UUID
+    ) -> tuple[DomainEvent, ...]:
+        """Load immutable events that carry an exact typed household subject reference."""
+        with self._engine.connect() as connection:
+            rows = (
+                connection.execute(
+                    text(
+                        "SELECT e.* FROM domain_events e JOIN event_subjects s "
+                        "ON s.event_id=e.event_id WHERE e.household_id=:household_id "
+                        "AND s.subject_type=:subject_type AND s.subject_id=:subject_id "
+                        "ORDER BY e.global_position"
+                    ),
+                    {
+                        "household_id": str(household_id),
+                        "subject_type": subject_type,
+                        "subject_id": str(subject_id),
+                    },
+                )
+                .mappings()
+                .all()
+            )
+            return tuple(self._deserialize_row(connection, row) for row in rows)
+
     def append(
         self, key: StreamKey, *, expected_version: int, events: tuple[DomainEvent, ...]
     ) -> AppendResult:

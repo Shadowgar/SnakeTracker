@@ -353,6 +353,15 @@ def test_enclosure_misting_is_neutral_but_requires_an_applicable_occupant(
             ("enclosure", "primary"),
             ("animal", "related"),
         ]
+        animal_history = animals.effective_history(bootstrap.household_id, spider.animal_id)
+        assert misting.event_id in {event.event_id for event in animal_history}
+        misting_view = next(
+            view
+            for view in present_care_events(animal_history)
+            if view.event.event_id == misting.event_id
+        )
+        assert misting_view.title == "Misting recorded"
+        assert misting_view.description == "20 seconds · Light wall mist."
 
         with pytest.raises(EnclosureValidationError, match="not available"):
             enclosures.record_misting(

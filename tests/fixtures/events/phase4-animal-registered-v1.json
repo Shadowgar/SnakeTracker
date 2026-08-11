@@ -1,0 +1,46 @@
+{
+  "fixture_schema_version": 1,
+  "events": [
+    {
+      "event_id": "77777777-7777-4777-8777-777777777777",
+      "household_id": "11111111-1111-4111-8111-111111111111",
+      "stream_type": "animal",
+      "stream_id": "66666666-6666-4666-8666-666666666666",
+      "stream_version": 1,
+      "event_type": "animal.registered",
+      "schema_version": 1,
+      "occurred_at": "2026-08-10T12:00:00.000000+00:00",
+      "recorded_at": "2026-08-10T12:00:00.000000+00:00",
+      "actor_user_id": "22222222-2222-4222-8222-222222222222",
+      "correlation_id": "33333333-3333-4333-8333-333333333333",
+      "causation_id": null,
+      "idempotency_key": "phase4-animal-fixture",
+      "subjects": [
+        {
+          "subject_type": "animal",
+          "subject_id": "66666666-6666-4666-8666-666666666666",
+          "relationship": "primary",
+          "display_order": 0
+        }
+      ],
+      "title": "Animal registered",
+      "description": null,
+      "payload": {
+        "animal_id": "66666666-6666-4666-8666-666666666666",
+        "name": "Fixture Snake",
+        "species": "Python regius",
+        "morph": null,
+        "genetics": null,
+        "sex": "female",
+        "birth_hatch_date": null,
+        "acquisition_date": null,
+        "breeder_source": null,
+        "status": "active",
+        "notes": "Legacy immutable registration."
+      },
+      "metadata": {},
+      "notes": "Legacy immutable registration.",
+      "checksum": "13de3916c9f9f934fb99d5e034874b0a2a0953d4f981497abc7aa27c54dd4475"
+    }
+  ]
+}

@@ -105,6 +105,10 @@ class EventStore(Protocol):
         expected_boundary_event_id: UUID | None = None,
     ) -> tuple[DomainEvent, ...]: ...
 
+    def load_subject_events(
+        self, household_id: UUID, subject_type: str, subject_id: UUID
+    ) -> tuple[DomainEvent, ...]: ...
+
     def append(
         self, key: StreamKey, *, expected_version: int, events: tuple[DomainEvent, ...]
     ) -> AppendResult: ...

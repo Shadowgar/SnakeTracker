@@ -11,6 +11,13 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="idempotency_key" value="{{ command_id }}">
     {% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+    <label>Animal type
+      <select name="animal_type" required>
+        {% for option in animal_types %}
+        <option value="{{ option.value }}" {% if values.animal_type|default('snake') == option.value %}selected{% endif %}>{{ option.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
     <label>Name<input name="name" value="{{ values.name|default('') }}" required autocomplete="off"></label>
     <label>Species<input name="species" value="{{ values.species|default('') }}" required></label>
     <label>Sex
