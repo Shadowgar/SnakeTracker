@@ -101,7 +101,33 @@ Accepted: August 11, 2026
 
 Owner acceptance: [August 11, 2026 owner acceptance record](../evidence/m5-operations/approvals/2026-08-11-owner-acceptance.md). Phase 6 has not started.
 
+## Phase 5.5 / M5.5 — Multi-species animal foundation
+
+Status: M5.5 planned; implementation not started
+
+M5.5 is an additive compatibility milestone required before M6. It generalizes the existing Animal
+module and adds usable Spider care without rewriting accepted snake events or duplicating shared
+household systems.
+
+- [ ] RB Existing `animal.registered` v1 events and all M0-M5 snake workflows replay unchanged and remain keeper-usable.
+- [ ] RB New registrations use a registered animal type/capability profile, and unknown types, profile versions, or contracts fail safely.
+- [ ] RB One household animal list and enclosure system correctly support mixed Snake and Spider collections, including reassignment and occupancy.
+- [ ] RB Spider profiles support shared identity, photos, feeding outcomes/prey, optional weight, enclosure/rehousing, notes, inventory, expenses, reminders, attachments, and effective timeline history.
+- [ ] RB Spider molt and premolt history, plus configured enclosure watering/misting and maintenance, are typed, correction-safe, replayable, and human-readable.
+- [ ] RB Capability enforcement prevents snake-only length, shed, and bath actions from appearing or executing for Spider profiles and prevents inapplicable Spider actions for Snake profiles.
+- [ ] RB Reminder schedules expose only registered subject capabilities while retaining owner-configured intervals and M5 deduplication/recovery behavior.
+- [ ] RB Migration upgrade/downgrade/re-upgrade, deterministic projection rebuild, backup/restore, feeding/inventory compensation, authorization, and compatibility suites preserve existing data.
+- [ ] RB Mixed-collection browser journeys pass desktop/mobile, keyboard, screen-reader, and WCAG 2.2 AA checks.
+- [ ] QT Development-environment mixed-collection replay, response, database-growth, and container measurements are retained as non-production evidence.
+- [ ] RD Remote access remains disabled until all RD controls through M7 are accepted.
+
 ## Phase 6 / M6 — Product experience complete
+
+M6 begins only after M5.5 acceptance. Its search, reports, dashboards, analytics, reference profiles,
+and explainable suggestions must consume the registered animal type/capability identity, effective
+feeding history, applicable measurements, snake shed history, spider molt history, reminder facts,
+neutral enclosure care, and versioned species/life-stage reference profiles. M6 does not redefine
+the Animal aggregate or infer that every care fact applies to every type.
 
 - [ ] RB FTS5 search cannot disclose unauthorized records.
 - [ ] RB Reports reconcile with authoritative event fixtures.

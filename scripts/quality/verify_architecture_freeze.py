@@ -14,6 +14,7 @@ ACCEPTANCE_DATES = {
     "0036": "2026-08-05",
     "0037": "2026-08-05",
     "0038": "2026-08-10",
+    "0039": "2026-08-11",
 }
 APPROVED_AMENDMENT_PATHS = {
     "docs/README.md",
@@ -21,6 +22,8 @@ APPROVED_AMENDMENT_PATHS = {
     "docs/adr/0036-development-and-pi-deployment-qualification.md",
     "docs/adr/0037-phase-order-minimal-household-events.md",
     "docs/adr/0038-scheduling-and-husbandry-reference-profiles.md",
+    "docs/adr/0039-multispecies-animal-capabilities.md",
+    "docs/architecture/domain-catalog.md",
     "docs/architecture/event-catalog.md",
     "docs/architecture/projection-catalog.md",
     "docs/architecture/system-architecture.md",
@@ -57,7 +60,7 @@ def main() -> int:
     expected_names = set(ACCEPTANCE_DATES)
     actual_names = {path.name[:4] for path in adr_paths}
     if actual_names != expected_names:
-        failures.append("ADR catalog must contain exactly ADR-0001 through ADR-0038")
+        failures.append("ADR catalog must contain exactly ADR-0001 through ADR-0039")
     for path in adr_paths:
         text = path.read_text(encoding="utf-8")
         acceptance_date = ACCEPTANCE_DATES[path.name[:4]]

@@ -38,7 +38,8 @@ Unknown contracts stop replay and normal startup safely. Upcasters live beside t
 
 ## Initial contract families
 
-Names are stable semantic identifiers; initial schemas begin at version 1.
+Names are stable semantic identifiers; initial schemas begin at version 1. A later schema version is
+a distinct event contract identity and never rewrites an event stored under an earlier version.
 
 ### Household
 
@@ -56,7 +57,8 @@ Names are stable semantic identifiers; initial schemas begin at version 1.
 
 | Event type | Meaning |
 |---|---|
-| `animal.registered` | Creates animal identity and initial profile |
+| `animal.registered` v1 | Creates legacy snake identity and initial profile; replay deterministically selects `snake.v1` |
+| `animal.registered` v2 | Creates common animal identity and records a registered animal type/capability profile |
 | `animal.profile_corrected` | Corrects name, species, morph, genetics, sex, dates, breeder, microchip, temperament, or notes |
 | `animal.status_changed` | Changes active, quarantine, deceased, rehomed, or archived status |
 | `animal.enclosure_assigned` | Changes animal-owned current enclosure assignment |
@@ -77,6 +79,13 @@ Names are stable semantic identifiers; initial schemas begin at version 1.
 | `animal.handling_recorded` | Records handling session |
 | `animal.behavior_recorded` | Records a behavior observation |
 | `animal.bath_recorded` | Records a bath |
+| `animal.molt_recorded` | Records a spider molt occurrence, result, and keeper observations |
+| `animal.molt_corrected` | Replaces effective spider molt facts for a same-stream target event |
+| `animal.premolt_observed` | Records or clears an observed spider premolt state with notes |
+
+Length, shed, and bath contracts require a profile declaring the corresponding snake capability.
+Molt and premolt contracts require a profile declaring the corresponding spider capability.
+Feeding and weight remain shared where the active profile permits them; spider weight is optional.
 
 ### Health feature slice
 
@@ -97,6 +106,7 @@ Names are stable semantic identifiers; initial schemas begin at version 1.
 | `enclosure.profile_changed` | Changes name/type/capacity policy |
 | `enclosure.cleaning_recorded` | Records cleaning |
 | `enclosure.water_change_recorded` | Records water change |
+| `enclosure.misting_recorded` | Records configured watering/misting care with an optional typed animal subject |
 | `enclosure.status_changed` | Activates, retires, or quarantines enclosure |
 
 ### Inventory
