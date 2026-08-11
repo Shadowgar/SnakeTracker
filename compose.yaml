@@ -1,7 +1,7 @@
 name: snaketracker
 
 x-app-common: &app-common
-  image: snaketracker:${SNAKETRACKER_IMAGE_TAG:-phase4}
+  image: snaketracker:${SNAKETRACKER_IMAGE_TAG:-phase5}
   build:
     context: .
     args:
