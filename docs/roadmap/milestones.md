@@ -103,7 +103,7 @@ Owner acceptance: [August 11, 2026 owner acceptance record](../evidence/m5-opera
 
 ## Phase 5.5 / M5.5 — Multi-species animal foundation
 
-Status: M5.5 planned; implementation not started
+Status: M5.5 implementation-qualified; owner acceptance pending
 
 M5.5 is an additive compatibility milestone required before M6. It generalizes the existing Animal
 module and adds usable Spider care without rewriting accepted snake events or duplicating shared
