@@ -231,9 +231,12 @@ registered.
 
 Test desktop/mobile navigation, values and units, correction/compensation explanations, conflict
 pages, keyboard/focus/error summaries, dead-letter/reconciliation status, protected routes, CSRF,
-and no leakage across households. Reminder views must explain calculations such as “10 days after
-last accepted feeding” while keeping event IDs behind technical disclosure. Do not add M6
-dashboards, charts, search, predictions, recommendations, or PWA behavior.
+and no leakage across households. Ordinary reminder schedules are configured from each animal
+profile and automatically maintain one logical underlying rule. The Reminders page is a care agenda
+grouped as overdue, due today, and upcoming; it explains calculations such as “10 days after last
+accepted feeding” without ordinary rule-management controls. Event IDs remain behind technical
+disclosure. Do not add M6 dashboards, charts, search, predictions, recommendations, or PWA
+behavior.
 
 ### Task 12: M5 qualification and evidence
 

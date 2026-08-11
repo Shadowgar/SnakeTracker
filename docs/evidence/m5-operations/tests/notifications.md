@@ -2,7 +2,7 @@
 
 Result: **Pass**
 
-Source revision: `f976b4622a0f72bd165c906cdc8ab5d72a399cc6`  
+Source revision: `567887cc95702fa0407cebdf12d33e22b11dd8fb`
 Reviewer: Codex local qualification; owner acceptance pending.
 
 Reminder facts, notification intent, transactional outbox handoff, durable jobs, and delivery

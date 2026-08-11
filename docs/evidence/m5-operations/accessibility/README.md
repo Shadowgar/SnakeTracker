@@ -2,13 +2,15 @@
 
 Result: **Pass for the M5 implementation gate**
 
-Source revision: `f976b4622a0f72bd165c906cdc8ab5d72a399cc6`  
+Source revision: `567887cc95702fa0407cebdf12d33e22b11dd8fb`
 Reviewer: Codex local qualification; owner acceptance pending.
 
 Playwright accessibility snapshots verify one main landmark, ordered headings, explicit labels,
 keyboard-reachable links and buttons, a skip link, accessible form errors, and meaningful status
-text across inventory, expenses, reminders, and operations. Desktop and 390 by 844 mobile browser
-workflows completed without horizontal overflow or console errors.
+text across inventory, expenses, animal-profile care schedules, the care agenda, and operations.
+Each schedule is an explicitly headed article with labeled enabled, interval, due-date, and save
+controls. Desktop and 390 by 844 mobile browser workflows completed without horizontal overflow or
+console errors.
 
 Pa11y 9 with the axe runner reported `No issues found!` at WCAG 2 AA on the live login boundary:
 

@@ -2,14 +2,14 @@
 
 Result: **Pass**
 
-Source revision: `f976b4622a0f72bd165c906cdc8ab5d72a399cc6`  
+Source revision: `567887cc95702fa0407cebdf12d33e22b11dd8fb`
 Reviewer: Codex local qualification; owner acceptance pending.
 
 The forward revision is `0009_operational_workflows`. A fresh isolated SQLite database upgraded to
 head, downgraded to base, and re-upgraded to the same head; `PRAGMA integrity_check` returned `ok`.
 The migration lifecycle leaves the accepted Phase 2 household and Phase 3/4 event contracts
 unchanged. A focused compatibility, event-store, animal-care, backup, and maintenance regression
-run passed 38 tests in 4.77 seconds.
+run passed 38 tests in 4.65 seconds.
 
 Reproduce:
 

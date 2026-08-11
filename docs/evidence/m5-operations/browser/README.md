@@ -2,22 +2,26 @@
 
 Result: **Pass**
 
-Source revision: `f976b4622a0f72bd165c906cdc8ab5d72a399cc6`  
-Browser: Playwright Chromium against an isolated fresh Docker database.  
+Source revision: `567887cc95702fa0407cebdf12d33e22b11dd8fb`
+Browser: Playwright Chromium against an isolated fresh Docker database.
 Reviewer: Codex local qualification; owner acceptance pending.
 
-The real-browser run completed first household setup, authentication, inventory creation, stock
-receipt, animal creation, authorized expense entry, and a fixed-schedule reminder. The reminder
-rendered as due with a human-readable explanation. The browser console reported zero errors and
-zero warnings. A 390 by 844 viewport had a 390-pixel document width, proving no horizontal
-overflow on the reminder workflow.
+The original real-browser run completed first household setup, authentication, inventory creation,
+stock receipt, animal creation, and authorized expense entry. The corrected reminder-UX run used a
+fresh isolated Docker database, recorded an accepted feeding, configured a seven-day feeding
+schedule from the animal profile, and verified the resulting upcoming agenda item. The normal
+agenda exposed neither an Add Reminder action nor rule-disable administration. The browser console
+reported zero errors and zero warnings. Both the animal schedule and agenda had a 390-pixel
+document width at a 390 by 844 viewport, proving no horizontal overflow.
 
 Retained screenshots:
 
 - [Desktop home](desktop-home.png)
 - [Desktop inventory](desktop-inventory.png)
 - [Desktop expense detail](desktop-expense-detail.png)
+- [Desktop animal care schedule](desktop-animal-care-schedule.png)
 - [Desktop reminders](desktop-reminders.png)
+- [Mobile animal care schedule](mobile-animal-care-schedule.png)
 - [Mobile reminders](mobile-reminders.png)
 
 `desktop-expenses.png` retains the required-field validation state that preceded successful entry;

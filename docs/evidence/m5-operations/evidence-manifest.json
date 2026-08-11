@@ -2,15 +2,15 @@
   "schema_version": 1,
   "milestone": "M5",
   "status": "implementation-qualified; owner acceptance pending",
-  "generated_at": "2026-08-11T15:55:25Z",
-  "implementation_revision": "f976b4622a0f72bd165c906cdc8ab5d72a399cc6",
+  "generated_at": "2026-08-11T16:39:00Z",
+  "implementation_revision": "567887cc95702fa0407cebdf12d33e22b11dd8fb",
   "environment_classification": "laptop Docker development",
   "native_raspberry_pi_qualification": "deferred to Phase 7/pre-deployment",
   "quality": {
-    "tests": 300,
-    "focused_m5_tests": 46,
-    "line_coverage_percent": 94.9,
-    "branch_coverage_percent": 85.04,
+    "tests": 305,
+    "focused_m5_tests": 51,
+    "line_coverage_percent": 94.89,
+    "branch_coverage_percent": 85.22,
     "dependency_vulnerabilities": 0,
     "ruff": "pass",
     "mypy_strict": "pass"
@@ -24,13 +24,14 @@
   "containers": {
     "amd64_compose": "pass",
     "arm64_platform": "linux/arm64",
-    "arm64_image_digest": "sha256:c5bd7bf40915068b67f6f412c62c8c78b263e866ffacdfbacb11eda3b82ea2d7",
-    "arm64_archive_bytes": 133572096,
+    "arm64_image_digest": "sha256:8ed93d38305ce8806764afc7e577b74c06eb05a1efaf3c434c2e85334ece78e1",
+    "arm64_archive_bytes": 133626880,
     "non_root": true,
     "live_url": "http://localhost:8081"
   },
   "browser": {
     "fresh_setup_and_m5_workflow": "pass",
+    "profile_care_schedule_and_agenda": "pass",
     "mobile_viewport": "390x844",
     "horizontal_overflow": false,
     "console_errors": 0,

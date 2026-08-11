@@ -4,12 +4,14 @@ Status: **M5 implementation-qualified; owner acceptance pending**
 
 - Qualification date: August 11, 2026
 - Source branch: `phase5/operational-workflows`
-- Qualified implementation revision: `f976b4622a0f72bd165c906cdc8ab5d72a399cc6`
+- Qualified implementation revision: `567887cc95702fa0407cebdf12d33e22b11dd8fb`
 - Environment: approved laptop/Docker development environment
 
 This package proves the Phase 5 inventory, expense, reminder, notification-pipeline, and durable-job
-release blockers on the supported local development topology. It does not record owner acceptance,
-authorize M6, approve remote/public deployment, or claim Raspberry Pi deployment qualification.
+release blockers on the supported local development topology. The corrected keeper workflow now
+configures ordinary care intervals from each animal profile and presents calculated care in an
+overdue/due-today/upcoming agenda. It does not record owner acceptance, authorize M6, approve
+remote/public deployment, or claim Raspberry Pi deployment qualification.
 
 ## Evidence inventory
 

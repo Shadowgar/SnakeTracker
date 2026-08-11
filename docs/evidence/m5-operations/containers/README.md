@@ -2,8 +2,8 @@
 
 Result: **Pass**
 
-Source revision: `f976b4622a0f72bd165c906cdc8ab5d72a399cc6`  
-Environment: Docker Engine 29.1.3; Compose 2.40.3; WSL2 x86_64 laptop.  
+Source revision: `567887cc95702fa0407cebdf12d33e22b11dd8fb`
+Environment: Docker Engine 29.1.3; Compose 2.40.3; WSL2 x86_64 laptop.
 Reviewer: Codex local qualification; owner acceptance pending.
 
 The amd64 Compose lifecycle migrated the retained local database to `0009_operational_workflows`.
@@ -16,8 +16,8 @@ and 8.14 MiB Nginx. These are development observations, not Raspberry Pi qualifi
 The linux/arm64 OCI build completed with:
 
 - descriptor platform: `linux/arm64`
-- image digest: `sha256:c5bd7bf40915068b67f6f412c62c8c78b263e866ffacdfbacb11eda3b82ea2d7`
-- archive size: 133,572,096 bytes
+- image digest: `sha256:8ed93d38305ce8806764afc7e577b74c06eb05a1efaf3c434c2e85334ece78e1`
+- archive size: 133,626,880 bytes
 
 Reproduce:
 
