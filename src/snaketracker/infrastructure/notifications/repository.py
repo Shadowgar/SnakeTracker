@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID, uuid5
 
 from sqlalchemy import text
 from sqlalchemy.engine import Engine, RowMapping
+
+from snaketracker.platform.notifications.service import NotificationIntent
 
 NOTIFICATION_INTENT_NAMESPACE = UUID("8b67a3b5-bb13-50ed-8333-fb2629277e21")
 NOTIFICATION_OUTBOX_NAMESPACE = UUID("3c5146ab-b33b-50d0-b7d3-e901a11b8980")
@@ -17,18 +18,6 @@ REMINDER_DUE_CONTRACT = "notification.reminder_due"
 
 class NotificationIntentValidationError(ValueError):
     """A fact, recipient, channel, or household boundary is invalid."""
-
-
-@dataclass(frozen=True, slots=True)
-class StoredNotificationIntent:
-    intent_id: UUID
-    household_id: UUID
-    rule_id: UUID
-    occurrence_key: str
-    recipient_user_id: UUID
-    channel: str
-    correlation_id: UUID
-    created_at: datetime
 
 
 class SQLAlchemyNotificationIntentRepository:
@@ -44,7 +33,7 @@ class SQLAlchemyNotificationIntentRepository:
         channel: str,
         correlation_id: UUID,
         now: datetime,
-    ) -> StoredNotificationIntent:
+    ) -> NotificationIntent:
         recorded_at = _utc(now)
         if channel != "local":
             raise NotificationIntentValidationError(
@@ -156,8 +145,24 @@ class SQLAlchemyNotificationIntentRepository:
                 connection.rollback()
                 raise
 
+    def active_recipients(self, household_id: UUID) -> tuple[UUID, ...]:
+        with self._engine.connect() as connection:
+            rows = (
+                connection.execute(
+                    text(
+                        "SELECT user_id FROM authorization_memberships "
+                        "WHERE household_id=:household_id AND status='active' "
+                        "AND role IN ('owner','administrator') ORDER BY user_id"
+                    ),
+                    {"household_id": str(household_id)},
+                )
+                .scalars()
+                .all()
+            )
+        return tuple(UUID(str(value)) for value in rows)
+
     @staticmethod
-    def _existing(connection: object, intent_id: UUID) -> StoredNotificationIntent | None:
+    def _existing(connection: object, intent_id: UUID) -> NotificationIntent | None:
         row = (
             connection.execute(  # type: ignore[attr-defined]
                 text("SELECT * FROM notification_intents WHERE intent_id=:intent_id"),
@@ -169,8 +174,8 @@ class SQLAlchemyNotificationIntentRepository:
         return _intent(row) if row is not None else None
 
 
-def _intent(row: RowMapping) -> StoredNotificationIntent:
-    return StoredNotificationIntent(
+def _intent(row: RowMapping) -> NotificationIntent:
+    return NotificationIntent(
         intent_id=UUID(str(row["intent_id"])),
         household_id=UUID(str(row["household_id"])),
         rule_id=UUID(str(row["rule_id"])),

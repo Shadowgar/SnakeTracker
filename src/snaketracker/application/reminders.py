@@ -103,6 +103,8 @@ class ReminderProjection(SynchronousProjection, Protocol):
 
     def rules_for(self, household_id: UUID) -> tuple[ReminderRuleCurrent, ...]: ...
 
+    def all_rules(self) -> tuple[ReminderRuleCurrent, ...]: ...
+
     def facts_for(self, household_id: UUID) -> tuple[ReminderFact, ...]: ...
 
     def subject_exists(self, household_id: UUID, subject_type: str, subject_id: UUID) -> bool: ...
@@ -236,6 +238,12 @@ class ReminderRuleService:
             _stored_uuid(result.stored_response, "rule_id"),
             _stored_uuid(result.stored_response, "event_id"),
         )
+
+    def correlation_id_for(self, household_id: UUID, rule_id: UUID) -> UUID:
+        events = self._event_store.load_stream(StreamKey(household_id, "reminder-rule", rule_id))
+        if not events:
+            raise ReminderValidationError("Reminder rule history is missing.")
+        return events[0].correlation_id
 
     def change(self, command: ChangeReminderRuleCommand) -> ReminderRuleResult:
         current = self._projection.rule_for(command.household_id, command.rule_id)
@@ -378,7 +386,7 @@ class ReminderFactService:
                 rule.interval_days,
                 self._projection.household_timezone(household_id),
             )
-            explanation = f"{rule.interval_days} days after the fixed schedule anchor"
+            explanation = f"{_days_label(rule.interval_days)} after the fixed schedule anchor"
         else:
             if source is None:
                 self._projection.replace_rule_facts(household_id, rule_id, ())
@@ -389,7 +397,7 @@ class ReminderFactService:
                 self._projection.household_timezone(household_id),
             )
             explanation = (
-                f"{rule.interval_days} days after last {_source_label(rule.reminder_type)}"
+                f"{_days_label(rule.interval_days)} after last {_source_label(rule.reminder_type)}"
             )
         if calculated_at < due_at:
             self._projection.replace_rule_facts(household_id, rule_id, ())
@@ -594,6 +602,10 @@ def _source_label(reminder_type: str) -> str:
     if reminder_type == "feeding":
         return "accepted feeding"
     return reminder_type.replace("_", " ")
+
+
+def _days_label(interval_days: int) -> str:
+    return f"{interval_days} day" if interval_days == 1 else f"{interval_days} days"
 
 
 def _required_text(value: str, label: str, maximum: int) -> str:

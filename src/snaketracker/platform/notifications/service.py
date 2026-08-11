@@ -2,13 +2,22 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
 
-class NotificationIntent(Protocol):
+@dataclass(frozen=True, slots=True)
+class NotificationIntent:
     intent_id: UUID
+    household_id: UUID
+    rule_id: UUID
+    occurrence_key: str
+    recipient_user_id: UUID
+    channel: str
+    correlation_id: UUID
+    created_at: datetime
 
 
 class NotificationIntentRepository(Protocol):

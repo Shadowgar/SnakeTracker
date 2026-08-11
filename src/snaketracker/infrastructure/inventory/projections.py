@@ -56,10 +56,28 @@ class SQLAlchemyInventoryBalanceProjection:
                     raise InventoryValidationError("Insufficient available inventory to reserve.")
                 reserved += payload.quantity
             elif isinstance(payload, InventoryStockConsumedV1):
-                if on_hand - reserved < payload.quantity:
+                reserved_consumption = min(reserved, payload.quantity)
+                unreserved_consumption = payload.quantity - reserved_consumption
+                if on_hand - reserved < unreserved_consumption:
                     raise InventoryValidationError("Insufficient available inventory to consume.")
+                reserved -= reserved_consumption
                 on_hand -= payload.quantity
                 consumed += payload.quantity
+                connection.execute(
+                    text(
+                        "INSERT INTO inventory_consumption_allocations "
+                        "(household_id,consumption_event_id,item_id,quantity,reserved_quantity,"
+                        "status,reversal_event_id) VALUES "
+                        "(:household_id,:event_id,:item_id,:quantity,:reserved,'active',NULL)"
+                    ),
+                    {
+                        "household_id": str(event.household_id),
+                        "event_id": str(event.event_id),
+                        "item_id": str(event.stream_id),
+                        "quantity": payload.quantity,
+                        "reserved": reserved_consumption,
+                    },
+                )
                 if payload.source_event_id is not None:
                     connection.execute(
                         text(
@@ -81,12 +99,48 @@ class SQLAlchemyInventoryBalanceProjection:
                         },
                     )
             elif isinstance(payload, InventoryConsumptionReversedV1):
+                allocation = (
+                    connection.execute(
+                        text(
+                            "SELECT quantity,reserved_quantity,status FROM "
+                            "inventory_consumption_allocations WHERE household_id=:household_id "
+                            "AND consumption_event_id=:consumption_event_id"
+                        ),
+                        {
+                            "household_id": str(event.household_id),
+                            "consumption_event_id": str(payload.target_event_id),
+                        },
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                if (
+                    allocation is None
+                    or allocation["status"] != "active"
+                    or int(allocation["quantity"]) != payload.quantity
+                ):
+                    raise InventoryValidationError(
+                        "Consumption reversal allocation is missing or inconsistent."
+                    )
                 if consumed < payload.quantity:
                     raise InventoryValidationError(
                         "Consumption reversal exceeds consumed inventory."
                     )
                 on_hand += payload.quantity
+                reserved += int(allocation["reserved_quantity"])
                 consumed -= payload.quantity
+                connection.execute(
+                    text(
+                        "UPDATE inventory_consumption_allocations SET status='reversed',"
+                        "reversal_event_id=:reversal_event_id WHERE household_id=:household_id "
+                        "AND consumption_event_id=:consumption_event_id"
+                    ),
+                    {
+                        "reversal_event_id": str(event.event_id),
+                        "household_id": str(event.household_id),
+                        "consumption_event_id": str(payload.target_event_id),
+                    },
+                )
                 connection.execute(
                     text(
                         "UPDATE inventory_consumption_links SET status='reversed',"

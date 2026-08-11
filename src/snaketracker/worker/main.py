@@ -6,11 +6,12 @@ import os
 import signal
 import socket
 import threading
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from types import FrameType
 from uuid import uuid4
 
 from snaketracker.application.readiness import PlatformReadiness
+from snaketracker.application.reminders import ReminderFactService
 from snaketracker.bootstrap.compatibility import inspect_startup_compatibility
 from snaketracker.bootstrap.configuration import Environment, Settings, load_settings
 from snaketracker.infrastructure.attachments.storage import LocalAttachmentStorage
@@ -18,8 +19,21 @@ from snaketracker.infrastructure.backups.pipeline import LocalBackupPipeline
 from snaketracker.infrastructure.backups.repository import SQLAlchemyBackupRepository
 from snaketracker.infrastructure.database.engine import create_sqlite_engine
 from snaketracker.infrastructure.database.health import SQLAlchemyDatabaseHealth
+from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
+from snaketracker.infrastructure.jobs.repository import SQLAlchemyJobRepository
+from snaketracker.infrastructure.notifications.provider import (
+    LocalQualificationNotificationProvider,
+)
+from snaketracker.infrastructure.notifications.repository import (
+    SQLAlchemyNotificationIntentRepository,
+)
 from snaketracker.infrastructure.observability.logging import configure_logging
+from snaketracker.infrastructure.reminders.projections import SQLAlchemyReminderProjection
+from snaketracker.platform.jobs.handoff import OutboxJobHandoff
+from snaketracker.platform.notifications.service import NotificationIntentService
 from snaketracker.worker.backups import LocalBackupWorker
+from snaketracker.worker.jobs import NotificationJobWorker
+from snaketracker.worker.reminders import ReminderScheduler
 
 EXIT_RECOVERY_REQUIRED = 2
 
@@ -56,7 +70,28 @@ def run_worker(settings: Settings, stop: threading.Event, poll_interval: float =
         if not readiness.check().is_ready:
             return EXIT_RECOVERY_REQUIRED
         backup_worker = _backup_worker(settings, engine)
+        job_repository = SQLAlchemyJobRepository(engine)
+        notification_repository = SQLAlchemyNotificationIntentRepository(engine)
+        reminder_projection = SQLAlchemyReminderProjection(engine)
+        reminder_scheduler = ReminderScheduler(
+            ReminderFactService(SQLAlchemyEventStore(engine), reminder_projection),
+            reminder_projection,
+            NotificationIntentService(notification_repository),
+            notification_repository,
+        )
+        outbox_handoff = OutboxJobHandoff(job_repository)
+        notification_worker = NotificationJobWorker(
+            job_repository,
+            LocalQualificationNotificationProvider(engine),
+            worker_id=f"{socket.gethostname()}-{os.getpid()}-notifications",
+            lease_duration=timedelta(minutes=1),
+            jitter_seconds=lambda attempt: attempt % 6,
+        )
         while not stop.wait(poll_interval):
+            now = datetime.now(UTC)
+            reminder_scheduler.run_once(now=now)
+            outbox_handoff.run(now=now)
+            notification_worker.run_one(now=now)
             if backup_worker is not None:
                 backup_worker.run_once()
         return 0

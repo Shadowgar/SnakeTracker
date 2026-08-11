@@ -204,6 +204,15 @@ class ExpenseService:
     def list_expenses(self, household_id: UUID) -> tuple[ExpenseCurrent, ...]:
         return self._projection.list_for(household_id)
 
+    def expense_for(self, household_id: UUID, expense_id: UUID) -> ExpenseCurrent | None:
+        return self._projection.expense_for(household_id, expense_id)
+
+    def correlation_id_for(self, household_id: UUID, expense_id: UUID) -> UUID:
+        events = self._event_store.load_stream(StreamKey(household_id, "expense", expense_id))
+        if not events:
+            raise ExpenseValidationError("Expense history is missing.")
+        return events[0].correlation_id
+
     def _change(
         self,
         command: CorrectExpenseCommand | VoidExpenseCommand,

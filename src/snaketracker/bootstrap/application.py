@@ -16,10 +16,13 @@ from snaketracker.application.animals import AnimalService
 from snaketracker.application.attachments import AttachmentService
 from snaketracker.application.backups import BackupService
 from snaketracker.application.enclosures import EnclosureService
+from snaketracker.application.expenses import ExpenseService
 from snaketracker.application.household_bootstrap import HouseholdBootstrapService
 from snaketracker.application.identity import IdentityService
+from snaketracker.application.inventory import InventoryService
 from snaketracker.application.ports.readiness import ReadinessPort
 from snaketracker.application.readiness import PlatformReadiness
+from snaketracker.application.reminders import ReminderFactService, ReminderRuleService
 from snaketracker.bootstrap.compatibility import inspect_startup_compatibility
 from snaketracker.bootstrap.configuration import Environment, Settings, load_settings
 from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
@@ -30,17 +33,25 @@ from snaketracker.infrastructure.database.engine import create_sqlite_engine
 from snaketracker.infrastructure.database.health import SQLAlchemyDatabaseHealth
 from snaketracker.infrastructure.enclosures.projections import SQLAlchemyEnclosureCurrentProjection
 from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
+from snaketracker.infrastructure.expenses.projections import SQLAlchemyExpenseCurrentProjection
 from snaketracker.infrastructure.identity.bootstrap_repository import (
     SQLAlchemyHouseholdBootstrapRepository,
 )
 from snaketracker.infrastructure.identity.identity_repository import SQLAlchemyIdentityRepository
+from snaketracker.infrastructure.inventory.projections import SQLAlchemyInventoryBalanceProjection
+from snaketracker.infrastructure.jobs.repository import SQLAlchemyJobRepository
+from snaketracker.infrastructure.notifications.repository import (
+    SQLAlchemyNotificationIntentRepository,
+)
 from snaketracker.infrastructure.observability.correlation import (
     correlation_context,
     normalize_correlation_id,
 )
 from snaketracker.infrastructure.observability.logging import configure_logging
 from snaketracker.infrastructure.observability.metrics import PlatformMetrics
+from snaketracker.infrastructure.reminders.projections import SQLAlchemyReminderProjection
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
+from snaketracker.platform.notifications.service import NotificationIntentService
 from snaketracker.presentation.health import create_health_router
 from snaketracker.presentation.web import create_web_router
 
@@ -123,8 +134,13 @@ def build_application(settings: Settings) -> FastAPI:
         password_hasher = Argon2PasswordHasher()
         bootstrap_repository = SQLAlchemyHouseholdBootstrapRepository(engine)
         identity_repository = SQLAlchemyIdentityRepository(engine)
+        event_store = SQLAlchemyEventStore(engine)
+        inventory_projection = SQLAlchemyInventoryBalanceProjection(engine)
+        inventory_service = InventoryService(event_store, inventory_projection)
         animal_service = AnimalService(
-            SQLAlchemyEventStore(engine), SQLAlchemyAnimalCurrentProjection(engine)
+            event_store,
+            SQLAlchemyAnimalCurrentProjection(engine),
+            inventory_projection=inventory_projection,
         )
         attachment_service = AttachmentService(
             animals=animal_service,
@@ -134,8 +150,9 @@ def build_application(settings: Settings) -> FastAPI:
             ),
         )
         enclosure_service = EnclosureService(
-            SQLAlchemyEventStore(engine), SQLAlchemyEnclosureCurrentProjection(engine)
+            event_store, SQLAlchemyEnclosureCurrentProjection(engine)
         )
+        reminder_projection = SQLAlchemyReminderProjection(engine)
         app.include_router(
             create_web_router(
                 bootstrap_service=HouseholdBootstrapService(
@@ -157,6 +174,17 @@ def build_application(settings: Settings) -> FastAPI:
                 attachment_service=attachment_service,
                 backup_service=BackupService(SQLAlchemyBackupRepository(engine)),
                 enclosure_service=enclosure_service,
+                inventory_service=inventory_service,
+                expense_service=ExpenseService(
+                    event_store, SQLAlchemyExpenseCurrentProjection(engine)
+                ),
+                reminder_rule_service=ReminderRuleService(event_store, reminder_projection),
+                reminder_fact_service=ReminderFactService(event_store, reminder_projection),
+                reminder_projection=reminder_projection,
+                notification_intent_service=NotificationIntentService(
+                    SQLAlchemyNotificationIntentRepository(engine)
+                ),
+                job_repository=SQLAlchemyJobRepository(engine),
                 is_bootstrapped=identity_repository.has_users,
                 secure_cookie=settings.session_cookie_secure,
                 expected_origin=(

@@ -109,6 +109,21 @@ class SQLAlchemyJobRepository:
         with self._engine.connect() as connection:
             return self._job(connection, job_id)
 
+    def list_for(self, household_id: UUID) -> tuple[JobRecord, ...]:
+        with self._engine.connect() as connection:
+            rows = (
+                connection.execute(
+                    text(
+                        "SELECT * FROM jobs WHERE household_id=:household_id "
+                        "ORDER BY created_at DESC,job_id"
+                    ),
+                    {"household_id": str(household_id)},
+                )
+                .mappings()
+                .all()
+            )
+        return tuple(_job_record(row) for row in rows)
+
     def claim(
         self, *, worker_id: str, now: datetime, lease_duration: timedelta
     ) -> JobRecord | None:

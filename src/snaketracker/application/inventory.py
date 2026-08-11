@@ -10,10 +10,12 @@ from uuid import UUID, uuid4
 from snaketracker.domains.inventory.contracts import (
     InventoryConsumptionReversedV1,
     InventoryItemRegisteredV1,
+    InventoryReorderPolicyChangedV1,
     InventoryStockAdjustedV1,
     InventoryStockConsumedV1,
     InventoryStockExpiredV1,
     InventoryStockReceivedV1,
+    InventoryStockReservedV1,
 )
 from snaketracker.platform.events.envelope import (
     DomainEvent,
@@ -106,6 +108,18 @@ class ConsumeStockCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class ReserveStockCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    item_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    expected_stream_version: int
+    quantity: int
+    reservation_key: str
+
+
+@dataclass(frozen=True, slots=True)
 class ReverseConsumptionCommand:
     household_id: UUID
     actor_user_id: UUID
@@ -140,6 +154,17 @@ class ExpireStockCommand:
     expected_stream_version: int
     quantity: int
     reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class ChangeReorderPolicyCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    item_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    expected_stream_version: int
+    reorder_threshold: int | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -227,6 +252,18 @@ class InventoryService:
             "Inventory stock consumed",
         )
 
+    def reserve(self, command: ReserveStockCommand) -> InventoryCommandResult:
+        return self._append(
+            command,
+            "inventory.stock_reserved",
+            InventoryStockReservedV1(
+                _positive(command.quantity, "Reserved quantity"),
+                _required_text(command.reservation_key, "Reservation key"),
+            ),
+            "inventory.reserve",
+            "Inventory stock reserved",
+        )
+
     def reverse_consumption(self, command: ReverseConsumptionCommand) -> InventoryCommandResult:
         existing = self._existing(command.household_id, command.item_id)
         target = next(
@@ -282,16 +319,32 @@ class InventoryService:
             "Inventory stock expired",
         )
 
+    def change_reorder_policy(self, command: ChangeReorderPolicyCommand) -> InventoryCommandResult:
+        if command.reorder_threshold is not None and command.reorder_threshold < 0:
+            raise InventoryValidationError("Reorder threshold cannot be negative.")
+        return self._append(
+            command,
+            "inventory.reorder_policy_changed",
+            InventoryReorderPolicyChangedV1(command.reorder_threshold),
+            "inventory.change_reorder_policy",
+            "Inventory reorder policy changed",
+        )
+
     def list_balances(self, household_id: UUID) -> tuple[InventoryBalance, ...]:
         return self._projection.list_for(household_id)
+
+    def balance_for(self, household_id: UUID, item_id: UUID) -> InventoryBalance | None:
+        return self._projection.balance_for(household_id, item_id)
 
     def _append(
         self,
         command: ReceiveStockCommand
         | ConsumeStockCommand
+        | ReserveStockCommand
         | ReverseConsumptionCommand
         | AdjustStockCommand
-        | ExpireStockCommand,
+        | ExpireStockCommand
+        | ChangeReorderPolicyCommand,
         event_type: str,
         payload: EventPayload,
         scope: str,

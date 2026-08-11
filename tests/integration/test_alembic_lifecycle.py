@@ -40,6 +40,7 @@ PHASE_FIVE_TABLES = {
     "idempotency_operations",
     "inventory_balance",
     "inventory_consumption_links",
+    "inventory_consumption_allocations",
     "jobs",
     "login_rate_limits",
     "local_notification_operations",

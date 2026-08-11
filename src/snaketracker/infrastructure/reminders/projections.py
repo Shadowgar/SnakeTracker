@@ -127,6 +127,20 @@ class SQLAlchemyReminderProjection:
             )
         return tuple(_rule(row) for row in rows)
 
+    def all_rules(self) -> tuple[ReminderRuleCurrent, ...]:
+        with self._engine.connect() as connection:
+            rows = (
+                connection.execute(
+                    text(
+                        "SELECT * FROM reminder_rule_current "
+                        "ORDER BY household_id,reminder_type,rule_id"
+                    )
+                )
+                .mappings()
+                .all()
+            )
+        return tuple(_rule(row) for row in rows)
+
     def facts_for(self, household_id: UUID) -> tuple[ReminderFact, ...]:
         with self._engine.connect() as connection:
             rows = (

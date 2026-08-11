@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Inventory · SnakeTracker{% endblock %}
+{% block content %}
+<section class="dashboard" aria-labelledby="page-title">
+  <header><p class="eyebrow">Operations</p><h1 id="page-title">Inventory</h1><p class="lede">Track physical care supplies without losing the immutable stock history.</p></header>
+  {% if 'inventory.manage' in principal.capabilities %}<div class="dashboard-actions"><a class="button-link" href="/inventory/new">Add inventory item</a></div>{% endif %}
+  {% if items %}<ul class="record-list">{% for item in items %}<li><a href="/inventory/{{ item.item_id }}"><strong>{{ item.name }}</strong><span>{{ item.on_hand_quantity }} {{ item.unit }} on hand · {{ item.reserved_quantity }} reserved</span></a></li>{% endfor %}</ul>{% else %}<div class="empty-state"><h2>No inventory yet</h2><p>Add an item when you are ready to track stock.</p></div>{% endif %}
+</section>
+{% endblock %}

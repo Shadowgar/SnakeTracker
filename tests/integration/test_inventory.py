@@ -21,12 +21,14 @@ from snaketracker.application.animals import (
 from snaketracker.application.household_bootstrap import BootstrapCommand, HouseholdBootstrapService
 from snaketracker.application.inventory import (
     AdjustStockCommand,
+    ChangeReorderPolicyCommand,
     ConsumeStockCommand,
     ExpireStockCommand,
     InventoryService,
     InventoryValidationError,
     ReceiveStockCommand,
     RegisterInventoryItemCommand,
+    ReserveStockCommand,
     ReverseConsumptionCommand,
 )
 from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
@@ -174,6 +176,91 @@ def test_inventory_balance_follows_receipt_consumption_compensation_and_adjustme
             "inventory.stock_expired",
         ]
         assert received.event.stream_version == 2
+    finally:
+        engine.dispose()
+
+
+def test_inventory_reservation_is_consumed_deterministically_and_policy_changes(
+    tmp_path: Path,
+) -> None:
+    engine, bootstrap, _store, service, projection = _setup(tmp_path)
+    try:
+        item = service.register(
+            RegisterInventoryItemCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                uuid4(),
+                "inventory-reservation-item",
+                "Frozen mice",
+                "item",
+                2,
+            )
+        )
+        service.receive(
+            ReceiveStockCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                item.item_id,
+                uuid4(),
+                "inventory-reservation-receive",
+                1,
+                10,
+                None,
+            )
+        )
+        service.reserve(
+            ReserveStockCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                item.item_id,
+                uuid4(),
+                "inventory-reserve",
+                2,
+                3,
+                "feeding-plan-1",
+            )
+        )
+        consumed = service.consume(
+            ConsumeStockCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                item.item_id,
+                uuid4(),
+                "inventory-consume-reserved",
+                3,
+                2,
+                None,
+            )
+        )
+        service.reverse_consumption(
+            ReverseConsumptionCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                item.item_id,
+                uuid4(),
+                "inventory-reverse-reserved",
+                4,
+                consumed.event.event_id,
+                2,
+                "Reserved feeding was cancelled.",
+            )
+        )
+        service.change_reorder_policy(
+            ChangeReorderPolicyCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                item.item_id,
+                uuid4(),
+                "inventory-reorder-policy",
+                5,
+                5,
+            )
+        )
+        balance = projection.balance_for(bootstrap.household_id, item.item_id)
+        assert balance is not None
+        assert (balance.on_hand_quantity, balance.reserved_quantity) == (10, 3)
+        assert balance.reorder_threshold == 5
+        assert balance.stream_version == 6
     finally:
         engine.dispose()
 

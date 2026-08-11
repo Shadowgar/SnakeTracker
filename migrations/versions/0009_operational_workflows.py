@@ -62,6 +62,29 @@ def upgrade() -> None:
         sa.CheckConstraint("quantity > 0", name="ck_inventory_link_quantity"),
         sa.CheckConstraint("status IN ('active','reversed')", name="ck_inventory_link_status"),
     )
+    op.create_table(
+        "inventory_consumption_allocations",
+        sa.Column("household_id", sa.String(36), nullable=False),
+        sa.Column("consumption_event_id", sa.String(36), nullable=False),
+        sa.Column("item_id", sa.String(36), nullable=False),
+        sa.Column("quantity", sa.Integer(), nullable=False),
+        sa.Column("reserved_quantity", sa.Integer(), nullable=False),
+        sa.Column("status", sa.String(24), nullable=False),
+        sa.Column("reversal_event_id", sa.String(36)),
+        sa.PrimaryKeyConstraint(
+            "household_id",
+            "consumption_event_id",
+            name="pk_inventory_consumption_allocations",
+        ),
+        sa.CheckConstraint("quantity > 0", name="ck_inventory_allocation_quantity"),
+        sa.CheckConstraint(
+            "reserved_quantity >= 0 AND reserved_quantity <= quantity",
+            name="ck_inventory_allocation_reserved",
+        ),
+        sa.CheckConstraint(
+            "status IN ('active','reversed')", name="ck_inventory_allocation_status"
+        ),
+    )
 
     op.create_table(
         "expense_current",
@@ -265,6 +288,7 @@ def downgrade() -> None:
     op.drop_table("reminder_rule_current")
     op.drop_index("ix_expense_household_occurred", table_name="expense_current")
     op.drop_table("expense_current")
+    op.drop_table("inventory_consumption_allocations")
     op.drop_table("inventory_consumption_links")
     op.drop_index("ix_inventory_household_name", table_name="inventory_balance")
     op.drop_table("inventory_balance")
