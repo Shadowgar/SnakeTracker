@@ -454,6 +454,92 @@ def test_animal_profile_manages_care_schedule_and_reminders_is_an_agenda(
         assert disabled.status_code == 303
         assert "No scheduled care yet" in client.get("/reminders").text
 
+        unsupported = client.post(
+            f"{animal_url}/care-schedule/shedding",
+            data={
+                "csrf_token": _csrf(disable_profile.text),
+                "idempotency_key": "profile-unsupported-schedule",
+                "expected_stream_version": "0",
+                "enabled": "true",
+                "interval_days": "7",
+                "override_due_at": "",
+            },
+        )
+        assert unsupported.status_code == 422
+        assert "Care schedule type is not supported" in unsupported.text
+
+        cleaning_without_enclosure = client.post(
+            f"{animal_url}/care-schedule/cleaning",
+            data={
+                "csrf_token": _csrf(disable_profile.text),
+                "idempotency_key": "profile-cleaning-without-enclosure",
+                "expected_stream_version": "0",
+                "enabled": "true",
+                "interval_days": "30",
+                "override_due_at": "",
+            },
+        )
+        assert cleaning_without_enclosure.status_code == 422
+        assert "Assign an enclosure" in cleaning_without_enclosure.text
+
+        missing_animal = client.post(
+            f"/animals/{uuid4()}/care-schedule/feeding",
+            data={
+                "csrf_token": _csrf(disable_profile.text),
+                "idempotency_key": "profile-missing-animal-schedule",
+                "expected_stream_version": "0",
+                "enabled": "true",
+                "interval_days": "7",
+                "override_due_at": "",
+            },
+        )
+        assert missing_animal.status_code == 404
+
+        enclosure_form = client.get("/enclosures/new")
+        enclosure = client.post(
+            "/enclosures",
+            data={
+                "csrf_token": _csrf(enclosure_form.text),
+                "name": "Keeper enclosure",
+                "enclosure_type": "vivarium",
+                "notes": "",
+            },
+            follow_redirects=False,
+        )
+        assert enclosure.status_code == 303
+        enclosure_id = enclosure.headers["location"].rsplit("/", 1)[-1]
+        profile = client.get(animal_url)
+        assigned = client.post(
+            f"{animal_url}/enclosure",
+            data={
+                "csrf_token": _csrf(profile.text),
+                "enclosure_id": enclosure_id,
+                "occurred_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M"),
+                "notes": "",
+            },
+            follow_redirects=False,
+        )
+        assert assigned.status_code == 303
+        profile = client.get(animal_url)
+        cleaning = client.post(
+            f"{animal_url}/care-schedule/cleaning",
+            data={
+                "csrf_token": _csrf(profile.text),
+                "idempotency_key": "profile-cleaning-schedule",
+                "expected_stream_version": "0",
+                "enabled": "true",
+                "interval_days": "30",
+                "override_due_at": (datetime.now(UTC) + timedelta(days=30)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+            },
+            follow_redirects=False,
+        )
+        assert cleaning.status_code == 303
+        agenda = client.get("/reminders")
+        assert "Enclosure cleaning" in agenda.text
+        assert "Keeper enclosure" in agenda.text
+
 
 def test_care_agenda_groups_overdue_due_today_and_upcoming_schedules(
     tmp_path: Path,

@@ -2605,6 +2605,10 @@ def _agenda_rows(
         grouped[item.status].append(
             {
                 "item": item,
+                "title": CARE_SCHEDULE_CAPABILITIES.get(
+                    item.reminder_type,
+                    (item.reminder_type.replace("_", " ").title(), "", ""),
+                )[0],
                 "subject_name": subject_name,
                 "subject_url": subject_url,
                 "location_name": location_name,

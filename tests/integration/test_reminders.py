@@ -673,11 +673,28 @@ def test_profile_schedule_save_reuses_one_logical_rule_and_disables_it(tmp_path:
         )
         assert matching == (changed,)
 
+        unchanged = rules.save_subject_schedule(command("profile-feeding-noop", 2, 14, True))
+        assert unchanged == changed
+        with pytest.raises(ReminderValidationError, match="changed in another request"):
+            rules.save_subject_schedule(command("profile-feeding-stale", 1, 30, True))
+
         disabled = rules.save_subject_schedule(command("profile-feeding-disable", 2, 14, False))
         assert disabled is not None
         assert disabled.rule_id == saved.rule_id
         assert disabled.enabled is False
         assert disabled.stream_version == 3
+
+        absent = replace(
+            command("profile-bath-disabled", 0, 14, False),
+            reminder_type="bath",
+        )
+        assert rules.save_subject_schedule(absent) is None
+        missing_subject = replace(
+            command("profile-missing-subject", 0, 7, True),
+            subject_id=uuid4(),
+        )
+        with pytest.raises(ReminderValidationError, match="does not exist"):
+            rules.save_subject_schedule(missing_subject)
     finally:
         engine.dispose()
 
@@ -707,6 +724,15 @@ def test_agenda_preview_includes_upcoming_effective_care_without_delivery_fact(
             )
         )
         rule = rules.create(_rule_command(bootstrap, animal_id, interval_days=7))
+        rules.create(
+            _rule_command(
+                bootstrap,
+                animal_id,
+                idempotency_key="agenda-weight-without-source",
+                reminder_type="weight",
+                interval_days=30,
+            )
+        )
 
         agenda = facts.agenda_for(
             bootstrap.household_id,

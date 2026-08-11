@@ -22,7 +22,7 @@
               <div>
                 <a class="agenda-animal" href="{{ row.subject_url }}">{{ row.subject_name }}</a>
                 {% if row.location_name %}<span class="muted"> · {{ row.location_name }}</span>{% endif %}
-                <h3>{{ row.item.reminder_type|replace('_',' ')|title }}</h3>
+                <h3>{{ row.title }}</h3>
               </div>
               <time datetime="{{ row.item.due_at.isoformat() }}">
                 {% if row.item.status == 'overdue' %}Overdue · due {{ row.item.due_at.astimezone(household_zone).strftime('%b %d') }}
