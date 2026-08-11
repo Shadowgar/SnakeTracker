@@ -248,10 +248,15 @@ def test_five_animal_mixed_collection_shows_type_photo_and_applicable_actions(
         assert "Record bath" not in spider.text
         assert "Molt check" in spider.text
         assert "Length check" not in spider.text
+        assert "Premolt state" in spider.text
+        assert "Not recorded" in spider.text
 
         direct_snake_form = client.get(f"{profiles['Spider A']}/lengths/new")
         assert direct_snake_form.status_code == 422
         assert "not available" in direct_snake_form.text
+        malformed_animal_form = client.get("/animals/not-a-uuid/molts/new")
+        assert malformed_animal_form.status_code == 404
+        assert "Animal not found" in malformed_animal_form.text
 
         snake_habitat = _create_enclosure(client, "Snake Habitat")
         spider_tower = _create_enclosure(client, "Spider Tower")
@@ -316,6 +321,23 @@ def test_five_animal_mixed_collection_shows_type_photo_and_applicable_actions(
         )
         assert premolt.status_code == 303
         spider_profile = client.get(profiles["Spider A"])
+        assert "Premolt state" in spider_profile.text
+        assert "Observed · Darkened abdomen." in spider_profile.text
+        cleared_premolt = client.post(
+            f"{profiles['Spider A']}/premolt-observations",
+            data={
+                "csrf_token": _csrf(spider_profile.text),
+                "idempotency_key": "m55-browser-spider-premolt-cleared",
+                "occurred_at": occurred_at,
+                "observed": "false",
+                "notes": "",
+            },
+            follow_redirects=False,
+        )
+        assert cleared_premolt.status_code == 303
+        spider_profile = client.get(profiles["Spider A"])
+        assert "Premolt state" in spider_profile.text
+        assert "Cleared" in spider_profile.text
         misting = client.post(
             f"{profiles['Spider A']}/mistings",
             data={

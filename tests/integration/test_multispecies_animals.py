@@ -7,6 +7,7 @@ from uuid import uuid4
 import pytest
 from alembic import command
 from alembic.config import Config
+from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from snaketracker.application.animals import (
@@ -270,6 +271,37 @@ def test_spider_molt_premolt_and_correction_are_effective_typed_history(tmp_path
         assert cleared_state is not None
         assert cleared_state.observed is False
         assert cleared_state.observation == "Normal color returned."
+
+        plain_molt = service.record_molt(
+            RecordMoltCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                spider.animal_id,
+                uuid4(),
+                "m55-molt-without-observation",
+                NOW + timedelta(minutes=2),
+                "complete",
+                None,
+            )
+        )
+        plain_premolt = service.record_premolt(
+            RecordPremoltCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                spider.animal_id,
+                uuid4(),
+                "m55-premolt-cleared-without-observation",
+                NOW + timedelta(minutes=3),
+                False,
+                None,
+            )
+        )
+        descriptions = {
+            view.event.event_id: view.description
+            for view in present_care_events(store.load_stream(spider.stream_key))
+        }
+        assert descriptions[plain_molt.event.event_id] == "Complete"
+        assert descriptions[plain_premolt.event.event_id] == "Premolt cleared"
     finally:
         engine.dispose()
 
@@ -292,6 +324,21 @@ def test_snake_rejects_spider_only_molt_command(tmp_path: Path) -> None:
                 )
             )
         assert len(store.load_stream(snake.stream_key)) == 1
+    finally:
+        engine.dispose()
+
+
+def test_current_premolt_state_is_absent_until_an_applicable_observation_exists(
+    tmp_path: Path,
+) -> None:
+    service, _store, bootstrap, engine = _services(tmp_path)
+    try:
+        snake = _register(service, bootstrap, "snake", "Nyx")
+        spider = _register(service, bootstrap, "spider", "Charlotte")
+
+        assert service.current_premolt_state(bootstrap.household_id, uuid4()) is None
+        assert service.current_premolt_state(bootstrap.household_id, snake.animal_id) is None
+        assert service.current_premolt_state(bootstrap.household_id, spider.animal_id) is None
     finally:
         engine.dispose()
 
@@ -358,6 +405,68 @@ def test_reminder_rules_enforce_the_animal_capability_profile(tmp_path: Path) ->
             )
         )
         assert created.current.reminder_type == "molt"
+
+        enclosure_projection = SQLAlchemyEnclosureCurrentProjection(engine)
+        enclosures = EnclosureService(store, enclosure_projection)
+        habitat = enclosures.register(
+            RegisterEnclosureCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                uuid4(),
+                "m55-reminder-enclosure",
+                "Misting habitat",
+                "terrarium",
+                None,
+            )
+        )
+
+        def misting_rule(key: str) -> CreateReminderRuleCommand:
+            return CreateReminderRuleCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                uuid4(),
+                key,
+                "enclosure",
+                habitat.enclosure_id,
+                "misting",
+                "event_relative",
+                2,
+                None,
+                None,
+                True,
+                "local",
+            )
+
+        with pytest.raises(ReminderValidationError, match="profile is unavailable"):
+            reminders.create(misting_rule("m55-empty-enclosure-misting-reminder"))
+        animal_service.assign_enclosure(
+            AssignEnclosureCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                snake.animal_id,
+                habitat.enclosure_id,
+                uuid4(),
+                "m55-reminder-assign-snake",
+                NOW,
+                None,
+            )
+        )
+        with pytest.raises(ReminderValidationError, match="not available"):
+            reminders.create(misting_rule("m55-snake-enclosure-misting-reminder"))
+        animal_service.assign_enclosure(
+            AssignEnclosureCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                spider.animal_id,
+                habitat.enclosure_id,
+                uuid4(),
+                "m55-reminder-assign-spider",
+                NOW,
+                None,
+            )
+        )
+        enclosure_rule = reminders.create(misting_rule("m55-spider-enclosure-misting-reminder"))
+        assert enclosure_rule.current.subject_type == "enclosure"
     finally:
         engine.dispose()
 
@@ -382,6 +491,38 @@ def test_enclosure_misting_is_neutral_but_requires_an_applicable_occupant(
                 None,
             )
         )
+        for duration, key in (
+            (0, "m55-invalid-zero-misting-duration"),
+            (3601, "m55-invalid-long-misting-duration"),
+        ):
+            with pytest.raises(EnclosureValidationError, match="duration"):
+                enclosures.record_misting(
+                    RecordMistingCommand(
+                        bootstrap.household_id,
+                        bootstrap.user_id,
+                        habitat.enclosure_id,
+                        spider.animal_id,
+                        uuid4(),
+                        key,
+                        NOW,
+                        duration,
+                        None,
+                    )
+                )
+        with pytest.raises(EnclosureValidationError, match="assigned household occupant"):
+            enclosures.record_misting(
+                RecordMistingCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    habitat.enclosure_id,
+                    spider.animal_id,
+                    uuid4(),
+                    "m55-unassigned-misting",
+                    NOW,
+                    None,
+                    None,
+                )
+            )
         animals.assign_enclosure(
             AssignEnclosureCommand(
                 bootstrap.household_id,
@@ -422,6 +563,66 @@ def test_enclosure_misting_is_neutral_but_requires_an_applicable_occupant(
         )
         assert misting_view.title == "Misting recorded"
         assert misting_view.description == "20 seconds · Light wall mist."
+        unmeasured_misting = enclosures.record_misting(
+            RecordMistingCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                habitat.enclosure_id,
+                spider.animal_id,
+                uuid4(),
+                "m55-record-unmeasured-misting",
+                NOW + timedelta(minutes=1),
+                None,
+                None,
+            )
+        )
+        unmeasured_view = next(
+            view
+            for view in present_care_events(
+                animals.effective_history(bootstrap.household_id, spider.animal_id)
+            )
+            if view.event.event_id == unmeasured_misting.event_id
+        )
+        assert unmeasured_view.description == "Misting or watering care recorded."
+
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "UPDATE animal_current SET capability_profile_version = 99 "
+                    "WHERE household_id = :household_id AND animal_id = :animal_id"
+                ),
+                {
+                    "household_id": str(bootstrap.household_id),
+                    "animal_id": str(spider.animal_id),
+                },
+            )
+        with pytest.raises(EnclosureValidationError, match="profile is unsupported"):
+            enclosures.record_misting(
+                RecordMistingCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    habitat.enclosure_id,
+                    spider.animal_id,
+                    uuid4(),
+                    "m55-unsupported-profile-misting",
+                    NOW + timedelta(minutes=2),
+                    10,
+                    None,
+                )
+            )
+
+        animals.assign_enclosure(
+            AssignEnclosureCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                snake.animal_id,
+                habitat.enclosure_id,
+                uuid4(),
+                "m55-assign-snake-before-misting-rejection",
+                NOW + timedelta(minutes=3),
+                None,
+            )
+        )
 
         with pytest.raises(EnclosureValidationError, match="not available"):
             enclosures.record_misting(

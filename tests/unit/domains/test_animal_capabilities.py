@@ -4,7 +4,9 @@ import pytest
 
 from snaketracker.domains.animals.capabilities import (
     AnimalCapability,
+    AnimalCapabilityRegistry,
     AnimalType,
+    CapabilityProfile,
     UnknownCapabilityProfileError,
     animal_capability_registry,
 )
@@ -59,3 +61,13 @@ def test_profile_definitions_are_immutable() -> None:
 
     with pytest.raises(AttributeError):
         profile.identity = "gecko.v1"  # type: ignore[misc]
+
+
+def test_registry_rejects_invalid_versions_and_duplicate_contract_identities() -> None:
+    invalid_version = CapabilityProfile(AnimalType.SPIDER, 0, "Spider", frozenset(), (), ())
+    spider = animal_capability_registry.require("spider.v1")
+
+    with pytest.raises(ValueError, match="registration is invalid"):
+        AnimalCapabilityRegistry((invalid_version,))
+    with pytest.raises(ValueError, match="registration is invalid"):
+        AnimalCapabilityRegistry((spider, spider))
