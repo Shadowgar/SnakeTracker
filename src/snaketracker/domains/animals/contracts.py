@@ -26,6 +26,25 @@ class AnimalRegisteredV1:
 
 
 @dataclass(frozen=True, slots=True)
+class AnimalRegisteredV2:
+    """Common animal profile with an explicit registered capability profile."""
+
+    animal_id: UUID
+    animal_type: str
+    capability_profile_version: int
+    name: str
+    species: str
+    morph: str | None
+    genetics: str | None
+    sex: str | None
+    birth_hatch_date: str | None
+    acquisition_date: str | None
+    breeder_source: str | None
+    status: str
+    notes: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class AnimalProfileCorrectedV1:
     """Latest approved profile facts without rewriting the registration event."""
 

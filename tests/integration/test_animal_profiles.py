@@ -75,6 +75,8 @@ def test_registering_an_animal_persists_event_and_current_profile(tmp_path: Path
         assert result.profile.name == "Nyx"
         assert result.profile.status == "active"
         assert result.profile.current_enclosure_id is None
+        assert result.profile.animal_type == "snake"
+        assert result.profile.capability_profile_version == 1
         assert result.profile.stream_version == 1
         loaded = store.load_stream(result.stream_key)
         assert [(event.event_type, event.stream_version) for event in loaded] == [
@@ -82,6 +84,61 @@ def test_registering_an_animal_persists_event_and_current_profile(tmp_path: Path
         ]
         assert loaded[0].subjects[0].subject_type == "animal"
         assert loaded[0].subjects[0].subject_id == result.animal_id
+        assert loaded[0].schema_version == 2
+    finally:
+        engine.dispose()
+
+
+def test_registering_a_spider_uses_v2_profile_identity(tmp_path: Path) -> None:
+    database = tmp_path / "spider-profile.sqlite3"
+    config = Config(ROOT / "alembic.ini")
+    config.set_main_option("script_location", str(ROOT / "migrations"))
+    config.set_main_option("sqlalchemy.url", f"sqlite+pysqlite:///{database}")
+    command.upgrade(config, "head")
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    try:
+        bootstrap = HouseholdBootstrapService(
+            SQLAlchemyHouseholdBootstrapRepository(engine),
+            Argon2PasswordHasher.for_testing(),
+            command_hash_secret=SECRET,
+        ).bootstrap(
+            BootstrapCommand(
+                household_name="Arachnid Home",
+                timezone="UTC",
+                owner_email="owner@example.com",
+                owner_display_name="Owner",
+                password="correct horse battery staple",
+                idempotency_key="m55-spider-bootstrap",
+                correlation_id=uuid4(),
+            )
+        )
+        store = SQLAlchemyEventStore(engine)
+        service = AnimalService(store, SQLAlchemyAnimalCurrentProjection(engine))
+
+        result = service.register(
+            RegisterAnimalCommand(
+                household_id=bootstrap.household_id,
+                actor_user_id=bootstrap.user_id,
+                correlation_id=uuid4(),
+                idempotency_key="m55-register-spider",
+                name="Aragog",
+                species="Grammostola pulchra",
+                morph=None,
+                genetics=None,
+                sex=None,
+                birth_hatch_date=None,
+                acquisition_date=None,
+                breeder_source=None,
+                notes="Calm juvenile.",
+                animal_type="spider",
+            )
+        )
+
+        event = store.load_stream(result.stream_key)[0]
+        assert event.event_type == "animal.registered"
+        assert event.schema_version == 2
+        assert result.profile.animal_type == "spider"
+        assert result.profile.capability_profile_version == 1
     finally:
         engine.dispose()
 

@@ -18,7 +18,7 @@ from snaketracker.infrastructure.identity.bootstrap_repository import (
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 
 ROOT = Path(__file__).parents[2]
-REVISION = "0009_operational_workflows"
+REVISION = "0010_multispecies_foundation"
 PHASE_FIVE_TABLES = {
     "aggregate_snapshots",
     "alembic_version",
@@ -135,6 +135,58 @@ def test_phase_five_downgrade_normalizes_new_outbox_states(tmp_path: Path) -> No
             assert (
                 connection.execute(text("SELECT state FROM outbox_items")).scalar_one() == "pending"
             )
+    finally:
+        engine.dispose()
+
+
+def test_multispecies_migration_backfills_existing_animals_as_snake_v1(tmp_path: Path) -> None:
+    database = tmp_path / "multispecies-backfill.sqlite3"
+    config = alembic_config(database)
+    command.upgrade(config, "0009_operational_workflows")
+    engine = create_engine(f"sqlite+pysqlite:///{database}")
+    animal_id = uuid4()
+    household_id = uuid4()
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO animal_current "
+                    "(household_id,animal_id,name,species,status,stream_version,"
+                    "last_event_id,updated_at) VALUES "
+                    "(:household_id,:animal_id,'Legacy','Python regius','active',1,:event_id,"
+                    "'2026-08-11T12:00:00.000000+00:00')"
+                ),
+                {
+                    "household_id": str(household_id),
+                    "animal_id": str(animal_id),
+                    "event_id": str(uuid4()),
+                },
+            )
+    finally:
+        engine.dispose()
+
+    command.upgrade(config, "head")
+    engine = create_engine(f"sqlite+pysqlite:///{database}")
+    try:
+        columns = {column["name"] for column in inspect(engine).get_columns("animal_current")}
+        assert {"animal_type", "capability_profile_version"} <= columns
+        with engine.connect() as connection:
+            assert connection.execute(
+                text(
+                    "SELECT animal_type,capability_profile_version FROM animal_current "
+                    "WHERE animal_id=:animal_id"
+                ),
+                {"animal_id": str(animal_id)},
+            ).one() == ("snake", 1)
+    finally:
+        engine.dispose()
+
+    command.downgrade(config, "0009_operational_workflows")
+    engine = create_engine(f"sqlite+pysqlite:///{database}")
+    try:
+        assert "animal_type" not in {
+            column["name"] for column in inspect(engine).get_columns("animal_current")
+        }
     finally:
         engine.dispose()
 

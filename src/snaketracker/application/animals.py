@@ -8,6 +8,11 @@ from typing import Protocol, cast
 from uuid import UUID, uuid4
 
 from snaketracker.application.inventory import InventoryBalanceProjection
+from snaketracker.domains.animals.capabilities import (
+    CapabilityProfile,
+    UnknownCapabilityProfileError,
+    animal_capability_registry,
+)
 from snaketracker.domains.animals.contracts import (
     ANIMAL_STATUSES,
     AnimalBathRecordedV1,
@@ -18,7 +23,7 @@ from snaketracker.domains.animals.contracts import (
     AnimalLengthRecordedV1,
     AnimalPhotoSelectedV1,
     AnimalProfileCorrectedV1,
-    AnimalRegisteredV1,
+    AnimalRegisteredV2,
     AnimalShedCorrectedV1,
     AnimalShedRecordedV1,
     AnimalStatusChangedV1,
@@ -87,7 +92,13 @@ class AnimalProfile:
     notes: str | None
     current_enclosure_id: UUID | None
     photo_attachment_version_id: UUID | None
+    animal_type: str
+    capability_profile_version: int
     stream_version: int
+
+    @property
+    def capability_profile_identity(self) -> str:
+        return f"{self.animal_type}.v{self.capability_profile_version}"
 
 
 class AnimalCurrentProjection(SynchronousProjection, Protocol):
@@ -113,6 +124,7 @@ class RegisterAnimalCommand:
     acquisition_date: str | None
     breeder_source: str | None
     notes: str | None
+    animal_type: str = "snake"
 
 
 @dataclass(frozen=True, slots=True)
@@ -347,6 +359,7 @@ class AnimalService:
 
     def register(self, command: RegisterAnimalCommand) -> RegisterAnimalResult:
         fields = _validated_registration_fields(command)
+        capability_profile = _validated_capability_profile(command.animal_type, 1)
         animal_id = uuid4()
         stream_key = StreamKey(command.household_id, "animal", animal_id)
         recorded_at = datetime.now(UTC)
@@ -371,6 +384,8 @@ class AnimalService:
                             "acquisition_date": fields["acquisition_date"],
                             "breeder_source": fields["breeder_source"],
                             "notes": fields["notes"],
+                            "animal_type": capability_profile.animal_type.value,
+                            "capability_profile_version": capability_profile.version,
                         }
                     ),
                     correlation_id=command.correlation_id,
@@ -1328,6 +1343,13 @@ def _validated_registration_fields(command: RegisterAnimalCommand) -> dict[str, 
     )
 
 
+def _validated_capability_profile(animal_type: str, version: int) -> CapabilityProfile:
+    try:
+        return animal_capability_registry.require_parts(animal_type, version)
+    except UnknownCapabilityProfileError as error:
+        raise AnimalValidationError("Animal type is not supported.") from error
+
+
 def _validated_profile_fields(
     *,
     name: str,
@@ -1435,7 +1457,7 @@ def _registered_event(
         stream_id=stream_key.stream_id,
         stream_version=1,
         event_type="animal.registered",
-        schema_version=1,
+        schema_version=2,
         occurred_at=recorded_at,
         recorded_at=recorded_at,
         actor_user_id=command.actor_user_id,
@@ -1445,8 +1467,10 @@ def _registered_event(
         subjects=(EventSubject("animal", animal_id, "primary", 0),),
         title="Animal registered",
         description=None,
-        payload=AnimalRegisteredV1(
+        payload=AnimalRegisteredV2(
             animal_id=animal_id,
+            animal_type=command.animal_type,
+            capability_profile_version=1,
             name=cast(str, fields["name"]),
             species=cast(str, fields["species"]),
             morph=fields["morph"],

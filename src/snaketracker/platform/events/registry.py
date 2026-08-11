@@ -8,6 +8,10 @@ from datetime import datetime
 from typing import Any, Literal, cast
 from uuid import UUID
 
+from snaketracker.domains.animals.capabilities import (
+    UnknownCapabilityProfileError,
+    animal_capability_registry,
+)
 from snaketracker.domains.animals.contracts import (
     ANIMAL_STATUSES,
     AnimalBathRecordedV1,
@@ -19,6 +23,7 @@ from snaketracker.domains.animals.contracts import (
     AnimalPhotoSelectedV1,
     AnimalProfileCorrectedV1,
     AnimalRegisteredV1,
+    AnimalRegisteredV2,
     AnimalShedCorrectedV1,
     AnimalShedRecordedV1,
     AnimalStatusChangedV1,
@@ -289,6 +294,52 @@ def _deserialize_animal_registered(data: Mapping[str, object]) -> EventPayload:
     )
 
 
+def _deserialize_animal_registered_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalRegisteredV2, data)
+    animal_id = data["animal_id"]
+    animal_type = data["animal_type"]
+    profile_version = data["capability_profile_version"]
+    required_text = ("name", "species", "status")
+    optional_text = (
+        "morph",
+        "genetics",
+        "sex",
+        "birth_hatch_date",
+        "acquisition_date",
+        "breeder_source",
+        "notes",
+    )
+    if (
+        not isinstance(animal_id, str)
+        or not isinstance(animal_type, str)
+        or type(profile_version) is not int
+        or any(not isinstance(data[name], str) for name in required_text)
+        or any(data[name] is not None and not isinstance(data[name], str) for name in optional_text)
+        or data["status"] not in ANIMAL_STATUSES
+    ):
+        raise ValueError("Stored animal registration v2 payload is invalid.")
+    try:
+        parsed_animal_id = UUID(animal_id)
+        animal_capability_registry.require_parts(animal_type, profile_version)
+    except (ValueError, UnknownCapabilityProfileError) as error:
+        raise ValueError("Stored animal registration v2 payload is invalid.") from error
+    return AnimalRegisteredV2(
+        animal_id=parsed_animal_id,
+        animal_type=animal_type,
+        capability_profile_version=profile_version,
+        name=cast(str, data["name"]),
+        species=cast(str, data["species"]),
+        morph=cast(str | None, data["morph"]),
+        genetics=cast(str | None, data["genetics"]),
+        sex=cast(str | None, data["sex"]),
+        birth_hatch_date=cast(str | None, data["birth_hatch_date"]),
+        acquisition_date=cast(str | None, data["acquisition_date"]),
+        breeder_source=cast(str | None, data["breeder_source"]),
+        status=data["status"],
+        notes=cast(str | None, data["notes"]),
+    )
+
+
 def _deserialize_animal_profile_corrected(data: Mapping[str, object]) -> EventPayload:
     _require_exact_fields(AnimalProfileCorrectedV1, data)
     required_text = ("name", "species")
@@ -340,6 +391,14 @@ ANIMAL_PROFILE_CONTRACTS = (
         owner="animals",
         payload_type=AnimalRegisteredV1,
         deserialize_payload=_deserialize_animal_registered,
+        subject_requirements=(SubjectRequirement("animal", "primary"),),
+    ),
+    EventContractRegistration(
+        event_type="animal.registered",
+        schema_version=2,
+        owner="animals",
+        payload_type=AnimalRegisteredV2,
+        deserialize_payload=_deserialize_animal_registered_v2,
         subject_requirements=(SubjectRequirement("animal", "primary"),),
     ),
     EventContractRegistration(
