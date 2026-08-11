@@ -301,3 +301,118 @@ def test_uncertain_result_requires_authorized_reconciliation_before_retry(tmp_pa
         }
     finally:
         engine.dispose()
+
+
+def test_expired_final_attempt_moves_to_reconciliation_instead_of_blind_retry(
+    tmp_path: Path,
+) -> None:
+    engine, repository, job_id, now = _setup(tmp_path)
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text("UPDATE jobs SET max_attempts=1 WHERE job_id=:job_id"),
+                {"job_id": str(job_id)},
+            )
+        claimed = repository.claim(
+            worker_id="final-worker", now=now, lease_duration=timedelta(seconds=10)
+        )
+        assert claimed is not None and claimed.lease_token is not None
+        repository.start_attempt(
+            job_id,
+            claimed.lease_token,
+            provider_idempotency_key=claimed.idempotency_key,
+            now=now,
+        )
+
+        assert (
+            repository.claim(
+                worker_id="takeover-worker",
+                now=now + timedelta(seconds=11),
+                lease_duration=timedelta(seconds=30),
+            )
+            is None
+        )
+        exhausted = repository.get(job_id)
+        assert exhausted is not None
+        assert exhausted.status == "reconciliation_required"
+        assert repository.attempts_for(job_id)[0].status == "lease_expired"
+    finally:
+        engine.dispose()
+
+
+def test_job_mutations_validate_lease_inputs_and_safe_operator_text(tmp_path: Path) -> None:
+    engine, repository, job_id, now = _setup(tmp_path)
+    try:
+        for worker_id, lease_duration, message in (
+            ("x" * 201, timedelta(seconds=10), "worker identity"),
+            ("worker", timedelta(hours=2), "lease duration"),
+        ):
+            with pytest.raises(ValueError, match=message):
+                repository.claim(worker_id=worker_id, now=now, lease_duration=lease_duration)
+        with pytest.raises(ValueError, match="include a timezone"):
+            repository.claim(
+                worker_id="worker",
+                now=datetime(2026, 8, 10, 12),
+                lease_duration=timedelta(seconds=10),
+            )
+
+        claimed = repository.claim(
+            worker_id="worker", now=now, lease_duration=timedelta(seconds=30)
+        )
+        assert claimed is not None and claimed.lease_token is not None
+        with pytest.raises(ValueError, match="lease duration"):
+            repository.heartbeat(
+                job_id,
+                claimed.lease_token,
+                now=now,
+                lease_duration=timedelta(hours=2),
+            )
+        with pytest.raises(ValueError, match="Provider idempotency key"):
+            repository.start_attempt(
+                job_id,
+                claimed.lease_token,
+                provider_idempotency_key=" ",
+                now=now,
+            )
+        with pytest.raises(ValueError, match="Retry delay"):
+            repository.schedule_retry(
+                job_id,
+                claimed.lease_token,
+                safe_error="Temporary failure",
+                now=now,
+                delay=timedelta(seconds=-1),
+            )
+        with pytest.raises(ValueError, match="Job failure is required"):
+            repository.schedule_retry(
+                job_id,
+                claimed.lease_token,
+                safe_error=" ",
+                now=now,
+                delay=timedelta(0),
+            )
+        with pytest.raises(JobLeaseConflictError, match="attempt is missing"):
+            repository.schedule_retry(
+                job_id,
+                claimed.lease_token,
+                safe_error="No attempt was started",
+                now=now,
+                delay=timedelta(0),
+            )
+        with pytest.raises(ValueError, match="Reconciliation reason is required"):
+            repository.resolve_not_delivered(
+                job_id,
+                actor_user_id=uuid4(),
+                correlation_id=uuid4(),
+                reason=" ",
+                now=now,
+            )
+        with pytest.raises(JobLeaseConflictError, match="not awaiting reconciliation"):
+            repository.resolve_not_delivered(
+                job_id,
+                actor_user_id=uuid4(),
+                correlation_id=uuid4(),
+                reason="Provider reported no delivery.",
+                now=now,
+            )
+    finally:
+        engine.dispose()

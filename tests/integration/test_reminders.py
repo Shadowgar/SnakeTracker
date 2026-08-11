@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
 from alembic import command
 from alembic.config import Config
 
@@ -503,5 +505,118 @@ def test_rule_change_disable_and_subject_tenancy(tmp_path: Path) -> None:
             assert "does not exist" in str(error)
         else:
             raise AssertionError("Cross-household or missing subjects must fail closed.")
+    finally:
+        engine.dispose()
+
+
+def test_reminder_schedule_validation_and_empty_fact_states_fail_closed(tmp_path: Path) -> None:
+    engine, bootstrap, _animals, _enclosures, animal_id, _enclosure_id, rules, facts, projection = (
+        _setup(tmp_path)
+    )
+    try:
+        base = _rule_command(bootstrap, animal_id)
+        invalid_rules = (
+            (replace(base, reminder_type="unsupported"), "not supported"),
+            (replace(base, subject_type="enclosure"), "incompatible"),
+            (replace(base, schedule_kind="monthly"), "kind is invalid"),
+            (replace(base, interval_days=0), "between 1 and 3650"),
+            (replace(base, schedule_kind="fixed_interval"), "require an anchor"),
+            (
+                replace(
+                    base,
+                    schedule_kind="fixed_interval",
+                    anchor_at="2026-08-10T12:00:00",
+                ),
+                "timezone",
+            ),
+            (replace(base, channel=" "), "channel is required"),
+            (replace(base, channel="x" * 33), "channel is too long"),
+            (replace(base, idempotency_key=" "), "Idempotency key is required"),
+        )
+        for command_value, message in invalid_rules:
+            with pytest.raises(ReminderValidationError, match=message):
+                rules.create(command_value)
+
+        with pytest.raises(ReminderValidationError, match="does not exist"):
+            facts.recalculate_rule(bootstrap.household_id, uuid4(), now=datetime.now(UTC))
+
+        created = rules.create(replace(base, idempotency_key="empty-fact-rule"))
+        assert (
+            facts.recalculate_rule(
+                bootstrap.household_id,
+                created.rule_id,
+                now=datetime(2026, 8, 10, tzinfo=UTC),
+            )
+            == ()
+        )
+
+        fixed = rules.create(
+            replace(
+                base,
+                idempotency_key="future-fixed-rule",
+                reminder_type="weight",
+                schedule_kind="fixed_interval",
+                interval_days=5,
+                anchor_at="2026-08-10T12:00:00+00:00",
+            )
+        )
+        assert (
+            facts.recalculate_rule(
+                bootstrap.household_id,
+                fixed.rule_id,
+                now=datetime(2026, 8, 11, tzinfo=UTC),
+            )
+            == ()
+        )
+
+        with pytest.raises(ReminderValidationError, match="does not exist"):
+            rules.change(
+                ChangeReminderRuleCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    uuid4(),
+                    1,
+                    uuid4(),
+                    "missing-rule-change",
+                    "feeding",
+                    "event_relative",
+                    7,
+                    None,
+                    None,
+                    True,
+                    "local",
+                )
+            )
+        with pytest.raises(ReminderValidationError, match="correlation lineage"):
+            rules.change(
+                ChangeReminderRuleCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    created.rule_id,
+                    1,
+                    uuid4(),
+                    "wrong-rule-lineage",
+                    "feeding",
+                    "event_relative",
+                    7,
+                    None,
+                    None,
+                    True,
+                    "local",
+                )
+            )
+        with pytest.raises(ReminderValidationError, match="reason is required"):
+            rules.disable(
+                DisableReminderRuleCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    created.rule_id,
+                    1,
+                    created.rule.correlation_id,
+                    "blank-disable-reason",
+                    " ",
+                )
+            )
+        assert projection.facts_for(bootstrap.household_id) == ()
     finally:
         engine.dispose()

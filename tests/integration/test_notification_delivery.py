@@ -161,3 +161,33 @@ def test_provider_registry_rejects_adapter_without_uncertain_effect_control() ->
     registry = NotificationProviderRegistry()
     with pytest.raises(ValueError, match="uncertain external effects"):
         registry.register("unsafe", UnsafeProvider())  # type: ignore[arg-type]
+
+
+def test_local_provider_registry_and_idempotency_fail_closed(tmp_path: Path) -> None:
+    engine, _repository, provider, _worker, _job_id, now = _setup(tmp_path)
+    try:
+        registry = NotificationProviderRegistry()
+        registry.register("local", provider)
+        assert registry.provider("local") is provider
+        with pytest.raises(ValueError, match="already registered"):
+            registry.register("local", provider)
+        with pytest.raises(ValueError, match="name is invalid"):
+            registry.register(" ", provider)
+        with pytest.raises(KeyError, match="not registered"):
+            registry.provider("missing")
+
+        payload = {"message": "Care reminder"}
+        first = provider.deliver(payload, "stable-provider-key", now=now)
+        assert provider.lookup("stable-provider-key") == first
+        assert provider.lookup("missing-provider-key") is None
+        assert provider.deliver(payload, "stable-provider-key", now=now) == first
+        with pytest.raises(PermanentNotificationError, match="different payload"):
+            provider.deliver({"message": "Changed"}, "stable-provider-key", now=now)
+        with pytest.raises(PermanentNotificationError, match="key is invalid"):
+            provider.deliver(payload, " ", now=now)
+        with pytest.raises(PermanentNotificationError, match="key is invalid"):
+            provider.deliver(payload, "x" * 201, now=now)
+        with pytest.raises(ValueError, match="include a timezone"):
+            provider.deliver(payload, "naive-time", now=datetime(2026, 8, 10, 12))
+    finally:
+        engine.dispose()

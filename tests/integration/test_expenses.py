@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -343,5 +344,71 @@ def test_voided_expense_cannot_be_reinstated_or_changed(tmp_path: Path) -> None:
                 )
             )
         assert not hasattr(service, "reinstate")
+    finally:
+        engine.dispose()
+
+
+def test_expense_validation_and_lineage_fail_closed(tmp_path: Path) -> None:
+    engine, bootstrap, _store, service, projection = _setup(tmp_path)
+    try:
+        base = RecordExpenseCommand(
+            bootstrap.household_id,
+            bootstrap.user_id,
+            "owner",
+            uuid4(),
+            "expense-validation",
+            1200,
+            "USD",
+            "Supplies",
+            None,
+            None,
+            None,
+            datetime.now(UTC),
+        )
+        invalid_records = (
+            (replace(base, amount_minor=0), "positive"),
+            (replace(base, currency="US1"), "three-letter"),
+            (replace(base, category=" "), "category is required"),
+            (replace(base, category="x" * 101), "category is too long"),
+            (replace(base, payee="x" * 201), "payee is too long"),
+            (replace(base, reference="x" * 301), "reference is too long"),
+            (replace(base, notes="x" * 2001), "notes is too long"),
+            (replace(base, occurred_at=datetime(2026, 8, 10, 12)), "timezone"),
+        )
+        for command_value, message in invalid_records:
+            with pytest.raises(ExpenseValidationError, match=message):
+                service.record(command_value)
+
+        recorded = service.record(replace(base, idempotency_key="valid-expense"))
+        with pytest.raises(ExpenseValidationError, match="history is missing"):
+            service.correlation_id_for(bootstrap.household_id, uuid4())
+
+        correction = CorrectExpenseCommand(
+            bootstrap.household_id,
+            bootstrap.user_id,
+            "owner",
+            recorded.expense_id,
+            recorded.event.event_id,
+            recorded.event.correlation_id,
+            "expense-valid-correction",
+            1,
+            1300,
+            "USD",
+            "Supplies",
+            None,
+            None,
+            "Receipt correction.",
+        )
+        invalid_changes = (
+            (replace(correction, expense_id=uuid4()), "does not exist"),
+            (replace(correction, expected_stream_version=-1), "stream version"),
+            (replace(correction, target_event_id=uuid4()), "current effective event"),
+            (replace(correction, correlation_id=uuid4()), "correlation lineage"),
+        )
+        for command_value, message in invalid_changes:
+            with pytest.raises(ExpenseValidationError, match=message):
+                service.correct(command_value)
+
+        assert projection.total_active_minor(bootstrap.household_id, "USD") == 1200
     finally:
         engine.dispose()

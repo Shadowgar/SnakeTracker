@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -31,6 +32,7 @@ from snaketracker.infrastructure.reminders.projections import SQLAlchemyReminder
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 from snaketracker.platform.jobs.handoff import OutboxJobHandoff
 from snaketracker.platform.notifications.service import NotificationIntentService
+from snaketracker.worker.reminders import ReminderScheduler
 
 ROOT = Path(__file__).parents[2]
 SECRET = b"phase5-notification-test-secret-32-bytes"
@@ -99,13 +101,23 @@ def _setup(tmp_path: Path):  # type: ignore[no-untyped-def]
         rule.rule_id,
         now=datetime(2026, 8, 2, 12, 0, tzinfo=UTC),
     )[0]
-    intents = NotificationIntentService(SQLAlchemyNotificationIntentRepository(engine))
+    recipients = SQLAlchemyNotificationIntentRepository(engine)
+    intents = NotificationIntentService(recipients)
     jobs = SQLAlchemyJobRepository(engine)
-    return engine, bootstrap, fact, intents, jobs
+    return (
+        engine,
+        bootstrap,
+        fact,
+        intents,
+        jobs,
+        reminders,
+        ReminderFactService(store, reminders),
+        recipients,
+    )
 
 
 def test_intent_outbox_and_job_handoff_each_deduplicate_independently(tmp_path: Path) -> None:
-    engine, bootstrap, fact, intents, jobs = _setup(tmp_path)
+    engine, bootstrap, fact, intents, jobs, _rules, _facts, _recipients = _setup(tmp_path)
     try:
         now = datetime(2026, 8, 2, 12, 0, tzinfo=UTC)
         first = intents.ensure_for_fact(
@@ -149,7 +161,7 @@ def test_intent_outbox_and_job_handoff_each_deduplicate_independently(tmp_path: 
 
 
 def test_missing_or_cross_household_recipient_fails_without_intent(tmp_path: Path) -> None:
-    engine, bootstrap, fact, intents, _jobs = _setup(tmp_path)
+    engine, bootstrap, fact, intents, _jobs, _rules, _facts, _recipients = _setup(tmp_path)
     try:
         with pytest.raises(NotificationIntentValidationError, match="recipient"):
             intents.ensure_for_fact(
@@ -171,7 +183,7 @@ def test_missing_or_cross_household_recipient_fails_without_intent(tmp_path: Pat
 
 
 def test_malformed_outbox_is_quarantined_atomically(tmp_path: Path) -> None:
-    engine, bootstrap, _fact, _intents, jobs = _setup(tmp_path)
+    engine, bootstrap, _fact, _intents, jobs, _rules, _facts, _recipients = _setup(tmp_path)
     try:
         outbox_id = uuid4()
         now = datetime.now(UTC)
@@ -207,5 +219,124 @@ def test_malformed_outbox_is_quarantined_atomically(tmp_path: Path) -> None:
         assert row["safe_error"] == "Unsupported or malformed notification handoff."
         assert row["job_id"] is None
         assert job_count == 0
+    finally:
+        engine.dispose()
+
+
+def test_each_malformed_notification_handoff_shape_is_quarantined(tmp_path: Path) -> None:
+    engine, bootstrap, fact, _intents, jobs, _rules, _facts, _recipients = _setup(tmp_path)
+    try:
+        now = datetime.now(UTC)
+        valid = {
+            "intent_id": str(uuid4()),
+            "household_id": str(bootstrap.household_id),
+            "rule_id": str(fact.rule_id),
+            "occurrence_key": fact.occurrence_key,
+            "recipient_user_id": str(bootstrap.user_id),
+            "channel": "local",
+            "reminder_type": fact.reminder_type,
+            "subject_type": fact.subject_type,
+            "subject_id": str(fact.subject_id),
+            "due_at": fact.due_at.isoformat(timespec="microseconds"),
+            "explanation": fact.explanation,
+        }
+
+        def payload_variant(**changes: str) -> tuple[str, str]:
+            payload = dict(valid, intent_id=str(uuid4()), **changes)
+            return json.dumps(payload), f"notification-intent:{payload['intent_id']}"
+
+        variants: list[tuple[str, str, str]] = [
+            ("bad-json", "{", f"notification-intent:{uuid4()}"),
+            ("not-object", "[]", f"notification-intent:{uuid4()}"),
+        ]
+        missing = dict(valid, intent_id=str(uuid4()))
+        missing.pop("explanation")
+        variants.append(
+            (
+                "missing-field",
+                json.dumps(missing),
+                f"notification-intent:{missing['intent_id']}",
+            )
+        )
+        for label, changes in (
+            ("empty-field", {"explanation": ""}),
+            ("wrong-household", {"household_id": str(uuid4())}),
+            ("bad-uuid", {"recipient_user_id": "not-a-uuid"}),
+            ("bad-date", {"due_at": "not-a-date"}),
+            ("unsupported-channel", {"channel": "email"}),
+        ):
+            payload, logical_key = payload_variant(**changes)
+            variants.append((label, payload, logical_key))
+        wrong_logical_payload, _logical_key = payload_variant()
+        variants.append(
+            ("wrong-logical-key", wrong_logical_payload, f"notification-intent:wrong-{uuid4()}")
+        )
+
+        with engine.begin() as connection:
+            for _label, payload, logical_key in variants:
+                connection.execute(
+                    text(
+                        "INSERT INTO outbox_items "
+                        "(outbox_id,household_id,kind,payload_contract,schema_version,logical_key,"
+                        "payload_json,correlation_id,causation_id,available_at,state,created_at) "
+                        "VALUES (:outbox_id,:household_id,'notification',"
+                        "'notification.reminder_due',1,:logical_key,:payload,:correlation_id,"
+                        "NULL,:now,'pending',:now)"
+                    ),
+                    {
+                        "outbox_id": str(uuid4()),
+                        "household_id": str(bootstrap.household_id),
+                        "logical_key": logical_key,
+                        "payload": payload,
+                        "correlation_id": str(uuid4()),
+                        "now": now.isoformat(timespec="microseconds"),
+                    },
+                )
+
+        assert OutboxJobHandoff(jobs).run(now=now, limit=20) == ()
+        with engine.connect() as connection:
+            assert connection.execute(
+                text("SELECT COUNT(*) FROM outbox_items WHERE state='quarantined'")
+            ).scalar_one() == len(variants)
+            assert connection.execute(text("SELECT COUNT(*) FROM jobs")).scalar_one() == 0
+    finally:
+        engine.dispose()
+
+
+def test_reminder_scheduler_creates_one_deduplicated_intent_per_active_recipient(
+    tmp_path: Path,
+) -> None:
+    engine, bootstrap, _fact, intents, _jobs, rules, facts, recipients = _setup(tmp_path)
+    try:
+        scheduler = ReminderScheduler(facts, rules, intents, recipients)
+        now = datetime(2026, 8, 2, 12, 0, tzinfo=UTC)
+        assert scheduler.run_once(now=now) == 1
+        assert scheduler.run_once(now=now) == 1
+        assert recipients.active_recipients(bootstrap.household_id) == (bootstrap.user_id,)
+        with engine.connect() as connection:
+            assert (
+                connection.execute(text("SELECT COUNT(*) FROM notification_intents")).scalar_one()
+                == 1
+            )
+            assert connection.execute(text("SELECT COUNT(*) FROM outbox_items")).scalar_one() == 1
+
+        with pytest.raises(NotificationIntentValidationError, match="local notification channel"):
+            intents.ensure_for_fact(
+                household_id=bootstrap.household_id,
+                fact_id=_fact.fact_id,
+                recipient_user_id=bootstrap.user_id,
+                channel="email",
+                correlation_id=uuid4(),
+                now=now,
+            )
+        with pytest.raises(NotificationIntentValidationError, match="include a timezone"):
+            intents.ensure_for_fact(
+                household_id=bootstrap.household_id,
+                fact_id=_fact.fact_id,
+                recipient_user_id=bootstrap.user_id,
+                channel="local",
+                correlation_id=uuid4(),
+                now=datetime(2026, 8, 2, 12),
+            )
     finally:
         engine.dispose()

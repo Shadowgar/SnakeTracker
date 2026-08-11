@@ -736,3 +736,137 @@ def test_stock_linked_feeding_correction_replaces_consumption_atomically(tmp_pat
         ][-2:] == ["inventory.consumption_reversed", "inventory.stock_consumed"]
     finally:
         engine.dispose()
+
+
+def test_inventory_rejects_invalid_commands_without_changing_balance(tmp_path: Path) -> None:
+    engine, bootstrap, _store, service, projection = _setup(tmp_path)
+    try:
+        with pytest.raises(InventoryValidationError, match="Reorder threshold"):
+            service.register(
+                RegisterInventoryItemCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    uuid4(),
+                    "invalid-threshold",
+                    "Mice",
+                    "item",
+                    -1,
+                )
+            )
+        with pytest.raises(InventoryValidationError, match="Inventory name"):
+            service.register(
+                RegisterInventoryItemCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    uuid4(),
+                    "invalid-name",
+                    " ",
+                    "item",
+                    None,
+                )
+            )
+
+        item = service.register(
+            RegisterInventoryItemCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                uuid4(),
+                "validation-item",
+                "Mice",
+                "item",
+                None,
+            )
+        )
+        base = (
+            bootstrap.household_id,
+            bootstrap.user_id,
+            item.item_id,
+            uuid4(),
+        )
+        with pytest.raises(InventoryValidationError, match="stream version"):
+            service.receive(ReceiveStockCommand(*base, "invalid-version", 0, 1, None))
+        with pytest.raises(InventoryValidationError, match="positive"):
+            service.receive(ReceiveStockCommand(*base, "invalid-quantity", 1, 0, None))
+        with pytest.raises(InventoryValidationError, match="too long"):
+            service.receive(ReceiveStockCommand(*base, "long-reference", 1, 1, "x" * 501))
+        with pytest.raises(InventoryValidationError, match="Reservation key"):
+            service.reserve(ReserveStockCommand(*base, "invalid-reservation", 1, 1, " "))
+        with pytest.raises(InventoryValidationError, match="cannot be zero"):
+            service.adjust(AdjustStockCommand(*base, "zero-adjustment", 1, 0, "Counted"))
+        with pytest.raises(InventoryValidationError, match="positive"):
+            service.expire(ExpireStockCommand(*base, "zero-expiry", 1, 0, "Expired"))
+        with pytest.raises(InventoryValidationError, match="Reorder threshold"):
+            service.change_reorder_policy(
+                ChangeReorderPolicyCommand(*base, "invalid-policy", 1, -1)
+            )
+        with pytest.raises(InventoryValidationError, match="does not exist"):
+            service.consume(
+                ConsumeStockCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    uuid4(),
+                    uuid4(),
+                    "missing-item",
+                    1,
+                    1,
+                    None,
+                )
+            )
+
+        service.receive(ReceiveStockCommand(*base, "valid-receipt", 1, 5, None))
+        service.reserve(ReserveStockCommand(*base, "valid-reservation", 2, 4, "feeding-plan"))
+        with pytest.raises(InventoryValidationError, match="available inventory to reserve"):
+            service.reserve(ReserveStockCommand(*base, "over-reservation", 3, 2, "second-plan"))
+        with pytest.raises(InventoryValidationError, match="conflicts with reservations"):
+            service.adjust(
+                AdjustStockCommand(*base, "reserved-adjustment", 3, -2, "Physical count")
+            )
+        with pytest.raises(InventoryValidationError, match="available inventory to expire"):
+            service.expire(ExpireStockCommand(*base, "reserved-expiry", 3, 2, "Expired"))
+
+        consumed = service.consume(ConsumeStockCommand(*base, "valid-consumption", 3, 2, None))
+        with pytest.raises(InventoryValidationError, match="target is invalid"):
+            service.reverse_consumption(
+                ReverseConsumptionCommand(*base, "missing-target", 4, uuid4(), 2, "Correction")
+            )
+        with pytest.raises(InventoryValidationError, match="consumed quantity"):
+            service.reverse_consumption(
+                ReverseConsumptionCommand(
+                    *base,
+                    "wrong-quantity",
+                    4,
+                    consumed.event.event_id,
+                    1,
+                    "Correction",
+                )
+            )
+        service.reverse_consumption(
+            ReverseConsumptionCommand(
+                *base,
+                "valid-reversal",
+                4,
+                consumed.event.event_id,
+                2,
+                "Correction",
+            )
+        )
+        with pytest.raises(InventoryValidationError, match="already been reversed"):
+            service.reverse_consumption(
+                ReverseConsumptionCommand(
+                    *base,
+                    "duplicate-reversal",
+                    5,
+                    consumed.event.event_id,
+                    2,
+                    "Correction",
+                )
+            )
+        balance = projection.balance_for(bootstrap.household_id, item.item_id)
+        assert balance is not None
+        assert (balance.on_hand_quantity, balance.reserved_quantity, balance.stream_version) == (
+            5,
+            4,
+            5,
+        )
+    finally:
+        engine.dispose()

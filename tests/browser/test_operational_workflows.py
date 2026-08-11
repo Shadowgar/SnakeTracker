@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import re
+import sqlite3
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from uuid import uuid4
 
 from alembic import command
 from alembic.config import Config
@@ -198,6 +200,7 @@ def test_keeper_can_use_inventory_expense_and_reminder_workflows(tmp_path: Path)
             "/reminders",
             data={
                 "csrf_token": _csrf(reminder_form.text),
+                "idempotency_key": "event-relative-reminder",
                 "subject_type": "animal",
                 "subject_id": animal_url.rsplit("/", 1)[-1],
                 "reminder_type": "feeding",
@@ -214,6 +217,37 @@ def test_keeper_can_use_inventory_expense_and_reminder_workflows(tmp_path: Path)
         assert "1 day after last accepted feeding" in reminders.text
         assert "No species assumptions" in reminders.text
 
+        fixed_reminder = client.post(
+            "/reminders",
+            data={
+                "csrf_token": _csrf(reminders.text),
+                "idempotency_key": "fixed-reminder",
+                "subject_type": "animal",
+                "subject_id": animal_url.rsplit("/", 1)[-1],
+                "reminder_type": "weight",
+                "schedule_kind": "fixed_interval",
+                "interval_days": "1",
+                "anchor_at": (datetime.now(UTC) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M"),
+                "override_due_at": "",
+                "channel": "local",
+            },
+            follow_redirects=False,
+        )
+        assert fixed_reminder.status_code == 303
+        fixed_rule_id = fixed_reminder.headers["location"].split("#", 1)[1]
+        reminders = client.get("/reminders")
+        assert "Due now" in reminders.text
+        disabled = client.post(
+            f"/reminders/{fixed_rule_id}/disable",
+            data={
+                "csrf_token": _csrf(reminders.text),
+                "idempotency_key": "disable-fixed-reminder",
+                "reason": "Owner paused this schedule.",
+            },
+            follow_redirects=False,
+        )
+        assert disabled.status_code == 303
+
         operations = client.get("/operations/jobs")
         assert operations.status_code == 200
         assert "Delivery operations" in operations.text
@@ -222,3 +256,122 @@ def test_keeper_can_use_inventory_expense_and_reminder_workflows(tmp_path: Path)
         protected = client.get("/inventory", follow_redirects=False)
         assert protected.status_code == 303
         assert protected.headers["location"] == "/login"
+
+
+def test_operational_routes_fail_closed_for_invalid_and_unauthorized_requests(
+    tmp_path: Path,
+) -> None:
+    with _client(tmp_path) as client:
+        _setup(client)
+        inventory_form = client.get("/inventory/new")
+        token = _csrf(inventory_form.text)
+        invalid_inventory = client.post(
+            "/inventory",
+            data={"csrf_token": token, "name": " ", "unit": "item"},
+        )
+        assert invalid_inventory.status_code == 422
+        assert "Inventory name is required" in invalid_inventory.text
+        assert client.get("/inventory/not-a-uuid").status_code == 404
+        invalid_receipt = client.post(
+            "/inventory/not-a-uuid/receive",
+            data={
+                "csrf_token": token,
+                "expected_stream_version": "1",
+                "quantity": "1",
+            },
+        )
+        assert invalid_receipt.status_code == 422
+
+        expense_form = client.get("/expenses/new")
+        token = _csrf(expense_form.text)
+        invalid_expense = client.post(
+            "/expenses",
+            data={
+                "csrf_token": token,
+                "amount": "not-money",
+                "currency": "USD",
+                "category": "Supplies",
+                "occurred_at": "2026-08-10T10:00",
+            },
+        )
+        assert invalid_expense.status_code == 422
+        assert client.get("/expenses/not-a-uuid").status_code == 404
+        invalid_correction = client.post(
+            "/expenses/not-a-uuid/correct",
+            data={"csrf_token": token, "target_event_id": "not-a-uuid"},
+        )
+        assert invalid_correction.status_code == 422
+        invalid_void = client.post(
+            "/expenses/not-a-uuid/void",
+            data={"csrf_token": token, "target_event_id": "not-a-uuid"},
+        )
+        assert invalid_void.status_code == 422
+
+        reminder_form = client.get("/reminders/new")
+        token = _csrf(reminder_form.text)
+        invalid_reminder = client.post(
+            "/reminders",
+            data={
+                "csrf_token": token,
+                "subject_type": "animal",
+                "subject_id": "not-a-uuid",
+                "reminder_type": "feeding",
+                "schedule_kind": "event_relative",
+                "interval_days": "7",
+                "channel": "local",
+            },
+        )
+        assert invalid_reminder.status_code == 422
+        invalid_disable = client.post(
+            f"/reminders/{uuid4()}/disable",
+            data={"csrf_token": token, "reason": "No longer needed"},
+        )
+        assert invalid_disable.status_code == 422
+
+        for path in (
+            f"/inventory/{uuid4()}/receive",
+            "/expenses",
+            f"/expenses/{uuid4()}/correct",
+            f"/expenses/{uuid4()}/void",
+            "/reminders",
+            f"/reminders/{uuid4()}/disable",
+        ):
+            assert client.post(path, data={}).status_code == 403
+
+        database = tmp_path / "operations-browser.sqlite3"
+        with sqlite3.connect(database) as connection:
+            connection.execute("UPDATE authorization_memberships SET role='viewer'")
+            connection.commit()
+        assert client.get("/inventory").status_code == 200
+        assert client.get("/inventory/new").status_code == 403
+        assert client.get("/expenses").status_code == 403
+        assert client.get("/expenses/new").status_code == 403
+        assert client.get("/reminders").status_code == 200
+        assert client.get("/reminders/new").status_code == 403
+        assert client.get("/operations/jobs").status_code == 403
+        for path in (
+            "/inventory",
+            f"/inventory/{uuid4()}/receive",
+            "/expenses",
+            f"/expenses/{uuid4()}/correct",
+            f"/expenses/{uuid4()}/void",
+            "/reminders",
+            f"/reminders/{uuid4()}/disable",
+        ):
+            assert client.post(path, data={"csrf_token": token}).status_code == 403
+
+        client.cookies.clear()
+        for path in (
+            "/inventory",
+            "/inventory/new",
+            f"/inventory/{uuid4()}",
+            "/expenses",
+            "/expenses/new",
+            f"/expenses/{uuid4()}",
+            "/reminders",
+            "/reminders/new",
+            "/operations/jobs",
+        ):
+            response = client.get(path, follow_redirects=False)
+            assert response.status_code == 303
+            assert response.headers["location"] == "/login"
