@@ -976,12 +976,14 @@ class AnimalService:
         for event in events:
             key = StreamKey(event.household_id, event.stream_type, event.stream_id)
             streams.setdefault(key, []).append(event)
-        effective_event_ids = {
-            event.event_id
+        primary_key = StreamKey(household_id, "animal", animal_id)
+        primary = evaluate_effective_events(tuple(streams.pop(primary_key, ())))
+        related = tuple(
+            event
             for stream_events in streams.values()
             for event in evaluate_effective_events(tuple(stream_events))
-        }
-        return tuple(event for event in events if event.event_id in effective_event_ids)
+        )
+        return (*primary, *related)
 
     def audit_history(self, household_id: UUID, animal_id: UUID) -> tuple[DomainEvent, ...]:
         return self._event_store.load_subject_events(household_id, "animal", animal_id)

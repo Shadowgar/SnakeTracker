@@ -595,9 +595,7 @@ def _deserialize_animal_premolt_observed(data: Mapping[str, object]) -> EventPay
     _require_exact_fields(AnimalPremoltObservedV1, data)
     observed = data["observed"]
     observation = data["observation"]
-    if type(observed) is not bool or (
-        observation is not None and not isinstance(observation, str)
-    ):
+    if type(observed) is not bool or (observation is not None and not isinstance(observation, str)):
         raise ValueError("Stored animal premolt payload is invalid.")
     return AnimalPremoltObservedV1(observed, observation)
 

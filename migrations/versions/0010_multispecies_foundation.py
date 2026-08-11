@@ -28,9 +28,7 @@ def upgrade() -> None:
     )
     with op.batch_alter_table("animal_current") as batch:
         batch.alter_column("animal_type", existing_type=sa.String(32), nullable=False)
-        batch.alter_column(
-            "capability_profile_version", existing_type=sa.Integer(), nullable=False
-        )
+        batch.alter_column("capability_profile_version", existing_type=sa.Integer(), nullable=False)
         batch.create_check_constraint(
             "ck_animal_current_capability_profile_version",
             "capability_profile_version > 0",

@@ -57,9 +57,7 @@ def test_accepted_amendment_paths_cover_m4_shed_correction_catalog() -> None:
 
 
 def test_accepted_amendment_paths_cover_adr_0039_multispecies_foundation() -> None:
-    assert "docs/adr/0039-multispecies-animal-capabilities.md" in (
-        freeze.APPROVED_AMENDMENT_PATHS
-    )
+    assert "docs/adr/0039-multispecies-animal-capabilities.md" in (freeze.APPROVED_AMENDMENT_PATHS)
     assert "docs/architecture/domain-catalog.md" in freeze.APPROVED_AMENDMENT_PATHS
     assert "docs/architecture/event-catalog.md" in freeze.APPROVED_AMENDMENT_PATHS
     assert "docs/architecture/projection-catalog.md" in freeze.APPROVED_AMENDMENT_PATHS
