@@ -93,8 +93,10 @@ from snaketracker.application.reminders import (
     DisableReminderRuleCommand,
     ReminderFactService,
     ReminderProjection,
+    ReminderRuleCurrent,
     ReminderRuleService,
     ReminderValidationError,
+    SaveSubjectScheduleCommand,
 )
 from snaketracker.domains.animals.contracts import ANIMAL_STATUSES
 from snaketracker.domains.enclosures.contracts import ENCLOSURE_STATUSES
@@ -120,6 +122,15 @@ CARE_FORM_DETAILS: dict[str, tuple[str, str, str]] = {
     "length": ("Record length", "Add the animal's measured length in millimetres.", "lengths"),
     "shed": ("Record shed", "Add the observed shed state or completed result.", "sheds"),
     "bath": ("Record bath", "Add a completed bath or soak.", "baths"),
+}
+
+CARE_SCHEDULE_CAPABILITIES: dict[str, tuple[str, str, str]] = {
+    "feeding": ("Feeding", "animal", "last accepted feeding"),
+    "weight": ("Weight check", "animal", "last weight"),
+    "length": ("Length check", "animal", "last length"),
+    "bath": ("Bath / soak", "animal", "last bath"),
+    "cleaning": ("Enclosure cleaning", "enclosure", "last qualifying cleaning"),
+    "water_change": ("Water change", "enclosure", "last water change"),
 }
 
 
@@ -1130,7 +1141,8 @@ def create_web_router(
         if "reminder.view" not in principal.capabilities:
             return _access_denied(request, "Reminder access denied")
         now = datetime.now(UTC)
-        for rule in reminder_projection.rules_for(principal.household_id):
+        rules = reminder_projection.rules_for(principal.household_id)
+        for rule in rules:
             facts = reminder_fact_service.recalculate_rule(
                 principal.household_id, rule.rule_id, now=now
             )
@@ -1143,13 +1155,23 @@ def create_web_router(
                     correlation_id=uuid4(),
                     now=now,
                 )
+        animals = animal_service.list_profiles(principal.household_id)
+        enclosures = enclosure_service.list_profiles(principal.household_id)
+        agenda = _agenda_rows(
+            reminder_fact_service.agenda_for(principal.household_id, now=now),
+            animals=animals,
+            enclosures=enclosures,
+        )
         return protected_page(
             request,
             "reminder_list.html",
             principal,
             context={
-                "rules": reminder_projection.rules_for(principal.household_id),
-                "facts": reminder_projection.facts_for(principal.household_id),
+                "agenda_groups": (
+                    ("overdue", "Overdue", agenda["overdue"]),
+                    ("due_today", "Due today", agenda["due_today"]),
+                    ("upcoming", "Upcoming", agenda["upcoming"]),
+                ),
             },
         )
 
@@ -1589,8 +1611,93 @@ def create_web_router(
                 "current_enclosure": current_enclosure,
                 "recent_events": recent_events[:5],
                 "animal_statuses": tuple(sorted(ANIMAL_STATUSES)),
+                "care_schedules": _care_schedule_rows(
+                    principal.household_id,
+                    profile.animal_id,
+                    current_enclosure,
+                    reminder_projection,
+                    principal.household_timezone,
+                ),
             },
         )
+
+    @router.post(
+        "/animals/{animal_id}/care-schedule/{reminder_type}",
+        response_class=HTMLResponse,
+    )
+    async def animal_care_schedule_save(
+        request: Request, animal_id: str, reminder_type: str
+    ) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "reminder.manage" not in principal.capabilities:
+            return _access_denied(request, "Care schedule access denied")
+        try:
+            animal_uuid = UUID(animal_id)
+            profile = animal_service.profile_for(principal.household_id, animal_uuid)
+            if profile is None:
+                raise FormValidationError("Animal not found.")
+            capability = CARE_SCHEDULE_CAPABILITIES.get(reminder_type)
+            if capability is None:
+                raise FormValidationError("Care schedule type is not supported.")
+            _title, subject_type, _source = capability
+            if subject_type == "animal":
+                subject_id = profile.animal_id
+            else:
+                if profile.current_enclosure_id is None:
+                    raise FormValidationError(
+                        "Assign an enclosure before configuring this care schedule."
+                    )
+                subject_id = profile.current_enclosure_id
+            enabled = str(form.get("enabled", "")).lower() == "true"
+            existing = _subject_schedule_rule(
+                reminder_projection,
+                principal.household_id,
+                subject_type,
+                subject_id,
+                reminder_type,
+            )
+            interval_value = str(form.get("interval_days", "")).strip()
+            interval_days = (
+                _required_int(interval_value, "interval")
+                if interval_value
+                else existing.interval_days
+                if existing is not None
+                else 1
+            )
+            override_value = str(form.get("override_due_at", "")).strip()
+            reminder_rule_service.save_subject_schedule(
+                SaveSubjectScheduleCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    uuid4(),
+                    _form_idempotency_key(form),
+                    _required_int(form.get("expected_stream_version", ""), "stream version"),
+                    subject_type,
+                    subject_id,
+                    reminder_type,
+                    interval_days,
+                    (
+                        _form_datetime(override_value, principal.household_timezone).isoformat()
+                        if override_value
+                        else None
+                    ),
+                    enabled,
+                )
+            )
+        except (ReminderValidationError, FormValidationError, ValueError) as error:
+            return _animal_form_error(
+                request,
+                principal,
+                animal_id,
+                str(error),
+                animal_service,
+                enclosure_service,
+                reminder_projection,
+            )
+        return RedirectResponse(f"/animals/{animal_id}#care-schedule", status_code=303)
 
     def care_form_response(
         request: Request,
@@ -1692,6 +1799,7 @@ def create_web_router(
                 str(error),
                 animal_service,
                 enclosure_service,
+                reminder_projection,
             )
         finally:
             if isinstance(upload, UploadFile):
@@ -1804,7 +1912,13 @@ def create_web_router(
             )
         except (AnimalValidationError, FormValidationError, ValueError) as error:
             return _animal_form_error(
-                request, principal, animal_id, str(error), animal_service, enclosure_service
+                request,
+                principal,
+                animal_id,
+                str(error),
+                animal_service,
+                enclosure_service,
+                reminder_projection,
             )
         return RedirectResponse(f"/animals/{animal_id}", status_code=303)
 
@@ -1844,6 +1958,7 @@ def create_web_router(
                 str(error),
                 animal_service,
                 enclosure_service,
+                reminder_projection,
             )
         return RedirectResponse(f"/animals/{animal_id}", status_code=303)
 
@@ -2326,6 +2441,7 @@ def _animal_form_error(
     message: str,
     animal_service: AnimalService,
     enclosure_service: EnclosureService | None = None,
+    reminder_projection: ReminderProjection | None = None,
 ) -> HTMLResponse:
     try:
         profile = animal_service.profile_for(principal.household_id, UUID(animal_id))
@@ -2369,9 +2485,132 @@ def _animal_form_error(
             "enclosures": enclosures,
             "current_enclosure": current_enclosure,
             "recent_events": recent_events[:5],
+            "care_schedules": (
+                _care_schedule_rows(
+                    principal.household_id,
+                    profile.animal_id,
+                    current_enclosure,
+                    reminder_projection,
+                    principal.household_timezone,
+                )
+                if reminder_projection is not None
+                else ()
+            ),
         },
         status_code=422,
     )
+
+
+def _subject_schedule_rule(
+    projection: ReminderProjection,
+    household_id: UUID,
+    subject_type: str,
+    subject_id: UUID,
+    reminder_type: str,
+) -> ReminderRuleCurrent | None:
+    matches = tuple(
+        rule
+        for rule in projection.rules_for(household_id)
+        if rule.subject_type == subject_type
+        and rule.subject_id == subject_id
+        and rule.reminder_type == reminder_type
+    )
+    return matches[0] if matches else None
+
+
+def _care_schedule_rows(
+    household_id: UUID,
+    animal_id: UUID,
+    current_enclosure: Any,
+    projection: ReminderProjection,
+    timezone_name: str,
+) -> tuple[dict[str, Any], ...]:
+    timezone = ZoneInfo(timezone_name)
+    rows: list[dict[str, Any]] = []
+    for reminder_type, (title, subject_type, source_label) in CARE_SCHEDULE_CAPABILITIES.items():
+        subject_id = (
+            animal_id
+            if subject_type == "animal"
+            else current_enclosure.enclosure_id
+            if current_enclosure is not None
+            else None
+        )
+        rule = (
+            _subject_schedule_rule(
+                projection,
+                household_id,
+                subject_type,
+                subject_id,
+                reminder_type,
+            )
+            if subject_id is not None
+            else None
+        )
+        rows.append(
+            {
+                "reminder_type": reminder_type,
+                "title": title,
+                "interval_label": f"{title} interval",
+                "source_label": source_label,
+                "available": subject_id is not None,
+                "enclosure_name": (
+                    current_enclosure.name
+                    if subject_type == "enclosure" and current_enclosure
+                    else None
+                ),
+                "enabled": rule.enabled if rule is not None else False,
+                "interval_days": rule.interval_days if rule is not None else "",
+                "expected_stream_version": rule.stream_version if rule is not None else 0,
+                "override_due_at": (
+                    rule.override_due_at.astimezone(timezone).strftime("%Y-%m-%dT%H:%M")
+                    if rule is not None and rule.override_due_at is not None
+                    else ""
+                ),
+            }
+        )
+    return tuple(rows)
+
+
+def _agenda_rows(
+    items: tuple[Any, ...], *, animals: tuple[Any, ...], enclosures: tuple[Any, ...]
+) -> dict[str, tuple[dict[str, Any], ...]]:
+    animal_by_id = {animal.animal_id: animal for animal in animals}
+    enclosure_by_id = {enclosure.enclosure_id: enclosure for enclosure in enclosures}
+    occupants: dict[UUID, list[Any]] = {}
+    for animal in animals:
+        if animal.current_enclosure_id is not None:
+            occupants.setdefault(animal.current_enclosure_id, []).append(animal)
+    grouped: dict[str, list[dict[str, Any]]] = {
+        "overdue": [],
+        "due_today": [],
+        "upcoming": [],
+    }
+    for item in items:
+        location_name = None
+        if item.subject_type == "animal":
+            animal = animal_by_id.get(item.subject_id)
+            subject_name = animal.name if animal is not None else "Animal"
+            subject_url = f"/animals/{item.subject_id}"
+        else:
+            enclosure = enclosure_by_id.get(item.subject_id)
+            enclosure_occupants = occupants.get(item.subject_id, [])
+            if len(enclosure_occupants) == 1:
+                animal = enclosure_occupants[0]
+                subject_name = animal.name
+                subject_url = f"/animals/{animal.animal_id}"
+                location_name = enclosure.name if enclosure is not None else "Enclosure"
+            else:
+                subject_name = enclosure.name if enclosure is not None else "Enclosure"
+                subject_url = f"/enclosures/{item.subject_id}"
+        grouped[item.status].append(
+            {
+                "item": item,
+                "subject_name": subject_name,
+                "subject_url": subject_url,
+                "location_name": location_name,
+            }
+        )
+    return {key: tuple(value) for key, value in grouped.items()}
 
 
 def _animal_edit_error(

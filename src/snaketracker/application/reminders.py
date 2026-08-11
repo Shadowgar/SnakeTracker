@@ -54,6 +54,7 @@ REMINDER_SUBJECTS: dict[str, str] = {
     "water_change": "enclosure",
 }
 REMINDER_FACT_NAMESPACE = UUID("0dfcdb6a-4a34-58ab-a0f0-ce8714678656")
+PROFILE_SCHEDULE_NAMESPACE = UUID("66570757-b1e8-58d5-98c2-b6f4f48a99b8")
 
 
 class ReminderValidationError(ValueError):
@@ -96,6 +97,22 @@ class ReminderFact:
     status: str
     explanation: str
     calculated_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class ReminderAgendaItem:
+    rule_id: UUID
+    household_id: UUID
+    reminder_type: str
+    subject_type: str
+    subject_id: UUID
+    interval_days: int
+    due_at: datetime
+    status: str
+    source_event_id: UUID | None
+    source_occurred_at: datetime | None
+    source_label: str
+    explanation: str
 
 
 class ReminderProjection(SynchronousProjection, Protocol):
@@ -159,6 +176,22 @@ class DisableReminderRuleCommand:
     correlation_id: UUID
     idempotency_key: str
     reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class SaveSubjectScheduleCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    expected_stream_version: int
+    subject_type: str
+    subject_id: UUID
+    reminder_type: str
+    interval_days: int
+    override_due_at: str | None
+    enabled: bool
+    channel: str = "local"
 
 
 @dataclass(frozen=True, slots=True)
@@ -286,6 +319,138 @@ class ReminderRuleService:
             notes=reason,
         )
 
+    def save_subject_schedule(
+        self, command: SaveSubjectScheduleCommand
+    ) -> ReminderRuleCurrent | None:
+        """Create, update, enable, or disable one logical subject-care schedule."""
+        validated = _validated_schedule(
+            command.reminder_type,
+            command.subject_type,
+            "event_relative",
+            command.interval_days,
+            None,
+            command.override_due_at,
+            command.channel,
+        )
+        if not self._projection.subject_exists(
+            command.household_id, command.subject_type, command.subject_id
+        ):
+            raise ReminderValidationError("Reminder subject does not exist in this household.")
+        reminder_type, kind, interval, anchor, override, channel = validated
+        matches = tuple(
+            rule
+            for rule in self._projection.rules_for(command.household_id)
+            if rule.subject_type == command.subject_type
+            and rule.subject_id == command.subject_id
+            and rule.reminder_type == reminder_type
+        )
+        if len(matches) > 1:
+            raise ReminderValidationError(
+                "This care schedule has duplicate reminder rules. Resolve them before saving."
+            )
+        current = matches[0] if matches else None
+        current_version = current.stream_version if current is not None else 0
+        if command.expected_stream_version != current_version:
+            raise ReminderValidationError(
+                "This care schedule changed in another request. Refresh the animal profile."
+            )
+        if not command.enabled and current is None:
+            return None
+        if current is not None and _schedule_matches(
+            current,
+            interval_days=interval,
+            override_due_at=override,
+            enabled=command.enabled,
+            channel=channel,
+        ):
+            return current
+
+        rule_id = (
+            current.rule_id
+            if current is not None
+            else uuid5(
+                PROFILE_SCHEDULE_NAMESPACE,
+                (
+                    f"{command.household_id}:{command.subject_type}:"
+                    f"{command.subject_id}:{reminder_type}"
+                ),
+            )
+        )
+        key = StreamKey(command.household_id, "reminder-rule", rule_id)
+        existing = self._event_store.load_stream(key)
+        now = datetime.now(UTC)
+        correlation_id = existing[0].correlation_id if existing else command.correlation_id
+        if current is None:
+            event_type = "reminder.rule_created"
+            payload: EventPayload = ReminderRuleCreatedV1(
+                rule_id,
+                command.subject_type,
+                command.subject_id,
+                reminder_type,
+                kind,
+                interval,
+                anchor,
+                override,
+                True,
+                channel,
+            )
+            title = "Care schedule created"
+            notes = None
+        elif command.enabled:
+            event_type = "reminder.rule_changed"
+            payload = ReminderRuleChangedV1(
+                reminder_type,
+                kind,
+                interval,
+                anchor,
+                override,
+                True,
+                channel,
+            )
+            title = "Care schedule changed"
+            notes = None
+        else:
+            event_type = "reminder.rule_disabled"
+            notes = "Disabled from the animal care schedule."
+            payload = ReminderRuleDisabledV1(notes)
+            title = "Care schedule disabled"
+        event = _rule_event(
+            key,
+            current_version + 1,
+            event_type,
+            payload,
+            command.actor_user_id,
+            correlation_id,
+            existing[-1].event_id if existing else None,
+            command.idempotency_key,
+            now,
+            title,
+            command.subject_type,
+            command.subject_id,
+            notes,
+        )
+        result = self._event_store.append_many(
+            AtomicAppendRequest(
+                streams=(StreamAppend(key, current_version, (event,)),),
+                idempotency=_idempotency(
+                    command.household_id,
+                    command.actor_user_id,
+                    "reminders.save_subject_schedule",
+                    command.idempotency_key,
+                    correlation_id,
+                    {"rule_id": str(rule_id), "event_id": str(event.event_id)},
+                    _command_fields(command),
+                    now,
+                ),
+                synchronous_projections=(self._projection,),
+            )
+        )
+        return self._result(
+            command.household_id,
+            _stored_uuid(result.stored_response, "rule_id"),
+            _stored_uuid(result.stored_response, "event_id"),
+        ).current
+
     def _append_change(
         self,
         command: ChangeReminderRuleCommand | DisableReminderRuleCommand,
@@ -374,31 +539,11 @@ class ReminderFactService:
         if not rule.enabled:
             self._projection.replace_rule_facts(household_id, rule_id, ())
             return ()
-        source = self._latest_source(rule)
-        if rule.override_due_at is not None:
-            due_at = rule.override_due_at
-            explanation = "Owner due-date override"
-        elif rule.schedule_kind == "fixed_interval":
-            if rule.anchor_at is None:
-                raise ReminderValidationError("Fixed-interval reminder is missing its anchor.")
-            due_at = _add_household_days(
-                rule.anchor_at,
-                rule.interval_days,
-                self._projection.household_timezone(household_id),
-            )
-            explanation = f"{_days_label(rule.interval_days)} after the fixed schedule anchor"
-        else:
-            if source is None:
-                self._projection.replace_rule_facts(household_id, rule_id, ())
-                return ()
-            due_at = _add_household_days(
-                source.occurred_at,
-                rule.interval_days,
-                self._projection.household_timezone(household_id),
-            )
-            explanation = (
-                f"{_days_label(rule.interval_days)} after last {_source_label(rule.reminder_type)}"
-            )
+        calculation = self._calculation(rule)
+        if calculation is None:
+            self._projection.replace_rule_facts(household_id, rule_id, ())
+            return ()
+        due_at, explanation, source = calculation
         if calculated_at < due_at:
             self._projection.replace_rule_facts(household_id, rule_id, ())
             return ()
@@ -429,6 +574,73 @@ class ReminderFactService:
         facts = (fact,)
         self._projection.replace_rule_facts(household_id, rule_id, facts)
         return facts
+
+    def agenda_for(self, household_id: UUID, *, now: datetime) -> tuple[ReminderAgendaItem, ...]:
+        calculated_at = _aware_utc(now, "Agenda calculation time")
+        timezone = ZoneInfo(self._projection.household_timezone(household_id))
+        today = calculated_at.astimezone(timezone).date()
+        items: list[ReminderAgendaItem] = []
+        for rule in self._projection.rules_for(household_id):
+            if not rule.enabled:
+                continue
+            calculation = self._calculation(rule)
+            if calculation is None:
+                continue
+            due_at, explanation, source = calculation
+            due_date = due_at.astimezone(timezone).date()
+            status = (
+                "overdue" if due_date < today else "due_today" if due_date == today else "upcoming"
+            )
+            items.append(
+                ReminderAgendaItem(
+                    rule.rule_id,
+                    household_id,
+                    rule.reminder_type,
+                    rule.subject_type,
+                    rule.subject_id,
+                    rule.interval_days,
+                    due_at,
+                    status,
+                    source.event_id if source is not None else None,
+                    source.occurred_at if source is not None else None,
+                    _source_label(rule.reminder_type),
+                    explanation,
+                )
+            )
+        order = {"overdue": 0, "due_today": 1, "upcoming": 2}
+        return tuple(
+            sorted(items, key=lambda item: (order[item.status], item.due_at, item.rule_id))
+        )
+
+    def _calculation(
+        self, rule: ReminderRuleCurrent
+    ) -> tuple[datetime, str, DomainEvent | None] | None:
+        source = self._latest_source(rule)
+        if rule.override_due_at is not None:
+            return rule.override_due_at, "Owner due-date override", source
+        if rule.schedule_kind == "fixed_interval":
+            if rule.anchor_at is None:
+                raise ReminderValidationError("Fixed-interval reminder is missing its anchor.")
+            return (
+                _add_household_days(
+                    rule.anchor_at,
+                    rule.interval_days,
+                    self._projection.household_timezone(rule.household_id),
+                ),
+                f"{_days_label(rule.interval_days)} after the fixed schedule anchor",
+                source,
+            )
+        if source is None:
+            return None
+        return (
+            _add_household_days(
+                source.occurred_at,
+                rule.interval_days,
+                self._projection.household_timezone(rule.household_id),
+            ),
+            f"{_days_label(rule.interval_days)} after last {_source_label(rule.reminder_type)}",
+            source,
+        )
 
     def _latest_source(self, rule: ReminderRuleCurrent) -> DomainEvent | None:
         stream_type = "animal" if rule.subject_type == "animal" else "enclosure"
@@ -560,7 +772,12 @@ def _idempotency(
 
 
 def _command_fields(
-    command: CreateReminderRuleCommand | ChangeReminderRuleCommand | DisableReminderRuleCommand,
+    command: (
+        CreateReminderRuleCommand
+        | ChangeReminderRuleCommand
+        | DisableReminderRuleCommand
+        | SaveSubjectScheduleCommand
+    ),
 ) -> dict[str, object]:
     return {
         key: str(value) if isinstance(value, UUID) else value
@@ -606,6 +823,25 @@ def _source_label(reminder_type: str) -> str:
 
 def _days_label(interval_days: int) -> str:
     return f"{interval_days} day" if interval_days == 1 else f"{interval_days} days"
+
+
+def _schedule_matches(
+    current: ReminderRuleCurrent,
+    *,
+    interval_days: int,
+    override_due_at: str | None,
+    enabled: bool,
+    channel: str,
+) -> bool:
+    override = datetime.fromisoformat(override_due_at) if override_due_at is not None else None
+    return (
+        current.schedule_kind == "event_relative"
+        and current.interval_days == interval_days
+        and current.anchor_at is None
+        and current.override_due_at == override
+        and current.enabled is enabled
+        and current.channel == channel
+    )
 
 
 def _required_text(value: str, label: str, maximum: int) -> str:

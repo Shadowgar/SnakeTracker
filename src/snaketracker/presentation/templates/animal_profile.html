@@ -30,6 +30,38 @@
     </div>
   </section>
 
+  <section id="care-schedule" aria-labelledby="care-schedule-title">
+    <div class="section-heading">
+      <div><p class="eyebrow">Routine care</p><h2 id="care-schedule-title">Care schedule</h2></div>
+      <a href="/reminders">View care agenda</a>
+    </div>
+    <p class="muted">Set the intervals you use for this animal. SnakeTracker will calculate what is due from the latest accepted care record.</p>
+    <div class="schedule-grid">
+      {% for schedule in care_schedules %}
+      <article class="card schedule-card">
+        <div>
+          <h3>{{ schedule.title }}</h3>
+          {% if schedule.enabled %}<p>Every {{ schedule.interval_days }} day{% if schedule.interval_days != 1 %}s{% endif %} after {{ schedule.source_label }}</p>{% else %}<p>Not enabled</p>{% endif %}
+          {% if schedule.enclosure_name %}<p class="muted">Uses care recorded for {{ schedule.enclosure_name }}.</p>{% endif %}
+        </div>
+        {% if schedule.available and 'reminder.manage' in principal.capabilities %}
+        <form class="schedule-form" method="post" action="/animals/{{ animal.animal_id }}/care-schedule/{{ schedule.reminder_type }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="idempotency_key" value="{{ command_id }}-care-{{ schedule.reminder_type }}">
+          <input type="hidden" name="expected_stream_version" value="{{ schedule.expected_stream_version }}">
+          <label class="checkbox-label"><input name="enabled" type="checkbox" value="true" {% if schedule.enabled %}checked{% endif %}> Enabled</label>
+          <label>{{ schedule.interval_label }}<span class="input-with-unit"><input name="interval_days" type="number" min="1" max="3650" value="{{ schedule.interval_days }}"><span>days</span></span></label>
+          <label>Due-date override (optional)<input name="override_due_at" type="datetime-local" value="{{ schedule.override_due_at }}"><small>{{ principal.household_timezone }}</small></label>
+          <button type="submit">Save {{ schedule.title|lower }}</button>
+        </form>
+        {% elif not schedule.available %}
+        <p class="muted">Assign an enclosure before configuring this schedule.</p>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+
   <section class="overview-grid" aria-label="Animal overview">
     <div class="card overview-card">
       <h2>Profile</h2>

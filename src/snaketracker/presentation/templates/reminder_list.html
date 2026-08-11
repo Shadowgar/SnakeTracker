@@ -1,5 +1,52 @@
 {% extends "base.html" %}
 {% block title %}Reminders · SnakeTracker{% endblock %}
-{% block content %}<section class="dashboard" aria-labelledby="page-title"><header><p class="eyebrow">Care schedule</p><h1 id="page-title">Reminders</h1><p class="lede">Owner-configured schedules derived from effective care history. No species assumptions are encoded.</p></header>{% if 'reminder.manage' in principal.capabilities %}<div class="dashboard-actions"><a class="button-link" href="/reminders/new">Add reminder</a></div>{% endif %}
-{% if facts %}<section class="card"><h2>Due now</h2><ul class="recent-care-list">{% for fact in facts %}<li><div><strong>{{ fact.reminder_type|replace('_',' ')|title }}</strong><p>{{ fact.explanation }}</p></div><time>{{ fact.status|capitalize }}</time></li>{% endfor %}</ul></section>{% endif %}
-{% if rules %}<ul class="record-list">{% for rule in rules %}<li class="reminder-rule" id="{{ rule.rule_id }}"><div class="reminder-rule-summary"><span><strong>{{ rule.reminder_type|replace('_',' ')|title }}</strong> · {{ rule.interval_days }} day{% if rule.interval_days != 1 %}s{% endif %} after {% if rule.schedule_kind == 'event_relative' %}last {{ 'accepted feeding' if rule.reminder_type == 'feeding' else rule.reminder_type|replace('_',' ') }}{% else %}fixed schedule anchor{% endif %}</span><span class="reminder-rule-status">Status: {{ 'Enabled' if rule.enabled else 'Disabled' }}</span></div>{% if rule.enabled and 'reminder.manage' in principal.capabilities %}<form class="reminder-rule-action" method="post" action="/reminders/{{ rule.rule_id }}/disable"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}-{{ rule.rule_id }}"><label>Disable reason<input name="reason" required></label><button class="secondary" type="submit">Disable</button></form>{% endif %}</li>{% endfor %}</ul>{% else %}<div class="empty-state"><h2>No reminder rules yet</h2></div>{% endif %}</section>{% endblock %}
+{% block content %}
+<section class="agenda-page" aria-labelledby="page-title">
+  <header>
+    <p class="eyebrow">Care agenda</p>
+    <h1 id="page-title">Reminders</h1>
+    <p class="lede">Upcoming care based on each animal's schedule.</p>
+  </header>
+
+  {% set agenda_count = namespace(value=0) %}
+  {% for status, heading, rows in agenda_groups %}{% set agenda_count.value = agenda_count.value + rows|length %}{% endfor %}
+  {% if agenda_count.value %}
+    {% for status, heading, rows in agenda_groups %}
+      {% if rows %}
+      <section class="agenda-section" aria-labelledby="agenda-{{ status }}">
+        <h2 id="agenda-{{ status }}">{{ heading }}</h2>
+        <ol class="agenda-list">
+          {% for row in rows %}
+          <li class="card agenda-card">
+            <div class="agenda-card-heading">
+              <div>
+                <a class="agenda-animal" href="{{ row.subject_url }}">{{ row.subject_name }}</a>
+                {% if row.location_name %}<span class="muted"> · {{ row.location_name }}</span>{% endif %}
+                <h3>{{ row.item.reminder_type|replace('_',' ')|title }}</h3>
+              </div>
+              <time datetime="{{ row.item.due_at.isoformat() }}">
+                {% if row.item.status == 'overdue' %}Overdue · due {{ row.item.due_at.astimezone(household_zone).strftime('%b %d') }}
+                {% elif row.item.status == 'due_today' %}Due today
+                {% else %}Due {{ row.item.due_at.astimezone(household_zone).strftime('%b %d') }}{% endif %}
+              </time>
+            </div>
+            <dl class="agenda-details">
+              {% if row.item.source_occurred_at %}<div><dt>Last {{ row.item.source_label }}</dt><dd>{{ row.item.source_occurred_at.astimezone(household_zone).strftime('%b %d') }}</dd></div>{% endif %}
+              <div><dt>Schedule</dt><dd>Every {{ row.item.interval_days }} day{% if row.item.interval_days != 1 %}s{% endif %}</dd></div>
+              {% if row.item.explanation == 'Owner due-date override' %}<div><dt>Due date</dt><dd>Owner override</dd></div>{% endif %}
+            </dl>
+          </li>
+          {% endfor %}
+        </ol>
+      </section>
+      {% endif %}
+    {% endfor %}
+  {% else %}
+  <div class="empty-state">
+    <h2>No scheduled care yet</h2>
+    <p>Open an animal profile to set its normal care intervals.</p>
+    <a class="button-link" href="/animals">View animals</a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

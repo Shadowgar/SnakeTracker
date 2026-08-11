@@ -11,6 +11,7 @@ from alembic.config import Config
 
 from snaketracker.application.animals import (
     AnimalService,
+    CorrectFeedingCommand,
     CorrectWeightCommand,
     RecordBathCommand,
     RecordFeedingCommand,
@@ -34,6 +35,7 @@ from snaketracker.application.reminders import (
     ReminderFactService,
     ReminderRuleService,
     ReminderValidationError,
+    SaveSubjectScheduleCommand,
 )
 from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
 from snaketracker.infrastructure.database.engine import create_sqlite_engine
@@ -618,5 +620,197 @@ def test_reminder_schedule_validation_and_empty_fact_states_fail_closed(tmp_path
                 )
             )
         assert projection.facts_for(bootstrap.household_id) == ()
+    finally:
+        engine.dispose()
+
+
+def test_profile_schedule_save_reuses_one_logical_rule_and_disables_it(tmp_path: Path) -> None:
+    (
+        engine,
+        bootstrap,
+        _animals,
+        _enclosures,
+        animal_id,
+        _enclosure_id,
+        rules,
+        _facts,
+        projection,
+    ) = _setup(tmp_path)
+    try:
+
+        def command(
+            key: str, expected_version: int, interval: int, enabled: bool
+        ) -> SaveSubjectScheduleCommand:
+            return SaveSubjectScheduleCommand(
+                household_id=bootstrap.household_id,
+                actor_user_id=bootstrap.user_id,
+                correlation_id=uuid4(),
+                idempotency_key=key,
+                expected_stream_version=expected_version,
+                subject_type="animal",
+                subject_id=animal_id,
+                reminder_type="feeding",
+                interval_days=interval,
+                override_due_at=None,
+                enabled=enabled,
+                channel="local",
+            )
+
+        saved = rules.save_subject_schedule(command("profile-feeding-create", 0, 7, True))
+        assert saved is not None
+        assert saved.interval_days == 7
+        assert saved.enabled is True
+
+        changed = rules.save_subject_schedule(command("profile-feeding-update", 1, 14, True))
+        assert changed is not None
+        assert changed.rule_id == saved.rule_id
+        assert changed.interval_days == 14
+        assert changed.stream_version == 2
+        matching = tuple(
+            rule
+            for rule in projection.rules_for(bootstrap.household_id)
+            if rule.subject_id == animal_id and rule.reminder_type == "feeding"
+        )
+        assert matching == (changed,)
+
+        disabled = rules.save_subject_schedule(command("profile-feeding-disable", 2, 14, False))
+        assert disabled is not None
+        assert disabled.rule_id == saved.rule_id
+        assert disabled.enabled is False
+        assert disabled.stream_version == 3
+    finally:
+        engine.dispose()
+
+
+def test_agenda_preview_includes_upcoming_effective_care_without_delivery_fact(
+    tmp_path: Path,
+) -> None:
+    engine, bootstrap, animals, _enclosures, animal_id, _enclosure_id, rules, facts, projection = (
+        _setup(tmp_path)
+    )
+    try:
+        accepted = animals.record_feeding(
+            RecordFeedingCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                animal_id,
+                uuid4(),
+                "agenda-accepted-feeding",
+                datetime(2026, 8, 10, 13, 0, tzinfo=UTC),
+                "mouse",
+                "small",
+                None,
+                "frozen_thawed",
+                1,
+                "accepted",
+                None,
+            )
+        )
+        rule = rules.create(_rule_command(bootstrap, animal_id, interval_days=7))
+
+        agenda = facts.agenda_for(
+            bootstrap.household_id,
+            now=datetime(2026, 8, 12, 13, 0, tzinfo=UTC),
+        )
+
+        assert len(agenda) == 1
+        item = agenda[0]
+        assert item.rule_id == rule.rule_id
+        assert item.status == "upcoming"
+        assert item.due_at == datetime(2026, 8, 17, 13, 0, tzinfo=UTC)
+        assert item.source_event_id == accepted.event.event_id
+        assert item.source_label == "accepted feeding"
+        assert projection.facts_for(bootstrap.household_id) == ()
+    finally:
+        engine.dispose()
+
+
+def test_feeding_agenda_recomputes_after_correction_void_and_reinstatement(
+    tmp_path: Path,
+) -> None:
+    engine, bootstrap, animals, _enclosures, animal_id, _enclosure_id, rules, facts, _projection = (
+        _setup(tmp_path)
+    )
+    try:
+        accepted = animals.record_feeding(
+            RecordFeedingCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                animal_id,
+                uuid4(),
+                "agenda-feeding-original",
+                datetime(2026, 8, 1, 13, 0, tzinfo=UTC),
+                "mouse",
+                "small",
+                None,
+                "frozen_thawed",
+                1,
+                "accepted",
+                None,
+            )
+        )
+        corrected = animals.correct_feeding(
+            CorrectFeedingCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                "owner",
+                animal_id,
+                accepted.event.event_id,
+                "agenda-feeding-corrected",
+                datetime(2026, 8, 3, 13, 0, tzinfo=UTC),
+                "mouse",
+                "small",
+                None,
+                "frozen_thawed",
+                1,
+                "accepted",
+                "Date corrected.",
+            )
+        )
+        rule = rules.create(_rule_command(bootstrap, animal_id, interval_days=7))
+
+        initial = facts.agenda_for(
+            bootstrap.household_id,
+            now=datetime(2026, 8, 5, 13, 0, tzinfo=UTC),
+        )[0]
+        assert initial.source_event_id == corrected.event.event_id
+        assert initial.due_at == datetime(2026, 8, 10, 13, 0, tzinfo=UTC)
+
+        animals.void_event(
+            VoidAnimalEventCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                "owner",
+                animal_id,
+                corrected.event.event_id,
+                "agenda-feeding-void",
+                "Correction withdrawn.",
+            )
+        )
+        after_void = facts.agenda_for(
+            bootstrap.household_id,
+            now=datetime(2026, 8, 5, 13, 0, tzinfo=UTC),
+        )[0]
+        assert after_void.rule_id == rule.rule_id
+        assert after_void.source_event_id == accepted.event.event_id
+        assert after_void.due_at == datetime(2026, 8, 8, 13, 0, tzinfo=UTC)
+
+        animals.reinstate_event(
+            ReinstateAnimalEventCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                "owner",
+                animal_id,
+                corrected.event.event_id,
+                "agenda-feeding-reinstate",
+                "Correction verified.",
+            )
+        )
+        after_reinstate = facts.agenda_for(
+            bootstrap.household_id,
+            now=datetime(2026, 8, 5, 13, 0, tzinfo=UTC),
+        )[0]
+        assert after_reinstate.source_event_id == corrected.event.event_id
+        assert after_reinstate.due_at == initial.due_at
     finally:
         engine.dispose()

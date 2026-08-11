@@ -195,59 +195,25 @@ def test_keeper_can_use_inventory_expense_and_reminder_workflows(tmp_path: Path)
         assert voided.status_code == 303
         assert "Voided" in client.get(expense_url).text
 
-        reminder_form = client.get("/reminders/new")
+        profile = client.get(animal_url)
         reminder = client.post(
-            "/reminders",
+            f"{animal_url}/care-schedule/feeding",
             data={
-                "csrf_token": _csrf(reminder_form.text),
+                "csrf_token": _csrf(profile.text),
                 "idempotency_key": "event-relative-reminder",
-                "subject_type": "animal",
-                "subject_id": animal_url.rsplit("/", 1)[-1],
-                "reminder_type": "feeding",
-                "schedule_kind": "event_relative",
+                "expected_stream_version": "0",
+                "enabled": "true",
                 "interval_days": "1",
-                "anchor_at": "",
                 "override_due_at": "",
-                "channel": "local",
             },
             follow_redirects=False,
         )
         assert reminder.status_code == 303
         reminders = client.get("/reminders")
-        assert "1 day after last accepted feeding" in reminders.text
-        assert "Status: Enabled" in reminders.text
-        assert "No species assumptions" in reminders.text
-
-        fixed_reminder = client.post(
-            "/reminders",
-            data={
-                "csrf_token": _csrf(reminders.text),
-                "idempotency_key": "fixed-reminder",
-                "subject_type": "animal",
-                "subject_id": animal_url.rsplit("/", 1)[-1],
-                "reminder_type": "weight",
-                "schedule_kind": "fixed_interval",
-                "interval_days": "1",
-                "anchor_at": (datetime.now(UTC) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M"),
-                "override_due_at": "",
-                "channel": "local",
-            },
-            follow_redirects=False,
-        )
-        assert fixed_reminder.status_code == 303
-        fixed_rule_id = fixed_reminder.headers["location"].split("#", 1)[1]
-        reminders = client.get("/reminders")
-        assert "Due now" in reminders.text
-        disabled = client.post(
-            f"/reminders/{fixed_rule_id}/disable",
-            data={
-                "csrf_token": _csrf(reminders.text),
-                "idempotency_key": "disable-fixed-reminder",
-                "reason": "Owner paused this schedule.",
-            },
-            follow_redirects=False,
-        )
-        assert disabled.status_code == 303
+        assert "Upcoming" in reminders.text
+        assert "Nyx" in reminders.text
+        assert "Every 1 day" in reminders.text
+        assert "Add reminder" not in reminders.text
 
         operations = client.get("/operations/jobs")
         assert operations.status_code == 200
@@ -336,6 +302,7 @@ def test_operational_routes_fail_closed_for_invalid_and_unauthorized_requests(
             f"/expenses/{uuid4()}/void",
             "/reminders",
             f"/reminders/{uuid4()}/disable",
+            f"/animals/{uuid4()}/care-schedule/feeding",
         ):
             assert client.post(path, data={}).status_code == 403
 
@@ -358,6 +325,7 @@ def test_operational_routes_fail_closed_for_invalid_and_unauthorized_requests(
             f"/expenses/{uuid4()}/void",
             "/reminders",
             f"/reminders/{uuid4()}/disable",
+            f"/animals/{uuid4()}/care-schedule/feeding",
         ):
             assert client.post(path, data={"csrf_token": token}).status_code == 403
 
@@ -376,3 +344,167 @@ def test_operational_routes_fail_closed_for_invalid_and_unauthorized_requests(
             response = client.get(path, follow_redirects=False)
             assert response.status_code == 303
             assert response.headers["location"] == "/login"
+
+
+def test_animal_profile_manages_care_schedule_and_reminders_is_an_agenda(
+    tmp_path: Path,
+) -> None:
+    with _client(tmp_path) as client:
+        _setup(client)
+        animal_form = client.get("/animals/new")
+        animal = client.post(
+            "/animals",
+            data={
+                "csrf_token": _csrf(animal_form.text),
+                "name": "Juniper",
+                "species": "Python regius",
+                "sex": "",
+                "morph": "",
+                "genetics": "",
+                "birth_hatch_date": "",
+                "acquisition_date": "",
+                "breeder_source": "",
+                "notes": "",
+            },
+            follow_redirects=False,
+        )
+        animal_url = animal.headers["location"]
+        profile = client.get(animal_url)
+        assert "Care schedule" in profile.text
+        assert "Feeding interval" in profile.text
+
+        feeding_form = client.get(f"{animal_url}/feedings/new")
+        feeding = client.post(
+            f"{animal_url}/feedings",
+            data={
+                "csrf_token": _csrf(feeding_form.text),
+                "occurred_at": (datetime.now(UTC) - timedelta(minutes=1)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "prey_type": "mouse",
+                "prey_size": "small",
+                "prey_weight_grams": "",
+                "preparation_method": "frozen_thawed",
+                "quantity": "1",
+                "outcome": "accepted",
+                "notes": "",
+                "inventory_item_id": "",
+                "inventory_expected_stream_version": "",
+                "inventory_quantity": "",
+            },
+            follow_redirects=False,
+        )
+        assert feeding.status_code == 303
+
+        saved = client.post(
+            f"{animal_url}/care-schedule/feeding",
+            data={
+                "csrf_token": _csrf(profile.text),
+                "idempotency_key": "profile-feeding-schedule",
+                "expected_stream_version": "0",
+                "enabled": "true",
+                "interval_days": "7",
+                "override_due_at": "",
+            },
+            follow_redirects=False,
+        )
+        assert saved.status_code == 303
+        assert saved.headers["location"] == f"{animal_url}#care-schedule"
+
+        agenda = client.get("/reminders")
+        assert "Upcoming care based on each animal's schedule." in agenda.text
+        assert "Upcoming" in agenda.text
+        assert "Juniper" in agenda.text
+        assert "Feeding" in agenda.text
+        assert "Last accepted feeding" in agenda.text
+        assert "Every 7 days" in agenda.text
+        assert "Add reminder" not in agenda.text
+        assert "Disable reason" not in agenda.text
+        assert "No species assumptions are encoded" not in agenda.text
+
+        updated_profile = client.get(animal_url)
+        assert "Every 7 days after last accepted feeding" in updated_profile.text
+        updated = client.post(
+            f"{animal_url}/care-schedule/feeding",
+            data={
+                "csrf_token": _csrf(updated_profile.text),
+                "idempotency_key": "profile-feeding-schedule-update",
+                "expected_stream_version": "1",
+                "enabled": "true",
+                "interval_days": "14",
+                "override_due_at": "",
+            },
+            follow_redirects=False,
+        )
+        assert updated.status_code == 303
+        assert "Every 14 days after last accepted feeding" in client.get(animal_url).text
+
+        disable_profile = client.get(animal_url)
+        disabled = client.post(
+            f"{animal_url}/care-schedule/feeding",
+            data={
+                "csrf_token": _csrf(disable_profile.text),
+                "idempotency_key": "profile-feeding-schedule-disable",
+                "expected_stream_version": "2",
+                "interval_days": "14",
+                "override_due_at": "",
+            },
+            follow_redirects=False,
+        )
+        assert disabled.status_code == 303
+        assert "No scheduled care yet" in client.get("/reminders").text
+
+
+def test_care_agenda_groups_overdue_due_today_and_upcoming_schedules(
+    tmp_path: Path,
+) -> None:
+    with _client(tmp_path) as client:
+        _setup(client)
+        animal_form = client.get("/animals/new")
+        animal = client.post(
+            "/animals",
+            data={
+                "csrf_token": _csrf(animal_form.text),
+                "name": "Sol",
+                "species": "Python regius",
+                "sex": "",
+                "morph": "",
+                "genetics": "",
+                "birth_hatch_date": "",
+                "acquisition_date": "",
+                "breeder_source": "",
+                "notes": "",
+            },
+            follow_redirects=False,
+        )
+        animal_url = animal.headers["location"]
+        today = datetime.now(UTC).date()
+        schedules = (
+            ("weight", today - timedelta(days=1), "agenda-overdue"),
+            ("length", today, "agenda-due_today"),
+            ("bath", today + timedelta(days=1), "agenda-upcoming"),
+        )
+        for reminder_type, due_date, key in schedules:
+            profile = client.get(animal_url)
+            saved = client.post(
+                f"{animal_url}/care-schedule/{reminder_type}",
+                data={
+                    "csrf_token": _csrf(profile.text),
+                    "idempotency_key": key,
+                    "expected_stream_version": "0",
+                    "enabled": "true",
+                    "interval_days": "30",
+                    "override_due_at": f"{due_date.isoformat()}T12:00",
+                },
+                follow_redirects=False,
+            )
+            assert saved.status_code == 303
+
+        agenda = client.get("/reminders")
+        assert agenda.status_code == 200
+        assert 'id="agenda-overdue"' in agenda.text
+        assert "Overdue · due" in agenda.text
+        assert 'id="agenda-due_today"' in agenda.text
+        assert "Due today" in agenda.text
+        assert 'id="agenda-upcoming"' in agenda.text
+        assert "Upcoming" in agenda.text
