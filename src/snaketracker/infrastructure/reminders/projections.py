@@ -174,6 +174,19 @@ class SQLAlchemyReminderProjection:
             ).scalar_one_or_none()
         return exists is not None
 
+    def animal_capability_profile(self, household_id: UUID, animal_id: UUID) -> str | None:
+        with self._engine.connect() as connection:
+            row = connection.execute(
+                text(
+                    "SELECT animal_type,capability_profile_version FROM animal_current "
+                    "WHERE household_id=:household_id AND animal_id=:animal_id"
+                ),
+                {"household_id": str(household_id), "animal_id": str(animal_id)},
+            ).one_or_none()
+        if row is None:
+            return None
+        return f"{row.animal_type}.v{row.capability_profile_version}"
+
     def household_timezone(self, household_id: UUID) -> str:
         with self._engine.connect() as connection:
             timezone = connection.execute(

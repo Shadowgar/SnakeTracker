@@ -13,9 +13,13 @@ from snaketracker.domains.animals.contracts import (
     AnimalFeedingRecordedV1,
     AnimalLengthCorrectedV1,
     AnimalLengthRecordedV1,
+    AnimalMoltCorrectedV1,
+    AnimalMoltRecordedV1,
     AnimalPhotoSelectedV1,
+    AnimalPremoltObservedV1,
     AnimalProfileCorrectedV1,
     AnimalRegisteredV1,
+    AnimalRegisteredV2,
     AnimalShedCorrectedV1,
     AnimalShedRecordedV1,
     AnimalStatusChangedV1,
@@ -45,7 +49,7 @@ def present_care_event(
     payload = event.payload
     title = event.title
     technical_facts: tuple[tuple[str, str], ...] = ()
-    if isinstance(payload, AnimalRegisteredV1):
+    if isinstance(payload, AnimalRegisteredV1 | AnimalRegisteredV2):
         description = f"{payload.name} was added as {payload.species}."
     elif isinstance(payload, AnimalProfileCorrectedV1):
         description = f"Profile details now identify this animal as {payload.name}."
@@ -71,6 +75,14 @@ def present_care_event(
         description = f"{state} · {result} · {blue}"
     elif isinstance(payload, AnimalBathRecordedV1):
         description = f"{payload.duration_minutes} minutes · {payload.reason}"
+    elif isinstance(payload, AnimalMoltRecordedV1 | AnimalMoltCorrectedV1):
+        description = _label(payload.result)
+        if payload.observation:
+            description += f" · {payload.observation}"
+    elif isinstance(payload, AnimalPremoltObservedV1):
+        description = "Premolt observed" if payload.observed else "Premolt cleared"
+        if payload.observation:
+            description += f" · {payload.observation}"
     elif isinstance(payload, AnimalEnclosureAssignedV1):
         names = enclosure_names or {}
         target_name = names.get(payload.enclosure_id)

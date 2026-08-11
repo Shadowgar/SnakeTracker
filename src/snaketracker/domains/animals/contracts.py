@@ -149,6 +149,31 @@ class AnimalBathRecordedV1:
 
 
 @dataclass(frozen=True, slots=True)
+class AnimalMoltRecordedV1:
+    """Completed Spider molt result and keeper observation."""
+
+    result: str
+    observation: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class AnimalMoltCorrectedV1:
+    """Typed replacement facts for one Spider molt event."""
+
+    target_event_id: UUID
+    result: str
+    observation: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class AnimalPremoltObservedV1:
+    """Current observed premolt state and supporting keeper observation."""
+
+    observed: bool
+    observation: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class AnimalEnclosureAssignedV1:
     """Animal-owned current enclosure transition."""
 

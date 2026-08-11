@@ -128,6 +128,44 @@ animal_capability_registry = AnimalCapabilityRegistry(
     )
 )
 
+EVENT_CAPABILITIES: Mapping[str, AnimalCapability] = MappingProxyType(
+    {
+        "animal.feeding_recorded": AnimalCapability.FEEDING,
+        "animal.feeding_corrected": AnimalCapability.FEEDING,
+        "animal.weight_recorded": AnimalCapability.WEIGHT,
+        "animal.weight_corrected": AnimalCapability.WEIGHT,
+        "animal.length_recorded": AnimalCapability.LENGTH,
+        "animal.length_corrected": AnimalCapability.LENGTH,
+        "animal.shed_recorded": AnimalCapability.SHED,
+        "animal.shed_corrected": AnimalCapability.SHED,
+        "animal.bath_recorded": AnimalCapability.BATH,
+        "animal.molt_recorded": AnimalCapability.MOLT,
+        "animal.molt_corrected": AnimalCapability.MOLT,
+        "animal.premolt_observed": AnimalCapability.PREMOLT,
+        "animal.enclosure_assigned": AnimalCapability.ENCLOSURE_ASSIGNMENT,
+        "animal.photo_selected": AnimalCapability.PHOTOS,
+    }
+)
+
+REMINDER_CAPABILITIES: Mapping[str, AnimalCapability] = MappingProxyType(
+    {
+        "feeding": AnimalCapability.FEEDING,
+        "weight": AnimalCapability.WEIGHT,
+        "length": AnimalCapability.LENGTH,
+        "bath": AnimalCapability.BATH,
+        "molt": AnimalCapability.MOLT,
+        "misting": AnimalCapability.MISTING,
+    }
+)
+
+
+def required_event_capability(event_type: str) -> AnimalCapability | None:
+    return EVENT_CAPABILITIES.get(event_type)
+
+
+def required_reminder_capability(reminder_type: str) -> AnimalCapability | None:
+    return REMINDER_CAPABILITIES.get(reminder_type)
+
 
 def legacy_registration_profile() -> CapabilityProfile:
     """Map immutable v1 registrations to their historical Snake semantics."""

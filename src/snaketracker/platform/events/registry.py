@@ -20,7 +20,10 @@ from snaketracker.domains.animals.contracts import (
     AnimalFeedingRecordedV1,
     AnimalLengthCorrectedV1,
     AnimalLengthRecordedV1,
+    AnimalMoltCorrectedV1,
+    AnimalMoltRecordedV1,
     AnimalPhotoSelectedV1,
+    AnimalPremoltObservedV1,
     AnimalProfileCorrectedV1,
     AnimalRegisteredV1,
     AnimalRegisteredV2,
@@ -33,6 +36,7 @@ from snaketracker.domains.animals.contracts import (
 from snaketracker.domains.enclosures.contracts import (
     ENCLOSURE_STATUSES,
     EnclosureCleaningRecordedV1,
+    EnclosureMistingRecordedV1,
     EnclosureProfileChangedV1,
     EnclosureRegisteredV1,
     EnclosureStatusChangedV1,
@@ -563,6 +567,41 @@ def _deserialize_animal_bath_recorded(data: Mapping[str, object]) -> EventPayloa
     return AnimalBathRecordedV1(duration_minutes=duration_minutes, reason=reason)
 
 
+def _molt_fields(data: Mapping[str, object], label: str) -> tuple[str, str | None]:
+    result = data["result"]
+    observation = data["observation"]
+    if result not in {"complete", "partial", "failed"} or (
+        observation is not None and not isinstance(observation, str)
+    ):
+        raise ValueError(f"Stored animal {label} payload is invalid.")
+    return result, observation
+
+
+def _deserialize_animal_molt_recorded(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalMoltRecordedV1, data)
+    result, observation = _molt_fields(data, "molt")
+    return AnimalMoltRecordedV1(result, observation)
+
+
+def _deserialize_animal_molt_corrected(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalMoltCorrectedV1, data)
+    result, observation = _molt_fields(data, "molt correction")
+    return AnimalMoltCorrectedV1(
+        _uuid_field(data, "target_event_id", "molt correction"), result, observation
+    )
+
+
+def _deserialize_animal_premolt_observed(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalPremoltObservedV1, data)
+    observed = data["observed"]
+    observation = data["observation"]
+    if type(observed) is not bool or (
+        observation is not None and not isinstance(observation, str)
+    ):
+        raise ValueError("Stored animal premolt payload is invalid.")
+    return AnimalPremoltObservedV1(observed, observation)
+
+
 def _deserialize_animal_enclosure_assigned(data: Mapping[str, object]) -> EventPayload:
     _require_exact_fields(AnimalEnclosureAssignedV1, data)
     return AnimalEnclosureAssignedV1(
@@ -698,6 +737,38 @@ ANIMAL_HUSBANDRY_CONTRACTS = (
         ),
         correction=CorrectionCapabilities(voidable=True, reinstatable=True, required_role="owner"),
     ),
+    EventContractRegistration(
+        event_type="animal.molt_recorded",
+        schema_version=1,
+        owner="animals.husbandry",
+        payload_type=AnimalMoltRecordedV1,
+        deserialize_payload=_deserialize_animal_molt_recorded,
+        subject_requirements=(SubjectRequirement("animal", "primary"),),
+        correction=CorrectionCapabilities(
+            correctable=True,
+            voidable=True,
+            reinstatable=True,
+            required_role="owner",
+            correction_event_types=("animal.molt_corrected",),
+        ),
+    ),
+    EventContractRegistration(
+        event_type="animal.molt_corrected",
+        schema_version=1,
+        owner="animals.husbandry",
+        payload_type=AnimalMoltCorrectedV1,
+        deserialize_payload=_deserialize_animal_molt_corrected,
+        subject_requirements=(SubjectRequirement("animal", "primary"),),
+        correction=CorrectionCapabilities(voidable=True, reinstatable=True, required_role="owner"),
+    ),
+    EventContractRegistration(
+        event_type="animal.premolt_observed",
+        schema_version=1,
+        owner="animals.husbandry",
+        payload_type=AnimalPremoltObservedV1,
+        deserialize_payload=_deserialize_animal_premolt_observed,
+        subject_requirements=(SubjectRequirement("animal", "primary"),),
+    ),
 )
 
 
@@ -748,6 +819,17 @@ def _deserialize_enclosure_water_change(data: Mapping[str, object]) -> EventPayl
     return EnclosureWaterChangeRecordedV1()
 
 
+def _deserialize_enclosure_misting(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(EnclosureMistingRecordedV1, data)
+    duration = data["duration_seconds"]
+    observation = data["observation"]
+    if (duration is not None and type(duration) is not int) or (
+        observation is not None and not isinstance(observation, str)
+    ):
+        raise ValueError("Stored enclosure misting payload is invalid.")
+    return EnclosureMistingRecordedV1(duration, observation)
+
+
 ENCLOSURE_CONTRACTS = (
     EventContractRegistration(
         event_type="enclosure.registered",
@@ -789,6 +871,18 @@ ENCLOSURE_CONTRACTS = (
         payload_type=EnclosureWaterChangeRecordedV1,
         deserialize_payload=_deserialize_enclosure_water_change,
         subject_requirements=(SubjectRequirement("enclosure", "primary"),),
+        correction=CorrectionCapabilities(voidable=True, reinstatable=True, required_role="owner"),
+    ),
+    EventContractRegistration(
+        event_type="enclosure.misting_recorded",
+        schema_version=1,
+        owner="enclosures",
+        payload_type=EnclosureMistingRecordedV1,
+        deserialize_payload=_deserialize_enclosure_misting,
+        subject_requirements=(
+            SubjectRequirement("enclosure", "primary"),
+            SubjectRequirement("animal", "related"),
+        ),
         correction=CorrectionCapabilities(voidable=True, reinstatable=True, required_role="owner"),
     ),
 )

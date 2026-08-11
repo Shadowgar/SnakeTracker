@@ -9,9 +9,11 @@ from uuid import UUID, uuid4
 
 from snaketracker.application.inventory import InventoryBalanceProjection
 from snaketracker.domains.animals.capabilities import (
+    AnimalCapability,
     CapabilityProfile,
     UnknownCapabilityProfileError,
     animal_capability_registry,
+    required_event_capability,
 )
 from snaketracker.domains.animals.contracts import (
     ANIMAL_STATUSES,
@@ -21,7 +23,10 @@ from snaketracker.domains.animals.contracts import (
     AnimalFeedingRecordedV1,
     AnimalLengthCorrectedV1,
     AnimalLengthRecordedV1,
+    AnimalMoltCorrectedV1,
+    AnimalMoltRecordedV1,
     AnimalPhotoSelectedV1,
+    AnimalPremoltObservedV1,
     AnimalProfileCorrectedV1,
     AnimalRegisteredV2,
     AnimalShedCorrectedV1,
@@ -68,6 +73,8 @@ CONTROLLABLE_ANIMAL_EVENT_TYPES = frozenset(
         "animal.shed_recorded",
         "animal.shed_corrected",
         "animal.bath_recorded",
+        "animal.molt_recorded",
+        "animal.molt_corrected",
     }
 )
 
@@ -250,6 +257,30 @@ class RecordBathCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class RecordMoltCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    animal_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    occurred_at: datetime
+    result: str
+    observation: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class RecordPremoltCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    animal_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    occurred_at: datetime
+    observed: bool
+    observation: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class CorrectFeedingCommand:
     household_id: UUID
     actor_user_id: UUID
@@ -307,6 +338,19 @@ class CorrectShedCommand:
     completed: bool
     result: str | None
     notes: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class CorrectMoltCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    actor_role: str
+    animal_id: UUID
+    target_event_id: UUID
+    idempotency_key: str
+    occurred_at: datetime
+    result: str
+    observation: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -640,6 +684,54 @@ class AnimalService:
             )
         )
 
+    def record_molt(self, command: RecordMoltCommand) -> AnimalEventResult:
+        result, observation = _validated_molt(command.result, command.observation)
+        return AnimalEventResult(
+            self._append_animal_event(
+                household_id=command.household_id,
+                actor_user_id=command.actor_user_id,
+                animal_id=command.animal_id,
+                correlation_id=command.correlation_id,
+                idempotency_key=command.idempotency_key,
+                operation_scope="animals.record_molt",
+                occurred_at=command.occurred_at,
+                event_type="animal.molt_recorded",
+                title="Molt recorded",
+                payload=AnimalMoltRecordedV1(result, observation),
+                notes=observation,
+                command_hash_fields={
+                    "occurred_at": command.occurred_at.isoformat(),
+                    "result": result,
+                    "observation": observation,
+                },
+            )
+        )
+
+    def record_premolt(self, command: RecordPremoltCommand) -> AnimalEventResult:
+        if type(command.observed) is not bool:
+            raise AnimalValidationError("Premolt state is invalid.")
+        observation = _optional_text(command.observation, "premolt observation")
+        return AnimalEventResult(
+            self._append_animal_event(
+                household_id=command.household_id,
+                actor_user_id=command.actor_user_id,
+                animal_id=command.animal_id,
+                correlation_id=command.correlation_id,
+                idempotency_key=command.idempotency_key,
+                operation_scope="animals.record_premolt",
+                occurred_at=command.occurred_at,
+                event_type="animal.premolt_observed",
+                title="Premolt observation recorded",
+                payload=AnimalPremoltObservedV1(command.observed, observation),
+                notes=observation,
+                command_hash_fields={
+                    "occurred_at": command.occurred_at.isoformat(),
+                    "observed": command.observed,
+                    "observation": observation,
+                },
+            )
+        )
+
     def correct_feeding(self, command: CorrectFeedingCommand) -> AnimalEventResult:
         feeding = _feeding_payload(
             command.prey_type,
@@ -778,6 +870,30 @@ class AnimalService:
             )
         )
 
+    def correct_molt(self, command: CorrectMoltCommand) -> AnimalEventResult:
+        result, observation = _validated_molt(command.result, command.observation)
+        return AnimalEventResult(
+            self._correct_animal_event(
+                household_id=command.household_id,
+                actor_user_id=command.actor_user_id,
+                actor_role=command.actor_role,
+                animal_id=command.animal_id,
+                target_event_id=command.target_event_id,
+                idempotency_key=command.idempotency_key,
+                occurred_at=command.occurred_at,
+                event_type="animal.molt_corrected",
+                title="Molt corrected",
+                payload=AnimalMoltCorrectedV1(command.target_event_id, result, observation),
+                notes=observation,
+                command_hash_fields={
+                    "target_event_id": str(command.target_event_id),
+                    "occurred_at": command.occurred_at.isoformat(),
+                    "result": result,
+                    "observation": observation,
+                },
+            )
+        )
+
     def void_event(self, command: VoidAnimalEventCommand) -> AnimalEventResult:
         return AnimalEventResult(
             self._control_animal_event(
@@ -849,6 +965,9 @@ class AnimalService:
     def _record_stock_linked_feeding(
         self, command: RecordFeedingCommand, payload: AnimalFeedingRecordedV1
     ) -> DomainEvent:
+        self._require_capability(
+            command.household_id, command.animal_id, AnimalCapability.FEEDING
+        )
         inventory = self._inventory_projection
         if inventory is None:
             raise AnimalValidationError("Inventory integration is not available.")
@@ -978,6 +1097,9 @@ class AnimalService:
         command_hash_fields: dict[str, object],
         related_subjects: tuple[EventSubject, ...] = (),
     ) -> DomainEvent:
+        capability = required_event_capability(event_type)
+        if capability is not None:
+            self._require_capability(household_id, animal_id, capability)
         key = StreamKey(household_id, "animal", animal_id)
         existing = self._event_store.load_stream(key)
         if not existing:
@@ -1059,6 +1181,9 @@ class AnimalService:
             raise AnimalValidationError(
                 "Correction target does not exist in this animal stream."
             ) from error
+        capability = required_event_capability(target.event_type)
+        if capability is not None:
+            self._require_capability(household_id, animal_id, capability)
         recorded_at = datetime.now(UTC)
         candidate = DomainEvent(
             event_id=uuid4(),
@@ -1195,6 +1320,9 @@ class AnimalService:
             ) from error
         if target.event_type not in CONTROLLABLE_ANIMAL_EVENT_TYPES:
             raise AnimalValidationError("Only animal care records can be voided or reinstated.")
+        capability = required_event_capability(target.event_type)
+        if capability is not None:
+            self._require_capability(household_id, animal_id, capability)
         recorded_at = datetime.now(UTC)
         active_void = _active_void_for(target_event_id, existing)
         if action is CorrectionAction.VOID:
@@ -1310,6 +1438,22 @@ class AnimalService:
             if str(stored.event_id) == stored_event_id
         )
 
+    def _require_capability(
+        self, household_id: UUID, animal_id: UUID, capability: AnimalCapability
+    ) -> None:
+        profile = self._projection.profile_for(household_id, animal_id)
+        if profile is None:
+            raise AnimalValidationError("Animal does not exist in this household.")
+        try:
+            registered = animal_capability_registry.require(profile.capability_profile_identity)
+        except UnknownCapabilityProfileError as error:
+            raise AnimalValidationError("Animal capability profile is not supported.") from error
+        if not registered.permits(capability):
+            raise AnimalValidationError(
+                f"{capability.value.replace('_', ' ').title()} care is not available "
+                f"for the {registered.label} profile."
+            )
+
 
 def _active_void_for(target_event_id: UUID, events: tuple[DomainEvent, ...]) -> DomainEvent | None:
     active_void: DomainEvent | None = None
@@ -1413,6 +1557,13 @@ def _validated_feeding_payload(command: RecordFeedingCommand) -> AnimalFeedingRe
         command.quantity,
         command.outcome,
     )
+
+
+def _validated_molt(result_value: str, observation_value: str | None) -> tuple[str, str | None]:
+    result = result_value.strip().lower()
+    if result not in {"complete", "partial", "failed"}:
+        raise AnimalValidationError("Molt result is invalid.")
+    return result, _optional_text(observation_value, "molt observation")
 
 
 def _feeding_payload(
