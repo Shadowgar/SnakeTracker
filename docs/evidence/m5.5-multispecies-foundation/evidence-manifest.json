@@ -47,6 +47,14 @@
     "pa11y_axe_wcag2aa_runs": 9,
     "pa11y_issues": 0
   },
+  "github": {
+    "draft_pr": 7,
+    "quality": "pass",
+    "container_trivy": "pass",
+    "coderabbit": "skipped-draft",
+    "copilot": "not-reported-on-draft",
+    "gitguardian": "not-reported-on-draft"
+  },
   "performance": {
     "mixed_animal_stream_replay_samples": 30,
     "mixed_animal_streams_per_pass": 5,
