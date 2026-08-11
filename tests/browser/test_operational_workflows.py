@@ -215,6 +215,7 @@ def test_keeper_can_use_inventory_expense_and_reminder_workflows(tmp_path: Path)
         assert reminder.status_code == 303
         reminders = client.get("/reminders")
         assert "1 day after last accepted feeding" in reminders.text
+        assert "Status: Enabled" in reminders.text
         assert "No species assumptions" in reminders.text
 
         fixed_reminder = client.post(

@@ -52,6 +52,10 @@ button.secondary { background: transparent; color: var(--ink); border: 1px solid
 .record-list { display: grid; gap: .75rem; margin: 0; padding: 0; list-style: none; }
 .record-list a { display: flex; justify-content: space-between; gap: 1rem; border: 1px solid var(--line); border-radius: .6rem; background: var(--surface-raised); padding: 1rem; text-decoration: none; }
 .record-list span { color: var(--muted); }
+.reminder-rule { display: grid; gap: 1rem; border: 1px solid var(--line); border-radius: .6rem; background: var(--surface-raised); padding: 1rem; }
+.reminder-rule-summary { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .75rem 1.5rem; }
+.reminder-rule-status { white-space: nowrap; }
+.reminder-rule-action { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .75rem; align-items: end; }
 .animal-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 1rem; margin: 0; padding: 0; list-style: none; }
 .animal-card { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr) auto; gap: 1rem; align-items: center; min-height: 6.5rem; border: 1px solid var(--line); border-radius: 1rem; background: var(--surface-raised); padding: 1rem; text-decoration: none; }
 .animal-card:hover { border-color: var(--accent); }
@@ -130,6 +134,8 @@ button.secondary { background: transparent; color: var(--ink); border: 1px solid
   .section-heading { align-items: start; }
   .timeline-list li { grid-template-columns: 1fr; gap: .25rem; }
   .technical-facts div { grid-template-columns: 1fr; gap: 0; }
+  .reminder-rule-action { grid-template-columns: 1fr; }
+  .reminder-rule-action button { justify-self: start; }
 }
 
 @media (min-width: 760px) {
