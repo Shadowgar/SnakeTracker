@@ -12,6 +12,7 @@ from alembic import command
 from alembic.config import Config
 
 import snaketracker.bootstrap.application as application_module
+import snaketracker.worker.main as worker_main_module
 from snaketracker.application.backups import BackupService, RequestBackupCommand
 from snaketracker.bootstrap.application import application_factory, build_application
 from snaketracker.bootstrap.compatibility import CompatibilityMode
@@ -132,6 +133,85 @@ def test_worker_lifecycle_waits_until_stop_is_requested(tmp_path: Path) -> None:
 
     assert run_worker(settings, stop, poll_interval=0.001) == 0
     assert stop.calls == 2
+
+
+def test_worker_runs_reminder_sweep_on_bounded_cadence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class StopAfterThreeWaits(threading.Event):
+        calls = 0
+
+        def wait(self, timeout: float | None = None) -> bool:
+            self.calls += 1
+            return self.calls >= 3
+
+    calls = {"reminders": 0, "outbox": 0, "notifications": 0}
+    monkeypatch.setattr(
+        worker_main_module.ReminderScheduler,
+        "run_once",
+        lambda *_args, **_kwargs: calls.__setitem__("reminders", calls["reminders"] + 1),
+    )
+    monkeypatch.setattr(
+        worker_main_module.OutboxJobHandoff,
+        "run",
+        lambda *_args, **_kwargs: calls.__setitem__("outbox", calls["outbox"] + 1),
+    )
+    monkeypatch.setattr(
+        worker_main_module.NotificationJobWorker,
+        "run_one",
+        lambda *_args, **_kwargs: calls.__setitem__("notifications", calls["notifications"] + 1),
+    )
+    database = tmp_path / "worker-cadence.sqlite3"
+    migrate(database)
+    settings = load_settings(
+        {"SNAKETRACKER_ENVIRONMENT": "test", "SNAKETRACKER_DATABASE_PATH": str(database)}
+    )
+
+    assert run_worker(settings, StopAfterThreeWaits(), poll_interval=0.001) == 0
+    assert calls == {"reminders": 1, "outbox": 2, "notifications": 2}
+
+
+def test_worker_duties_are_isolated_from_one_another(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class StopAfterTwoWaits(threading.Event):
+        calls = 0
+
+        def wait(self, timeout: float | None = None) -> bool:
+            self.calls += 1
+            return self.calls >= 2
+
+    calls = {"outbox": 0, "notifications": 0}
+    diagnostics: list[str] = []
+
+    def fail_reminders(*_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("synthetic reminder failure")
+
+    monkeypatch.setattr(worker_main_module.ReminderScheduler, "run_once", fail_reminders)
+    monkeypatch.setattr(
+        worker_main_module.LOGGER,
+        "exception",
+        lambda message, name: diagnostics.append(message % name),
+    )
+    monkeypatch.setattr(
+        worker_main_module.OutboxJobHandoff,
+        "run",
+        lambda *_args, **_kwargs: calls.__setitem__("outbox", calls["outbox"] + 1),
+    )
+    monkeypatch.setattr(
+        worker_main_module.NotificationJobWorker,
+        "run_one",
+        lambda *_args, **_kwargs: calls.__setitem__("notifications", calls["notifications"] + 1),
+    )
+    database = tmp_path / "worker-isolation.sqlite3"
+    migrate(database)
+    settings = load_settings(
+        {"SNAKETRACKER_ENVIRONMENT": "test", "SNAKETRACKER_DATABASE_PATH": str(database)}
+    )
+
+    assert run_worker(settings, StopAfterTwoWaits(), poll_interval=0.001) == 0
+    assert calls == {"outbox": 1, "notifications": 1}
+    assert diagnostics == ["Reminder sweep failed; the worker will continue other duties."]
 
 
 def test_worker_executes_queued_local_backup_when_key_is_configured(tmp_path: Path) -> None:

@@ -86,6 +86,60 @@ class SQLAlchemySubjectReferenceValidator:
                             "household_id": str(event.household_id),
                         },
                     ).scalar_one_or_none()
+            elif subject.subject_type == "inventory_item":
+                if (
+                    event.event_type == "inventory.item_registered"
+                    and subject.relationship == "primary"
+                    and subject.subject_id == event.stream_id
+                ):
+                    exists = 1
+                else:
+                    exists = connection.execute(
+                        text(
+                            "SELECT 1 FROM inventory_balance WHERE household_id=:household_id "
+                            "AND item_id=:subject_id"
+                        ),
+                        {
+                            "subject_id": str(subject.subject_id),
+                            "household_id": str(event.household_id),
+                        },
+                    ).scalar_one_or_none()
+            elif subject.subject_type == "expense":
+                if (
+                    event.event_type == "expense.recorded"
+                    and subject.relationship == "primary"
+                    and subject.subject_id == event.stream_id
+                ):
+                    exists = 1
+                else:
+                    exists = connection.execute(
+                        text(
+                            "SELECT 1 FROM expense_current WHERE household_id=:household_id "
+                            "AND expense_id=:subject_id"
+                        ),
+                        {
+                            "subject_id": str(subject.subject_id),
+                            "household_id": str(event.household_id),
+                        },
+                    ).scalar_one_or_none()
+            elif subject.subject_type == "reminder_rule":
+                if (
+                    event.event_type == "reminder.rule_created"
+                    and subject.relationship == "primary"
+                    and subject.subject_id == event.stream_id
+                ):
+                    exists = 1
+                else:
+                    exists = connection.execute(
+                        text(
+                            "SELECT 1 FROM reminder_rule_current "
+                            "WHERE household_id=:household_id AND rule_id=:subject_id"
+                        ),
+                        {
+                            "subject_id": str(subject.subject_id),
+                            "household_id": str(event.household_id),
+                        },
+                    ).scalar_one_or_none()
             else:
                 raise EventValidationError("Event subject type is not registered.")
             if exists is None:

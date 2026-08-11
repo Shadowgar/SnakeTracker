@@ -28,6 +28,7 @@
       {% set outcome = values.get('outcome', 'accepted') %}
       <select name="outcome"><option value="accepted" {% if outcome == 'accepted' %}selected{% endif %}>Accepted</option><option value="refused" {% if outcome == 'refused' %}selected{% endif %}>Refused</option><option value="regurgitated" {% if outcome == 'regurgitated' %}selected{% endif %}>Regurgitated</option></select>
     </label>
+    {% if inventory_items %}<label>Use inventory<select name="inventory_item_id"><option value="">Do not deduct inventory</option>{% for item in inventory_items %}<option value="{{ item.item_id }}:{{ item.stream_version }}">{{ item.name }} · {{ item.on_hand_quantity }} {{ item.unit }} available</option>{% endfor %}</select></label><label>Inventory quantity<input name="inventory_quantity" type="number" min="1" value="{{ values.get('inventory_quantity','1') }}"></label>{% endif %}
     {% elif care_kind == 'weight' %}
     <label>Weight (g)<input name="weight_grams" type="number" min="1" value="{{ values.get('weight_grams', '') }}" required></label>
     {% elif care_kind == 'length' %}

@@ -52,6 +52,10 @@ button.secondary { background: transparent; color: var(--ink); border: 1px solid
 .record-list { display: grid; gap: .75rem; margin: 0; padding: 0; list-style: none; }
 .record-list a { display: flex; justify-content: space-between; gap: 1rem; border: 1px solid var(--line); border-radius: .6rem; background: var(--surface-raised); padding: 1rem; text-decoration: none; }
 .record-list span { color: var(--muted); }
+.reminder-rule { display: grid; gap: 1rem; border: 1px solid var(--line); border-radius: .6rem; background: var(--surface-raised); padding: 1rem; }
+.reminder-rule-summary { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .75rem 1.5rem; }
+.reminder-rule-status { white-space: nowrap; }
+.reminder-rule-action { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .75rem; align-items: end; }
 .animal-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 1rem; margin: 0; padding: 0; list-style: none; }
 .animal-card { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr) auto; gap: 1rem; align-items: center; min-height: 6.5rem; border: 1px solid var(--line); border-radius: 1rem; background: var(--surface-raised); padding: 1rem; text-decoration: none; }
 .animal-card:hover { border-color: var(--accent); }
@@ -118,6 +122,28 @@ button.secondary { background: transparent; color: var(--ink); border: 1px solid
 .technical-facts div { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: .75rem; }
 .technical-facts dd { margin: 0; overflow-wrap: anywhere; }
 .technical-facts code { font-size: inherit; }
+.schedule-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 1rem; margin-top: 1rem; }
+.schedule-card { display: grid; gap: 1.25rem; align-content: start; }
+.schedule-card h3 { margin: 0; font-size: 1.2rem; }
+.schedule-card p { margin: .35rem 0 0; }
+.schedule-form { display: grid; gap: 1rem; }
+.checkbox-label { display: flex; gap: .65rem; align-items: center; width: max-content; }
+.checkbox-label input { width: 1.15rem; height: 1.15rem; margin: 0; }
+.input-with-unit { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .65rem; align-items: center; color: var(--muted); font-weight: 400; }
+.agenda-page { display: grid; gap: 2rem; }
+.agenda-page h1 { max-width: 13ch; margin: .3rem 0 1rem; font-size: clamp(2.3rem, 7vw, 4.8rem); line-height: .98; letter-spacing: -.045em; }
+.agenda-section { display: grid; gap: 1rem; }
+.agenda-section > h2 { margin: 0; }
+.agenda-list { display: grid; gap: 1rem; margin: 0; padding: 0; list-style: none; }
+.agenda-card { display: grid; gap: 1rem; box-shadow: none; }
+.agenda-card-heading { display: flex; justify-content: space-between; gap: 1rem; align-items: start; }
+.agenda-card-heading h3 { margin: .25rem 0 0; font-size: 1.25rem; }
+.agenda-card-heading time { flex: 0 0 auto; color: var(--muted); font-weight: 700; }
+.agenda-animal { color: var(--accent); font-weight: 800; }
+.agenda-details { display: flex; flex-wrap: wrap; gap: .75rem 2rem; margin: 0; }
+.agenda-details div { display: grid; gap: .1rem; }
+.agenda-details dt { color: var(--muted); font-size: .9rem; }
+.agenda-details dd { margin: 0; font-weight: 700; }
 
 @media (max-width: 560px) {
   .profile-header { display: grid; }
@@ -130,6 +156,10 @@ button.secondary { background: transparent; color: var(--ink); border: 1px solid
   .section-heading { align-items: start; }
   .timeline-list li { grid-template-columns: 1fr; gap: .25rem; }
   .technical-facts div { grid-template-columns: 1fr; gap: 0; }
+  .reminder-rule-action { grid-template-columns: 1fr; }
+  .reminder-rule-action button { justify-self: start; }
+  .agenda-card-heading { display: grid; }
+  .agenda-card-heading time { justify-self: start; }
 }
 
 @media (min-width: 760px) {

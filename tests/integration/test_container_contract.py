@@ -44,7 +44,7 @@ def test_compose_services_are_hardened_and_local_only() -> None:
     assert "SNAKETRACKER_RUNTIME_SECRET:" not in compose
     assert "SNAKETRACKER_BACKUP_ENCRYPTION_KEY_FILE" in compose
     assert "SNAKETRACKER_BACKUP_ENCRYPTION_KEY:" not in compose
-    assert "SNAKETRACKER_IMAGE_TAG:-phase4" in compose
+    assert "SNAKETRACKER_IMAGE_TAG:-phase5" in compose
     assert "SNAKETRACKER_ENVIRONMENT: development" in compose
     assert 'SNAKETRACKER_SESSION_COOKIE_SECURE: "false"' in compose
     assert "SNAKETRACKER_EXTERNAL_ORIGIN:-http://localhost:8081" in compose

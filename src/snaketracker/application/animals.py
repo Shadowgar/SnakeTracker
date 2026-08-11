@@ -7,6 +7,7 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Protocol, cast
 from uuid import UUID, uuid4
 
+from snaketracker.application.inventory import InventoryBalanceProjection
 from snaketracker.domains.animals.contracts import (
     ANIMAL_STATUSES,
     AnimalBathRecordedV1,
@@ -23,6 +24,10 @@ from snaketracker.domains.animals.contracts import (
     AnimalStatusChangedV1,
     AnimalWeightCorrectedV1,
     AnimalWeightRecordedV1,
+)
+from snaketracker.domains.inventory.contracts import (
+    InventoryConsumptionReversedV1,
+    InventoryStockConsumedV1,
 )
 from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
 from snaketracker.platform.events.corrections import (
@@ -171,6 +176,9 @@ class RecordFeedingCommand:
     quantity: int
     outcome: str
     notes: str | None
+    inventory_item_id: UUID | None = None
+    inventory_expected_stream_version: int | None = None
+    inventory_quantity: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -245,6 +253,7 @@ class CorrectFeedingCommand:
     quantity: int
     outcome: str
     notes: str | None
+    inventory_quantity: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -325,9 +334,16 @@ class AssignEnclosureCommand:
 class AnimalService:
     """Append Animal-owned profile events through the shared M3 event platform."""
 
-    def __init__(self, event_store: EventStore, projection: AnimalCurrentProjection) -> None:
+    def __init__(
+        self,
+        event_store: EventStore,
+        projection: AnimalCurrentProjection,
+        *,
+        inventory_projection: InventoryBalanceProjection | None = None,
+    ) -> None:
         self._event_store = event_store
         self._projection = projection
+        self._inventory_projection = inventory_projection
 
     def register(self, command: RegisterAnimalCommand) -> RegisterAnimalResult:
         fields = _validated_registration_fields(command)
@@ -465,6 +481,15 @@ class AnimalService:
 
     def record_feeding(self, command: RecordFeedingCommand) -> AnimalEventResult:
         payload = _validated_feeding_payload(command)
+        if any(
+            value is not None
+            for value in (
+                command.inventory_item_id,
+                command.inventory_expected_stream_version,
+                command.inventory_quantity,
+            )
+        ):
+            return AnimalEventResult(self._record_stock_linked_feeding(command, payload))
         event = self._append_animal_event(
             household_id=command.household_id,
             actor_user_id=command.actor_user_id,
@@ -640,7 +665,13 @@ class AnimalService:
                     "quantity": feeding.quantity,
                     "outcome": feeding.outcome,
                     "notes": _optional_text(command.notes, "feeding notes"),
+                    **(
+                        {"inventory_quantity": command.inventory_quantity}
+                        if command.inventory_quantity is not None
+                        else {}
+                    ),
                 },
+                inventory_quantity=command.inventory_quantity,
             )
         )
 
@@ -800,6 +831,121 @@ class AnimalService:
                 accepted = event.occurred_at
         return accepted
 
+    def _record_stock_linked_feeding(
+        self, command: RecordFeedingCommand, payload: AnimalFeedingRecordedV1
+    ) -> DomainEvent:
+        inventory = self._inventory_projection
+        if inventory is None:
+            raise AnimalValidationError("Inventory integration is not available.")
+        if (
+            command.inventory_item_id is None
+            or command.inventory_expected_stream_version is None
+            or command.inventory_quantity is None
+        ):
+            raise AnimalValidationError(
+                "Inventory item, version, and quantity are required together."
+            )
+        if command.inventory_quantity < 1:
+            raise AnimalValidationError("Inventory quantity must be positive.")
+        balance = inventory.balance_for(command.household_id, command.inventory_item_id)
+        if balance is None:
+            raise AnimalValidationError("Inventory item does not exist in this household.")
+        animal_key = StreamKey(command.household_id, "animal", command.animal_id)
+        animal_events = self._event_store.load_stream(animal_key)
+        if not animal_events:
+            raise AnimalValidationError("Animal does not exist in this household.")
+        inventory_key = StreamKey(command.household_id, "inventory-item", command.inventory_item_id)
+        now = datetime.now(UTC)
+        feeding_candidate = DomainEvent(
+            event_id=uuid4(),
+            household_id=command.household_id,
+            stream_type="animal",
+            stream_id=command.animal_id,
+            stream_version=len(animal_events) + 1,
+            event_type="animal.feeding_recorded",
+            schema_version=1,
+            occurred_at=command.occurred_at,
+            recorded_at=now,
+            actor_user_id=command.actor_user_id,
+            correlation_id=command.correlation_id,
+            causation_id=None,
+            idempotency_key=command.idempotency_key,
+            subjects=(EventSubject("animal", command.animal_id, "primary", 0),),
+            title="Feeding recorded",
+            description=None,
+            payload=payload,
+            metadata={},
+            notes=_optional_text(command.notes, "feeding notes"),
+            checksum="",
+        )
+        feeding = feeding_candidate.with_checksum(event_checksum(feeding_candidate))
+        consumption = _inventory_event(
+            inventory_key,
+            command.inventory_expected_stream_version + 1,
+            "inventory.stock_consumed",
+            InventoryStockConsumedV1(command.inventory_quantity, feeding.event_id),
+            command.actor_user_id,
+            command.correlation_id,
+            feeding.event_id,
+            command.idempotency_key,
+            now,
+            command.animal_id,
+        )
+        result = self._event_store.append_many(
+            AtomicAppendRequest(
+                streams=(
+                    StreamAppend(animal_key, len(animal_events), (feeding,)),
+                    StreamAppend(
+                        inventory_key,
+                        command.inventory_expected_stream_version,
+                        (consumption,),
+                    ),
+                ),
+                idempotency=IdempotencyContext(
+                    operation_id=uuid4(),
+                    household_id=command.household_id,
+                    actor_user_id=command.actor_user_id,
+                    operation_scope="animals.record_feeding_with_inventory",
+                    idempotency_key=command.idempotency_key,
+                    command_hash=canonical_command_hash(
+                        {
+                            "animal_id": str(command.animal_id),
+                            "occurred_at": command.occurred_at.isoformat(),
+                            "prey_type": payload.prey_type,
+                            "prey_size": payload.prey_size,
+                            "prey_weight_grams": payload.prey_weight_grams,
+                            "preparation_method": payload.preparation_method,
+                            "quantity": payload.quantity,
+                            "outcome": payload.outcome,
+                            "notes": _optional_text(command.notes, "feeding notes"),
+                            "inventory_item_id": str(command.inventory_item_id),
+                            "inventory_expected_stream_version": (
+                                command.inventory_expected_stream_version
+                            ),
+                            "inventory_quantity": command.inventory_quantity,
+                        }
+                    ),
+                    correlation_id=command.correlation_id,
+                    stored_response={
+                        "event_id": str(feeding.event_id),
+                        "inventory_event_id": str(consumption.event_id),
+                    },
+                    stored_response_schema_version=1,
+                    created_at=now,
+                    expires_at=now + timedelta(days=90),
+                ),
+                synchronous_projections=(self._projection, inventory),
+            )
+        )
+        stored_event_id = result.stored_response.get("event_id")
+        if not isinstance(stored_event_id, str):
+            raise RuntimeError("Stock-linked feeding did not retain its result.")
+        return next(
+            event
+            for event in self._event_store.load_stream(animal_key)
+            if str(event.event_id) == stored_event_id
+        )
+
     def _append_animal_event(
         self,
         *,
@@ -888,6 +1034,7 @@ class AnimalService:
         payload: EventPayload,
         notes: str | None,
         command_hash_fields: dict[str, object],
+        inventory_quantity: int | None = None,
     ) -> DomainEvent:
         key = StreamKey(household_id, "animal", animal_id)
         existing = self._event_store.load_stream(key)
@@ -932,9 +1079,60 @@ class AnimalService:
             actor_role,
             existing,
         )
+        streams: list[StreamAppend] = [
+            StreamAppend(key, expected_version=len(existing), events=(event,))
+        ]
+        projections: list[SynchronousProjection] = [self._projection]
+        inventory = self._inventory_projection
+        if inventory is not None:
+            link = inventory.consumption_for_source(household_id, target.event_id)
+            if link is not None and link.status == "active":
+                replacement_quantity = (
+                    link.quantity if inventory_quantity is None else inventory_quantity
+                )
+                if replacement_quantity < 1:
+                    raise AnimalValidationError("Inventory replacement quantity must be positive.")
+                inventory_key = StreamKey(household_id, "inventory-item", link.item_id)
+                inventory_events = self._event_store.load_stream(inventory_key)
+                reversal = _inventory_event(
+                    inventory_key,
+                    len(inventory_events) + 1,
+                    "inventory.consumption_reversed",
+                    InventoryConsumptionReversedV1(
+                        link.consumption_event_id,
+                        link.quantity,
+                        "Feeding correction replaced inventory consumption.",
+                    ),
+                    actor_user_id,
+                    target.correlation_id,
+                    event.event_id,
+                    idempotency_key,
+                    recorded_at,
+                    animal_id,
+                )
+                replacement = _inventory_event(
+                    inventory_key,
+                    len(inventory_events) + 2,
+                    "inventory.stock_consumed",
+                    InventoryStockConsumedV1(replacement_quantity, target.event_id),
+                    actor_user_id,
+                    target.correlation_id,
+                    event.event_id,
+                    idempotency_key,
+                    recorded_at,
+                    animal_id,
+                )
+                streams.append(
+                    StreamAppend(
+                        inventory_key,
+                        len(inventory_events),
+                        (reversal, replacement),
+                    )
+                )
+                projections.append(inventory)
         append = self._event_store.append_many(
             AtomicAppendRequest(
-                streams=(StreamAppend(key, expected_version=len(existing), events=(event,)),),
+                streams=tuple(streams),
                 idempotency=IdempotencyContext(
                     operation_id=uuid4(),
                     household_id=household_id,
@@ -948,7 +1146,7 @@ class AnimalService:
                     created_at=recorded_at,
                     expires_at=recorded_at + timedelta(days=90),
                 ),
-                synchronous_projections=(self._projection,),
+                synchronous_projections=tuple(projections),
             )
         )
         stored_event_id = append.stored_response.get("event_id")
@@ -1023,9 +1221,53 @@ class AnimalService:
             target.event_type, target.schema_version
         )
         validate_correction(action, target, event, registration.correction, actor_role, existing)
+        streams: list[StreamAppend] = [
+            StreamAppend(key, expected_version=len(existing), events=(event,))
+        ]
+        projections: list[SynchronousProjection] = [self._projection]
+        inventory = self._inventory_projection
+        if inventory is not None:
+            link = inventory.consumption_for_source(household_id, target.event_id)
+            if link is not None:
+                inventory_key = StreamKey(household_id, "inventory-item", link.item_id)
+                inventory_events = self._event_store.load_stream(inventory_key)
+                compensation: DomainEvent | None = None
+                if action is CorrectionAction.VOID and link.status == "active":
+                    compensation = _inventory_event(
+                        inventory_key,
+                        len(inventory_events) + 1,
+                        "inventory.consumption_reversed",
+                        InventoryConsumptionReversedV1(
+                            link.consumption_event_id, link.quantity, reason
+                        ),
+                        actor_user_id,
+                        target.correlation_id,
+                        event.event_id,
+                        idempotency_key,
+                        recorded_at,
+                        animal_id,
+                    )
+                elif action is CorrectionAction.REINSTATE and link.status == "reversed":
+                    compensation = _inventory_event(
+                        inventory_key,
+                        len(inventory_events) + 1,
+                        "inventory.stock_consumed",
+                        InventoryStockConsumedV1(link.quantity, target.event_id),
+                        actor_user_id,
+                        target.correlation_id,
+                        event.event_id,
+                        idempotency_key,
+                        recorded_at,
+                        animal_id,
+                    )
+                if compensation is not None:
+                    streams.append(
+                        StreamAppend(inventory_key, len(inventory_events), (compensation,))
+                    )
+                    projections.append(inventory)
         append = self._event_store.append_many(
             AtomicAppendRequest(
-                streams=(StreamAppend(key, expected_version=len(existing), events=(event,)),),
+                streams=tuple(streams),
                 idempotency=IdempotencyContext(
                     operation_id=uuid4(),
                     household_id=household_id,
@@ -1041,7 +1283,7 @@ class AnimalService:
                     created_at=recorded_at,
                     expires_at=recorded_at + timedelta(days=90),
                 ),
-                synchronous_projections=(self._projection,),
+                synchronous_projections=tuple(projections),
             )
         )
         stored_event_id = append.stored_response.get("event_id")
@@ -1218,6 +1460,50 @@ def _registered_event(
         ),
         metadata={},
         notes=fields["notes"],
+        checksum="",
+    )
+    return candidate.with_checksum(event_checksum(candidate))
+
+
+def _inventory_event(
+    key: StreamKey,
+    stream_version: int,
+    event_type: str,
+    payload: EventPayload,
+    actor_user_id: UUID,
+    correlation_id: UUID,
+    causation_id: UUID,
+    idempotency_key: str,
+    recorded_at: datetime,
+    animal_id: UUID,
+) -> DomainEvent:
+    candidate = DomainEvent(
+        event_id=uuid4(),
+        household_id=key.household_id,
+        stream_type=key.stream_type,
+        stream_id=key.stream_id,
+        stream_version=stream_version,
+        event_type=event_type,
+        schema_version=1,
+        occurred_at=recorded_at,
+        recorded_at=recorded_at,
+        actor_user_id=actor_user_id,
+        correlation_id=correlation_id,
+        causation_id=causation_id,
+        idempotency_key=idempotency_key,
+        subjects=(
+            EventSubject("inventory_item", key.stream_id, "primary", 0),
+            EventSubject("animal", animal_id, "related", 1),
+        ),
+        title=(
+            "Inventory consumption reversed"
+            if event_type == "inventory.consumption_reversed"
+            else "Inventory stock consumed"
+        ),
+        description=None,
+        payload=payload,
+        metadata={},
+        notes=None,
         checksum="",
     )
     return candidate.with_checksum(event_checksum(candidate))

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Add inventory · SnakeTracker{% endblock %}
+{% block content %}
+<section class="form-page" aria-labelledby="page-title"><header><p class="eyebrow">Inventory</p><h1 id="page-title">Add inventory item</h1></header>
+{% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+<form class="card form-stack" method="post" action="/inventory" novalidate><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}">
+<label>Name<input name="name" value="{{ values.get('name','') }}" required></label><label>Unit<input name="unit" value="{{ values.get('unit','item') }}" required><small>Examples: item, gram, bag.</small></label><label>Reorder threshold<input name="reorder_threshold" type="number" min="0" value="{{ values.get('reorder_threshold','') }}"></label>
+<div class="form-actions"><a href="/inventory">Cancel</a><button type="submit">Add item</button></div></form></section>
+{% endblock %}

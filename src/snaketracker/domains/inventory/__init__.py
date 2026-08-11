@@ -1,0 +1,1 @@
+"""Inventory Item aggregate contracts."""

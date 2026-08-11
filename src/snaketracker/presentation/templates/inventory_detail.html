@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}{{ item.name }} · Inventory · SnakeTracker{% endblock %}
+{% block content %}
+<section class="form-page" aria-labelledby="page-title"><header><p class="eyebrow">Inventory</p><h1 id="page-title">{{ item.name }}</h1><p class="lede">{{ item.on_hand_quantity }} {{ item.unit }} on hand · {{ item.consumed_quantity }} consumed · version {{ item.stream_version }}</p></header>
+{% if 'inventory.manage' in principal.capabilities %}<form class="card form-stack" method="post" action="/inventory/{{ item.item_id }}/receive"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}"><input type="hidden" name="expected_stream_version" value="{{ item.stream_version }}"><h2>Receive stock</h2><label>Quantity<input name="quantity" type="number" min="1" required></label><label>Reference<input name="reference" placeholder="Optional order or receipt"></label><div class="form-actions"><a href="/inventory">Back</a><button type="submit">Receive stock</button></div></form>{% endif %}</section>
+{% endblock %}

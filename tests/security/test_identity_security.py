@@ -228,7 +228,9 @@ def test_session_is_household_bound_and_capabilities_follow_current_role(
     with engine.begin() as connection:
         connection.execute(text("UPDATE authorization_memberships SET role='viewer'"))
     principal = service.authenticate(issued.token, now=now + timedelta(minutes=1))
-    assert principal.capabilities == frozenset({"household.view"})
+    assert principal.capabilities == frozenset(
+        {"household.view", "inventory.view", "reminder.view"}
+    )
 
     other = uuid4()
     with engine.begin() as connection:

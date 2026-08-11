@@ -3,7 +3,7 @@
 Status: Approved
 Acceptance date: 2026-08-04
 
-This package is the approved architecture baseline for SnakeTracker. The decision freeze in [ADR-0028](adr/0028-architecture-governance-and-decision-freeze.md) is active as of 2026-08-04. [ADR-0036](adr/0036-development-and-pi-deployment-qualification.md) separates laptop development qualification from mandatory pre-deployment Raspberry Pi qualification. [ADR-0037](adr/0037-phase-order-minimal-household-events.md) moves only the permanent household-event bootstrap slice into Phase 2 while leaving the general event platform in Phase 3.
+This package is the approved architecture baseline for SnakeTracker. The decision freeze in [ADR-0028](adr/0028-architecture-governance-and-decision-freeze.md) is active as of 2026-08-04. [ADR-0036](adr/0036-development-and-pi-deployment-qualification.md) separates laptop development qualification from mandatory pre-deployment Raspberry Pi qualification. [ADR-0037](adr/0037-phase-order-minimal-household-events.md) moves only the permanent household-event bootstrap slice into Phase 2 while leaving the general event platform in Phase 3. [ADR-0038](adr/0038-scheduling-and-husbandry-reference-profiles.md) fixes the boundary between owner-configured effective-history scheduling in M5 and optional explainable analytics/reference profiles in M6.
 
 ## Document map
 

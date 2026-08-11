@@ -1,0 +1,1 @@
+"""SQLite expense projection adapters."""

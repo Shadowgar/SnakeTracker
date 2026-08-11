@@ -109,10 +109,40 @@ class IdentityRepository(Protocol):
 
 
 ROLE_CAPABILITIES: dict[str, frozenset[str]] = {
-    "owner": frozenset({"household.view", "household.manage", "identity.manage"}),
-    "administrator": frozenset({"household.view", "household.manage", "identity.manage"}),
-    "caretaker": frozenset({"household.view"}),
-    "viewer": frozenset({"household.view"}),
+    "owner": frozenset(
+        {
+            "household.view",
+            "household.manage",
+            "identity.manage",
+            "inventory.view",
+            "inventory.manage",
+            "expense.view",
+            "expense.manage",
+            "reminder.view",
+            "reminder.manage",
+            "operations.view",
+            "operations.manage",
+        }
+    ),
+    "administrator": frozenset(
+        {
+            "household.view",
+            "household.manage",
+            "identity.manage",
+            "inventory.view",
+            "inventory.manage",
+            "expense.view",
+            "expense.manage",
+            "reminder.view",
+            "reminder.manage",
+            "operations.view",
+            "operations.manage",
+        }
+    ),
+    "caretaker": frozenset(
+        {"household.view", "inventory.view", "inventory.manage", "reminder.view"}
+    ),
+    "viewer": frozenset({"household.view", "inventory.view", "reminder.view"}),
 }
 
 

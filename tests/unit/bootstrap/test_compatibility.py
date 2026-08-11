@@ -16,7 +16,7 @@ from snaketracker.bootstrap.compatibility import (
     ("metadata", "database_is_empty", "expected_mode"),
     [
         (
-            {"manifest_version": 1, "relational_schema_version": 8},
+            {"manifest_version": 1, "relational_schema_version": 9},
             False,
             CompatibilityMode.NORMAL,
         ),
@@ -28,12 +28,12 @@ from snaketracker.bootstrap.compatibility import (
         (None, True, CompatibilityMode.BOOTSTRAP_ALLOWED),
         (None, False, CompatibilityMode.RECOVERY_REQUIRED),
         (
-            {"manifest_version": 2, "relational_schema_version": 8},
+            {"manifest_version": 2, "relational_schema_version": 9},
             False,
             CompatibilityMode.RECOVERY_REQUIRED,
         ),
         (
-            {"manifest_version": 1, "relational_schema_version": 9},
+            {"manifest_version": 1, "relational_schema_version": 10},
             False,
             CompatibilityMode.RECOVERY_REQUIRED,
         ),
@@ -73,7 +73,9 @@ def test_known_alembic_revision_is_compatible(tmp_path) -> None:
     try:
         with engine.begin() as connection:
             connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
-            connection.execute(text("INSERT INTO alembic_version VALUES ('0008_local_backups')"))
+            connection.execute(
+                text("INSERT INTO alembic_version VALUES ('0009_operational_workflows')")
+            )
 
         assert inspect_database_compatibility(engine).mode is CompatibilityMode.NORMAL
     finally:
@@ -166,7 +168,9 @@ def test_startup_compatibility_accepts_supported_runtime_and_schema(tmp_path) ->
     try:
         with engine.begin() as connection:
             connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
-            connection.execute(text("INSERT INTO alembic_version VALUES ('0008_local_backups')"))
+            connection.execute(
+                text("INSERT INTO alembic_version VALUES ('0009_operational_workflows')")
+            )
             connection.execute(
                 text(
                     "CREATE TABLE domain_events ("
@@ -186,7 +190,9 @@ def test_unknown_non_household_contract_requires_restricted_recovery(tmp_path) -
     try:
         with engine.begin() as connection:
             connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
-            connection.execute(text("INSERT INTO alembic_version VALUES ('0008_local_backups')"))
+            connection.execute(
+                text("INSERT INTO alembic_version VALUES ('0009_operational_workflows')")
+            )
             connection.execute(
                 text(
                     "CREATE TABLE domain_events ("

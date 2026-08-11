@@ -186,11 +186,14 @@ def test_worker_creates_encrypted_verified_backup_and_rehearses_restore(tmp_path
         assert run.status == "completed"
         assert (run.archive_path / "manifest.v1.json.enc").is_file()
         assert (run.archive_path / "database.sqlite3.enc").is_file()
-        assert b"Nyx" not in (run.archive_path / "database.sqlite3.enc").read_bytes()
+        encrypted_database = (run.archive_path / "database.sqlite3.enc").read_bytes()
+        assert encrypted_database.startswith(b"STBK1")
+        assert not encrypted_database.startswith(b"SQLite format 3\x00")
+        assert encrypted_database != database.read_bytes()
 
         verification = pipeline.verify(run)
         assert verification.attachment_count == 1
-        assert verification.database_schema_revision == "0008_local_backups"
+        assert verification.database_schema_revision == "0009_operational_workflows"
         assert verification.event_global_position >= 3
         assert verification.encryption_key_id == "m4-local-test-key"
         assert ("animal.photo_selected", 1) in verification.event_contracts

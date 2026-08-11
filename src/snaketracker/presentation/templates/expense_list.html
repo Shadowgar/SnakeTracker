@@ -1,0 +1,4 @@
+{% extends "base.html" %}
+{% block title %}Expenses · SnakeTracker{% endblock %}
+{% block content %}<section class="dashboard" aria-labelledby="page-title"><header><p class="eyebrow">Financial records</p><h1 id="page-title">Expenses</h1><p class="lede">Owner and Administrator financial history.</p></header>{% if 'expense.manage' in principal.capabilities %}<div class="dashboard-actions"><a class="button-link" href="/expenses/new">Record expense</a></div>{% endif %}
+{% if expenses %}<ul class="record-list">{% for expense in expenses %}<li><a href="/expenses/{{ expense.expense_id }}"><strong>{{ expense.category }} · {{ expense.currency }} {{ '%.2f'|format(expense.amount_minor / 100) }}</strong><span>{{ expense.status|capitalize }}{% if expense.payee %} · {{ expense.payee }}{% endif %}</span></a></li>{% endfor %}</ul>{% else %}<div class="empty-state"><h2>No expenses yet</h2></div>{% endif %}</section>{% endblock %}

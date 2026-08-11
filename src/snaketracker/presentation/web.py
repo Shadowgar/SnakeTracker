@@ -6,8 +6,9 @@ import hmac
 import secrets
 from collections.abc import Callable
 from datetime import UTC, datetime
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -60,6 +61,14 @@ from snaketracker.application.enclosures import (
     RegisterEnclosureCommand,
     UpdateEnclosureProfileCommand,
 )
+from snaketracker.application.expenses import (
+    CorrectExpenseCommand,
+    ExpenseAuthorizationError,
+    ExpenseService,
+    ExpenseValidationError,
+    RecordExpenseCommand,
+    VoidExpenseCommand,
+)
 from snaketracker.application.household_bootstrap import (
     AlreadyBootstrappedError,
     BootstrapCommand,
@@ -73,12 +82,31 @@ from snaketracker.application.identity import (
     LoginBlockedError,
     Principal,
 )
+from snaketracker.application.inventory import (
+    InventoryService,
+    InventoryValidationError,
+    ReceiveStockCommand,
+    RegisterInventoryItemCommand,
+)
+from snaketracker.application.reminders import (
+    CreateReminderRuleCommand,
+    DisableReminderRuleCommand,
+    ReminderFactService,
+    ReminderProjection,
+    ReminderRuleCurrent,
+    ReminderRuleService,
+    ReminderValidationError,
+    SaveSubjectScheduleCommand,
+)
 from snaketracker.domains.animals.contracts import ANIMAL_STATUSES
 from snaketracker.domains.enclosures.contracts import ENCLOSURE_STATUSES
 from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
 from snaketracker.platform.events.envelope import DomainEvent
 from snaketracker.platform.events.registry import production_event_registry
+from snaketracker.platform.events.store import ExpectedVersionConflictError
 from snaketracker.platform.events.validation import household_local_to_utc
+from snaketracker.platform.jobs.models import JobRecord
+from snaketracker.platform.notifications.service import NotificationIntentService
 from snaketracker.presentation.animal_care_views import (
     present_care_events,
     present_effective_care_events,
@@ -97,9 +125,22 @@ CARE_FORM_DETAILS: dict[str, tuple[str, str, str]] = {
     "bath": ("Record bath", "Add a completed bath or soak.", "baths"),
 }
 
+CARE_SCHEDULE_CAPABILITIES: dict[str, tuple[str, str, str]] = {
+    "feeding": ("Feeding", "animal", "last accepted feeding"),
+    "weight": ("Weight check", "animal", "last weight"),
+    "length": ("Length check", "animal", "last length"),
+    "bath": ("Bath / soak", "animal", "last bath"),
+    "cleaning": ("Enclosure cleaning", "enclosure", "last qualifying cleaning"),
+    "water_change": ("Water change", "enclosure", "last water change"),
+}
+
 
 class FormValidationError(ValueError):
     """A browser form value cannot be converted to an owned command input."""
+
+
+class JobReadRepository(Protocol):
+    def list_for(self, household_id: UUID) -> tuple[JobRecord, ...]: ...
 
 
 def _form_datetime(value: object, household_timezone: str) -> datetime:
@@ -122,6 +163,29 @@ def _required_int(value: object, label: str) -> int:
 def _optional_int(value: object, label: str) -> int | None:
     normalized = str(value).strip()
     return None if not normalized else _required_int(normalized, label)
+
+
+def _money_minor(value: object) -> int:
+    try:
+        amount = Decimal(str(value)).quantize(Decimal("0.01"))
+    except (InvalidOperation, ValueError) as error:
+        raise FormValidationError("Enter a valid monetary amount.") from error
+    minor = int(amount * 100)
+    if minor < 1:
+        raise FormValidationError("Expense amount must be positive.")
+    return minor
+
+
+def _inventory_reference(form: Any) -> tuple[UUID | None, int | None]:
+    raw = str(form.get("inventory_item_id", "")).strip()
+    if not raw:
+        return None, None
+    if ":" in raw:
+        item_value, version_value = raw.rsplit(":", 1)
+        return UUID(item_value), _required_int(version_value, "inventory stream version")
+    return UUID(raw), _optional_int(
+        form.get("inventory_expected_stream_version", ""), "inventory stream version"
+    )
 
 
 def _form_bool(value: object, label: str) -> bool:
@@ -320,6 +384,24 @@ def _new_form_response(
     return response
 
 
+def _access_denied(request: Request, title: str) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request,
+        "error.html",
+        {"title": title, "message": "Your current household role cannot use this feature."},
+        status_code=403,
+    )
+
+
+def _not_found(request: Request, title: str) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request,
+        "error.html",
+        {"title": title, "message": "Return to your household workspace and try again."},
+        status_code=404,
+    )
+
+
 def _preauth_csrf_valid(request: Request, submitted: str) -> bool:
     cookie = request.cookies.get(CSRF_COOKIE)
     return cookie is not None and hmac.compare_digest(cookie, submitted)
@@ -345,6 +427,13 @@ def create_web_router(
     attachment_service: AttachmentService,
     backup_service: BackupService,
     enclosure_service: EnclosureService,
+    inventory_service: InventoryService,
+    expense_service: ExpenseService,
+    reminder_rule_service: ReminderRuleService,
+    reminder_fact_service: ReminderFactService,
+    reminder_projection: ReminderProjection,
+    notification_intent_service: NotificationIntentService,
+    job_repository: JobReadRepository,
     is_bootstrapped: Callable[[], bool],
     secure_cookie: bool,
     expected_origin: str | None = None,
@@ -778,6 +867,425 @@ def create_web_router(
             )
         return RedirectResponse("/settings/backups", status_code=303)
 
+    @router.get("/inventory", response_class=HTMLResponse)
+    async def inventory_list(request: Request) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if "inventory.view" not in principal.capabilities:
+            return _access_denied(request, "Inventory access denied")
+        return protected_page(
+            request,
+            "inventory_list.html",
+            principal,
+            context={"items": inventory_service.list_balances(principal.household_id)},
+        )
+
+    @router.get("/inventory/new", response_class=HTMLResponse)
+    async def inventory_new(request: Request) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if "inventory.manage" not in principal.capabilities:
+            return _access_denied(request, "Inventory access denied")
+        return protected_page(
+            request,
+            "inventory_new.html",
+            principal,
+            context={"errors": {}, "values": {}},
+        )
+
+    @router.post("/inventory", response_class=HTMLResponse)
+    async def inventory_create(request: Request) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "inventory.manage" not in principal.capabilities:
+            return _access_denied(request, "Inventory access denied")
+        try:
+            result = inventory_service.register(
+                RegisterInventoryItemCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    uuid4(),
+                    _form_idempotency_key(form),
+                    str(form.get("name", "")),
+                    str(form.get("unit", "")),
+                    _optional_int(form.get("reorder_threshold", ""), "reorder threshold"),
+                )
+            )
+        except (InventoryValidationError, FormValidationError) as error:
+            return protected_page(
+                request,
+                "inventory_new.html",
+                principal,
+                status_code=422,
+                context={"errors": {"form": str(error)}, "values": _form_values(form)},
+            )
+        return RedirectResponse(f"/inventory/{result.item_id}", status_code=303)
+
+    @router.get("/inventory/{item_id}", response_class=HTMLResponse)
+    async def inventory_detail(request: Request, item_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if "inventory.view" not in principal.capabilities:
+            return _access_denied(request, "Inventory access denied")
+        try:
+            item = inventory_service.balance_for(principal.household_id, UUID(item_id))
+        except ValueError:
+            item = None
+        if item is None:
+            return _not_found(request, "Inventory item not found")
+        return protected_page(
+            request,
+            "inventory_detail.html",
+            principal,
+            context={"item": item, "errors": {}},
+        )
+
+    @router.post("/inventory/{item_id}/receive", response_class=HTMLResponse)
+    async def inventory_receive(request: Request, item_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "inventory.manage" not in principal.capabilities:
+            return _access_denied(request, "Inventory access denied")
+        try:
+            item_uuid = UUID(item_id)
+            inventory_service.receive(
+                ReceiveStockCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    item_uuid,
+                    uuid4(),
+                    _form_idempotency_key(form),
+                    _required_int(form.get("expected_stream_version", ""), "stream version"),
+                    _required_int(form.get("quantity", ""), "quantity"),
+                    str(form.get("reference", "")) or None,
+                )
+            )
+        except (
+            InventoryValidationError,
+            ExpectedVersionConflictError,
+            FormValidationError,
+            ValueError,
+        ) as error:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=422,
+                context={"title": "Inventory could not be updated", "message": str(error)},
+            )
+        return RedirectResponse(f"/inventory/{item_id}", status_code=303)
+
+    @router.get("/expenses", response_class=HTMLResponse)
+    async def expense_list(request: Request) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if "expense.view" not in principal.capabilities:
+            return _access_denied(request, "Expense access denied")
+        return protected_page(
+            request,
+            "expense_list.html",
+            principal,
+            context={"expenses": expense_service.list_expenses(principal.household_id)},
+        )
+
+    @router.get("/expenses/new", response_class=HTMLResponse)
+    async def expense_new(request: Request) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if "expense.manage" not in principal.capabilities:
+            return _access_denied(request, "Expense access denied")
+        return protected_page(
+            request, "expense_new.html", principal, context={"errors": {}, "values": {}}
+        )
+
+    @router.post("/expenses", response_class=HTMLResponse)
+    async def expense_create(request: Request) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "expense.manage" not in principal.capabilities:
+            return _access_denied(request, "Expense access denied")
+        try:
+            result = expense_service.record(
+                RecordExpenseCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    principal.role,
+                    uuid4(),
+                    _form_idempotency_key(form),
+                    _money_minor(form.get("amount", "")),
+                    str(form.get("currency", "")),
+                    str(form.get("category", "")),
+                    str(form.get("payee", "")) or None,
+                    str(form.get("reference", "")) or None,
+                    str(form.get("notes", "")) or None,
+                    _form_datetime(form.get("occurred_at", ""), principal.household_timezone),
+                )
+            )
+        except ExpenseAuthorizationError as error:
+            return _access_denied(request, str(error))
+        except (ExpenseValidationError, FormValidationError) as error:
+            return protected_page(
+                request,
+                "expense_new.html",
+                principal,
+                status_code=422,
+                context={"errors": {"form": str(error)}, "values": _form_values(form)},
+            )
+        return RedirectResponse(f"/expenses/{result.expense_id}", status_code=303)
+
+    @router.get("/expenses/{expense_id}", response_class=HTMLResponse)
+    async def expense_detail(request: Request, expense_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if "expense.view" not in principal.capabilities:
+            return _access_denied(request, "Expense access denied")
+        try:
+            expense = expense_service.expense_for(principal.household_id, UUID(expense_id))
+        except ValueError:
+            expense = None
+        if expense is None:
+            return _not_found(request, "Expense not found")
+        return protected_page(
+            request, "expense_detail.html", principal, context={"expense": expense, "errors": {}}
+        )
+
+    @router.post("/expenses/{expense_id}/correct", response_class=HTMLResponse)
+    async def expense_correct(request: Request, expense_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "expense.manage" not in principal.capabilities:
+            return _access_denied(request, "Expense access denied")
+        try:
+            expense_uuid = UUID(expense_id)
+            expense_service.correct(
+                CorrectExpenseCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    principal.role,
+                    expense_uuid,
+                    UUID(str(form.get("target_event_id", ""))),
+                    expense_service.correlation_id_for(principal.household_id, expense_uuid),
+                    _form_idempotency_key(form),
+                    _required_int(form.get("expected_stream_version", ""), "stream version"),
+                    _money_minor(form.get("amount", "")),
+                    str(form.get("currency", "")),
+                    str(form.get("category", "")),
+                    str(form.get("payee", "")) or None,
+                    str(form.get("reference", "")) or None,
+                    str(form.get("reason", "")),
+                )
+            )
+        except ExpenseAuthorizationError as error:
+            return _access_denied(request, str(error))
+        except (ExpenseValidationError, FormValidationError, ValueError) as error:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=422,
+                context={"title": "Expense could not be corrected", "message": str(error)},
+            )
+        return RedirectResponse(f"/expenses/{expense_id}", status_code=303)
+
+    @router.post("/expenses/{expense_id}/void", response_class=HTMLResponse)
+    async def expense_void(request: Request, expense_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "expense.manage" not in principal.capabilities:
+            return _access_denied(request, "Expense access denied")
+        try:
+            expense_service.void(
+                VoidExpenseCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    principal.role,
+                    UUID(expense_id),
+                    UUID(str(form.get("target_event_id", ""))),
+                    expense_service.correlation_id_for(principal.household_id, UUID(expense_id)),
+                    _form_idempotency_key(form),
+                    _required_int(form.get("expected_stream_version", ""), "stream version"),
+                    str(form.get("reason", "")),
+                )
+            )
+        except ExpenseAuthorizationError as error:
+            return _access_denied(request, str(error))
+        except (ExpenseValidationError, FormValidationError, ValueError) as error:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=422,
+                context={"title": "Expense could not be voided", "message": str(error)},
+            )
+        return RedirectResponse(f"/expenses/{expense_id}", status_code=303)
+
+    @router.get("/reminders", response_class=HTMLResponse)
+    async def reminder_list(request: Request) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if "reminder.view" not in principal.capabilities:
+            return _access_denied(request, "Reminder access denied")
+        now = datetime.now(UTC)
+        animals = animal_service.list_profiles(principal.household_id)
+        enclosures = enclosure_service.list_profiles(principal.household_id)
+        agenda = _agenda_rows(
+            reminder_fact_service.agenda_for(principal.household_id, now=now),
+            animals=animals,
+            enclosures=enclosures,
+        )
+        return protected_page(
+            request,
+            "reminder_list.html",
+            principal,
+            context={
+                "agenda_groups": (
+                    ("overdue", "Overdue", agenda["overdue"]),
+                    ("due_today", "Due today", agenda["due_today"]),
+                    ("upcoming", "Upcoming", agenda["upcoming"]),
+                ),
+            },
+        )
+
+    @router.get("/reminders/new", response_class=HTMLResponse)
+    async def reminder_new(request: Request) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if "reminder.manage" not in principal.capabilities:
+            return _access_denied(request, "Reminder access denied")
+        return protected_page(
+            request,
+            "reminder_new.html",
+            principal,
+            context={
+                "errors": {},
+                "values": {},
+                "animals": animal_service.list_profiles(principal.household_id),
+                "enclosures": enclosure_service.list_profiles(principal.household_id),
+            },
+        )
+
+    @router.post("/reminders", response_class=HTMLResponse)
+    async def reminder_create(request: Request) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "reminder.manage" not in principal.capabilities:
+            return _access_denied(request, "Reminder access denied")
+        try:
+            schedule_kind = str(form.get("schedule_kind", ""))
+            anchor_value = str(form.get("anchor_at", "")).strip()
+            override_value = str(form.get("override_due_at", "")).strip()
+            subject_type, separator, subject_id_value = str(form.get("subject", "")).partition(":")
+            if not separator or subject_type not in {"animal", "enclosure"}:
+                raise FormValidationError("Choose a valid reminder subject.")
+            result = reminder_rule_service.create(
+                CreateReminderRuleCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    uuid4(),
+                    _form_idempotency_key(form),
+                    subject_type,
+                    UUID(subject_id_value),
+                    str(form.get("reminder_type", "")),
+                    schedule_kind,
+                    _required_int(form.get("interval_days", ""), "interval"),
+                    (
+                        _form_datetime(anchor_value, principal.household_timezone).isoformat()
+                        if anchor_value
+                        else None
+                    ),
+                    (
+                        _form_datetime(override_value, principal.household_timezone).isoformat()
+                        if override_value
+                        else None
+                    ),
+                    True,
+                    str(form.get("channel", "local")),
+                )
+            )
+        except (ReminderValidationError, FormValidationError, ValueError) as error:
+            return protected_page(
+                request,
+                "reminder_new.html",
+                principal,
+                status_code=422,
+                context={
+                    "errors": {"form": str(error)},
+                    "values": _form_values(form),
+                    "animals": animal_service.list_profiles(principal.household_id),
+                    "enclosures": enclosure_service.list_profiles(principal.household_id),
+                },
+            )
+        return RedirectResponse(f"/reminders#{result.rule_id}", status_code=303)
+
+    @router.post("/reminders/{rule_id}/disable", response_class=HTMLResponse)
+    async def reminder_disable(request: Request, rule_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "reminder.manage" not in principal.capabilities:
+            return _access_denied(request, "Reminder access denied")
+        try:
+            current = reminder_projection.rule_for(principal.household_id, UUID(rule_id))
+            if current is None:
+                raise ReminderValidationError("Reminder rule does not exist.")
+            reminder_rule_service.disable(
+                DisableReminderRuleCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    current.rule_id,
+                    current.stream_version,
+                    reminder_rule_service.correlation_id_for(
+                        principal.household_id, current.rule_id
+                    ),
+                    _form_idempotency_key(form),
+                    str(form.get("reason", "")),
+                )
+            )
+        except (ReminderValidationError, ValueError) as error:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=422,
+                context={"title": "Reminder could not be disabled", "message": str(error)},
+            )
+        return RedirectResponse("/reminders", status_code=303)
+
+    @router.get("/operations/jobs", response_class=HTMLResponse)
+    async def operations_jobs(request: Request) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if "operations.view" not in principal.capabilities:
+            return _access_denied(request, "Operations access denied")
+        return protected_page(
+            request,
+            "operations_jobs.html",
+            principal,
+            context={"jobs": job_repository.list_for(principal.household_id)},
+        )
+
     @router.get("/animals/new", response_class=HTMLResponse)
     async def animal_new(request: Request) -> Response:
         principal = principal_for(request, audit_denial=True)
@@ -1094,8 +1602,95 @@ def create_web_router(
                 "current_enclosure": current_enclosure,
                 "recent_events": recent_events[:5],
                 "animal_statuses": tuple(sorted(ANIMAL_STATUSES)),
+                "care_schedules": _care_schedule_rows(
+                    principal.household_id,
+                    profile.animal_id,
+                    current_enclosure,
+                    reminder_projection,
+                    principal.household_timezone,
+                ),
             },
         )
+
+    @router.post(
+        "/animals/{animal_id}/care-schedule/{reminder_type}",
+        response_class=HTMLResponse,
+    )
+    async def animal_care_schedule_save(
+        request: Request, animal_id: str, reminder_type: str
+    ) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "reminder.manage" not in principal.capabilities:
+            return _access_denied(request, "Care schedule access denied")
+        try:
+            animal_uuid = UUID(animal_id)
+            profile = animal_service.profile_for(principal.household_id, animal_uuid)
+            if profile is None:
+                raise FormValidationError("Animal not found.")
+            capability = CARE_SCHEDULE_CAPABILITIES.get(reminder_type)
+            if capability is None:
+                raise FormValidationError("Care schedule type is not supported.")
+            _title, subject_type, _source = capability
+            if subject_type == "animal":
+                subject_id = profile.animal_id
+            else:
+                if profile.current_enclosure_id is None:
+                    raise FormValidationError(
+                        "Assign an enclosure before configuring this care schedule."
+                    )
+                subject_id = profile.current_enclosure_id
+            enabled = str(form.get("enabled", "")).lower() == "true"
+            existing = _subject_schedule_rule(
+                reminder_projection,
+                principal.household_id,
+                subject_type,
+                subject_id,
+                reminder_type,
+            )
+            interval_value = str(form.get("interval_days", "")).strip()
+            if enabled and not interval_value:
+                raise FormValidationError("Interval is required when the schedule is enabled.")
+            interval_days = (
+                _required_int(interval_value, "interval")
+                if interval_value
+                else existing.interval_days
+                if existing is not None
+                else 1
+            )
+            override_value = str(form.get("override_due_at", "")).strip()
+            reminder_rule_service.save_subject_schedule(
+                SaveSubjectScheduleCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    uuid4(),
+                    _form_idempotency_key(form),
+                    _required_int(form.get("expected_stream_version", ""), "stream version"),
+                    subject_type,
+                    subject_id,
+                    reminder_type,
+                    interval_days,
+                    (
+                        _form_datetime(override_value, principal.household_timezone).isoformat()
+                        if override_value
+                        else None
+                    ),
+                    enabled,
+                )
+            )
+        except (ReminderValidationError, FormValidationError, ValueError) as error:
+            return _animal_form_error(
+                request,
+                principal,
+                animal_id,
+                str(error),
+                animal_service,
+                enclosure_service,
+                reminder_projection,
+            )
+        return RedirectResponse(f"/animals/{animal_id}#care-schedule", status_code=303)
 
     def care_form_response(
         request: Request,
@@ -1117,6 +1712,7 @@ def create_web_router(
             principal=current_principal,
             protected_page=protected_page,
             animal_service=animal_service,
+            inventory_service=inventory_service,
             status_code=status_code,
             error=error,
             values=values,
@@ -1196,6 +1792,7 @@ def create_web_router(
                 str(error),
                 animal_service,
                 enclosure_service,
+                reminder_projection,
             )
         finally:
             if isinstance(upload, UploadFile):
@@ -1308,7 +1905,13 @@ def create_web_router(
             )
         except (AnimalValidationError, FormValidationError, ValueError) as error:
             return _animal_form_error(
-                request, principal, animal_id, str(error), animal_service, enclosure_service
+                request,
+                principal,
+                animal_id,
+                str(error),
+                animal_service,
+                enclosure_service,
+                reminder_projection,
             )
         return RedirectResponse(f"/animals/{animal_id}", status_code=303)
 
@@ -1348,6 +1951,7 @@ def create_web_router(
                 str(error),
                 animal_service,
                 enclosure_service,
+                reminder_projection,
             )
         return RedirectResponse(f"/animals/{animal_id}", status_code=303)
 
@@ -1362,6 +1966,7 @@ def create_web_router(
             animal_uuid = UUID(animal_id)
             if animal_service.profile_for(principal.household_id, animal_uuid) is None:
                 raise FormValidationError("Animal not found.")
+            inventory_item_id, inventory_version = _inventory_reference(form)
             animal_service.record_feeding(
                 RecordFeedingCommand(
                     household_id=principal.household_id,
@@ -1381,6 +1986,11 @@ def create_web_router(
                     quantity=_required_int(form.get("quantity", ""), "quantity"),
                     outcome=str(form.get("outcome", "")),
                     notes=str(form.get("notes", "")),
+                    inventory_item_id=inventory_item_id,
+                    inventory_expected_stream_version=inventory_version,
+                    inventory_quantity=_optional_int(
+                        form.get("inventory_quantity", ""), "inventory quantity"
+                    ),
                 )
             )
         except (AnimalValidationError, FormValidationError, ValueError) as error:
@@ -1824,6 +2434,7 @@ def _animal_form_error(
     message: str,
     animal_service: AnimalService,
     enclosure_service: EnclosureService | None = None,
+    reminder_projection: ReminderProjection | None = None,
 ) -> HTMLResponse:
     try:
         profile = animal_service.profile_for(principal.household_id, UUID(animal_id))
@@ -1867,9 +2478,136 @@ def _animal_form_error(
             "enclosures": enclosures,
             "current_enclosure": current_enclosure,
             "recent_events": recent_events[:5],
+            "care_schedules": (
+                _care_schedule_rows(
+                    principal.household_id,
+                    profile.animal_id,
+                    current_enclosure,
+                    reminder_projection,
+                    principal.household_timezone,
+                )
+                if reminder_projection is not None
+                else ()
+            ),
         },
         status_code=422,
     )
+
+
+def _subject_schedule_rule(
+    projection: ReminderProjection,
+    household_id: UUID,
+    subject_type: str,
+    subject_id: UUID,
+    reminder_type: str,
+) -> ReminderRuleCurrent | None:
+    matches = tuple(
+        rule
+        for rule in projection.rules_for(household_id)
+        if rule.subject_type == subject_type
+        and rule.subject_id == subject_id
+        and rule.reminder_type == reminder_type
+    )
+    return matches[0] if matches else None
+
+
+def _care_schedule_rows(
+    household_id: UUID,
+    animal_id: UUID,
+    current_enclosure: Any,
+    projection: ReminderProjection,
+    timezone_name: str,
+) -> tuple[dict[str, Any], ...]:
+    timezone = ZoneInfo(timezone_name)
+    rows: list[dict[str, Any]] = []
+    for reminder_type, (title, subject_type, source_label) in CARE_SCHEDULE_CAPABILITIES.items():
+        subject_id = (
+            animal_id
+            if subject_type == "animal"
+            else current_enclosure.enclosure_id
+            if current_enclosure is not None
+            else None
+        )
+        rule = (
+            _subject_schedule_rule(
+                projection,
+                household_id,
+                subject_type,
+                subject_id,
+                reminder_type,
+            )
+            if subject_id is not None
+            else None
+        )
+        rows.append(
+            {
+                "reminder_type": reminder_type,
+                "title": title,
+                "interval_label": f"{title} interval",
+                "source_label": source_label,
+                "available": subject_id is not None,
+                "enclosure_name": (
+                    current_enclosure.name
+                    if subject_type == "enclosure" and current_enclosure
+                    else None
+                ),
+                "enabled": rule.enabled if rule is not None else False,
+                "interval_days": rule.interval_days if rule is not None else "",
+                "expected_stream_version": rule.stream_version if rule is not None else 0,
+                "override_due_at": (
+                    rule.override_due_at.astimezone(timezone).strftime("%Y-%m-%dT%H:%M")
+                    if rule is not None and rule.override_due_at is not None
+                    else ""
+                ),
+            }
+        )
+    return tuple(rows)
+
+
+def _agenda_rows(
+    items: tuple[Any, ...], *, animals: tuple[Any, ...], enclosures: tuple[Any, ...]
+) -> dict[str, tuple[dict[str, Any], ...]]:
+    animal_by_id = {animal.animal_id: animal for animal in animals}
+    enclosure_by_id = {enclosure.enclosure_id: enclosure for enclosure in enclosures}
+    occupants: dict[UUID, list[Any]] = {}
+    for animal in animals:
+        if animal.current_enclosure_id is not None:
+            occupants.setdefault(animal.current_enclosure_id, []).append(animal)
+    grouped: dict[str, list[dict[str, Any]]] = {
+        "overdue": [],
+        "due_today": [],
+        "upcoming": [],
+    }
+    for item in items:
+        location_name = None
+        if item.subject_type == "animal":
+            animal = animal_by_id.get(item.subject_id)
+            subject_name = animal.name if animal is not None else "Animal"
+            subject_url = f"/animals/{item.subject_id}"
+        else:
+            enclosure = enclosure_by_id.get(item.subject_id)
+            enclosure_occupants = occupants.get(item.subject_id, [])
+            if len(enclosure_occupants) == 1:
+                animal = enclosure_occupants[0]
+                subject_name = animal.name
+                subject_url = f"/animals/{animal.animal_id}"
+                location_name = enclosure.name if enclosure is not None else "Enclosure"
+            else:
+                subject_name = enclosure.name if enclosure is not None else "Enclosure"
+                subject_url = f"/enclosures/{item.subject_id}"
+        grouped[item.status].append(
+            {
+                "item": item,
+                "title": CARE_SCHEDULE_CAPABILITIES.get(
+                    item.reminder_type,
+                    (item.reminder_type.replace("_", " ").title(), "", ""),
+                )[0],
+                "subject_name": subject_name,
+                "subject_url": subject_url,
+                "location_name": location_name,
+            }
+        )
+    return {key: tuple(value) for key, value in grouped.items()}
 
 
 def _animal_edit_error(
@@ -2081,6 +2819,7 @@ def _animal_care_form_page(
     principal: Principal,
     protected_page: Callable[..., HTMLResponse],
     animal_service: AnimalService,
+    inventory_service: InventoryService,
     status_code: int = 200,
     error: str | None = None,
     values: dict[str, str] | None = None,
@@ -2113,5 +2852,6 @@ def _animal_care_form_page(
             "action": f"/animals/{animal_id}/{route}",
             "errors": {"form": error} if error else {},
             "values": values or {},
+            "inventory_items": inventory_service.list_balances(principal.household_id),
         },
     )

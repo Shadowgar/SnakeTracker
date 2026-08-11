@@ -12,7 +12,7 @@
 | `enclosure_occupancy` | Current projected occupancy from animal streams | Synchronous |
 | `inventory_balance` | Available, reserved, consumed, expired quantities | Synchronous |
 | `reminder_rule_current` | Effective reminder-rule state | Synchronous |
-| `reminder_facts` | Due/overdue factual inputs | Synchronous where command correctness depends on them; otherwise asynchronous |
+| `reminder_facts` | Explainable due/overdue facts from owner rules and effective care history | Synchronous where command correctness depends on them; otherwise asynchronous |
 | `document_catalog` | Finalized version and subject ownership | Synchronous |
 | `tag_index` | Effective normalized tag associations | Synchronous initially |
 | `global_search_fts` | Authorized FTS5 search | Asynchronous |
@@ -21,6 +21,8 @@
 | `report_facts` | Normalized report facts | Asynchronous |
 | `dashboard_statistics` | Expensive counts and trends | Asynchronous |
 | `notification_candidates` | Inputs for intent generation | Asynchronous |
+| `husbandry_reference_profiles` | Optional versioned curated species/life-stage ranges with source provenance | Read-only reference data introduced in M6 |
+| `husbandry_recommendations` | Explainable estimated windows from owner rules, effective history, and optional references | Asynchronous in M6 |
 | `aggregate_snapshots` | Command replay acceleration | Asynchronous |
 
 Moving a projection into the synchronous command transaction requires a measured correctness or user-experience need and an ADR impact review.
@@ -30,6 +32,17 @@ Moving a projection into the synchronous command transaction requires a measured
 Each projection declares a stable name, schema version, handler version, supported event contracts, consistency class, rebuild group, correction/reversal behavior, last processed global position, health, last error, and active generation.
 
 Asynchronous projections consume transactional outbox work in global-position order and expose freshness. A lagging or unavailable analytical projection cannot corrupt authoritative state.
+
+Reminder facts consume effective feeding, measurement, bath, cleaning, and water-change history.
+Corrections, voids, and reinstatements therefore change their factual source and trigger deterministic
+recalculation. Each fact retains rule version, schedule kind, interval/override, source type and
+effective occurrence time, calculation time, and a technical source reference so the keeper view can
+explain the result without exposing event UUIDs.
+
+M6 analytics and recommendations remain read-side consumers; they do not own write aggregates.
+Versioned husbandry reference profiles are curated reference data with explicit sources and profile
+versions. Missing guidance remains missing, ranges are preferred over false precision, and owner
+schedules remain authoritative. Deterministic suggestions are not the deferred AI-assistant feature.
 
 ## Rebuild and activation
 

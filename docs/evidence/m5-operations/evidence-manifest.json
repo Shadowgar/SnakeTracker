@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "milestone": "M5",
+  "status": "M5 operational workflows reliable",
+  "accepted_at": "2026-08-11",
+  "generated_at": "2026-08-11T17:23:18Z",
+  "implementation_revision": "de39d1d17448d0016a0b83e13bcf301c23cc390b",
+  "environment_classification": "laptop Docker development",
+  "native_raspberry_pi_qualification": "deferred to Phase 7/pre-deployment",
+  "quality": {
+    "tests": 311,
+    "focused_m5_tests": 54,
+    "line_coverage_percent": 94.92,
+    "branch_coverage_percent": 85.41,
+    "dependency_vulnerabilities": 0,
+    "ruff": "pass",
+    "mypy_strict": "pass"
+  },
+  "migration": {
+    "head": "0009_operational_workflows",
+    "upgrade_downgrade_reupgrade": "pass",
+    "integrity_check": "ok",
+    "phase_2_3_4_compatibility_and_regression_tests": 38
+  },
+  "containers": {
+    "amd64_compose": "pass",
+    "arm64_platform": "linux/arm64",
+    "arm64_image_digest": "sha256:8ed93d38305ce8806764afc7e577b74c06eb05a1efaf3c434c2e85334ece78e1",
+    "arm64_archive_bytes": 133626880,
+    "non_root": true,
+    "live_url": "http://localhost:8081"
+  },
+  "browser": {
+    "fresh_setup_and_m5_workflow": "pass",
+    "profile_care_schedule_and_agenda": "pass",
+    "mobile_viewport": "390x844",
+    "horizontal_overflow": false,
+    "console_errors": 0,
+    "console_warnings": 0,
+    "pa11y_wcag2aa_login_issues": 0
+  },
+  "commands": [
+    "./scripts/quality/check.sh",
+    "uv run pytest -q tests/integration/test_inventory.py tests/integration/test_expenses.py tests/integration/test_reminders.py tests/integration/test_notification_pipeline.py tests/integration/test_durable_jobs.py tests/integration/test_notification_delivery.py tests/browser/test_operational_workflows.py",
+    "docker compose up --build -d --wait",
+    "docker compose ps",
+    "docker buildx build --platform linux/arm64 --build-arg SNAKETRACKER_UID=1001 --output type=oci,dest=/tmp/snaketracker-m5-arm64.oci.tar --metadata-file /tmp/snaketracker-m5-arm64-metadata.json .",
+    "npx --yes pa11y@9.0.1 --runner axe --standard WCAG2AA http://localhost:8081/login"
+  ]
+}

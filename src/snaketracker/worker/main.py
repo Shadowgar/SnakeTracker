@@ -2,15 +2,20 @@
 
 from __future__ import annotations
 
+import logging
 import os
+import secrets
 import signal
 import socket
 import threading
-from datetime import timedelta
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
+from functools import partial
 from types import FrameType
 from uuid import uuid4
 
 from snaketracker.application.readiness import PlatformReadiness
+from snaketracker.application.reminders import ReminderFactService
 from snaketracker.bootstrap.compatibility import inspect_startup_compatibility
 from snaketracker.bootstrap.configuration import Environment, Settings, load_settings
 from snaketracker.infrastructure.attachments.storage import LocalAttachmentStorage
@@ -18,10 +23,25 @@ from snaketracker.infrastructure.backups.pipeline import LocalBackupPipeline
 from snaketracker.infrastructure.backups.repository import SQLAlchemyBackupRepository
 from snaketracker.infrastructure.database.engine import create_sqlite_engine
 from snaketracker.infrastructure.database.health import SQLAlchemyDatabaseHealth
+from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
+from snaketracker.infrastructure.jobs.repository import SQLAlchemyJobRepository
+from snaketracker.infrastructure.notifications.provider import (
+    LocalQualificationNotificationProvider,
+)
+from snaketracker.infrastructure.notifications.repository import (
+    SQLAlchemyNotificationIntentRepository,
+)
 from snaketracker.infrastructure.observability.logging import configure_logging
+from snaketracker.infrastructure.reminders.projections import SQLAlchemyReminderProjection
+from snaketracker.platform.jobs.handoff import OutboxJobHandoff
+from snaketracker.platform.notifications.service import NotificationIntentService
 from snaketracker.worker.backups import LocalBackupWorker
+from snaketracker.worker.jobs import NotificationJobWorker
+from snaketracker.worker.reminders import ReminderScheduler
 
 EXIT_RECOVERY_REQUIRED = 2
+LOGGER = logging.getLogger(__name__)
+REMINDER_SWEEP_INTERVAL = timedelta(minutes=1)
 
 
 def install_signal_handlers(stop: threading.Event) -> None:
@@ -56,12 +76,49 @@ def run_worker(settings: Settings, stop: threading.Event, poll_interval: float =
         if not readiness.check().is_ready:
             return EXIT_RECOVERY_REQUIRED
         backup_worker = _backup_worker(settings, engine)
+        job_repository = SQLAlchemyJobRepository(engine)
+        notification_repository = SQLAlchemyNotificationIntentRepository(engine)
+        reminder_projection = SQLAlchemyReminderProjection(engine)
+        reminder_scheduler = ReminderScheduler(
+            ReminderFactService(SQLAlchemyEventStore(engine), reminder_projection),
+            reminder_projection,
+            NotificationIntentService(notification_repository),
+            notification_repository,
+        )
+        outbox_handoff = OutboxJobHandoff(job_repository)
+        notification_worker = NotificationJobWorker(
+            job_repository,
+            LocalQualificationNotificationProvider(engine),
+            worker_id=f"{socket.gethostname()}-{os.getpid()}-notifications",
+            lease_duration=timedelta(minutes=1),
+            jitter_seconds=lambda _attempt: secrets.randbelow(31),
+        )
+        next_reminder_sweep_at: datetime | None = None
         while not stop.wait(poll_interval):
+            now = datetime.now(UTC)
+            if next_reminder_sweep_at is None or now >= next_reminder_sweep_at:
+                _run_duty(
+                    "Reminder sweep",
+                    partial(reminder_scheduler.run_once, now=now),
+                )
+                next_reminder_sweep_at = now + REMINDER_SWEEP_INTERVAL
+            _run_duty("Outbox handoff", partial(outbox_handoff.run, now=now))
+            _run_duty(
+                "Notification delivery",
+                partial(notification_worker.run_one, now=now),
+            )
             if backup_worker is not None:
-                backup_worker.run_once()
+                _run_duty("Backup execution", backup_worker.run_once)
         return 0
     finally:
         engine.dispose()
+
+
+def _run_duty(name: str, duty: Callable[[], object]) -> None:
+    try:
+        duty()
+    except Exception:
+        LOGGER.exception("%s failed; the worker will continue other duties.", name)
 
 
 def _backup_worker(settings: Settings, engine: object) -> LocalBackupWorker | None:

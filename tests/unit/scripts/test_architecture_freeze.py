@@ -44,5 +44,13 @@ def test_accepted_amendment_paths_cover_adr_0037_phase_order_change() -> None:
     assert freeze.ACCEPTANCE_DATES["0037"] == "2026-08-05"
 
 
+def test_accepted_amendment_paths_cover_adr_0038_scheduling_and_reference_profiles() -> None:
+    assert "docs/adr/0038-scheduling-and-husbandry-reference-profiles.md" in (
+        freeze.APPROVED_AMENDMENT_PATHS
+    )
+    assert "docs/architecture/projection-catalog.md" in freeze.APPROVED_AMENDMENT_PATHS
+    assert freeze.ACCEPTANCE_DATES["0038"] == "2026-08-10"
+
+
 def test_accepted_amendment_paths_cover_m4_shed_correction_catalog() -> None:
     assert "docs/architecture/event-catalog.md" in freeze.APPROVED_AMENDMENT_PATHS

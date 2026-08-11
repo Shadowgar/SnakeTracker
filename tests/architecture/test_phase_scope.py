@@ -10,15 +10,14 @@ import snaketracker
 
 ROOT = Path(__file__).parents[2]
 
-FORBIDDEN_PHASE_TWO_PATHS = (
-    "src/snaketracker/domains/inventory",
-    "src/snaketracker/domains/expenses",
-    "src/snaketracker/domains/reminders",
-    "src/snaketracker/platform/jobs",
-    "src/snaketracker/platform/notifications",
+FORBIDDEN_PHASE_SIX_PATHS = (
+    "src/snaketracker/domains/reports",
+    "src/snaketracker/platform/search",
+    "src/snaketracker/platform/analytics",
+    "src/snaketracker/presentation/pwa",
 )
 
-FORBIDDEN_PHASE_TWO_DEPENDENCIES = {
+FORBIDDEN_IDENTITY_DEPENDENCIES = {
     "authlib",
     "passlib",
     "pyjwt",
@@ -41,15 +40,15 @@ def test_package_exposes_the_project_version() -> None:
     assert snaketracker.__version__ == "0.1.0"
 
 
-def test_phase_two_has_no_later_phase_packages_or_dependencies() -> None:
+def test_phase_five_has_no_phase_six_packages_or_unapproved_identity_dependencies() -> None:
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())
     dependencies = {
         canonicalize_name(Requirement(requirement).name)
         for requirement in project["project"]["dependencies"]
     }
 
-    assert not FORBIDDEN_PHASE_TWO_DEPENDENCIES & dependencies
-    assert not [path for path in FORBIDDEN_PHASE_TWO_PATHS if (ROOT / path).exists()]
+    assert not FORBIDDEN_IDENTITY_DEPENDENCIES & dependencies
+    assert not [path for path in FORBIDDEN_PHASE_SIX_PATHS if (ROOT / path).exists()]
 
 
 def test_reserved_synthetic_event_namespace_is_absent_from_production_and_migrations() -> None:

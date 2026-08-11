@@ -18,8 +18,8 @@ from snaketracker.infrastructure.identity.bootstrap_repository import (
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 
 ROOT = Path(__file__).parents[2]
-REVISION = "0008_local_backups"
-PHASE_FOUR_TABLES = {
+REVISION = "0009_operational_workflows"
+PHASE_FIVE_TABLES = {
     "aggregate_snapshots",
     "alembic_version",
     "animal_current",
@@ -31,16 +31,26 @@ PHASE_FOUR_TABLES = {
     "backup_runs",
     "backup_schedules",
     "domain_events",
+    "delivery_attempts",
     "enclosure_current",
+    "expense_current",
     "event_streams",
     "event_subjects",
     "household_summaries",
     "idempotency_operations",
+    "inventory_balance",
+    "inventory_consumption_links",
+    "inventory_consumption_allocations",
+    "jobs",
     "login_rate_limits",
+    "local_notification_operations",
+    "notification_intents",
     "outbox_items",
     "projection_checkpoints",
     "projection_definitions",
     "projection_generations",
+    "reminder_facts",
+    "reminder_rule_current",
     "security_audit",
     "sessions",
     "users",
@@ -81,7 +91,7 @@ def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -
 
     engine = create_engine(f"sqlite+pysqlite:///{database}")
     try:
-        assert set(inspect(engine).get_table_names()) == PHASE_FOUR_TABLES
+        assert set(inspect(engine).get_table_names()) == PHASE_FIVE_TABLES
     finally:
         engine.dispose()
 
@@ -92,7 +102,44 @@ def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -
     assert current_revision(database) == REVISION
 
 
-def test_migrations_contain_no_event_upcasters_or_deferred_phase_tables() -> None:
+def test_phase_five_downgrade_normalizes_new_outbox_states(tmp_path: Path) -> None:
+    database = tmp_path / "outbox-downgrade.sqlite3"
+    config = alembic_config(database)
+    command.upgrade(config, "head")
+    engine = create_engine(f"sqlite+pysqlite:///{database}")
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO outbox_items "
+                    "(outbox_id,household_id,kind,payload_contract,schema_version,logical_key,"
+                    "payload_json,correlation_id,available_at,state,created_at) VALUES "
+                    "(:outbox_id,:household_id,'test','test.contract',1,:logical_key,'{}',"
+                    ":correlation_id,'2026-08-11T12:00:00.000000Z','handed_off',"
+                    "'2026-08-11T12:00:00.000000Z')"
+                ),
+                {
+                    "outbox_id": str(uuid4()),
+                    "household_id": str(uuid4()),
+                    "logical_key": f"downgrade-{uuid4()}",
+                    "correlation_id": str(uuid4()),
+                },
+            )
+    finally:
+        engine.dispose()
+
+    command.downgrade(config, "0008_local_backups")
+    engine = create_engine(f"sqlite+pysqlite:///{database}")
+    try:
+        with engine.connect() as connection:
+            assert (
+                connection.execute(text("SELECT state FROM outbox_items")).scalar_one() == "pending"
+            )
+    finally:
+        engine.dispose()
+
+
+def test_migrations_contain_no_event_upcasters_or_phase_six_tables() -> None:
     migration_root = ROOT / "migrations"
     assert not list(migration_root.rglob("*upcaster*"))
 
@@ -100,10 +147,9 @@ def test_migrations_contain_no_event_upcasters_or_deferred_phase_tables() -> Non
         path.read_text(encoding="utf-8") for path in migration_root.rglob("*.py")
     ).lower()
     forbidden = {
-        "inventory",
-        "expenses",
-        "jobs",
-        "notifications",
+        "husbandry_reference_profiles",
+        "global_search_fts",
+        "dashboard_statistics",
     }
     assert not {name for name in forbidden if name in migration_text}
 
@@ -136,6 +182,15 @@ def test_identity_schema_has_required_uniqueness_and_foreign_keys(tmp_path: Path
         }
         assert {item["name"] for item in inspector.get_unique_constraints("outbox_items")} == {
             "uq_outbox_logical_handoff"
+        }
+        assert {item["name"] for item in inspector.get_unique_constraints("jobs")} == {
+            "uq_jobs_logical_operation"
+        }
+        assert {
+            item["name"] for item in inspector.get_unique_constraints("notification_intents")
+        } == {"uq_notification_intent_occurrence_recipient_channel"}
+        assert {item["name"] for item in inspector.get_unique_constraints("delivery_attempts")} == {
+            "uq_delivery_attempt_job_attempt_lease"
         }
         assert {
             item["name"] for item in inspector.get_unique_constraints("aggregate_snapshots")
