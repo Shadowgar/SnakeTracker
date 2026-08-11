@@ -2,7 +2,7 @@
 
 Result: **Pass**
 
-Source revision: `e1a15025b4b5caa81391866d49c1b5a050f616be`
+Source revision: `6f1bb5b8f5dc4b5d37dcf8acd839c6b2d05c6972`
 Environment: Docker Engine 29.1.3; Compose 2.40.3; WSL2 x86_64 laptop.
 Reviewer: Codex final qualification; owner accepted August 11, 2026.
 

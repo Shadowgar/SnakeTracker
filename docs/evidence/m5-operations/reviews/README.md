@@ -2,7 +2,7 @@
 
 Status: **Final substantive review complete; owner accepted**
 
-Source revision: `e1a15025b4b5caa81391866d49c1b5a050f616be`.
+Source revision: `6f1bb5b8f5dc4b5d37dcf8acd839c6b2d05c6972`.
 
 Local review concentrated on transaction atomicity, stream versions, inventory compensation,
 tenant authorization, reminder effective history, independent pipeline deduplication, lease
@@ -35,9 +35,20 @@ merge remains gated on the required hosted checks.
 | Required correction | Feeding correction treated explicit zero inventory quantity as absent and changed legacy idempotency hashes when omitted. | `None` and zero are distinct; omitted optional data is excluded from the hash, with zero validation and legacy retry coverage. |
 | Required correction | Reminder parsing, local-day status, stale inventory submissions, and enabled blank intervals did not fail consistently. | Typed subject references, service-level timestamp errors, household-local date comparison, `422` conflict handling, and required interval validation are covered by integration/browser tests. |
 | Required correction | Capability-gated actions were rendered without corresponding capability checks. | Home operational links and the expense-create action now follow the current principal capabilities. |
+| Required correction | Operator job resolution was not explicitly household-scoped. | Resolution and dead-letter reads now require household identity; a cross-household resolution test proves no state transition occurs. |
+| Required correction | External-effect crash qualification depended on a production worker test switch, and transient exhaustion lacked worker-level proof. | The crash is injected by a test-only provider wrapper, production has no crash switch, and five transient attempts are proven to dead-letter. |
+| Required correction | Recipient isolation was tested only with a nonexistent user. | Notification intent tests now include an active owner belonging to a different household and prove no intent or outbox write. |
 | Required correction | Evidence reproduction and labels were ambiguous. | Migration commands fail fast, Compose waits for health, screenshot inventory and compatibility labels are explicit, and M6 no longer duplicates M5 due/overdue agenda scope. |
 | False positive | None. | No substantive reviewer finding was rejected as a false positive. |
 | Valid but deferred | Starlette TestClient `httpx2` deprecation warning. | Upstream adapter transition remains non-blocking and is retained as a warning; runtime application behavior is unaffected. |
 
 No other substantive finding was deferred. Cosmetic suggestions that did not affect correctness were
 applied where they improved evidence accuracy and were otherwise left out of the runtime change.
+
+The remaining CodeRabbit nitpicks were classified as valid but deferred maintenance: table-driven
+compatibility/subject-validation refactors, shared literal types, protocol typing refinements,
+test-fixture conversion, query-count micro-optimizations, and test-only readability cleanups. They
+do not change an M5 invariant, security boundary, or release result. UI suggestions that would
+reopen the already accepted M5 reminder/expense experience are likewise deferred to the relevant
+future product phase. CI and dependency audit reported no findings; Copilot and current-head
+GitGuardian review were unavailable rather than silently treated as passing reviews.
