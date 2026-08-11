@@ -102,7 +102,10 @@ from snaketracker.application.reminders import (
     ReminderValidationError,
     SaveSubjectScheduleCommand,
 )
-from snaketracker.domains.animals.capabilities import animal_capability_registry
+from snaketracker.domains.animals.capabilities import (
+    AnimalCapability,
+    animal_capability_registry,
+)
 from snaketracker.domains.animals.contracts import ANIMAL_STATUSES
 from snaketracker.domains.enclosures.contracts import ENCLOSURE_STATUSES
 from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
@@ -1644,6 +1647,7 @@ def create_web_router(
                 "current_enclosure": current_enclosure,
                 "recent_events": recent_events[:5],
                 "care_actions": _care_action_rows(profile),
+                "premolt_status": _premolt_status(profile, animal_service),
                 "animal_statuses": tuple(sorted(ANIMAL_STATUSES)),
                 "care_schedules": _care_schedule_rows(
                     principal.household_id,
@@ -2644,6 +2648,7 @@ def _animal_form_error(
             "current_enclosure": current_enclosure,
             "recent_events": recent_events[:5],
             "care_actions": _care_action_rows(profile),
+            "premolt_status": _premolt_status(profile, animal_service),
             "care_schedules": (
                 _care_schedule_rows(
                     principal.household_id,
@@ -2753,6 +2758,22 @@ def _care_action_rows(animal: Any) -> tuple[dict[str, str], ...]:
         }
         for key in animal.care_action_keys
     )
+
+
+def _premolt_status(animal: Any, animal_service: AnimalService) -> dict[str, str] | None:
+    if not animal.permits(AnimalCapability.PREMOLT):
+        return None
+    state = animal_service.current_premolt_state(animal.household_id, animal.animal_id)
+    return {
+        "label": (
+            "Observed"
+            if state is not None and state.observed
+            else "Cleared"
+            if state
+            else "Not recorded"
+        ),
+        "observation": state.observation if state is not None and state.observation else "",
+    }
 
 
 def _agenda_rows(

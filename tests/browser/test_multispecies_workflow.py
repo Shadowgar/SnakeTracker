@@ -354,3 +354,14 @@ def test_five_animal_mixed_collection_shows_type_photo_and_applicable_actions(
         agenda = client.get("/reminders")
         assert "Spider A" in agenda.text
         assert "Molt" in agenda.text
+
+        home = client.get("/home")
+        logged_out = client.post(
+            "/logout",
+            data={"csrf_token": _csrf(home.text)},
+            follow_redirects=False,
+        )
+        assert logged_out.status_code == 303
+        protected = client.get(profiles["Spider A"], follow_redirects=False)
+        assert protected.status_code == 303
+        assert protected.headers["location"] == "/login"

@@ -119,6 +119,19 @@ class AnimalProfile:
     def reminder_kinds(self) -> tuple[str, ...]:
         return animal_capability_registry.require(self.capability_profile_identity).reminder_kinds
 
+    def permits(self, capability: AnimalCapability) -> bool:
+        return animal_capability_registry.require(self.capability_profile_identity).permits(
+            capability
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class PremoltState:
+    observed: bool
+    occurred_at: datetime
+    observation: str | None
+    source_event_id: UUID
+
 
 class AnimalCurrentProjection(SynchronousProjection, Protocol):
     """Application-owned write/read port for the synchronous animal profile."""
@@ -972,6 +985,29 @@ class AnimalService:
 
     def audit_history(self, household_id: UUID, animal_id: UUID) -> tuple[DomainEvent, ...]:
         return self._event_store.load_subject_events(household_id, "animal", animal_id)
+
+    def current_premolt_state(self, household_id: UUID, animal_id: UUID) -> PremoltState | None:
+        profile = self.profile_for(household_id, animal_id)
+        if profile is None or not profile.permits(AnimalCapability.PREMOLT):
+            return None
+        candidates = tuple(
+            event
+            for event in self.effective_history(household_id, animal_id)
+            if isinstance(event.payload, AnimalPremoltObservedV1)
+        )
+        if not candidates:
+            return None
+        latest = max(
+            candidates,
+            key=lambda event: (event.occurred_at, event.recorded_at, event.stream_version),
+        )
+        payload = cast(AnimalPremoltObservedV1, latest.payload)
+        return PremoltState(
+            observed=payload.observed,
+            occurred_at=latest.occurred_at,
+            observation=payload.observation,
+            source_event_id=latest.event_id,
+        )
 
     def last_accepted_feeding_at(self, household_id: UUID, animal_id: UUID) -> datetime | None:
         accepted: datetime | None = None

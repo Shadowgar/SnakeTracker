@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -15,12 +15,16 @@ from snaketracker.application.animals import (
     AssignEnclosureCommand,
     CorrectMoltCommand,
     RecordBathCommand,
+    RecordFeedingCommand,
     RecordLengthCommand,
     RecordMoltCommand,
     RecordPremoltCommand,
     RecordShedCommand,
+    RecordWeightCommand,
     RegisterAnimalCommand,
     RegisterAnimalResult,
+    ReinstateAnimalEventCommand,
+    VoidAnimalEventCommand,
 )
 from snaketracker.application.enclosures import (
     EnclosureService,
@@ -178,6 +182,10 @@ def test_spider_molt_premolt_and_correction_are_effective_typed_history(tmp_path
                 "Darkened abdomen.",
             )
         )
+        observed_state = service.current_premolt_state(bootstrap.household_id, spider.animal_id)
+        assert observed_state is not None
+        assert observed_state.observed is True
+        assert observed_state.observation == "Darkened abdomen."
         molt = service.record_molt(
             RecordMoltCommand(
                 bootstrap.household_id,
@@ -210,6 +218,58 @@ def test_spider_molt_premolt_and_correction_are_effective_typed_history(tmp_path
         views = present_care_events(events)
         assert any(view.description == "Premolt observed · Darkened abdomen." for view in views)
         assert any(view.description == "Partial · One leg retained." for view in views)
+
+        service.void_event(
+            VoidAnimalEventCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                "owner",
+                spider.animal_id,
+                corrected.event.event_id,
+                "m55-molt-correction-void",
+                "Correction was entered in error.",
+            )
+        )
+        assert any(
+            view.description == "Complete · Clean molt."
+            for view in present_care_events(
+                service.effective_history(bootstrap.household_id, spider.animal_id)
+            )
+        )
+        service.reinstate_event(
+            ReinstateAnimalEventCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                "owner",
+                spider.animal_id,
+                corrected.event.event_id,
+                "m55-molt-correction-reinstate",
+                "Correction was confirmed.",
+            )
+        )
+        assert any(
+            view.description == "Partial · One leg retained."
+            for view in present_care_events(
+                service.effective_history(bootstrap.household_id, spider.animal_id)
+            )
+        )
+
+        service.record_premolt(
+            RecordPremoltCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                spider.animal_id,
+                uuid4(),
+                "m55-premolt-cleared",
+                NOW + timedelta(minutes=1),
+                False,
+                "Normal color returned.",
+            )
+        )
+        cleared_state = service.current_premolt_state(bootstrap.household_id, spider.animal_id)
+        assert cleared_state is not None
+        assert cleared_state.observed is False
+        assert cleared_state.observation == "Normal color returned."
     finally:
         engine.dispose()
 
@@ -377,5 +437,104 @@ def test_enclosure_misting_is_neutral_but_requires_an_applicable_occupant(
                     None,
                 )
             )
+    finally:
+        engine.dispose()
+
+
+def test_m6_read_boundary_exposes_only_applicable_effective_facts(tmp_path: Path) -> None:
+    animals, _store, bootstrap, engine = _services(tmp_path)
+    try:
+        snake = _register(animals, bootstrap, "snake", "Nyx")
+        spider = _register(animals, bootstrap, "spider", "Charlotte")
+        for animal in (snake, spider):
+            animals.record_feeding(
+                RecordFeedingCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    animal.animal_id,
+                    uuid4(),
+                    f"m55-read-feeding-{animal.animal_id}",
+                    NOW,
+                    "prey",
+                    "small",
+                    None,
+                    "other",
+                    1,
+                    "accepted",
+                    None,
+                )
+            )
+            animals.record_weight(
+                RecordWeightCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    animal.animal_id,
+                    uuid4(),
+                    f"m55-read-weight-{animal.animal_id}",
+                    NOW,
+                    100,
+                    None,
+                )
+            )
+        animals.record_length(
+            RecordLengthCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                snake.animal_id,
+                uuid4(),
+                "m55-read-snake-length",
+                NOW,
+                900,
+                None,
+            )
+        )
+        animals.record_shed(
+            RecordShedCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                snake.animal_id,
+                uuid4(),
+                "m55-read-snake-shed",
+                NOW,
+                False,
+                True,
+                "complete",
+                None,
+            )
+        )
+        animals.record_molt(
+            RecordMoltCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                spider.animal_id,
+                uuid4(),
+                "m55-read-spider-molt",
+                NOW,
+                "complete",
+                None,
+            )
+        )
+
+        snake_profile = animals.profile_for(bootstrap.household_id, snake.animal_id)
+        spider_profile = animals.profile_for(bootstrap.household_id, spider.animal_id)
+        assert snake_profile is not None and snake_profile.capability_profile_identity == "snake.v1"
+        assert (
+            spider_profile is not None and spider_profile.capability_profile_identity == "spider.v1"
+        )
+        snake_facts = {
+            event.event_type
+            for event in animals.effective_history(bootstrap.household_id, snake.animal_id)
+        }
+        spider_facts = {
+            event.event_type
+            for event in animals.effective_history(bootstrap.household_id, spider.animal_id)
+        }
+        assert {"animal.feeding_recorded", "animal.weight_recorded"} <= snake_facts
+        assert {"animal.length_recorded", "animal.shed_recorded"} <= snake_facts
+        assert "animal.molt_recorded" not in snake_facts
+        assert {"animal.feeding_recorded", "animal.weight_recorded"} <= spider_facts
+        assert "animal.molt_recorded" in spider_facts
+        assert "animal.length_recorded" not in spider_facts
+        assert "animal.shed_recorded" not in spider_facts
     finally:
         engine.dispose()

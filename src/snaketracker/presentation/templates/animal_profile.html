@@ -69,6 +69,7 @@
         <div><dt>Morph</dt><dd>{{ animal.morph or 'Not recorded' }}</dd></div>
         <div><dt>Sex</dt><dd>{{ animal.sex|capitalize if animal.sex else 'Not recorded' }}</dd></div>
         <div><dt>Status</dt><dd>{{ animal.status|capitalize }}</dd></div>
+        {% if premolt_status %}<div><dt>Premolt state</dt><dd>{{ premolt_status.label }}{% if premolt_status.observation %} · {{ premolt_status.observation }}{% endif %}</dd></div>{% endif %}
         <div><dt>Enclosure</dt><dd>{% if current_enclosure %}<a href="/enclosures/{{ current_enclosure.enclosure_id }}">{{ current_enclosure.name }}</a>{% else %}Not assigned{% endif %}</dd></div>
       </dl>
       {% if animal.notes %}<p class="keeper-note">{{ animal.notes }}</p>{% endif %}
