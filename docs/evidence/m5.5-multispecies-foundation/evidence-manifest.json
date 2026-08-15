@@ -1,7 +1,8 @@
 {
   "schema_version": 1,
   "milestone": "M5.5",
-  "status": "M5.5 implementation-qualified; owner acceptance pending",
+  "status": "M5.5 multi-species animal foundation accepted",
+  "accepted_at": "2026-08-15",
   "generated_at": "2026-08-15T03:55:00Z",
   "implementation_revision": "ebd5200",
   "environment_classification": "laptop Docker development",

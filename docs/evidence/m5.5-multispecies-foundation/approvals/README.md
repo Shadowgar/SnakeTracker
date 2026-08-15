@@ -1,9 +1,9 @@
 # M5.5 Approval Status
 
-Status: **Owner acceptance pending**
+Status: **M5.5 multi-species animal foundation accepted**
+Accepted: **August 15, 2026**
 
-Technical implementation qualification does not check the M5.5 roadmap release blockers. Owner
-acceptance must be recorded separately after review. M6 through M8 remain unstarted/unchecked,
-remote/public deployment remains deferred, and Raspberry Pi deployment qualification remains
-pending under M7.
-
+Owner acceptance is recorded in [the August 15, 2026 acceptance record](2026-08-15-owner-acceptance.md).
+The final technical review evidence, deferred reviewer observations, and false-positive
+classifications remain authoritative. M6 through M8 remain unstarted/unchecked, remote/public
+deployment remains deferred, and Raspberry Pi deployment qualification remains pending under M7.

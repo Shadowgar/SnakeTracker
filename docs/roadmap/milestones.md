@@ -103,23 +103,26 @@ Owner acceptance: [August 11, 2026 owner acceptance record](../evidence/m5-opera
 
 ## Phase 5.5 / M5.5 — Multi-species animal foundation
 
-Status: M5.5 implementation-qualified; owner acceptance pending
+Status: M5.5 multi-species animal foundation accepted
+Accepted: August 15, 2026
 
 M5.5 is an additive compatibility milestone required before M6. It generalizes the existing Animal
 module and adds usable Spider care without rewriting accepted snake events or duplicating shared
 household systems.
 
-- [ ] RB Existing `animal.registered` v1 events and all M0-M5 snake workflows replay unchanged and remain keeper-usable.
-- [ ] RB New registrations use a registered animal type/capability profile, and unknown types, profile versions, or contracts fail safely.
-- [ ] RB One household animal list and enclosure system correctly support mixed Snake and Spider collections, including reassignment and occupancy.
-- [ ] RB Spider profiles support shared identity, photos, feeding outcomes/prey, optional weight, enclosure/rehousing, notes, inventory, expenses, reminders, attachments, and effective timeline history.
-- [ ] RB Spider molt and premolt history, plus configured enclosure watering/misting and maintenance, are typed, correction-safe, replayable, and human-readable.
-- [ ] RB Capability enforcement prevents snake-only length, shed, and bath actions from appearing or executing for Spider profiles and prevents inapplicable Spider actions for Snake profiles.
-- [ ] RB Reminder schedules expose only registered subject capabilities while retaining owner-configured intervals and M5 deduplication/recovery behavior.
-- [ ] RB Migration upgrade/downgrade/re-upgrade, deterministic projection rebuild, backup/restore, feeding/inventory compensation, authorization, and compatibility suites preserve existing data.
-- [ ] RB Mixed-collection browser journeys pass desktop/mobile, keyboard, screen-reader, and WCAG 2.2 AA checks.
-- [ ] QT Development-environment mixed-collection replay, response, database-growth, and container measurements are retained as non-production evidence.
+- [x] RB Existing `animal.registered` v1 events and all M0-M5 snake workflows replay unchanged and remain keeper-usable. Evidence: [legacy compatibility](../evidence/m5.5-multispecies-foundation/tests/compatibility/README.md) and [Snake regression](../evidence/m5.5-multispecies-foundation/tests/snake/README.md).
+- [x] RB New registrations use a registered animal type/capability profile, and unknown types, profile versions, or contracts fail safely. Evidence: [capability registry](../evidence/m5.5-multispecies-foundation/tests/capabilities/README.md).
+- [x] RB One household animal list and enclosure system correctly support mixed Snake and Spider collections, including reassignment and occupancy. Evidence: [mixed collection](../evidence/m5.5-multispecies-foundation/tests/mixed-collection/README.md) and [type-neutral enclosures](../evidence/m5.5-multispecies-foundation/tests/enclosures/README.md).
+- [x] RB Spider profiles support shared identity, photos, feeding outcomes/prey, optional weight, enclosure/rehousing, notes, inventory, expenses, reminders, attachments, and effective timeline history. Evidence: [Spider care](../evidence/m5.5-multispecies-foundation/tests/spider-care/README.md) and [browser qualification](../evidence/m5.5-multispecies-foundation/browser/README.md).
+- [x] RB Spider molt and premolt history, plus configured enclosure watering/misting and maintenance, are typed, correction-safe, replayable, and human-readable. Evidence: [Spider care](../evidence/m5.5-multispecies-foundation/tests/spider-care/README.md) and [final review](../evidence/m5.5-multispecies-foundation/reviews/README.md).
+- [x] RB Capability enforcement prevents snake-only length, shed, and bath actions from appearing or executing for Spider profiles and prevents inapplicable Spider actions for Snake profiles. Evidence: [capability security](../evidence/m5.5-multispecies-foundation/security/README.md).
+- [x] RB Reminder schedules expose only registered subject capabilities while retaining owner-configured intervals and M5 deduplication/recovery behavior. Evidence: [applicable reminders](../evidence/m5.5-multispecies-foundation/tests/reminders/README.md).
+- [x] RB Migration upgrade/downgrade/re-upgrade, deterministic projection rebuild, backup/restore, feeding/inventory compensation, authorization, and compatibility suites preserve existing data. Evidence: [migration lifecycle](../evidence/m5.5-multispecies-foundation/operations/migrations/README.md), [backup and restore](../evidence/m5.5-multispecies-foundation/operations/backup-restore/README.md), and [shared inventory](../evidence/m5.5-multispecies-foundation/tests/inventory/README.md).
+- [x] RB Mixed-collection browser journeys pass desktop/mobile, keyboard, screen-reader, and WCAG 2.2 AA checks. Evidence: [browser qualification](../evidence/m5.5-multispecies-foundation/browser/README.md) and [accessibility qualification](../evidence/m5.5-multispecies-foundation/accessibility/README.md).
+- [x] QT Development-environment mixed-collection replay, response, database-growth, and container measurements are retained as non-production evidence. Evidence: [laptop/container measurements](../evidence/m5.5-multispecies-foundation/performance/laptop-container/README.md) and [container qualification](../evidence/m5.5-multispecies-foundation/containers/README.md).
 - [ ] RD Remote access remains disabled until all RD controls through M7 are accepted.
+
+Owner acceptance: [August 15, 2026 owner acceptance record](../evidence/m5.5-multispecies-foundation/approvals/2026-08-15-owner-acceptance.md). M6 has not started.
 
 ## Phase 6 / M6 — Product experience complete
 

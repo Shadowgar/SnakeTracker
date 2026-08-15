@@ -1,15 +1,16 @@
 # M5.5 Multi-species Foundation Evidence
 
-Status: **M5.5 implementation-qualified; owner acceptance pending**
+Status: **M5.5 multi-species animal foundation accepted**
 
 - Qualification date: August 11, 2026
+- Acceptance date: August 15, 2026
 - Source branch: `phase5.5/multispecies-foundation`
 - Qualified implementation revision: `fe4a476`
 - Environment: approved laptop/Docker development environment
 - Native Raspberry Pi qualification: deferred to Phase 7/pre-deployment
 
-This package proves the technical M5.5 release blockers for a mixed Snake and Spider household.
-It does not record owner acceptance, authorize M6, approve remote/public deployment, or claim
+This package proves the technical M5.5 release blockers for a mixed Snake and Spider household and
+records owner acceptance. It does not approve remote/public deployment, production release, or
 Raspberry Pi deployment qualification.
 
 ## Evidence inventory
@@ -35,4 +36,3 @@ Raspberry Pi deployment qualification.
 
 `evidence-manifest.json` records the reproducible qualification summary. `checksums.sha256`
 covers retained evidence artifacts except itself.
-
