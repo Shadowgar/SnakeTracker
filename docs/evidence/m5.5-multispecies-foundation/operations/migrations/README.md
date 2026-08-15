@@ -1,6 +1,6 @@
 # Migration and Replay Lifecycle
 
-Result: **Pass** on August 11, 2026 at revision `fe4a476`.
+Result: **Pass**, requalified on August 15, 2026 at revision `ebd5200`.
 
 A fresh temporary database upgraded through 0010, downgraded to 0009 while it contained no v2
 facts, and re-upgraded to 0010. Final checks reported:

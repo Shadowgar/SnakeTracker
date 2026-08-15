@@ -12,3 +12,6 @@ Reproduce automated semantics with `uv run pytest -q tests/browser/test_multispe
 tests/browser/test_identity_flow.py` and follow the authenticated procedure in
 [browser evidence](../browser/README.md).
 
+Final review repeated seven Pa11y 9.1.1 scans with the axe runner and WCAG2AA standard on August 15,
+2026 at revision `ebd5200`: login, mixed collection, Spider profile, Spider timeline, current
+enclosure occupancy, shared inventory, and reminder agenda. Every scan returned zero issues.

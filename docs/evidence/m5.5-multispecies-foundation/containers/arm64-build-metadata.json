@@ -41,19 +41,19 @@
       }
     }
   },
-  "buildx.build.ref": "default/default/ke3q9n4wyis50swvc0ic753ic",
-  "containerimage.config.digest": "sha256:f434bd0b6da47af12224c076db4c8b92ecc7aaf212af46da20e39a716eadb210",
+  "buildx.build.ref": "default/default/7g2eird8o5gezpliqsgwdq46z",
+  "containerimage.config.digest": "sha256:1b4b117540e989391e08067c6ac374a3aa452d7434b1aac6103f748f8a28a3c0",
   "containerimage.descriptor": {
     "mediaType": "application/vnd.oci.image.manifest.v1+json",
-    "digest": "sha256:1b505606c2cf3a649ec40a1f999d684b5e3475c002a5d4d4bb6f2f1fc9ceb5b6",
+    "digest": "sha256:35288f3cc254936cbf8eed3652b14e6562031f00b9acd39bb3011c94ca8e2831",
     "size": 2957,
     "annotations": {
-      "org.opencontainers.image.created": "2026-08-11T18:47:57Z"
+      "org.opencontainers.image.created": "2026-08-15T03:49:35Z"
     },
     "platform": {
       "architecture": "arm64",
       "os": "linux"
     }
   },
-  "containerimage.digest": "sha256:1b505606c2cf3a649ec40a1f999d684b5e3475c002a5d4d4bb6f2f1fc9ceb5b6"
+  "containerimage.digest": "sha256:35288f3cc254936cbf8eed3652b14e6562031f00b9acd39bb3011c94ca8e2831"
 }

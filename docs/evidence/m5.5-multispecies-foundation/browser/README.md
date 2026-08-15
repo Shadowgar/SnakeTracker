@@ -19,3 +19,10 @@ Retained views:
 The automated five-animal journey is reproducible with `uv run pytest -q
 tests/browser/test_multispecies_workflow.py`.
 
+Final review re-ran real Chromium on August 15, 2026 against an isolated Compose stack at revision
+`ebd5200`. Desktop and 390×844 mobile views showed the same five animals and photos, capability-
+appropriate Spider actions, correct three-Spider nursery occupancy after reassignment, shared stock
+at three items after Snake and Spider feedings, effective Spider care history, and the applicable
+molt reminder. Both viewports had zero console errors/warnings; mobile had no horizontal overflow.
+The isolated stack was stopped afterward, while the normal development stack remained healthy on
+port 8081.
