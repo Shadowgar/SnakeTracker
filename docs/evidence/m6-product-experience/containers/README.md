@@ -8,8 +8,8 @@ foreign-key violations are zero.
 
 The frozen Dockerfile and lockfile produced a `linux/arm64` OCI image:
 
-- manifest digest: `sha256:a4cb9ab7d9fcf52b5011237870dcaf0cfa83b6bbaa7be3fe750822c3b6a03a39`;
-- archive SHA-256: `7c653cd027fe1e1c517faa80445f94f4f690ee1bdd8237ab49a8e7e4b1c5e7e7`;
-- archive size: 134,224,384 bytes.
+- manifest digest: `sha256:8eeb18e8a199adbf22c6991b1622c5cc6f403bc74e78a0f852e72d816e4400f7`;
+- archive SHA-256: `f0cdfe04a4acfb07fa03f749533e6c4ad9f0908608b38c9d3479cb64a334d890`;
+- archive size: 134,254,592 bytes.
 
 This proves ARM64 container compatibility only. Raspberry Pi deployment qualification remains M7.

@@ -2,15 +2,15 @@
 
 Result: **Pass** on the versioned `snaketracker-reference-v1-m6-product-experience` dataset.
 
-The run at revision `02919d8` used Python 3.13.14, SQLite 3.53.1, x86_64, and ext4. It seeded 100
+The run at revision `e9b29fe` used Python 3.13.14, SQLite 3.53.1, x86_64, and ext4. It seeded 100
 mixed Snake/Spider profiles and 102 events. All six production projection definitions rebuilt in
 cold and warm states. Measured results:
 
-- authorized FTS query p95: 0.51 ms;
-- collection read p95: 1.00 ms;
-- maximum projection-group rebuild: less than 0.04 seconds;
-- database: 1,626,112 bytes; peak observed WAL: 4,136,512 bytes;
-- peak process RSS: 65.11 MiB;
+- authorized FTS query p95: 0.93 ms;
+- collection read p95: 1.05 ms;
+- maximum projection-group rebuild: less than 0.08 seconds;
+- database: 2,695,168 bytes; peak observed WAL: 4,148,872 bytes;
+- peak process RSS: 65.05 MiB;
 - integrity: `ok`; foreign-key violations: 0.
 
 These are qualification measurements on the pinned development dataset, not universal ratios or

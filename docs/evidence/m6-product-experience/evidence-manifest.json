@@ -3,14 +3,14 @@
   "milestone": "M6",
   "status": "M6 implementation-qualified; owner acceptance pending",
   "qualified_at": "2026-08-15",
-  "implementation_revision": "02919d8",
+  "implementation_revision": "e9b29fe",
   "environment_classification": "laptop Docker development",
   "native_raspberry_pi_qualification": "deferred to Phase 7/pre-deployment",
   "quality": {
-    "tests": 390,
-    "focused_compatibility_tests": 93,
-    "line_coverage_percent": 94.93,
-    "branch_coverage_percent": 85.02,
+    "tests": 392,
+    "focused_compatibility_tests": 94,
+    "line_coverage_percent": 94.94,
+    "branch_coverage_percent": 85.09,
     "dependency_vulnerabilities": 0,
     "ruff": "pass",
     "mypy_strict": "pass",
@@ -26,9 +26,9 @@
     "dataset": "snaketracker-reference-v1-m6-product-experience",
     "mixed_animals": 100,
     "events": 102,
-    "search_p95_ms": 0.5101,
-    "collection_p95_ms": 0.9966,
-    "max_rss_mib": 65.11,
+    "search_p95_ms": 0.9256,
+    "collection_p95_ms": 1.0467,
+    "max_rss_mib": 65.05,
     "cold_warm_projection_groups": 6
   },
   "containers": {
@@ -36,9 +36,9 @@
     "live_url": "http://localhost:8081",
     "non_root_uid": 1001,
     "arm64_platform": "linux/arm64",
-    "arm64_manifest_digest": "sha256:a4cb9ab7d9fcf52b5011237870dcaf0cfa83b6bbaa7be3fe750822c3b6a03a39",
-    "arm64_archive_sha256": "7c653cd027fe1e1c517faa80445f94f4f690ee1bdd8237ab49a8e7e4b1c5e7e7",
-    "arm64_archive_bytes": 134224384
+    "arm64_manifest_digest": "sha256:8eeb18e8a199adbf22c6991b1622c5cc6f403bc74e78a0f852e72d816e4400f7",
+    "arm64_archive_sha256": "f0cdfe04a4acfb07fa03f749533e6c4ad9f0908608b38c9d3479cb64a334d890",
+    "arm64_archive_bytes": 134254592
   },
   "browser": {
     "desktop_and_mobile": "pass",
