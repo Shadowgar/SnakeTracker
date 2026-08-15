@@ -28,6 +28,7 @@ _CORRECTION_TYPES = {
     "animal.shed_corrected",
     "animal.molt_corrected",
 }
+_TECHNICAL_PAYLOAD_KEYS = {"capability_profile_version", "target_event_id"}
 
 
 class FTSSearchProjectionStrategy:
@@ -324,7 +325,14 @@ def _document(
 
 
 def _body(payload: Mapping[str, object], notes: str | None) -> str:
-    values = [str(value) for key, value in payload.items() if key != "target_event_id" and value]
+    values = [
+        str(value)
+        for key, value in payload.items()
+        if value
+        and not key.endswith("_id")
+        and key not in _TECHNICAL_PAYLOAD_KEYS
+        and not (key == "notes" and notes)
+    ]
     if notes:
         values.append(notes)
     return " · ".join(values)

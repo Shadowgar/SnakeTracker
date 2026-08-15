@@ -61,6 +61,10 @@ def test_search_is_household_scoped_capability_filtered_and_unicode_safe(
         assert service.search(bootstrap.household_id, frozenset(), "régïus")[0].route == (
             f"/animals/{animal.animal_id}"
         )
+        registration = service.search(bootstrap.household_id, frozenset(), "Nyx")[0]
+        assert str(animal.animal_id) not in registration.body
+        assert "capability_profile_version" not in registration.body
+        assert registration.body.count("Calm <script>alert(1)</script>") == 1
 
         other_household = uuid4()
         layout = manager.active_layout("search")
