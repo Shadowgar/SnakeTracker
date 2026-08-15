@@ -101,6 +101,19 @@ def test_first_run_login_home_logout_and_login_again(tmp_path: Path) -> None:
         assert client.get("/home").status_code == 200
 
 
+def test_search_page_is_authenticated_and_has_a_safe_rebuilding_state(tmp_path: Path) -> None:
+    with client_for(tmp_path) as client:
+        assert client.get("/search?q=Nyx", follow_redirects=False).headers["location"] == "/login"
+        complete_setup(client)
+
+        response = client.get("/search?q=Nyx")
+
+        assert response.status_code == 200
+        assert "Search your household" in response.text
+        assert 'name="q"' in response.text
+        assert "Search is catching up" in response.text
+
+
 def test_csrf_and_validation_errors_are_usable_and_security_headers_are_strict(
     tmp_path: Path,
 ) -> None:

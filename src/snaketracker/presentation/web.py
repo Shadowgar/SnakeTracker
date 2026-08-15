@@ -102,6 +102,11 @@ from snaketracker.application.reminders import (
     ReminderValidationError,
     SaveSubjectScheduleCommand,
 )
+from snaketracker.application.search import (
+    SearchService,
+    SearchUnavailableError,
+    SearchValidationError,
+)
 from snaketracker.domains.animals.capabilities import (
     AnimalCapability,
     animal_capability_registry,
@@ -470,6 +475,7 @@ def create_web_router(
     reminder_projection: ReminderProjection,
     notification_intent_service: NotificationIntentService,
     job_repository: JobReadRepository,
+    search_service: SearchService,
     is_bootstrapped: Callable[[], bool],
     secure_cookie: bool,
     expected_origin: str | None = None,
@@ -786,6 +792,33 @@ def create_web_router(
     @router.get("/animals", response_class=HTMLResponse)
     async def animal_list(request: Request) -> Response:
         return await home(request)
+
+    @router.get("/search", response_class=HTMLResponse)
+    async def search(request: Request, q: str = "") -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        results: tuple[object, ...] = ()
+        error: str | None = None
+        unavailable = False
+        try:
+            results = search_service.search(principal.household_id, principal.capabilities, q)
+        except SearchValidationError as caught:
+            error = str(caught)
+        except SearchUnavailableError:
+            unavailable = True
+        return protected_page(
+            request,
+            "search.html",
+            principal,
+            status_code=422 if error is not None else 200,
+            context={
+                "query": q,
+                "results": results,
+                "error": error,
+                "search_unavailable": unavailable,
+            },
+        )
 
     @router.get("/enclosures", response_class=HTMLResponse)
     async def enclosure_list(request: Request) -> Response:

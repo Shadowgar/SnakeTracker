@@ -439,8 +439,8 @@ class SQLiteProjectionGenerationManager:
     ) -> None:
         rows = connection.execute(
             text(
-                "SELECT global_position,household_id,stream_type,stream_id,event_type,"
-                "schema_version,payload_json "
+                "SELECT event_id,global_position,household_id,stream_type,stream_id,event_type,"
+                "schema_version,payload_json,occurred_at,title,description,notes "
                 "FROM domain_events WHERE global_position>:after AND global_position<=:through "
                 "ORDER BY global_position"
             ),
@@ -448,6 +448,7 @@ class SQLiteProjectionGenerationManager:
         ).mappings()
         for row in rows:
             event = ProjectionEvent(
+                event_id=UUID(str(row["event_id"])),
                 global_position=int(row["global_position"]),
                 household_id=UUID(str(row["household_id"])),
                 stream_type=str(row["stream_type"]),
@@ -455,6 +456,10 @@ class SQLiteProjectionGenerationManager:
                 event_type=str(row["event_type"]),
                 schema_version=int(row["schema_version"]),
                 payload=json.loads(str(row["payload_json"])),
+                occurred_at=datetime.fromisoformat(str(row["occurred_at"])),
+                title=str(row["title"]),
+                description=str(row["description"]) if row["description"] is not None else None,
+                notes=str(row["notes"]) if row["notes"] is not None else None,
             )
             for definition in definitions:
                 if (event.event_type, event.schema_version) in definition.supported_contracts:

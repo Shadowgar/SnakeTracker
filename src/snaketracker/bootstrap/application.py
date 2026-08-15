@@ -23,6 +23,7 @@ from snaketracker.application.inventory import InventoryService
 from snaketracker.application.ports.readiness import ReadinessPort
 from snaketracker.application.readiness import PlatformReadiness
 from snaketracker.application.reminders import ReminderFactService, ReminderRuleService
+from snaketracker.application.search import SearchService
 from snaketracker.bootstrap.compatibility import inspect_startup_compatibility
 from snaketracker.bootstrap.configuration import Environment, Settings, load_settings
 from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
@@ -52,7 +53,11 @@ from snaketracker.infrastructure.observability.metrics import PlatformMetrics
 from snaketracker.infrastructure.product_experience.projections import (
     product_projection_registry,
 )
+from snaketracker.infrastructure.projections.sqlite_generations import (
+    SQLiteProjectionGenerationManager,
+)
 from snaketracker.infrastructure.reminders.projections import SQLAlchemyReminderProjection
+from snaketracker.infrastructure.search.fts import SQLAlchemyFTSSearchRepository
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 from snaketracker.platform.notifications.service import NotificationIntentService
 from snaketracker.presentation.health import create_health_router
@@ -188,6 +193,12 @@ def build_application(settings: Settings) -> FastAPI:
                     SQLAlchemyNotificationIntentRepository(engine)
                 ),
                 job_repository=SQLAlchemyJobRepository(engine),
+                search_service=SearchService(
+                    SQLAlchemyFTSSearchRepository(
+                        engine,
+                        SQLiteProjectionGenerationManager(engine, product_projection_registry),
+                    )
+                ),
                 is_bootstrapped=identity_repository.has_users,
                 secure_cookie=settings.session_cookie_secure,
                 expected_origin=(

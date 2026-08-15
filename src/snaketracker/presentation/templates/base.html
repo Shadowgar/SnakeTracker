@@ -14,6 +14,13 @@
         <span class="brand-mark" aria-hidden="true">S</span>
         <span>SnakeTracker</span>
       </a>
+      {% if principal is defined %}
+      <form class="site-search" action="/search" method="get" role="search">
+        <label class="visually-hidden" for="global-search">Search your household</label>
+        <input id="global-search" name="q" type="search" maxlength="100" placeholder="Search" value="{{ query|default('') }}">
+        <button type="submit">Search</button>
+      </form>
+      {% endif %}
     </header>
     <main id="main-content" class="page-shell" tabindex="-1">
       {% block content %}{% endblock %}

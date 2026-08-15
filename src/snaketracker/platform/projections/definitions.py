@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Literal, Protocol
 from uuid import UUID
 
@@ -14,6 +15,7 @@ TEST_PROJECTION_PREFIX = "__snaketracker_" + "test__."
 
 @dataclass(frozen=True, slots=True)
 class ProjectionEvent:
+    event_id: UUID
     global_position: int
     household_id: UUID
     stream_type: str
@@ -21,6 +23,10 @@ class ProjectionEvent:
     event_type: str
     schema_version: int
     payload: Mapping[str, object]
+    occurred_at: datetime
+    title: str
+    description: str | None
+    notes: str | None
 
 
 @dataclass(frozen=True, slots=True)
