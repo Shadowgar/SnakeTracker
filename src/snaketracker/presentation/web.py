@@ -868,6 +868,20 @@ def create_web_router(
             request, "reports.html", principal, context={"report": None, "report_kinds": kinds}
         )
 
+    @router.get("/reports/{kind}.csv", response_class=PlainTextResponse)
+    async def report_csv(request: Request, kind: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        report = report_for(principal, kind)
+        if report is None:
+            return _access_denied(request, "Report access denied")
+        return PlainTextResponse(
+            report_service.csv(report),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="snaketracker-{kind}.csv"'},
+        )
+
     @router.get("/reports/{kind}", response_class=HTMLResponse)
     async def report_detail(request: Request, kind: str) -> Response:
         principal = principal_for(request, audit_denial=True)
@@ -881,20 +895,6 @@ def create_web_router(
             "reports.html",
             principal,
             context={"report": report, "report_kinds": ()},
-        )
-
-    @router.get("/reports/{kind}.csv", response_class=PlainTextResponse)
-    async def report_csv(request: Request, kind: str) -> Response:
-        principal = principal_for(request, audit_denial=True)
-        if principal is None:
-            return RedirectResponse("/login", status_code=303)
-        report = report_for(principal, kind)
-        if report is None:
-            return _access_denied(request, "Report access denied")
-        return PlainTextResponse(
-            report_service.csv(report),
-            media_type="text/csv; charset=utf-8",
-            headers={"Content-Disposition": f'attachment; filename="snaketracker-{kind}.csv"'},
         )
 
     @router.get("/animals/{animal_id}/analytics", response_class=HTMLResponse)

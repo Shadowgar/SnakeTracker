@@ -32,6 +32,8 @@ def test_product_projection_worker_advances_every_active_group_before_acknowledg
     engine, household = migrated_household(tmp_path)
     try:
         manager = ensure_product_projection_generations(engine)
+        # Re-running startup generation checks must preserve healthy active generations.
+        ensure_product_projection_generations(engine)
         append_household_event(engine, household, 3)
 
         result = ProjectionWorker(engine, manager, product_projection_registry).run_once()

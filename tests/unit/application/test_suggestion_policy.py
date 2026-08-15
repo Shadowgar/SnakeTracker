@@ -119,3 +119,12 @@ def test_nonpositive_intervals_are_excluded_and_unknown_kind_fails_closed() -> N
     assert policy.suggest("feeding", repeated, as_of=date(2026, 8, 15)) is None
     with pytest.raises(ValueError, match="not registered"):
         policy.suggest("unknown", occurrences([1, 1, 1, 1, 1]), as_of=date(2026, 8, 15))
+
+
+def test_outlier_filter_that_removes_too_much_history_returns_no_estimate() -> None:
+    assert (
+        DeterministicSuggestionPolicy().suggest(
+            "feeding", occurrences([1, 2, 3, 100, 200]), as_of=date(2026, 12, 31)
+        )
+        is None
+    )

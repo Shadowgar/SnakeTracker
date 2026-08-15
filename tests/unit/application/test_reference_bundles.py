@@ -44,3 +44,100 @@ def test_reference_bundle_fails_closed_for_unknown_schema_or_checksum() -> None:
     value["schema_version"] = 2
     with pytest.raises(ReferenceBundleValidationError, match="unsupported"):
         load_reference_bundle(json.dumps(value).encode())
+    with pytest.raises(ReferenceBundleValidationError, match="valid JSON"):
+        load_reference_bundle(b"{")
+
+    value = json.loads(bundle())
+    value["checksum"] = "0" * 64
+    with pytest.raises(ReferenceBundleValidationError, match="checksum"):
+        load_reference_bundle(json.dumps(value).encode())
+
+
+def test_reference_bundle_rejects_non_list_profiles() -> None:
+    value = {
+        "schema_version": 1,
+        "bundle_id": "invalid-profiles",
+        "checksum": "",
+        "production_approved": False,
+        "profiles": {},
+    }
+    canonical = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    value["checksum"] = hashlib.sha256(canonical).hexdigest()
+
+    with pytest.raises(ReferenceBundleValidationError, match="must be a list"):
+        load_reference_bundle(json.dumps(value).encode())
+
+
+def test_separately_authorized_bundle_parses_typed_provenance() -> None:
+    value = {
+        "schema_version": 1,
+        "bundle_id": "owner-reviewed-fixture",
+        "checksum": "",
+        "production_approved": True,
+        "profiles": [
+            {
+                "profile_id": "fixture",
+                "capability_profile": "snake.v1",
+                "guidance": ["Non-production fixture statement"],
+                "provenance": [
+                    {
+                        "source": "Fixture source",
+                        "publisher": "Fixture publisher",
+                        "publication": "Fixture publication 2026",
+                        "species": "Fixture species",
+                        "life_stage": "adult",
+                    },
+                    {
+                        "source": "Fixture source without optional fields",
+                        "publisher": "Fixture publisher",
+                        "species": "Fixture species",
+                    },
+                ],
+            }
+        ],
+    }
+    canonical = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    value["checksum"] = hashlib.sha256(canonical).hexdigest()
+
+    loaded = load_reference_bundle(json.dumps(value).encode(), allow_production_content=True)
+
+    assert loaded.profiles[0].provenance[0].publisher == "Fixture publisher"
+    assert loaded.profiles[0].provenance[0].publication == "Fixture publication 2026"
+    assert loaded.profiles[0].provenance[0].life_stage == "adult"
+    assert loaded.profiles[0].provenance[1].publication is None
+    assert loaded.profiles[0].provenance[1].life_stage is None
+
+
+def test_reference_profile_shape_fails_closed() -> None:
+    value = {
+        "schema_version": 1,
+        "bundle_id": "bad-profile",
+        "checksum": "",
+        "production_approved": False,
+        "profiles": [None],
+    }
+    canonical = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    value["checksum"] = hashlib.sha256(canonical).hexdigest()
+    with pytest.raises(ReferenceBundleValidationError, match="profile"):
+        load_reference_bundle(json.dumps(value).encode())
+
+    value["profiles"] = [{"profile_id": "missing-required-fields"}]
+    value["checksum"] = ""
+    canonical = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    value["checksum"] = hashlib.sha256(canonical).hexdigest()
+    with pytest.raises(ReferenceBundleValidationError, match="profile fields"):
+        load_reference_bundle(json.dumps(value).encode())
+
+    value["profiles"] = [
+        {
+            "profile_id": "invalid-provenance",
+            "capability_profile": "snake.v1",
+            "guidance": [],
+            "provenance": None,
+        }
+    ]
+    value["checksum"] = ""
+    canonical = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    value["checksum"] = hashlib.sha256(canonical).hexdigest()
+    with pytest.raises(ReferenceBundleValidationError, match="profile fields"):
+        load_reference_bundle(json.dumps(value).encode())
