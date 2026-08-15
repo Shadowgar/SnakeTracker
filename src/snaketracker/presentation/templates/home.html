@@ -4,8 +4,8 @@
 <section class="dashboard" aria-labelledby="page-title">
   <header>
     <p class="eyebrow">{{ principal.household_name }}</p>
-    <h1 id="page-title">Your animals</h1>
-    <p class="lede">Welcome home, {{ principal.display_name }}. Keep the day-to-day record close at hand.</p>
+    <h1 id="page-title">Today</h1>
+    <p class="lede">Welcome home, {{ principal.display_name }}. See what is due, then keep the day-to-day record close at hand.</p>
   </header>
   <div class="dashboard-actions">
     <a class="button-link" href="/animals/new">Add animal</a>
@@ -15,6 +15,7 @@
     {% if 'expense.view' in principal.capabilities %}<a class="button-link secondary-link" href="/expenses">Expenses</a>{% endif %}
     {% if 'reminder.view' in principal.capabilities %}<a class="button-link secondary-link" href="/reminders">Reminders</a>{% endif %}
     {% if 'operations.view' in principal.capabilities %}<a class="button-link secondary-link" href="/operations/jobs">Operations</a>{% endif %}
+    <a class="button-link secondary-link" href="/reports">Reports</a>
     <form method="post" action="/logout">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <button class="secondary" type="submit">Log out</button>
@@ -24,6 +25,18 @@
     <span class="status-dot" aria-hidden="true"></span>
     <div><strong>Household access active</strong><p>Signed in as {{ principal.role }}.</p></div>
   </div>
+  {% for key, label, rows in agenda_groups %}
+  {% if rows %}
+  <section class="agenda-section" aria-labelledby="home-{{ key }}">
+    <h2 id="home-{{ key }}">{{ label }}</h2>
+    <ul class="agenda-list">
+      {% for item in rows %}<li class="card agenda-card"><div class="agenda-card-heading"><div><p class="eyebrow">{{ item.reminder_type_label }}</p><h3>{{ item.subject_name }}</h3></div><time datetime="{{ item.due_at.isoformat() }}">{{ item.due_label }}</time></div><p>{{ item.explanation }}</p></li>{% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+  {% endfor %}
+  <section class="card" aria-labelledby="collection-summary"><h2 id="collection-summary">Collection</h2><p>{{ collection_statistics.animals }} animals · {{ collection_statistics.enclosures }} enclosures</p></section>
+  <div class="section-heading"><h2>Your animals</h2><a href="/reports/collection">View collection report</a></div>
   {% if animals %}
   <ul class="animal-list" aria-label="Animals">
     {% for animal in animals %}

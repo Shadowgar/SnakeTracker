@@ -12,6 +12,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.types import Lifespan
 
+from snaketracker.application.analytics import AnimalAnalyticsService
 from snaketracker.application.animals import AnimalService
 from snaketracker.application.attachments import AttachmentService
 from snaketracker.application.backups import BackupService
@@ -23,6 +24,7 @@ from snaketracker.application.inventory import InventoryService
 from snaketracker.application.ports.readiness import ReadinessPort
 from snaketracker.application.readiness import PlatformReadiness
 from snaketracker.application.reminders import ReminderFactService, ReminderRuleService
+from snaketracker.application.reports import ReportService
 from snaketracker.application.search import SearchService
 from snaketracker.bootstrap.compatibility import inspect_startup_compatibility
 from snaketracker.bootstrap.configuration import Environment, Settings, load_settings
@@ -161,6 +163,7 @@ def build_application(settings: Settings) -> FastAPI:
             event_store, SQLAlchemyEnclosureCurrentProjection(engine)
         )
         reminder_projection = SQLAlchemyReminderProjection(engine)
+        expense_service = ExpenseService(event_store, SQLAlchemyExpenseCurrentProjection(engine))
         app.include_router(
             create_web_router(
                 bootstrap_service=HouseholdBootstrapService(
@@ -183,9 +186,9 @@ def build_application(settings: Settings) -> FastAPI:
                 backup_service=BackupService(SQLAlchemyBackupRepository(engine)),
                 enclosure_service=enclosure_service,
                 inventory_service=inventory_service,
-                expense_service=ExpenseService(
-                    event_store, SQLAlchemyExpenseCurrentProjection(engine)
-                ),
+                expense_service=expense_service,
+                analytics_service=AnimalAnalyticsService(animal_service),
+                report_service=ReportService(animal_service, expense_service),
                 reminder_rule_service=ReminderRuleService(event_store, reminder_projection),
                 reminder_fact_service=ReminderFactService(event_store, reminder_projection),
                 reminder_projection=reminder_projection,

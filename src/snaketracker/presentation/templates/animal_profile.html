@@ -15,7 +15,10 @@
       <p class="lede">{{ animal.type_label }} · {{ animal.species }}{% if animal.morph %} · {{ animal.morph }}{% endif %} · {{ animal.status|capitalize }}</p>
       </div>
     </div>
-    <a class="button-link secondary-link" href="/animals">All animals</a>
+    <div class="profile-actions">
+      <a class="button-link secondary-link" href="/animals/{{ animal.animal_id }}/analytics">Trends</a>
+      <a class="button-link secondary-link" href="/animals">All animals</a>
+    </div>
   </header>
   {% if errors and errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
 

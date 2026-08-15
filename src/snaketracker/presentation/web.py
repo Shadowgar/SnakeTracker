@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import hmac
+import json
 import secrets
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -13,11 +15,15 @@ from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Request, Response
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.datastructures import UploadFile
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from snaketracker.application.analytics import (
+    AnalyticsNotAvailableError,
+    AnimalAnalyticsService,
+)
 from snaketracker.application.animals import (
     CONTROLLABLE_ANIMAL_EVENT_TYPES,
     AnimalService,
@@ -102,6 +108,7 @@ from snaketracker.application.reminders import (
     ReminderValidationError,
     SaveSubjectScheduleCommand,
 )
+from snaketracker.application.reports import KeeperReport, ReportService
 from snaketracker.application.search import (
     SearchService,
     SearchUnavailableError,
@@ -470,6 +477,8 @@ def create_web_router(
     enclosure_service: EnclosureService,
     inventory_service: InventoryService,
     expense_service: ExpenseService,
+    analytics_service: AnimalAnalyticsService,
+    report_service: ReportService,
     reminder_rule_service: ReminderRuleService,
     reminder_fact_service: ReminderFactService,
     reminder_projection: ReminderProjection,
@@ -775,13 +784,29 @@ def create_web_router(
                 correlation_id=uuid4(),
             )
             csrf_token = issued.csrf_token
+        animals = animal_service.list_profiles(principal.household_id)
+        enclosures = enclosure_service.list_profiles(principal.household_id)
+        agenda = _agenda_rows(
+            reminder_fact_service.agenda_for(principal.household_id, now=datetime.now(UTC)),
+            animals=animals,
+            enclosures=enclosures,
+        )
         response = templates.TemplateResponse(
             request,
             "home.html",
             {
                 "principal": principal,
                 "csrf_token": csrf_token,
-                "animals": animal_service.list_profiles(principal.household_id),
+                "animals": animals,
+                "agenda_groups": (
+                    ("overdue", "Overdue", agenda["overdue"]),
+                    ("due_today", "Due today", agenda["due_today"]),
+                    ("upcoming", "Upcoming", agenda["upcoming"]),
+                ),
+                "collection_statistics": {
+                    "animals": len(animals),
+                    "enclosures": len(enclosures),
+                },
             },
         )
         if issued is not None:
@@ -819,6 +844,114 @@ def create_web_router(
                 "search_unavailable": unavailable,
             },
         )
+
+    def report_for(principal: Principal, kind: str) -> KeeperReport | None:
+        generated_at = datetime.now(UTC)
+        if kind == "collection":
+            return report_service.collection(principal.household_id, generated_at=generated_at)
+        if kind == "care":
+            return report_service.care(principal.household_id, generated_at=generated_at)
+        if kind == "expenses" and "expense.view" in principal.capabilities:
+            return report_service.expenses(principal.household_id, generated_at=generated_at)
+        return None
+
+    @router.get("/reports", response_class=HTMLResponse)
+    async def reports(request: Request) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        kinds = [("collection", "Collection"), ("care", "Care history")]
+        if "expense.view" in principal.capabilities:
+            kinds.append(("expenses", "Expenses"))
+        return protected_page(
+            request, "reports.html", principal, context={"report": None, "report_kinds": kinds}
+        )
+
+    @router.get("/reports/{kind}", response_class=HTMLResponse)
+    async def report_detail(request: Request, kind: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        report = report_for(principal, kind)
+        if report is None:
+            return _access_denied(request, "Report access denied")
+        return protected_page(
+            request,
+            "reports.html",
+            principal,
+            context={"report": report, "report_kinds": ()},
+        )
+
+    @router.get("/reports/{kind}.csv", response_class=PlainTextResponse)
+    async def report_csv(request: Request, kind: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        report = report_for(principal, kind)
+        if report is None:
+            return _access_denied(request, "Report access denied")
+        return PlainTextResponse(
+            report_service.csv(report),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="snaketracker-{kind}.csv"'},
+        )
+
+    @router.get("/animals/{animal_id}/analytics", response_class=HTMLResponse)
+    async def animal_analytics(request: Request, animal_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            analytics = analytics_service.for_animal(
+                principal.household_id, UUID(animal_id), as_of=datetime.now(UTC).date()
+            )
+        except (AnalyticsNotAvailableError, ValueError):
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=404,
+                context={"title": "Analytics unavailable", "message": "Animal not found."},
+            )
+        return protected_page(
+            request,
+            "animal_analytics.html",
+            principal,
+            context={"analytics": analytics},
+        )
+
+    @router.get("/api/v1/animals/{animal_id}/analytics/measurements")
+    async def animal_measurement_data(request: Request, animal_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return JSONResponse({"detail": "Authentication required."}, status_code=401)
+        try:
+            analytics = analytics_service.for_animal(
+                principal.household_id, UUID(animal_id), as_of=datetime.now(UTC).date()
+            )
+        except (AnalyticsNotAvailableError, ValueError):
+            return JSONResponse({"detail": "Animal not found."}, status_code=404)
+        payload = {
+            "schema_version": 1,
+            "animal_id": str(analytics.animal.animal_id),
+            "source_cutoff": (
+                analytics.source_cutoff.isoformat() if analytics.source_cutoff is not None else None
+            ),
+            "points": [
+                {
+                    "kind": item.kind,
+                    "occurred_at": item.occurred_at.isoformat(),
+                    "value": item.value,
+                    "unit": item.unit,
+                }
+                for item in analytics.measurements
+            ],
+        }
+        encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        etag = f'"{hashlib.sha256(encoded.encode()).hexdigest()}"'
+        if request.headers.get("if-none-match") == etag:
+            return Response(status_code=304, headers={"ETag": etag})
+        return JSONResponse(payload, headers={"ETag": etag})
 
     @router.get("/enclosures", response_class=HTMLResponse)
     async def enclosure_list(request: Request) -> Response:
