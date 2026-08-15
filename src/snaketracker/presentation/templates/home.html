@@ -35,7 +35,7 @@
   </section>
   {% endif %}
   {% endfor %}
-  <section class="card" aria-labelledby="collection-summary"><h2 id="collection-summary">Collection</h2><p>{{ collection_statistics.animals }} animals · {{ collection_statistics.enclosures }} enclosures</p></section>
+  <section class="card" aria-labelledby="collection-summary"><h2 id="collection-summary">Collection</h2>{% if collection_statistics %}<p>{{ collection_statistics.animals }} animals · {{ collection_statistics.enclosures }} enclosures</p>{% else %}<p>Collection statistics are catching up.</p>{% endif %}</section>
   <div class="section-heading"><h2>Your animals</h2><a href="/reports/collection">View collection report</a></div>
   {% if animals %}
   <ul class="animal-list" aria-label="Animals">

@@ -8,6 +8,7 @@ from itertools import pairwise
 from uuid import UUID
 
 from snaketracker.application.animals import AnimalProfile, AnimalService
+from snaketracker.application.projected_events import ProjectedEventReader
 from snaketracker.application.suggestion_policy import (
     CareWindowEstimate,
     DeterministicSuggestionPolicy,
@@ -25,6 +26,7 @@ from snaketracker.domains.animals.contracts import (
     AnimalWeightCorrectedV1,
     AnimalWeightRecordedV1,
 )
+from snaketracker.platform.events.corrections import evaluate_effective_events
 
 
 class AnalyticsNotAvailableError(RuntimeError):
@@ -70,16 +72,26 @@ class AnimalAnalyticsService:
         self,
         animals: AnimalService,
         suggestion_policy: DeterministicSuggestionPolicy | None = None,
+        projected_events: ProjectedEventReader | None = None,
     ) -> None:
         self._animals = animals
         self._suggestions = suggestion_policy or DeterministicSuggestionPolicy()
+        self._projected_events = projected_events
 
     def for_animal(self, household_id: UUID, animal_id: UUID, *, as_of: date) -> AnimalAnalytics:
         profile = self._animals.profile_for(household_id, animal_id)
         if profile is None:
             raise AnalyticsNotAvailableError("Animal analytics are not available.")
         capability = animal_capability_registry.require(profile.capability_profile_identity)
-        events = self._animals.effective_history(household_id, animal_id)
+        events = (
+            evaluate_effective_events(
+                self._projected_events.events_for(
+                    household_id, stream_type="animal", stream_id=animal_id
+                )
+            )
+            if self._projected_events is not None
+            else self._animals.effective_history(household_id, animal_id)
+        )
         measurements: list[MeasurementPoint] = []
         feedings: list[FeedingPoint] = []
         husbandry: list[HusbandryPoint] = []

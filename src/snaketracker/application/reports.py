@@ -10,6 +10,9 @@ from uuid import UUID
 
 from snaketracker.application.animals import AnimalService
 from snaketracker.application.expenses import ExpenseService
+from snaketracker.application.projected_events import ProjectedEventReader
+from snaketracker.platform.events.corrections import evaluate_effective_events
+from snaketracker.platform.events.envelope import DomainEvent
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,9 +29,15 @@ class KeeperReport:
 
 
 class ReportService:
-    def __init__(self, animals: AnimalService, expenses: ExpenseService) -> None:
+    def __init__(
+        self,
+        animals: AnimalService,
+        expenses: ExpenseService,
+        projected_events: ProjectedEventReader | None = None,
+    ) -> None:
         self._animals = animals
         self._expenses = expenses
+        self._projected_events = projected_events
 
     def collection(self, household_id: UUID, *, generated_at: datetime) -> KeeperReport:
         rows = tuple(
@@ -44,8 +53,20 @@ class ReportService:
 
     def care(self, household_id: UUID, *, generated_at: datetime) -> KeeperReport:
         rows: list[ReportRow] = []
+        projected_by_animal: dict[UUID, list[DomainEvent]] | None = None
+        if self._projected_events is not None:
+            projected_by_animal = {}
+            for event in evaluate_effective_events(
+                self._projected_events.events_for(household_id, stream_type="animal")
+            ):
+                projected_by_animal.setdefault(event.stream_id, []).append(event)
         for animal in self._animals.list_profiles(household_id):
-            for event in self._animals.effective_history(household_id, animal.animal_id):
+            history = (
+                tuple(projected_by_animal.get(animal.animal_id, ()))
+                if projected_by_animal is not None
+                else self._animals.effective_history(household_id, animal.animal_id)
+            )
+            for event in history:
                 if event.event_type == "animal.registered":
                     continue
                 rows.append(

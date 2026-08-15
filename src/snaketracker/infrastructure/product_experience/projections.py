@@ -33,29 +33,74 @@ class ProductEventSourceStrategy:
         connection.exec_driver_sql(
             f'CREATE TABLE "{table}" ('
             "global_position INTEGER PRIMARY KEY, household_id TEXT NOT NULL, "
-            "stream_type TEXT NOT NULL, stream_id TEXT NOT NULL, event_type TEXT NOT NULL, "
-            "schema_version INTEGER NOT NULL, payload_json TEXT NOT NULL)"
+            "stream_type TEXT NOT NULL, stream_id TEXT NOT NULL, event_json TEXT NOT NULL)"
+        )
+        connection.exec_driver_sql(
+            f'CREATE INDEX "{table}_household_stream" ON "{table}" '
+            "(household_id,stream_type,stream_id,global_position)"
         )
 
     def apply(self, transaction: object, layout: GenerationLayout, event: ProjectionEvent) -> None:
         connection = _connection(transaction)
         table = layout.component(self._projection_name, "source_events")
+        row = (
+            connection.execute(
+                text("SELECT * FROM domain_events WHERE global_position=:position"),
+                {"position": event.global_position},
+            )
+            .mappings()
+            .one()
+        )
+        subjects = [
+            {
+                "subject_type": str(subject["subject_type"]),
+                "subject_id": str(subject["subject_id"]),
+                "relationship": str(subject["relationship"]),
+                "display_order": subject["display_order"],
+            }
+            for subject in connection.execute(
+                text(
+                    "SELECT subject_type,subject_id,relationship,display_order "
+                    "FROM event_subjects WHERE event_id=:event_id ORDER BY display_order"
+                ),
+                {"event_id": str(row["event_id"])},
+            ).mappings()
+        ]
+        record = {
+            "event_id": str(row["event_id"]),
+            "household_id": str(row["household_id"]),
+            "stream_type": str(row["stream_type"]),
+            "stream_id": str(row["stream_id"]),
+            "stream_version": int(row["stream_version"]),
+            "event_type": str(row["event_type"]),
+            "schema_version": int(row["schema_version"]),
+            "occurred_at": str(row["occurred_at"]),
+            "recorded_at": str(row["recorded_at"]),
+            "actor_user_id": str(row["actor_user_id"]),
+            "correlation_id": str(row["correlation_id"]),
+            "causation_id": str(row["causation_id"]) if row["causation_id"] else None,
+            "idempotency_key": str(row["idempotency_key"]),
+            "subjects": subjects,
+            "title": str(row["title"]),
+            "description": str(row["description"]) if row["description"] else None,
+            "payload": json.loads(str(row["payload_json"])),
+            "metadata": json.loads(str(row["metadata_json"])),
+            "notes": str(row["notes"]) if row["notes"] else None,
+            "checksum": str(row["checksum"]),
+        }
         connection.execute(
             text(
                 f'INSERT OR IGNORE INTO "{table}" '
-                "(global_position,household_id,stream_type,stream_id,event_type,schema_version,"
-                "payload_json) VALUES (:position,:household_id,:stream_type,:stream_id,"
-                ":event_type,:schema_version,:payload_json)"
+                "(global_position,household_id,stream_type,stream_id,event_json) "
+                "VALUES (:position,:household_id,:stream_type,:stream_id,:event_json)"
             ),
             {
                 "position": event.global_position,
                 "household_id": str(event.household_id),
                 "stream_type": event.stream_type,
                 "stream_id": str(event.stream_id),
-                "event_type": event.event_type,
-                "schema_version": event.schema_version,
-                "payload_json": json.dumps(
-                    event.payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+                "event_json": json.dumps(
+                    record, sort_keys=True, separators=(",", ":"), ensure_ascii=False
                 ),
             },
         )
@@ -78,7 +123,7 @@ def _definition(
     *,
     strategy: object | None = None,
     components: tuple[str, ...] = ("source_events",),
-    handler_version: int = 1,
+    handler_version: int = 2,
 ) -> ProjectionDefinition:
     return ProjectionDefinition(
         name=name,

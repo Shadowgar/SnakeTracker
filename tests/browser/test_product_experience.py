@@ -1,8 +1,35 @@
 from __future__ import annotations
 
+from pathlib import Path
 from uuid import uuid4
 
+from alembic import command
+from alembic.config import Config
+from fastapi.testclient import TestClient
+
+from snaketracker.bootstrap.application import build_application
+from snaketracker.bootstrap.configuration import Environment, Settings
 from tests.browser.test_identity_flow import client_for, complete_setup, csrf_from
+
+ROOT = Path(__file__).parents[2]
+
+
+def development_client_for(tmp_path: Path) -> TestClient:
+    database = tmp_path / "development-browser.sqlite3"
+    config = Config(ROOT / "alembic.ini")
+    config.set_main_option("script_location", str(ROOT / "migrations"))
+    config.set_main_option("sqlalchemy.url", f"sqlite+pysqlite:///{database}")
+    command.upgrade(config, "head")
+    return TestClient(
+        build_application(
+            Settings(
+                environment=Environment.DEVELOPMENT,
+                database_path=database,
+                runtime_secret="development-browser-runtime-secret",
+                session_cookie_secure=False,
+            )
+        )
+    )
 
 
 def test_today_reports_search_and_read_only_pwa_shell_are_browser_visible(tmp_path) -> None:
@@ -68,3 +95,18 @@ def test_today_reports_search_and_read_only_pwa_shell_are_browser_visible(tmp_pa
         assert "caches.delete" in pwa.text
         assert "indexedDB" not in worker.text
         assert "indexedDB" not in pwa.text
+
+
+def test_development_requests_do_not_run_async_projections_inline(tmp_path) -> None:
+    with development_client_for(tmp_path) as client:
+        complete_setup(client)
+
+        home = client.get("/home")
+        assert home.status_code == 200
+        assert "Collection statistics are catching up." in home.text
+        assert "Search is catching up" in client.get("/search?q=Nyx").text
+        assert client.get("/reports").status_code == 200
+        care = client.get("/reports/care")
+        assert care.status_code == 503
+        assert "report projection is rebuilding" in care.text
+        assert client.get("/reports/care.csv").status_code == 503

@@ -17,6 +17,7 @@ from snaketracker.application.analytics import AnimalAnalyticsService
 from snaketracker.application.animals import AnimalService
 from snaketracker.application.attachments import AttachmentService
 from snaketracker.application.backups import BackupService
+from snaketracker.application.dashboard import DashboardStatisticsService
 from snaketracker.application.enclosures import EnclosureService
 from snaketracker.application.expenses import ExpenseService
 from snaketracker.application.household_bootstrap import HouseholdBootstrapService
@@ -54,7 +55,11 @@ from snaketracker.infrastructure.observability.correlation import (
 from snaketracker.infrastructure.observability.logging import configure_logging
 from snaketracker.infrastructure.observability.metrics import PlatformMetrics
 from snaketracker.infrastructure.product_experience.projections import (
+    ensure_product_projection_generations,
     product_projection_registry,
+)
+from snaketracker.infrastructure.product_experience.read_models import (
+    SQLAlchemyProjectedEventReader,
 )
 from snaketracker.infrastructure.projections.sqlite_generations import (
     SQLiteProjectionGenerationManager,
@@ -65,6 +70,7 @@ from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 from snaketracker.platform.notifications.service import NotificationIntentService
 from snaketracker.presentation.health import create_health_router
 from snaketracker.presentation.web import create_web_router
+from snaketracker.worker.projections import ProjectionWorker
 
 logger = logging.getLogger(__name__)
 
@@ -174,6 +180,32 @@ def build_application(settings: Settings) -> FastAPI:
         )
         reminder_projection = SQLAlchemyReminderProjection(engine)
         expense_service = ExpenseService(event_store, SQLAlchemyExpenseCurrentProjection(engine))
+        projection_manager = SQLiteProjectionGenerationManager(engine, product_projection_registry)
+        projection_catch_up: Callable[[], object] | None = None
+        if settings.environment is Environment.TEST:
+
+            def catch_up_test_projections() -> object:
+                test_manager = ensure_product_projection_generations(engine)
+                return ProjectionWorker(
+                    engine, test_manager, product_projection_registry
+                ).run_once()
+
+            projection_catch_up = catch_up_test_projections
+        analytics_events = SQLAlchemyProjectedEventReader(
+            engine,
+            projection_manager,
+            product_projection_registry,
+            "measurement_analytics",
+        )
+        report_events = SQLAlchemyProjectedEventReader(
+            engine, projection_manager, product_projection_registry, "report_facts"
+        )
+        dashboard_events = SQLAlchemyProjectedEventReader(
+            engine,
+            projection_manager,
+            product_projection_registry,
+            "dashboard_statistics",
+        )
         app.include_router(
             create_web_router(
                 bootstrap_service=HouseholdBootstrapService(
@@ -197,8 +229,13 @@ def build_application(settings: Settings) -> FastAPI:
                 enclosure_service=enclosure_service,
                 inventory_service=inventory_service,
                 expense_service=expense_service,
-                analytics_service=AnimalAnalyticsService(animal_service),
-                report_service=ReportService(animal_service, expense_service),
+                analytics_service=AnimalAnalyticsService(
+                    animal_service, projected_events=analytics_events
+                ),
+                report_service=ReportService(
+                    animal_service, expense_service, projected_events=report_events
+                ),
+                dashboard_statistics_service=DashboardStatisticsService(dashboard_events),
                 reminder_rule_service=ReminderRuleService(event_store, reminder_projection),
                 reminder_fact_service=ReminderFactService(event_store, reminder_projection),
                 reminder_projection=reminder_projection,
@@ -207,11 +244,9 @@ def build_application(settings: Settings) -> FastAPI:
                 ),
                 job_repository=SQLAlchemyJobRepository(engine),
                 search_service=SearchService(
-                    SQLAlchemyFTSSearchRepository(
-                        engine,
-                        SQLiteProjectionGenerationManager(engine, product_projection_registry),
-                    )
+                    SQLAlchemyFTSSearchRepository(engine, projection_manager)
                 ),
+                projection_catch_up=projection_catch_up,
                 is_bootstrapped=identity_repository.has_users,
                 secure_cookie=settings.session_cookie_secure,
                 expected_origin=(

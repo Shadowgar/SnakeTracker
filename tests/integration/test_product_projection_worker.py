@@ -2,12 +2,21 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
+from uuid import uuid4
 
 from sqlalchemy import text
 
+from snaketracker.application.analytics import AnimalAnalyticsService
+from snaketracker.application.animals import AnimalService, RegisterAnimalCommand
+from snaketracker.application.dashboard import DashboardStatisticsService
+from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
+from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
 from snaketracker.infrastructure.product_experience.projections import (
     ensure_product_projection_generations,
     product_projection_registry,
+)
+from snaketracker.infrastructure.product_experience.read_models import (
+    SQLAlchemyProjectedEventReader,
 )
 from snaketracker.worker.projections import ProjectionWorker
 from tests.integration.test_projection_rebuilds import (
@@ -65,5 +74,62 @@ def test_product_projection_worker_advances_every_active_group_before_acknowledg
                 ).scalar_one()
                 == 1
             )
+    finally:
+        engine.dispose()
+
+
+def test_product_readers_observe_only_the_active_async_checkpoint(tmp_path: Path) -> None:
+    engine, household = migrated_household(tmp_path)
+    try:
+        manager = ensure_product_projection_generations(engine)
+        events = SQLAlchemyProjectedEventReader(
+            engine,
+            manager,
+            product_projection_registry,
+            "measurement_analytics",
+        )
+        dashboard = DashboardStatisticsService(
+            SQLAlchemyProjectedEventReader(
+                engine,
+                manager,
+                product_projection_registry,
+                "dashboard_statistics",
+            )
+        )
+        animals = AnimalService(
+            SQLAlchemyEventStore(engine), SQLAlchemyAnimalCurrentProjection(engine)
+        )
+        animal = animals.register(
+            RegisterAnimalCommand(
+                household_id=household.household_id,
+                actor_user_id=household.user_id,
+                correlation_id=uuid4(),
+                idempotency_key="m6-async-reader-animal",
+                name="Async Nyx",
+                species="Python regius",
+                morph=None,
+                genetics=None,
+                sex=None,
+                birth_hatch_date=None,
+                acquisition_date=None,
+                breeder_source=None,
+                notes=None,
+            )
+        )
+
+        assert events.events_for(household.household_id, stream_type="animal") == ()
+        assert dashboard.collection(household.household_id).animals == 0
+
+        ProjectionWorker(engine, manager, product_projection_registry).run_once()
+
+        projected = events.events_for(
+            household.household_id, stream_type="animal", stream_id=animal.animal_id
+        )
+        assert [event.event_type for event in projected] == ["animal.registered"]
+        assert dashboard.collection(household.household_id).animals == 1
+        analytics = AnimalAnalyticsService(animals, projected_events=events).for_animal(
+            household.household_id, animal.animal_id, as_of=datetime.now(UTC).date()
+        )
+        assert analytics.source_cutoff == projected[0].recorded_at
     finally:
         engine.dispose()

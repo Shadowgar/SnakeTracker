@@ -61,6 +61,7 @@ from snaketracker.application.backups import (
     ConfigureBackupScheduleCommand,
     RequestBackupCommand,
 )
+from snaketracker.application.dashboard import DashboardStatisticsService
 from snaketracker.application.enclosures import (
     ChangeEnclosureStatusCommand,
     EnclosureService,
@@ -479,12 +480,14 @@ def create_web_router(
     expense_service: ExpenseService,
     analytics_service: AnimalAnalyticsService,
     report_service: ReportService,
+    dashboard_statistics_service: DashboardStatisticsService,
     reminder_rule_service: ReminderRuleService,
     reminder_fact_service: ReminderFactService,
     reminder_projection: ReminderProjection,
     notification_intent_service: NotificationIntentService,
     job_repository: JobReadRepository,
     search_service: SearchService,
+    projection_catch_up: Callable[[], object] | None,
     is_bootstrapped: Callable[[], bool],
     secure_cookie: bool,
     expected_origin: str | None = None,
@@ -773,6 +776,8 @@ def create_web_router(
         principal = principal_for(request, audit_denial=True)
         if principal is None:
             return RedirectResponse("/login", status_code=303)
+        if projection_catch_up is not None:
+            projection_catch_up()
         csrf_token = request.cookies.get(CSRF_COOKIE)
         issued = None
         if csrf_token is None:
@@ -791,6 +796,10 @@ def create_web_router(
             animals=animals,
             enclosures=enclosures,
         )
+        try:
+            collection_statistics = dashboard_statistics_service.collection(principal.household_id)
+        except RuntimeError:
+            collection_statistics = None
         response = templates.TemplateResponse(
             request,
             "home.html",
@@ -804,10 +813,7 @@ def create_web_router(
                     ("due_today", "Due today", agenda["due_today"]),
                     ("upcoming", "Upcoming", agenda["upcoming"]),
                 ),
-                "collection_statistics": {
-                    "animals": len(animals),
-                    "enclosures": len(enclosures),
-                },
+                "collection_statistics": collection_statistics,
             },
         )
         if issued is not None:
@@ -861,6 +867,8 @@ def create_web_router(
         principal = principal_for(request, audit_denial=True)
         if principal is None:
             return RedirectResponse("/login", status_code=303)
+        if projection_catch_up is not None:
+            projection_catch_up()
         kinds = [("collection", "Collection"), ("care", "Care history")]
         if "expense.view" in principal.capabilities:
             kinds.append(("expenses", "Expenses"))
@@ -873,7 +881,12 @@ def create_web_router(
         principal = principal_for(request, audit_denial=True)
         if principal is None:
             return RedirectResponse("/login", status_code=303)
-        report = report_for(principal, kind)
+        if projection_catch_up is not None:
+            projection_catch_up()
+        try:
+            report = report_for(principal, kind)
+        except RuntimeError:
+            return PlainTextResponse("Report is catching up.", status_code=503)
         if report is None:
             return _access_denied(request, "Report access denied")
         return PlainTextResponse(
@@ -887,7 +900,21 @@ def create_web_router(
         principal = principal_for(request, audit_denial=True)
         if principal is None:
             return RedirectResponse("/login", status_code=303)
-        report = report_for(principal, kind)
+        if projection_catch_up is not None:
+            projection_catch_up()
+        try:
+            report = report_for(principal, kind)
+        except RuntimeError:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=503,
+                context={
+                    "title": "Report is catching up",
+                    "message": "The report projection is rebuilding. Try again shortly.",
+                },
+            )
         if report is None:
             return _access_denied(request, "Report access denied")
         return protected_page(
@@ -902,6 +929,8 @@ def create_web_router(
         principal = principal_for(request, audit_denial=True)
         if principal is None:
             return RedirectResponse("/login", status_code=303)
+        if projection_catch_up is not None:
+            projection_catch_up()
         try:
             analytics = analytics_service.for_animal(
                 principal.household_id, UUID(animal_id), as_of=datetime.now(UTC).date()
@@ -913,6 +942,17 @@ def create_web_router(
                 principal,
                 status_code=404,
                 context={"title": "Analytics unavailable", "message": "Animal not found."},
+            )
+        except RuntimeError:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=503,
+                context={
+                    "title": "Analytics are catching up",
+                    "message": "The analytics projection is rebuilding. Try again shortly.",
+                },
             )
         return protected_page(
             request,
@@ -926,12 +966,16 @@ def create_web_router(
         principal = principal_for(request, audit_denial=True)
         if principal is None:
             return JSONResponse({"detail": "Authentication required."}, status_code=401)
+        if projection_catch_up is not None:
+            projection_catch_up()
         try:
             analytics = analytics_service.for_animal(
                 principal.household_id, UUID(animal_id), as_of=datetime.now(UTC).date()
             )
         except (AnalyticsNotAvailableError, ValueError):
             return JSONResponse({"detail": "Animal not found."}, status_code=404)
+        except RuntimeError:
+            return JSONResponse({"detail": "Analytics are catching up."}, status_code=503)
         payload = {
             "schema_version": 1,
             "animal_id": str(analytics.animal.animal_id),
