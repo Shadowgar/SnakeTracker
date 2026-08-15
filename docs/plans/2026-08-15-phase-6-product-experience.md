@@ -17,6 +17,9 @@ under the existing strict CSP.
 projection generations and durable workers, locally served pinned Chart.js, Playwright/Pa11y for
 real-browser qualification, Docker Compose, and Buildx ARM64 builds.
 
+**Owner approval:** Approved August 15, 2026, with the proportional minimum-uncertainty amendment
+recorded below.
+
 ---
 
 ## Scope and controlling requirements
@@ -56,9 +59,11 @@ policy, increase disclosure risk, and make corrected effective history harder to
 - Calculate the median interval and median absolute deviation (MAD). When MAD is nonzero, discard
   intervals more than three MAD from the median; when MAD is zero, retain the sample unchanged. Do
   not suggest if filtering leaves fewer than the minimum interval count.
-- The window is the latest qualifying occurrence plus `median ± max(MAD, one day)`, clamped to a
-  positive lower interval. Use no opaque weighting in M6; the bounded recent sample is the recency
-  policy.
+- The window is the latest qualifying occurrence plus
+  `median ± max(MAD, 10% of the median interval, one day)`, using the deterministic integer-day
+  equivalent defined by the policy implementation and clamped to a positive lower interval. The
+  10% term is a minimum uncertainty floor, not a confidence percentage. Use no opaque weighting in
+  M6; the bounded recent sample is the recency policy.
 - If today is after the upper window, display that the historical estimate window has passed; never
   roll the estimate forward without a new effective qualifying event. Corrections, voids, and
   reinstatements rebuild the sample before the result is shown.
@@ -249,8 +254,10 @@ evidence, and commit. No roadmap box is checked until its evidence passes.
   using the approved minimum-history/MAD policy and effective history.
 - **Routes/screens:** estimate cards show window and plain-language reason; technical provenance is
   optional disclosure; insufficient/stale history produces no invented date.
-- **Tests:** every threshold boundary, outliers, long gaps, refused feeds, corrections/voids/
-  reinstatements, separate shed/molt rules, owner schedule precedence, and deterministic replay.
+- **Tests:** short and long feeding intervals; long Spider molt intervals; zero MAD; nonzero MAD
+  below and above the proportional floor; every sample threshold; outliers; long/passed windows;
+  refused feeds; corrections/voids/reinstatements; separate shed/molt rules; owner schedule
+  precedence; insufficient history; and deterministic rebuild/replay.
 - **Data/migration:** recommendations remain insights read models and never write Animal/Reminder
   streams.
 - **Capability enforcement:** the registered profile selects allowed suggestion policies.
@@ -386,7 +393,8 @@ fixture guidance never loads in production.
 
 Approval of this plan confirms:
 
-1. the deterministic minimum-history/MAD/window policy above;
+1. the deterministic minimum-history/MAD/window policy above, including the 10% proportional
+   uncertainty floor that is never presented as a confidence percentage;
 2. HTML plus CSV as the M6 report/export boundary, with no PDF implementation;
 3. zero browser-persisted drafts in M6 unless a later form receives a separate security review; and
 4. no production husbandry reference content until its exact sources and bundle are presented for
