@@ -9,6 +9,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.types import Lifespan
 
@@ -82,6 +83,15 @@ def create_application(
     metrics = PlatformMetrics()
     app.include_router(create_health_router(readiness, metrics))
     static_directory = Path(__file__).parents[1] / "presentation" / "static"
+
+    @app.get("/service-worker.js", include_in_schema=False)
+    def service_worker() -> FileResponse:
+        return FileResponse(
+            static_directory / "service-worker.js",
+            media_type="text/javascript",
+            headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"},
+        )
+
     app.mount("/static", StaticFiles(directory=static_directory), name="static")
 
     @app.middleware("http")

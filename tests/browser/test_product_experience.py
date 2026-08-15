@@ -55,7 +55,9 @@ def test_today_reports_search_and_read_only_pwa_shell_are_browser_visible(tmp_pa
             ).status_code
             == 304
         )
-        worker = client.get("/static/service-worker.js")
+        worker = client.get("/service-worker.js")
         assert worker.status_code == 200
+        assert worker.headers["service-worker-allowed"] == "/"
+        assert worker.headers["cache-control"] == "no-cache"
         assert 'method !== "GET"' in worker.text
         assert "indexedDB" not in worker.text
