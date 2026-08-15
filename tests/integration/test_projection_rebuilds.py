@@ -426,11 +426,14 @@ def test_projection_worker_does_not_acknowledge_work_without_registered_consumer
 
         assert result.processed_outbox_items == 0
         with engine.connect() as connection:
-            assert connection.execute(
-                text(
-                    "SELECT count(*) FROM outbox_items "
-                    "WHERE kind='projection' AND state='pending'"
-                )
-            ).scalar_one() == 1
+            assert (
+                connection.execute(
+                    text(
+                        "SELECT count(*) FROM outbox_items "
+                        "WHERE kind='projection' AND state='pending'"
+                    )
+                ).scalar_one()
+                == 1
+            )
     finally:
         engine.dispose()

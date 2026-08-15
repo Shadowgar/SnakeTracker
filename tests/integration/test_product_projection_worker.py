@@ -43,19 +43,25 @@ def test_product_projection_worker_advances_every_active_group_before_acknowledg
             assert freshness.lag_events == 0
             assert freshness.is_stale is False
         with engine.connect() as connection:
-            assert connection.execute(
-                text(
-                    "SELECT count(*) FROM projection_definitions "
-                    "WHERE projection_name IN ('global_search_fts','measurement_analytics',"
-                    "'feeding_analytics','report_facts','dashboard_statistics',"
-                    "'husbandry_recommendations')"
-                )
-            ).scalar_one() == 6
-            assert connection.execute(
-                text(
-                    "SELECT count(*) FROM outbox_items "
-                    "WHERE kind='projection' AND state='handed_off'"
-                )
-            ).scalar_one() == 1
+            assert (
+                connection.execute(
+                    text(
+                        "SELECT count(*) FROM projection_definitions "
+                        "WHERE projection_name IN ('global_search_fts','measurement_analytics',"
+                        "'feeding_analytics','report_facts','dashboard_statistics',"
+                        "'husbandry_recommendations')"
+                    )
+                ).scalar_one()
+                == 6
+            )
+            assert (
+                connection.execute(
+                    text(
+                        "SELECT count(*) FROM outbox_items "
+                        "WHERE kind='projection' AND state='handed_off'"
+                    )
+                ).scalar_one()
+                == 1
+            )
     finally:
         engine.dispose()

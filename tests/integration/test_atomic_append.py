@@ -224,15 +224,21 @@ def test_multi_stream_append_is_ordered_atomic_and_returns_stored_retry(tmp_path
                 .all()
             )
             assert event_types == ["__snaketracker_test__.counter", "household"]
-            assert connection.execute(
-                text(
-                    "SELECT count(*) FROM outbox_items "
-                    "WHERE kind='__snaketracker_test__.projection-handoff'"
-                )
-            ).scalar_one() == 1
-            assert connection.execute(
-                text("SELECT count(*) FROM outbox_items WHERE kind='projection'")
-            ).scalar_one() == 2
+            assert (
+                connection.execute(
+                    text(
+                        "SELECT count(*) FROM outbox_items "
+                        "WHERE kind='__snaketracker_test__.projection-handoff'"
+                    )
+                ).scalar_one()
+                == 1
+            )
+            assert (
+                connection.execute(
+                    text("SELECT count(*) FROM outbox_items WHERE kind='projection'")
+                ).scalar_one()
+                == 2
+            )
             assert (
                 connection.execute(text("SELECT count(*) FROM idempotency_operations")).scalar_one()
                 == 2
@@ -345,15 +351,21 @@ def test_synchronous_projection_commits_with_append_or_rolls_everything_back(
                 connection.execute(text("SELECT count(*) FROM sync_projection_test")).scalar_one()
                 == 1
             )
-            assert connection.execute(
-                text(
-                    "SELECT count(*) FROM outbox_items "
-                    "WHERE kind='__snaketracker_test__.projection-handoff'"
-                )
-            ).scalar_one() == 1
-            assert connection.execute(
-                text("SELECT count(*) FROM outbox_items WHERE kind='projection'")
-            ).scalar_one() == 2
+            assert (
+                connection.execute(
+                    text(
+                        "SELECT count(*) FROM outbox_items "
+                        "WHERE kind='__snaketracker_test__.projection-handoff'"
+                    )
+                ).scalar_one()
+                == 1
+            )
+            assert (
+                connection.execute(
+                    text("SELECT count(*) FROM outbox_items WHERE kind='projection'")
+                ).scalar_one()
+                == 2
+            )
     finally:
         engine.dispose()
 

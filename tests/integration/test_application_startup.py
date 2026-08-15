@@ -149,9 +149,7 @@ def test_worker_runs_reminder_sweep_on_bounded_cadence(
     monkeypatch.setattr(
         worker_main_module.ProjectionWorker,
         "run_once",
-        lambda *_args, **_kwargs: calls.__setitem__(
-            "projections", calls["projections"] + 1
-        ),
+        lambda *_args, **_kwargs: calls.__setitem__("projections", calls["projections"] + 1),
     )
     monkeypatch.setattr(
         worker_main_module.ReminderScheduler,
@@ -198,9 +196,7 @@ def test_worker_duties_are_isolated_from_one_another(
     monkeypatch.setattr(
         worker_main_module.ProjectionWorker,
         "run_once",
-        lambda *_args, **_kwargs: calls.__setitem__(
-            "projections", calls["projections"] + 1
-        ),
+        lambda *_args, **_kwargs: calls.__setitem__("projections", calls["projections"] + 1),
     )
     monkeypatch.setattr(
         worker_main_module.LOGGER,
