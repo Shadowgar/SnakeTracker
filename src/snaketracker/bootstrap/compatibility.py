@@ -294,7 +294,9 @@ def inspect_projection_compatibility(
     return _report(CompatibilityMode.NORMAL, "compatible", "The application is ready.")
 
 
-def inspect_startup_compatibility(engine: Engine) -> CompatibilityReport:
+def inspect_startup_compatibility(
+    engine: Engine, registry: ProjectionRegistry = production_projection_registry
+) -> CompatibilityReport:
     """Require both the release runtime and stored schema to be compatible."""
     runtime = inspect_runtime_compatibility(engine)
     if not runtime.normal_readiness:
@@ -305,4 +307,4 @@ def inspect_startup_compatibility(engine: Engine) -> CompatibilityReport:
     events = inspect_event_contracts(engine)
     if not events.normal_readiness:
         return events
-    return inspect_projection_compatibility(engine)
+    return inspect_projection_compatibility(engine, registry)

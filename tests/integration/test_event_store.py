@@ -114,6 +114,15 @@ def test_loads_phase2_household_events_and_appends_at_expected_version(tmp_path:
         assert outcome.stream_version == 3
         assert len(outcome.global_positions) == 1
         assert store.load_stream(key)[-1] == appended
+        with engine.connect() as connection:
+            outbox = connection.execute(
+                text(
+                    "SELECT kind,payload_contract,state FROM outbox_items "
+                    "WHERE logical_key=:logical_key"
+                ),
+                {"logical_key": f"event:{appended.event_id}"},
+            ).one()
+        assert outbox == ("projection", "projection.event_committed", "pending")
     finally:
         engine.dispose()
 

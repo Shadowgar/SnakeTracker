@@ -11,6 +11,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine
 
+from snaketracker.application.projection_health import ProjectionFreshness
 from snaketracker.platform.projections.definitions import (
     GenerationLayout,
     ProjectionDefinition,
@@ -149,6 +150,98 @@ class SQLiteProjectionGenerationManager:
                 for definition in definitions
             }
         return self._layout(definitions, generation_ids)
+
+    def advance(self, group_name: str) -> int:
+        """Apply the authoritative event tail once to an active projection group."""
+        definitions = self._registry.rebuild_group(group_name)
+        layout = self.active_layout(group_name)
+        with self._engine.connect() as connection:
+            connection.exec_driver_sql("BEGIN IMMEDIATE")
+            try:
+                checkpoints = (
+                    connection.execute(
+                        text(
+                            "SELECT c.last_global_position FROM projection_checkpoints c "
+                            "JOIN projection_definitions d ON d.projection_name=c.projection_name "
+                            "AND d.active_generation_id=c.generation_id "
+                            "WHERE d.rebuild_group=:group_name ORDER BY c.projection_name"
+                        ),
+                        {"group_name": group_name},
+                    )
+                    .scalars()
+                    .all()
+                )
+                if len(checkpoints) != len(definitions) or len(set(checkpoints)) != 1:
+                    raise RuntimeError("Active projection group checkpoints are inconsistent.")
+                after = int(checkpoints[0])
+                through = int(
+                    connection.execute(
+                        text("SELECT coalesce(max(global_position),0) FROM domain_events")
+                    ).scalar_one()
+                )
+                if through > after:
+                    self._replay(connection, definitions, layout, after, through)
+                    active_ids = {
+                        definition.name: UUID(
+                            str(
+                                connection.execute(
+                                    text(
+                                        "SELECT active_generation_id FROM projection_definitions "
+                                        "WHERE projection_name=:name"
+                                    ),
+                                    {"name": definition.name},
+                                ).scalar_one()
+                            )
+                        )
+                        for definition in definitions
+                    }
+                    self._checkpoint(connection, active_ids, through, _utc_now())
+                connection.commit()
+                return through
+            except Exception:
+                connection.rollback()
+                raise
+
+    def freshness(self, group_name: str, *, now: datetime) -> ProjectionFreshness:
+        definitions = self._registry.rebuild_group(group_name)
+        with self._engine.connect() as connection:
+            rows = connection.execute(
+                text(
+                    "SELECT c.last_global_position,c.updated_at "
+                    "FROM projection_checkpoints c JOIN projection_definitions d "
+                    "ON d.projection_name=c.projection_name "
+                    "AND d.active_generation_id=c.generation_id "
+                    "WHERE d.rebuild_group=:group_name ORDER BY c.projection_name"
+                ),
+                {"group_name": group_name},
+            ).all()
+            latest = int(
+                connection.execute(
+                    text("SELECT coalesce(max(global_position),0) FROM domain_events")
+                ).scalar_one()
+            )
+        if len(rows) != len(definitions) or len({int(row[0]) for row in rows}) != 1:
+            raise RuntimeError("Active projection group checkpoints are inconsistent.")
+        checkpoint = int(rows[0][0])
+        updated = min(datetime.fromisoformat(str(row[1])) for row in rows)
+        threshold = min(
+            (
+                item.freshness_threshold_seconds
+                for item in definitions
+                if item.freshness_threshold_seconds is not None
+            ),
+            default=60,
+        )
+        lag = max(latest - checkpoint, 0)
+        normalized_now = now.astimezone(UTC)
+        return ProjectionFreshness(
+            group_name=group_name,
+            checkpoint_global_position=checkpoint,
+            latest_global_position=latest,
+            checkpoint_updated_at=updated,
+            lag_events=lag,
+            is_stale=lag > 0 and (normalized_now - updated).total_seconds() >= threshold,
+        )
 
     def rollback(self, group_name: str) -> GenerationLayout:
         definitions = self._registry.rebuild_group(group_name)

@@ -147,13 +147,26 @@ def test_intent_outbox_and_job_handoff_each_deduplicate_independently(tmp_path: 
         assert first_jobs[0].max_attempts == 5
         with engine.connect() as connection:
             counts = {
-                table: int(connection.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar_one())
-                for table in ("notification_intents", "outbox_items", "jobs")
+                "notification_intents": int(
+                    connection.execute(
+                        text("SELECT COUNT(*) FROM notification_intents")
+                    ).scalar_one()
+                ),
+                "notification_outbox": int(
+                    connection.execute(
+                        text("SELECT COUNT(*) FROM outbox_items WHERE kind='notification'")
+                    ).scalar_one()
+                ),
+                "jobs": int(connection.execute(text("SELECT COUNT(*) FROM jobs")).scalar_one()),
             }
             outbox = (
-                connection.execute(text("SELECT state,job_id FROM outbox_items")).mappings().one()
+                connection.execute(
+                    text("SELECT state,job_id FROM outbox_items WHERE kind='notification'")
+                )
+                .mappings()
+                .one()
             )
-        assert counts == {"notification_intents": 1, "outbox_items": 1, "jobs": 1}
+        assert counts == {"notification_intents": 1, "notification_outbox": 1, "jobs": 1}
         assert outbox["state"] == "handed_off"
         assert outbox["job_id"] == str(first_jobs[0].job_id)
     finally:
@@ -213,7 +226,12 @@ def test_missing_or_cross_household_recipient_fails_without_intent(tmp_path: Pat
                 connection.execute(text("SELECT COUNT(*) FROM notification_intents")).scalar_one()
                 == 0
             )
-            assert connection.execute(text("SELECT COUNT(*) FROM outbox_items")).scalar_one() == 0
+            assert (
+                connection.execute(
+                    text("SELECT COUNT(*) FROM outbox_items WHERE kind='notification'")
+                ).scalar_one()
+                == 0
+            )
     finally:
         engine.dispose()
 
@@ -354,7 +372,12 @@ def test_reminder_scheduler_creates_one_deduplicated_intent_per_active_recipient
                 connection.execute(text("SELECT COUNT(*) FROM notification_intents")).scalar_one()
                 == 1
             )
-            assert connection.execute(text("SELECT COUNT(*) FROM outbox_items")).scalar_one() == 1
+            assert (
+                connection.execute(
+                    text("SELECT COUNT(*) FROM outbox_items WHERE kind='notification'")
+                ).scalar_one()
+                == 1
+            )
 
         with pytest.raises(NotificationIntentValidationError, match="local notification channel"):
             intents.ensure_for_fact(

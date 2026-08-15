@@ -49,6 +49,9 @@ from snaketracker.infrastructure.observability.correlation import (
 )
 from snaketracker.infrastructure.observability.logging import configure_logging
 from snaketracker.infrastructure.observability.metrics import PlatformMetrics
+from snaketracker.infrastructure.product_experience.projections import (
+    product_projection_registry,
+)
 from snaketracker.infrastructure.reminders.projections import SQLAlchemyReminderProjection
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 from snaketracker.platform.notifications.service import NotificationIntentService
@@ -115,7 +118,7 @@ def build_application(settings: Settings) -> FastAPI:
         settings.database_path,
         require_local_storage=settings.environment is Environment.PRODUCTION,
     )
-    compatibility = inspect_startup_compatibility(engine)
+    compatibility = inspect_startup_compatibility(engine, product_projection_registry)
     readiness = PlatformReadiness(
         database=SQLAlchemyDatabaseHealth(engine),
         compatibility=compatibility,

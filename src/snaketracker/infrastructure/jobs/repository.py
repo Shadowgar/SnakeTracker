@@ -35,7 +35,8 @@ class SQLAlchemyJobRepository:
                 rows = (
                     connection.execute(
                         text(
-                            "SELECT * FROM outbox_items WHERE state='pending' "
+                            "SELECT * FROM outbox_items WHERE kind='notification' "
+                            "AND state='pending' "
                             "AND available_at<=:now ORDER BY available_at,outbox_id LIMIT :limit"
                         ),
                         {"now": _timestamp(handoff_at), "limit": limit},

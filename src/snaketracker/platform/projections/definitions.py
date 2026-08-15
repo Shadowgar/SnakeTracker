@@ -117,5 +117,9 @@ class ProjectionRegistry:
             raise KeyError("Projection rebuild group is not registered.")
         return definitions
 
+    @property
+    def group_names(self) -> tuple[str, ...]:
+        return tuple(sorted({item.rebuild_group for item in self._definitions.values()}))
+
 
 production_projection_registry = ProjectionRegistry(())

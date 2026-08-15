@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -32,6 +32,7 @@ from snaketracker.platform.projections.definitions import (
     ProjectionDefinition,
     ProjectionRegistry,
 )
+from snaketracker.worker.projections import ProjectionWorker
 from tests.support.synthetic_projections import (
     ChildMembershipStrategy,
     FailingValidationStrategy,
@@ -369,5 +370,67 @@ def test_retained_generation_cleanup_preserves_one_rollback_generation(tmp_path:
                 {"name": name},
             ).all()
             assert dict(statuses) == {"active": 1, "cleanup": 1, "retained": 1}
+    finally:
+        engine.dispose()
+
+
+def test_projection_outbox_advances_active_generation_idempotently_and_reports_freshness(
+    tmp_path: Path,
+) -> None:
+    engine, household = migrated_household(tmp_path)
+    name = "__snaketracker_test__.advance"
+    item = definition(name, "test_advance_projection", OrdinaryCounterStrategy(name))
+    registry = ProjectionRegistry((item,), allow_reserved_test_namespace=True)
+    manager = SQLiteProjectionGenerationManager(engine, registry)
+    worker = ProjectionWorker(engine, manager, registry)
+    try:
+        manager.rebuild(GROUP)
+        append_household_event(engine, household, 3)
+        stale = manager.freshness(GROUP, now=datetime.now(UTC) + timedelta(minutes=5))
+        assert stale.lag_events == 1
+        assert stale.is_stale is True
+
+        first = worker.run_once()
+        second = worker.run_once()
+
+        assert first.processed_outbox_items == 1
+        assert first.final_global_position == 3
+        assert second.processed_outbox_items == 0
+        assert manager.freshness(GROUP, now=datetime.now(UTC)).lag_events == 0
+        table = manager.active_layout(GROUP).component(name, "data")
+        with engine.connect() as connection:
+            assert connection.execute(text(f'SELECT count(*) FROM "{table}"')).scalar_one() == 2
+            assert (
+                connection.execute(
+                    text(
+                        "SELECT count(*) FROM outbox_items "
+                        "WHERE kind='projection' AND state='handed_off'"
+                    )
+                ).scalar_one()
+                == 1
+            )
+    finally:
+        engine.dispose()
+
+
+def test_projection_worker_does_not_acknowledge_work_without_registered_consumers(
+    tmp_path: Path,
+) -> None:
+    engine, household = migrated_household(tmp_path)
+    registry = ProjectionRegistry(())
+    manager = SQLiteProjectionGenerationManager(engine, registry)
+    try:
+        append_household_event(engine, household, 3)
+
+        result = ProjectionWorker(engine, manager, registry).run_once()
+
+        assert result.processed_outbox_items == 0
+        with engine.connect() as connection:
+            assert connection.execute(
+                text(
+                    "SELECT count(*) FROM outbox_items "
+                    "WHERE kind='projection' AND state='pending'"
+                )
+            ).scalar_one() == 1
     finally:
         engine.dispose()

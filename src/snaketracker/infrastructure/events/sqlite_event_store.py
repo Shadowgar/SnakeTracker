@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import timedelta
-from uuid import UUID
+from uuid import UUID, uuid5
 
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine, RowMapping
@@ -35,6 +35,8 @@ from snaketracker.platform.events.validation import (
 )
 
 from .sqlite_subjects import SQLAlchemySubjectReferenceValidator
+
+PROJECTION_OUTBOX_NAMESPACE = UUID("c7052f18-41d5-5b55-8f19-dc6ad2ed5b68")
 
 
 class SQLAlchemyEventStore:
@@ -523,7 +525,27 @@ class SQLAlchemyEventStore:
             )
         if result.lastrowid is None:
             raise RuntimeError("Domain event did not receive a global position.")
-        return int(result.lastrowid)
+        global_position = int(result.lastrowid)
+        SQLAlchemyEventStore._insert_outbox(
+            connection,
+            OutboxHandoff(
+                outbox_id=uuid5(PROJECTION_OUTBOX_NAMESPACE, str(event.event_id)),
+                household_id=event.household_id,
+                kind="projection",
+                payload_contract="projection.event_committed",
+                schema_version=1,
+                logical_key=f"event:{event.event_id}",
+                payload={
+                    "event_id": str(event.event_id),
+                    "global_position": global_position,
+                },
+                correlation_id=event.correlation_id,
+                causation_id=event.causation_id,
+                available_at=event.recorded_at,
+                created_at=event.recorded_at,
+            ),
+        )
+        return global_position
 
 
 def _stream_parameters(key: StreamKey) -> dict[str, str]:
