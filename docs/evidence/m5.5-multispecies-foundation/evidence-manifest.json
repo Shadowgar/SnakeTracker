@@ -51,7 +51,7 @@
     "pull_request": 7,
     "quality": "pass at ebd5200",
     "container_trivy": "pass at ebd5200",
-    "coderabbit": "substantive review complete; seven threads resolved",
+    "coderabbit": "substantive review complete; eight threads resolved",
     "copilot": "not available or reported",
     "gitguardian": "pass at ebd5200"
   },
