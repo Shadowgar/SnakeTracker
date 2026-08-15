@@ -45,6 +45,8 @@ def test_today_reports_search_and_read_only_pwa_shell_are_browser_visible(tmp_pa
         analytics = client.get(f"{animal_url}/analytics")
         assert analytics.status_code == 200
         assert "Nyx trends" in analytics.text
+        assert "No measurements recorded yet." in analytics.text
+        assert "No feedings recorded yet." in analytics.text
         data = client.get(f"/api/v1{animal_url}/analytics/measurements")
         assert data.status_code == 200
         assert data.json()["schema_version"] == 1
