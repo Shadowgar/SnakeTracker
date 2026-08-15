@@ -71,3 +71,9 @@ def test_runtime_backup_adapter_is_not_hidden_by_artifact_ignore_rule() -> None:
 
     assert "backups/" not in ignore_rules
     assert "/backups/" in ignore_rules
+
+
+def test_m5_5_production_capability_registry_is_closed_to_approved_profiles() -> None:
+    from snaketracker.domains.animals.capabilities import animal_capability_registry
+
+    assert animal_capability_registry.identities == ("snake.v1", "spider.v1")

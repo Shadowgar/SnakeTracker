@@ -21,10 +21,23 @@ Authentication credentials and sessions are platform records. Membership transit
 - **Aggregate:** Animal
 - **Stream:** `animal:{animal_uuid}`
 - **Feature slices:** profile, husbandry, health
-- **Owns:** animal identity, lifecycle, profile, current enclosure assignment, husbandry history, health history
+- **Owns:** animal identity, registered care-capability profile, lifecycle, profile, current enclosure assignment, husbandry history, health history
 - **Invariant examples:** archived animals cannot receive ordinary husbandry entries without an explicit override; measurement units must be valid; correction targets must belong to the same stream and household
 
 Husbandry and health are not peer bounded contexts. They issue commands through animal-owned application ports and cannot import one another. Common types live in `animals.domain.common`. Reports, reminders, and search consume public event contracts.
+
+Animal type is modeled by a trusted, versioned care-capability profile within this aggregate, not by
+creating a new aggregate per species. The initial profiles are `snake.v1` and `spider.v1`. Profiles
+declare applicable typed commands, measurements, husbandry contracts, reminder kinds, and
+presentation actions. Application services and domain handlers both reject inapplicable actions.
+They do not embed universal husbandry intervals or permit arbitrary user-defined code.
+
+Legacy `animal.registered` version 1 streams deterministically resolve to `snake.v1`; they are not
+rewritten. Version 2 registration records the profile identity for new animals. Common identity,
+photos, feeding, enclosure assignment, inventory and expense associations, reminders, attachments,
+timeline, backup, and authorization remain shared. Snake length, shed, and bath facts remain
+snake-capability features. Spider molt and premolt facts are additive Animal contracts. Enclosure
+care remains in the neutral Enclosure aggregate.
 
 ### Enclosures
 
@@ -34,6 +47,8 @@ Husbandry and health are not peer bounded contexts. They issue commands through 
 - **Does not own:** current animal occupancy
 
 The Animal aggregate owns current enclosure assignment. Occupancy is a projection of animal streams. Enclosure events may use related-animal subject references.
+Watering and misting are enclosure-care facts and may reference an occupant through a typed subject;
+they do not change enclosure ownership or create type-specific enclosure aggregates.
 
 ### Inventory
 

@@ -5,8 +5,9 @@
 | Projection/group | Purpose | Consistency |
 |---|---|---|
 | `authorization_memberships` | Current membership, roles, account/household access | Synchronous |
-| `animal_current` | Profile, lifecycle, enclosure, latest measurements | Synchronous |
+| `animal_current` | Profile, registered capability profile, lifecycle, enclosure, latest applicable measurements | Synchronous |
 | `animal_effective_timeline` | Effective history and correction chain | Synchronous initially |
+| `spider_molt_history` | Effective spider molt and premolt history | Synchronous initially |
 | `health_current` | Active medication and material health state | Synchronous |
 | `enclosure_current` | Enclosure state and maintenance due facts | Synchronous |
 | `enclosure_occupancy` | Current projected occupancy from animal streams | Synchronous |
@@ -33,13 +34,21 @@ Each projection declares a stable name, schema version, handler version, support
 
 Asynchronous projections consume transactional outbox work in global-position order and expose freshness. A lagging or unavailable analytical projection cannot corrupt authoritative state.
 
-Reminder facts consume effective feeding, measurement, bath, cleaning, and water-change history.
+Reminder facts consume only care kinds registered for the subject's capability profile. Shared
+sources include effective feeding and applicable measurements; type-specific sources include snake
+shed/bath and spider molt/premolt. Enclosure-owned cleaning and water-change sources require no
+Animal capability profile. Configured misting requires a currently assigned capable occupant and
+the event's related Animal subject.
 Corrections, voids, and reinstatements therefore change their factual source and trigger deterministic
 recalculation. Each fact retains rule version, schedule kind, interval/override, source type and
 effective occurrence time, calculation time, and a technical source reference so the keeper view can
 explain the result without exposing event UUIDs.
 
 M6 analytics and recommendations remain read-side consumers; they do not own write aggregates.
+Their stable M5.5 inputs are animal type/capability identity, effective feeding history, applicable
+measurements, snake shed history, spider molt history, reminder facts, and neutral enclosure-care
+facts. Search and reports index a common animal document plus allow-listed capability-specific
+fields. Missing or inapplicable facts are not interpreted as zero, overdue, or negative evidence.
 Versioned husbandry reference profiles are curated reference data with explicit sources and profile
 versions. Missing guidance remains missing, ranges are preferred over false precision, and owner
 schedules remain authoritative. Deterministic suggestions are not the deferred AI-assistant feature.

@@ -50,6 +50,13 @@ This matrix is authoritative for architecture acceptance. Evidence paths are rel
 | R-044 | Fixed and event-relative reminder schedules use owner configuration and latest effective care history, preserve calculation provenance, and recalculate after correction/void/reinstatement/rebuild | RB | 0006, 0007, 0014, 0030, 0038 | TM-09, TM-11 | 5 | AT-REM-01 effective-history scheduling and provenance matrix | m5-operations/tests/reminders | M5 |
 | R-045 | Husbandry trends, interval statistics, and suggested care windows consume effective history, remain explainable, and are labeled as estimates | RB | 0007, 0038 | TM-09, TM-18 | 6 | AT-ANA-01 effective-history analytics and explanation suite | m6-product-experience/tests/husbandry-analytics | M6 |
 | R-046 | Optional species/life-stage reference profiles are curated, sourced, versioned, range-oriented, and subordinate to owner schedules | RB when enabled | 0038 | TM-09, TM-20 | 6 | AT-REF-01 provenance/version/precedence suite | m6-product-experience/tests/husbandry-references | M6 |
+| R-047 | All supported animal types share the Animal aggregate and common household services through registered, versioned capability profiles | RB | 0001, 0004, 0039 | TM-09, TM-14, TM-20 | 5.5 | AT-MSP-01 aggregate/profile registry and boundary suite | m5.5-multispecies-foundation/tests/capabilities | M5.5 |
+| R-048 | Legacy `animal.registered` v1 and all M0-M5 snake data replay unchanged as `snake.v1`; projections rebuild deterministically without event rewriting | RB | 0005, 0026, 0033, 0039 | TM-09, TM-20 | 5.5 | AT-MSP-02 legacy replay, migration, projection rebuild, and backup/restore suite | m5.5-multispecies-foundation/tests/compatibility | M5.5 |
+| R-049 | Spider is a usable typed care profile with feeding, optional weight, molt/premolt, rehousing, configured watering/misting, maintenance, photos, notes, reminders, and timeline | RB | 0004, 0005, 0039 | TM-04, TM-09 | 5.5 | AT-MSP-03 Spider domain and end-to-end care workflow suite | m5.5-multispecies-foundation/tests/spider-care | M5.5 |
+| R-050 | Application, domain, reminder, and presentation layers reject or hide care actions not declared by the subject capability profile | RB | 0015, 0031, 0034, 0039 | TM-04, TM-05, TM-09 | 5.5 | AT-MSP-04 capability enforcement and unauthorized/inapplicable action suite | m5.5-multispecies-foundation/security/capability-enforcement | M5.5 |
+| R-051 | Mixed collections reuse neutral enclosures, feeding/inventory, expenses, reminders, attachments, and effective history without duplicating subsystems | RB | 0004, 0007, 0011, 0014, 0017, 0039 | TM-04, TM-09, TM-11 | 5.5 | AT-MSP-05 mixed-household occupancy and shared-workflow suite | m5.5-multispecies-foundation/tests/mixed-collection | M5.5 |
+| R-052 | M6 consumers use animal type/capability and applicable effective facts without treating missing or inapplicable data as negative evidence | RB | 0007, 0019, 0038, 0039 | TM-04, TM-09, TM-18 | 5.5–6 | AT-MSP-06 read-contract and M6 extension-boundary suite | m5.5-multispecies-foundation/tests/m6-read-boundary | M5.5 |
+| R-053 | Mixed Snake/Spider keeper journeys are responsive, keyboard/screen-reader usable, and WCAG 2.2 AA without irrelevant controls | RB | 0034, 0039 | TM-05 | 5.5 | AT-MSP-07 desktop/mobile browser and accessibility suite | m5.5-multispecies-foundation/accessibility/mixed-collection | M5.5 |
 
 ## Coverage rule
 
@@ -63,7 +70,8 @@ A mandatory requirement is satisfied only when its governing document is accepte
 - **M3 event integrity proven** — accepted August 7, 2026; evidence under `m3-event-integrity`.
 - **M4 internal minimum usable baseline accepted** — accepted August 10, 2026; evidence under
   `m4-internal-baseline`. Remote deployment remains deferred.
-- **M5 implementation-qualified; owner acceptance pending** — qualified August 11, 2026; evidence
-  under `m5-operations`. All applicable technical release blockers pass, but M5 is not accepted or
-  merged. M6 through M8 have not started and remain unchecked.
+- **M5 operational workflows reliable** — accepted August 11, 2026; evidence under
+  `m5-operations`.
+- **M5.5 multi-species animal foundation accepted** — accepted August 15, 2026; evidence under
+  `m5.5-multispecies-foundation`. M6 through M8 have not started and remain unchecked.
 - `Raspberry Pi deployment qualified` remains pending under Phase 7/pre-deployment controls.

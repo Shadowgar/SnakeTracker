@@ -8,6 +8,10 @@ from datetime import datetime
 from typing import Any, Literal, cast
 from uuid import UUID
 
+from snaketracker.domains.animals.capabilities import (
+    UnknownCapabilityProfileError,
+    animal_capability_registry,
+)
 from snaketracker.domains.animals.contracts import (
     ANIMAL_STATUSES,
     AnimalBathRecordedV1,
@@ -16,9 +20,13 @@ from snaketracker.domains.animals.contracts import (
     AnimalFeedingRecordedV1,
     AnimalLengthCorrectedV1,
     AnimalLengthRecordedV1,
+    AnimalMoltCorrectedV1,
+    AnimalMoltRecordedV1,
     AnimalPhotoSelectedV1,
+    AnimalPremoltObservedV1,
     AnimalProfileCorrectedV1,
     AnimalRegisteredV1,
+    AnimalRegisteredV2,
     AnimalShedCorrectedV1,
     AnimalShedRecordedV1,
     AnimalStatusChangedV1,
@@ -28,6 +36,7 @@ from snaketracker.domains.animals.contracts import (
 from snaketracker.domains.enclosures.contracts import (
     ENCLOSURE_STATUSES,
     EnclosureCleaningRecordedV1,
+    EnclosureMistingRecordedV1,
     EnclosureProfileChangedV1,
     EnclosureRegisteredV1,
     EnclosureStatusChangedV1,
@@ -289,6 +298,52 @@ def _deserialize_animal_registered(data: Mapping[str, object]) -> EventPayload:
     )
 
 
+def _deserialize_animal_registered_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalRegisteredV2, data)
+    animal_id = data["animal_id"]
+    animal_type = data["animal_type"]
+    profile_version = data["capability_profile_version"]
+    required_text = ("name", "species", "status")
+    optional_text = (
+        "morph",
+        "genetics",
+        "sex",
+        "birth_hatch_date",
+        "acquisition_date",
+        "breeder_source",
+        "notes",
+    )
+    if (
+        not isinstance(animal_id, str)
+        or not isinstance(animal_type, str)
+        or type(profile_version) is not int
+        or any(not isinstance(data[name], str) for name in required_text)
+        or any(data[name] is not None and not isinstance(data[name], str) for name in optional_text)
+        or data["status"] not in ANIMAL_STATUSES
+    ):
+        raise ValueError("Stored animal registration v2 payload is invalid.")
+    try:
+        parsed_animal_id = UUID(animal_id)
+        animal_capability_registry.require_parts(animal_type, profile_version)
+    except (ValueError, UnknownCapabilityProfileError) as error:
+        raise ValueError("Stored animal registration v2 payload is invalid.") from error
+    return AnimalRegisteredV2(
+        animal_id=parsed_animal_id,
+        animal_type=animal_type,
+        capability_profile_version=profile_version,
+        name=cast(str, data["name"]),
+        species=cast(str, data["species"]),
+        morph=cast(str | None, data["morph"]),
+        genetics=cast(str | None, data["genetics"]),
+        sex=cast(str | None, data["sex"]),
+        birth_hatch_date=cast(str | None, data["birth_hatch_date"]),
+        acquisition_date=cast(str | None, data["acquisition_date"]),
+        breeder_source=cast(str | None, data["breeder_source"]),
+        status=data["status"],
+        notes=cast(str | None, data["notes"]),
+    )
+
+
 def _deserialize_animal_profile_corrected(data: Mapping[str, object]) -> EventPayload:
     _require_exact_fields(AnimalProfileCorrectedV1, data)
     required_text = ("name", "species")
@@ -340,6 +395,14 @@ ANIMAL_PROFILE_CONTRACTS = (
         owner="animals",
         payload_type=AnimalRegisteredV1,
         deserialize_payload=_deserialize_animal_registered,
+        subject_requirements=(SubjectRequirement("animal", "primary"),),
+    ),
+    EventContractRegistration(
+        event_type="animal.registered",
+        schema_version=2,
+        owner="animals",
+        payload_type=AnimalRegisteredV2,
+        deserialize_payload=_deserialize_animal_registered_v2,
         subject_requirements=(SubjectRequirement("animal", "primary"),),
     ),
     EventContractRegistration(
@@ -504,6 +567,41 @@ def _deserialize_animal_bath_recorded(data: Mapping[str, object]) -> EventPayloa
     return AnimalBathRecordedV1(duration_minutes=duration_minutes, reason=reason)
 
 
+def _molt_fields(data: Mapping[str, object], label: str) -> tuple[str, str | None]:
+    result = data["result"]
+    observation = data["observation"]
+    if (
+        not isinstance(result, str)
+        or result not in {"complete", "partial", "failed"}
+        or (observation is not None and not isinstance(observation, str))
+    ):
+        raise ValueError(f"Stored animal {label} payload is invalid.")
+    return result, observation
+
+
+def _deserialize_animal_molt_recorded(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalMoltRecordedV1, data)
+    result, observation = _molt_fields(data, "molt")
+    return AnimalMoltRecordedV1(result, observation)
+
+
+def _deserialize_animal_molt_corrected(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalMoltCorrectedV1, data)
+    result, observation = _molt_fields(data, "molt correction")
+    return AnimalMoltCorrectedV1(
+        _uuid_field(data, "target_event_id", "molt correction"), result, observation
+    )
+
+
+def _deserialize_animal_premolt_observed(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalPremoltObservedV1, data)
+    observed = data["observed"]
+    observation = data["observation"]
+    if type(observed) is not bool or (observation is not None and not isinstance(observation, str)):
+        raise ValueError("Stored animal premolt payload is invalid.")
+    return AnimalPremoltObservedV1(observed, observation)
+
+
 def _deserialize_animal_enclosure_assigned(data: Mapping[str, object]) -> EventPayload:
     _require_exact_fields(AnimalEnclosureAssignedV1, data)
     return AnimalEnclosureAssignedV1(
@@ -639,6 +737,43 @@ ANIMAL_HUSBANDRY_CONTRACTS = (
         ),
         correction=CorrectionCapabilities(voidable=True, reinstatable=True, required_role="owner"),
     ),
+    EventContractRegistration(
+        event_type="animal.molt_recorded",
+        schema_version=1,
+        owner="animals.husbandry",
+        payload_type=AnimalMoltRecordedV1,
+        deserialize_payload=_deserialize_animal_molt_recorded,
+        subject_requirements=(SubjectRequirement("animal", "primary"),),
+        correction=CorrectionCapabilities(
+            correctable=True,
+            voidable=True,
+            reinstatable=True,
+            required_role="owner",
+            correction_event_types=("animal.molt_corrected",),
+        ),
+    ),
+    EventContractRegistration(
+        event_type="animal.molt_corrected",
+        schema_version=1,
+        owner="animals.husbandry",
+        payload_type=AnimalMoltCorrectedV1,
+        deserialize_payload=_deserialize_animal_molt_corrected,
+        subject_requirements=(SubjectRequirement("animal", "primary"),),
+        correction=CorrectionCapabilities(voidable=True, reinstatable=True, required_role="owner"),
+    ),
+    EventContractRegistration(
+        event_type="animal.premolt_observed",
+        schema_version=1,
+        owner="animals.husbandry",
+        payload_type=AnimalPremoltObservedV1,
+        deserialize_payload=_deserialize_animal_premolt_observed,
+        subject_requirements=(SubjectRequirement("animal", "primary"),),
+        correction=CorrectionCapabilities(
+            voidable=True,
+            reinstatable=True,
+            required_role="owner",
+        ),
+    ),
 )
 
 
@@ -689,6 +824,17 @@ def _deserialize_enclosure_water_change(data: Mapping[str, object]) -> EventPayl
     return EnclosureWaterChangeRecordedV1()
 
 
+def _deserialize_enclosure_misting(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(EnclosureMistingRecordedV1, data)
+    duration = data["duration_seconds"]
+    observation = data["observation"]
+    if (duration is not None and type(duration) is not int) or (
+        observation is not None and not isinstance(observation, str)
+    ):
+        raise ValueError("Stored enclosure misting payload is invalid.")
+    return EnclosureMistingRecordedV1(duration, observation)
+
+
 ENCLOSURE_CONTRACTS = (
     EventContractRegistration(
         event_type="enclosure.registered",
@@ -730,6 +876,18 @@ ENCLOSURE_CONTRACTS = (
         payload_type=EnclosureWaterChangeRecordedV1,
         deserialize_payload=_deserialize_enclosure_water_change,
         subject_requirements=(SubjectRequirement("enclosure", "primary"),),
+        correction=CorrectionCapabilities(voidable=True, reinstatable=True, required_role="owner"),
+    ),
+    EventContractRegistration(
+        event_type="enclosure.misting_recorded",
+        schema_version=1,
+        owner="enclosures",
+        payload_type=EnclosureMistingRecordedV1,
+        deserialize_payload=_deserialize_enclosure_misting,
+        subject_requirements=(
+            SubjectRequirement("enclosure", "primary"),
+            SubjectRequirement("animal", "related"),
+        ),
         correction=CorrectionCapabilities(voidable=True, reinstatable=True, required_role="owner"),
     ),
 )

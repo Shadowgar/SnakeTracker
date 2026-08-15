@@ -9,11 +9,13 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine, RowMapping
 
 from snaketracker.application.animals import AnimalProfile
+from snaketracker.domains.animals.capabilities import capability_profile_for_registration
 from snaketracker.domains.animals.contracts import (
     AnimalEnclosureAssignedV1,
     AnimalPhotoSelectedV1,
     AnimalProfileCorrectedV1,
     AnimalRegisteredV1,
+    AnimalRegisteredV2,
     AnimalStatusChangedV1,
 )
 from snaketracker.platform.events.envelope import DomainEvent
@@ -31,16 +33,19 @@ class SQLAlchemyAnimalCurrentProjection:
             if event.stream_type != "animal":
                 continue
             if event.event_type == "animal.registered":
-                registered = cast(AnimalRegisteredV1, event.payload)
+                registered = cast(AnimalRegisteredV1 | AnimalRegisteredV2, event.payload)
+                capability_profile = capability_profile_for_registration(registered)
                 connection.execute(
                     text(
                         "INSERT INTO animal_current "
                         "(household_id,animal_id,name,species,morph,genetics,sex,birth_hatch_date,"
                         "acquisition_date,breeder_source,status,notes,current_enclosure_id,"
-                        "photo_attachment_version_id,stream_version,last_event_id,updated_at) "
+                        "photo_attachment_version_id,animal_type,capability_profile_version,"
+                        "stream_version,last_event_id,updated_at) "
                         "VALUES (:household_id,:animal_id,:name,:species,:morph,:genetics,:sex,"
                         ":birth_hatch_date,:acquisition_date,:breeder_source,:status,:notes,NULL,"
-                        "NULL,:stream_version,:last_event_id,:updated_at)"
+                        "NULL,:animal_type,:capability_profile_version,:stream_version,"
+                        ":last_event_id,:updated_at)"
                     ),
                     {
                         "household_id": str(event.household_id),
@@ -55,6 +60,8 @@ class SQLAlchemyAnimalCurrentProjection:
                         "breeder_source": registered.breeder_source,
                         "status": registered.status,
                         "notes": registered.notes,
+                        "animal_type": capability_profile.animal_type.value,
+                        "capability_profile_version": capability_profile.version,
                         "stream_version": event.stream_version,
                         "last_event_id": str(event.event_id),
                         "updated_at": event.recorded_at.isoformat(timespec="microseconds"),
@@ -218,6 +225,8 @@ def _profile_from_row(row: RowMapping) -> AnimalProfile:
             if row["photo_attachment_version_id"] is not None
             else None
         ),
+        animal_type=str(row["animal_type"]),
+        capability_profile_version=int(row["capability_profile_version"]),
         stream_version=int(row["stream_version"]),
     )
 

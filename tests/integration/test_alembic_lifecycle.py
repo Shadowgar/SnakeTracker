@@ -3,22 +3,26 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import create_engine, inspect, text
 
+from snaketracker.application.animals import AnimalService, RegisterAnimalCommand
 from snaketracker.application.household_bootstrap import (
     BootstrapCommand,
     HouseholdBootstrapService,
 )
+from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
 from snaketracker.infrastructure.database.engine import create_sqlite_engine
+from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
 from snaketracker.infrastructure.identity.bootstrap_repository import (
     SQLAlchemyHouseholdBootstrapRepository,
 )
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 
 ROOT = Path(__file__).parents[2]
-REVISION = "0009_operational_workflows"
+REVISION = "0010_multispecies_foundation"
 PHASE_FIVE_TABLES = {
     "aggregate_snapshots",
     "alembic_version",
@@ -73,6 +77,55 @@ def current_revision(database: Path) -> str | None:
             ).scalar_one_or_none()
     finally:
         engine.dispose()
+
+
+def test_multispecies_migration_blocks_downgrade_when_v2_events_exist(tmp_path: Path) -> None:
+    database = tmp_path / "multispecies-downgrade-guard.sqlite3"
+    config = alembic_config(database)
+    command.upgrade(config, "head")
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    try:
+        bootstrap = HouseholdBootstrapService(
+            SQLAlchemyHouseholdBootstrapRepository(engine),
+            Argon2PasswordHasher.for_testing(),
+            command_hash_secret=b"m55-migration-guard-secret-32-bytes",
+        ).bootstrap(
+            BootstrapCommand(
+                household_name="Mixed Migration Home",
+                timezone="UTC",
+                owner_email="owner@example.com",
+                owner_display_name="Owner",
+                password="correct horse battery staple",
+                idempotency_key="m55-migration-bootstrap",
+                correlation_id=uuid4(),
+            )
+        )
+        AnimalService(
+            SQLAlchemyEventStore(engine), SQLAlchemyAnimalCurrentProjection(engine)
+        ).register(
+            RegisterAnimalCommand(
+                household_id=bootstrap.household_id,
+                actor_user_id=bootstrap.user_id,
+                correlation_id=uuid4(),
+                idempotency_key="m55-migration-spider",
+                name="Charlotte",
+                species="Grammostola pulchra",
+                morph=None,
+                genetics=None,
+                sex=None,
+                birth_hatch_date=None,
+                acquisition_date=None,
+                breeder_source=None,
+                notes=None,
+                animal_type="spider",
+            )
+        )
+    finally:
+        engine.dispose()
+
+    with pytest.raises(RuntimeError, match=r"M5\.5 downgrade blocked"):
+        command.downgrade(config, "0009_operational_workflows")
+    assert current_revision(database) == REVISION
 
 
 def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -> None:
@@ -137,6 +190,60 @@ def test_phase_five_downgrade_normalizes_new_outbox_states(tmp_path: Path) -> No
             )
     finally:
         engine.dispose()
+
+
+def test_multispecies_migration_backfills_existing_animals_as_snake_v1(tmp_path: Path) -> None:
+    database = tmp_path / "multispecies-backfill.sqlite3"
+    config = alembic_config(database)
+    command.upgrade(config, "0009_operational_workflows")
+    engine = create_engine(f"sqlite+pysqlite:///{database}")
+    animal_id = uuid4()
+    household_id = uuid4()
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO animal_current "
+                    "(household_id,animal_id,name,species,status,stream_version,"
+                    "last_event_id,updated_at) VALUES "
+                    "(:household_id,:animal_id,'Legacy','Python regius','active',1,:event_id,"
+                    "'2026-08-11T12:00:00.000000+00:00')"
+                ),
+                {
+                    "household_id": str(household_id),
+                    "animal_id": str(animal_id),
+                    "event_id": str(uuid4()),
+                },
+            )
+    finally:
+        engine.dispose()
+
+    command.upgrade(config, "head")
+    engine = create_engine(f"sqlite+pysqlite:///{database}")
+    try:
+        columns = {column["name"] for column in inspect(engine).get_columns("animal_current")}
+        assert {"animal_type", "capability_profile_version"} <= columns
+        with engine.connect() as connection:
+            assert connection.execute(
+                text(
+                    "SELECT animal_type,capability_profile_version FROM animal_current "
+                    "WHERE animal_id=:animal_id"
+                ),
+                {"animal_id": str(animal_id)},
+            ).one() == ("snake", 1)
+    finally:
+        engine.dispose()
+
+    command.downgrade(config, "0009_operational_workflows")
+    engine = create_engine(f"sqlite+pysqlite:///{database}")
+    try:
+        remaining = {column["name"] for column in inspect(engine).get_columns("animal_current")}
+        assert remaining.isdisjoint({"animal_type", "capability_profile_version"})
+    finally:
+        engine.dispose()
+
+    command.upgrade(config, "head")
+    assert current_revision(database) == REVISION
 
 
 def test_migrations_contain_no_event_upcasters_or_phase_six_tables() -> None:

@@ -9,17 +9,26 @@ from typing import Protocol
 from uuid import UUID, uuid4, uuid5
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from snaketracker.domains.animals.capabilities import (
+    AnimalCapability,
+    UnknownCapabilityProfileError,
+    animal_capability_registry,
+    required_reminder_capability,
+)
 from snaketracker.domains.animals.contracts import (
     AnimalBathRecordedV1,
     AnimalFeedingCorrectedV1,
     AnimalFeedingRecordedV1,
     AnimalLengthCorrectedV1,
     AnimalLengthRecordedV1,
+    AnimalMoltCorrectedV1,
+    AnimalMoltRecordedV1,
     AnimalWeightCorrectedV1,
     AnimalWeightRecordedV1,
 )
 from snaketracker.domains.enclosures.contracts import (
     EnclosureCleaningRecordedV1,
+    EnclosureMistingRecordedV1,
     EnclosureWaterChangeRecordedV1,
 )
 from snaketracker.domains.reminders.contracts import (
@@ -50,8 +59,10 @@ REMINDER_SUBJECTS: dict[str, str] = {
     "weight": "animal",
     "length": "animal",
     "bath": "animal",
+    "molt": "animal",
     "cleaning": "enclosure",
     "water_change": "enclosure",
+    "misting": "enclosure",
 }
 REMINDER_FACT_NAMESPACE = UUID("0dfcdb6a-4a34-58ab-a0f0-ce8714678656")
 PROFILE_SCHEDULE_NAMESPACE = UUID("66570757-b1e8-58d5-98c2-b6f4f48a99b8")
@@ -125,6 +136,12 @@ class ReminderProjection(SynchronousProjection, Protocol):
     def facts_for(self, household_id: UUID) -> tuple[ReminderFact, ...]: ...
 
     def subject_exists(self, household_id: UUID, subject_type: str, subject_id: UUID) -> bool: ...
+
+    def animal_capability_profile(self, household_id: UUID, animal_id: UUID) -> str | None: ...
+
+    def enclosure_occupant_capability_profiles(
+        self, household_id: UUID, enclosure_id: UUID
+    ) -> tuple[str, ...]: ...
 
     def household_timezone(self, household_id: UUID) -> str: ...
 
@@ -220,6 +237,12 @@ class ReminderRuleService:
             command.household_id, command.subject_type, command.subject_id
         ):
             raise ReminderValidationError("Reminder subject does not exist in this household.")
+        self._ensure_subject_capability(
+            command.household_id,
+            command.subject_type,
+            command.subject_id,
+            command.reminder_type,
+        )
         reminder_type, kind, interval, anchor, override, channel = validated
         rule_id = uuid4()
         key = StreamKey(command.household_id, "reminder-rule", rule_id)
@@ -292,6 +315,12 @@ class ReminderRuleService:
             command.channel,
         )
         reminder_type, kind, interval, anchor, override, channel = validated
+        self._ensure_subject_capability(
+            command.household_id,
+            current.subject_type,
+            current.subject_id,
+            reminder_type,
+        )
         return self._append_change(
             command,
             "reminder.rule_changed",
@@ -336,6 +365,13 @@ class ReminderRuleService:
             command.household_id, command.subject_type, command.subject_id
         ):
             raise ReminderValidationError("Reminder subject does not exist in this household.")
+        if command.enabled:
+            self._ensure_subject_capability(
+                command.household_id,
+                command.subject_type,
+                command.subject_id,
+                command.reminder_type,
+            )
         reminder_type, kind, interval, anchor, override, channel = validated
         matches = tuple(
             rule
@@ -450,6 +486,39 @@ class ReminderRuleService:
             _stored_uuid(result.stored_response, "rule_id"),
             _stored_uuid(result.stored_response, "event_id"),
         ).current
+
+    def _ensure_subject_capability(
+        self,
+        household_id: UUID,
+        subject_type: str,
+        subject_id: UUID,
+        reminder_type: str,
+    ) -> None:
+        required = required_reminder_capability(reminder_type)
+        if required is None:
+            return
+        identities = (
+            (self._projection.animal_capability_profile(household_id, subject_id),)
+            if subject_type == "animal"
+            else self._projection.enclosure_occupant_capability_profiles(household_id, subject_id)
+            if subject_type == "enclosure" and required is AnimalCapability.MISTING
+            else ()
+        )
+        supported_identities = tuple(identity for identity in identities if identity is not None)
+        if not supported_identities:
+            raise ReminderValidationError("Reminder animal profile is unavailable.")
+        try:
+            profiles = tuple(
+                animal_capability_registry.require(identity) for identity in supported_identities
+            )
+        except UnknownCapabilityProfileError as error:
+            raise ReminderValidationError("Reminder animal profile is unsupported.") from error
+        if not any(profile.permits(required) for profile in profiles):
+            labels = ", ".join(profile.label for profile in profiles)
+            raise ReminderValidationError(
+                f"{reminder_type.replace('_', ' ').title()} reminders are not available "
+                f"for the {labels} profile."
+            )
 
     def _append_change(
         self,
@@ -682,8 +751,13 @@ def _qualifies(reminder_type: str, event: DomainEvent) -> bool:
             and isinstance(payload, (AnimalLengthRecordedV1, AnimalLengthCorrectedV1))
         )
         or (reminder_type == "bath" and isinstance(payload, AnimalBathRecordedV1))
+        or (
+            reminder_type == "molt"
+            and isinstance(payload, AnimalMoltRecordedV1 | AnimalMoltCorrectedV1)
+        )
         or (reminder_type == "cleaning" and isinstance(payload, EnclosureCleaningRecordedV1))
         or (reminder_type == "water_change" and isinstance(payload, EnclosureWaterChangeRecordedV1))
+        or (reminder_type == "misting" and isinstance(payload, EnclosureMistingRecordedV1))
     )
 
 

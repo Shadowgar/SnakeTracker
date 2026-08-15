@@ -13,15 +13,20 @@ from snaketracker.domains.animals.contracts import (
     AnimalFeedingRecordedV1,
     AnimalLengthCorrectedV1,
     AnimalLengthRecordedV1,
+    AnimalMoltCorrectedV1,
+    AnimalMoltRecordedV1,
     AnimalPhotoSelectedV1,
+    AnimalPremoltObservedV1,
     AnimalProfileCorrectedV1,
     AnimalRegisteredV1,
+    AnimalRegisteredV2,
     AnimalShedCorrectedV1,
     AnimalShedRecordedV1,
     AnimalStatusChangedV1,
     AnimalWeightCorrectedV1,
     AnimalWeightRecordedV1,
 )
+from snaketracker.domains.enclosures.contracts import EnclosureMistingRecordedV1
 from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
 from snaketracker.platform.events.envelope import DomainEvent
 
@@ -45,7 +50,7 @@ def present_care_event(
     payload = event.payload
     title = event.title
     technical_facts: tuple[tuple[str, str], ...] = ()
-    if isinstance(payload, AnimalRegisteredV1):
+    if isinstance(payload, AnimalRegisteredV1 | AnimalRegisteredV2):
         description = f"{payload.name} was added as {payload.species}."
     elif isinstance(payload, AnimalProfileCorrectedV1):
         description = f"Profile details now identify this animal as {payload.name}."
@@ -71,6 +76,27 @@ def present_care_event(
         description = f"{state} · {result} · {blue}"
     elif isinstance(payload, AnimalBathRecordedV1):
         description = f"{payload.duration_minutes} minutes · {payload.reason}"
+    elif isinstance(payload, AnimalMoltRecordedV1 | AnimalMoltCorrectedV1):
+        description = _label(payload.result)
+        if payload.observation:
+            description += f" · {payload.observation}"
+    elif isinstance(payload, AnimalPremoltObservedV1):
+        description = "Premolt observed" if payload.observed else "Premolt cleared"
+        if payload.observation:
+            description += f" · {payload.observation}"
+    elif isinstance(payload, EnclosureMistingRecordedV1):
+        title = "Misting recorded"
+        facts = (
+            [f"{payload.duration_seconds} seconds"] if payload.duration_seconds is not None else []
+        )
+        if payload.observation:
+            facts.append(payload.observation)
+        description = " · ".join(facts) if facts else "Misting or watering care recorded."
+        enclosure_name = (enclosure_names or {}).get(event.stream_id)
+        enclosure_reference = (
+            f"{enclosure_name} ({event.stream_id})" if enclosure_name else str(event.stream_id)
+        )
+        technical_facts = (("Enclosure", enclosure_reference),)
     elif isinstance(payload, AnimalEnclosureAssignedV1):
         names = enclosure_names or {}
         target_name = names.get(payload.enclosure_id)

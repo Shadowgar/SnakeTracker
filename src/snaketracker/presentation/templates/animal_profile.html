@@ -12,7 +12,7 @@
       <div>
       <p class="eyebrow">{{ principal.household_name }}</p>
       <h1 id="page-title">{{ animal.name }}</h1>
-      <p class="lede">{{ animal.species }}{% if animal.morph %} · {{ animal.morph }}{% endif %} · {{ animal.status|capitalize }}</p>
+      <p class="lede">{{ animal.type_label }} · {{ animal.species }}{% if animal.morph %} · {{ animal.morph }}{% endif %} · {{ animal.status|capitalize }}</p>
       </div>
     </div>
     <a class="button-link secondary-link" href="/animals">All animals</a>
@@ -22,11 +22,9 @@
   <section aria-labelledby="care-actions-title">
     <div class="section-heading"><div><p class="eyebrow">Quick entry</p><h2 id="care-actions-title">Care actions</h2></div><a href="/animals/{{ animal.animal_id }}/timeline">View full timeline</a></div>
     <div class="care-actions-grid">
-      <a class="care-action" href="/animals/{{ animal.animal_id }}/feedings/new"><strong>Record feeding</strong><span>Prey and outcome</span></a>
-      <a class="care-action" href="/animals/{{ animal.animal_id }}/weights/new"><strong>Record weight</strong><span>Weight in grams</span></a>
-      <a class="care-action" href="/animals/{{ animal.animal_id }}/lengths/new"><strong>Record length</strong><span>Length in millimetres</span></a>
-      <a class="care-action" href="/animals/{{ animal.animal_id }}/sheds/new"><strong>Record shed</strong><span>State and result</span></a>
-      <a class="care-action" href="/animals/{{ animal.animal_id }}/baths/new"><strong>Record bath</strong><span>Duration and reason</span></a>
+      {% for action in care_actions %}
+      <a class="care-action" href="{{ action.href }}"><strong>{{ action.title }}</strong><span>{{ action.description }}</span></a>
+      {% endfor %}
     </div>
   </section>
 
@@ -67,9 +65,11 @@
       <h2>Profile</h2>
       <dl class="fact-list">
         <div><dt>Species</dt><dd>{{ animal.species }}</dd></div>
+        <div><dt>Animal type</dt><dd>{{ animal.type_label }}</dd></div>
         <div><dt>Morph</dt><dd>{{ animal.morph or 'Not recorded' }}</dd></div>
         <div><dt>Sex</dt><dd>{{ animal.sex|capitalize if animal.sex else 'Not recorded' }}</dd></div>
         <div><dt>Status</dt><dd>{{ animal.status|capitalize }}</dd></div>
+        {% if premolt_status %}<div><dt>Premolt state</dt><dd>{{ premolt_status.label }}{% if premolt_status.observation %} · {{ premolt_status.observation }}{% endif %}</dd></div>{% endif %}
         <div><dt>Enclosure</dt><dd>{% if current_enclosure %}<a href="/enclosures/{{ current_enclosure.enclosure_id }}">{{ current_enclosure.name }}</a>{% else %}Not assigned{% endif %}</dd></div>
       </dl>
       {% if animal.notes %}<p class="keeper-note">{{ animal.notes }}</p>{% endif %}

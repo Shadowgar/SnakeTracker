@@ -7,6 +7,7 @@ import pytest
 from snaketracker.domains.animals.contracts import (
     AnimalLengthCorrectedV1,
     AnimalRegisteredV1,
+    AnimalRegisteredV2,
     AnimalShedCorrectedV1,
     AnimalWeightCorrectedV1,
 )
@@ -61,6 +62,79 @@ def test_animal_registration_rejects_malformed_stored_payload() -> None:
             "animal.registered",
             1,
             {"name": "Nyx"},
+        )
+
+
+def test_animal_registration_v2_is_typed_without_changing_v1() -> None:
+    animal_id = uuid4()
+    v1_registration = production_event_registry.registration("animal.registered", 1)
+    v2_registration = production_event_registry.registration("animal.registered", 2)
+
+    assert v1_registration.payload_type is AnimalRegisteredV1
+    assert v2_registration.payload_type is AnimalRegisteredV2
+    payload = production_event_registry.deserialize(
+        "animal.registered",
+        2,
+        {
+            "animal_id": str(animal_id),
+            "animal_type": "spider",
+            "capability_profile_version": 1,
+            "name": "Aragog",
+            "species": "Grammostola pulchra",
+            "morph": None,
+            "genetics": None,
+            "sex": None,
+            "birth_hatch_date": None,
+            "acquisition_date": None,
+            "breeder_source": None,
+            "status": "active",
+            "notes": "Calm juvenile.",
+        },
+    )
+
+    assert payload == AnimalRegisteredV2(
+        animal_id=animal_id,
+        animal_type="spider",
+        capability_profile_version=1,
+        name="Aragog",
+        species="Grammostola pulchra",
+        morph=None,
+        genetics=None,
+        sex=None,
+        birth_hatch_date=None,
+        acquisition_date=None,
+        breeder_source=None,
+        status="active",
+        notes="Calm juvenile.",
+    )
+
+
+@pytest.mark.parametrize(
+    ("animal_type", "profile_version"),
+    (("gecko", 1), ("spider", 2), ("snake", 0), ("SPIDER", 1)),
+)
+def test_animal_registration_v2_rejects_unknown_profiles(
+    animal_type: str, profile_version: int
+) -> None:
+    with pytest.raises(ValueError, match="invalid"):
+        production_event_registry.deserialize(
+            "animal.registered",
+            2,
+            {
+                "animal_id": str(uuid4()),
+                "animal_type": animal_type,
+                "capability_profile_version": profile_version,
+                "name": "Animal",
+                "species": "Species",
+                "morph": None,
+                "genetics": None,
+                "sex": None,
+                "birth_hatch_date": None,
+                "acquisition_date": None,
+                "breeder_source": None,
+                "status": "active",
+                "notes": None,
+            },
         )
 
 
@@ -168,6 +242,10 @@ def test_animal_correction_contracts_are_typed_and_replayable() -> None:
         (
             "animal.bath_recorded",
             {"duration_minutes": "20", "reason": "hydration"},
+        ),
+        (
+            "animal.molt_recorded",
+            {"result": [], "observation": None},
         ),
         ("animal.enclosure_assigned", {"enclosure_id": 7}),
         ("animal.photo_selected", {"attachment_version_id": "not-a-uuid"}),

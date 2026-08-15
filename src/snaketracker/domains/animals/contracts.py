@@ -26,6 +26,25 @@ class AnimalRegisteredV1:
 
 
 @dataclass(frozen=True, slots=True)
+class AnimalRegisteredV2:
+    """Common animal profile with an explicit registered capability profile."""
+
+    animal_id: UUID
+    animal_type: str
+    capability_profile_version: int
+    name: str
+    species: str
+    morph: str | None
+    genetics: str | None
+    sex: str | None
+    birth_hatch_date: str | None
+    acquisition_date: str | None
+    breeder_source: str | None
+    status: str
+    notes: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class AnimalProfileCorrectedV1:
     """Latest approved profile facts without rewriting the registration event."""
 
@@ -127,6 +146,31 @@ class AnimalBathRecordedV1:
 
     duration_minutes: int
     reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class AnimalMoltRecordedV1:
+    """Completed Spider molt result and keeper observation."""
+
+    result: str
+    observation: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class AnimalMoltCorrectedV1:
+    """Typed replacement facts for one Spider molt event."""
+
+    target_event_id: UUID
+    result: str
+    observation: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class AnimalPremoltObservedV1:
+    """Current observed premolt state and supporting keeper observation."""
+
+    observed: bool
+    observation: str | None
 
 
 @dataclass(frozen=True, slots=True)

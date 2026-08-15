@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "milestone": "M5.5",
+  "status": "M5.5 multi-species animal foundation accepted",
+  "accepted_at": "2026-08-15",
+  "generated_at": "2026-08-15T03:55:00Z",
+  "implementation_revision": "ebd5200",
+  "environment_classification": "laptop Docker development",
+  "native_raspberry_pi_qualification": "deferred to Phase 7/pre-deployment",
+  "quality": {
+    "tests": 337,
+    "focused_migration_replay_backup_tests": 94,
+    "line_coverage_percent": 94.84,
+    "branch_coverage_percent": 85.17,
+    "dependency_vulnerabilities": 0,
+    "ruff": "pass",
+    "mypy_strict": "pass"
+  },
+  "migration": {
+    "head": "0010_multispecies_foundation",
+    "upgrade_downgrade_reupgrade": "pass",
+    "integrity_check": "ok",
+    "foreign_key_violations": 0
+  },
+  "mixed_collection": {
+    "snake_count": 2,
+    "spider_count": 3,
+    "profile_photos": 5,
+    "database_bytes": 512000,
+    "domain_events": 14
+  },
+  "containers": {
+    "amd64_compose": "pass",
+    "arm64_platform": "linux/arm64",
+    "arm64_image_digest": "sha256:35288f3cc254936cbf8eed3652b14e6562031f00b9acd39bb3011c94ca8e2831",
+    "arm64_archive_sha256": "0e81262378a64e24b9fb3b25b45790a6cf01e58133658c00fa4f305bbc1b3b9a",
+    "arm64_archive_bytes": 133727232,
+    "non_root_uid": 1001,
+    "live_url": "http://localhost:8081"
+  },
+  "browser": {
+    "mixed_collection": "pass",
+    "desktop_and_mobile": "pass",
+    "mobile_viewport": "390x844",
+    "horizontal_overflow": false,
+    "console_errors": 0,
+    "console_warnings": 0,
+    "pa11y_axe_wcag2aa_runs": 7,
+    "pa11y_issues": 0
+  },
+  "github": {
+    "pull_request": 7,
+    "quality": "pass at ebd5200",
+    "container_trivy": "pass at ebd5200",
+    "coderabbit": "substantive review complete; eight threads resolved",
+    "copilot": "not available or reported",
+    "gitguardian": "pass at ebd5200"
+  },
+  "performance": {
+    "mixed_animal_stream_replay_samples": 30,
+    "mixed_animal_streams_per_pass": 5,
+    "mixed_animal_events_per_pass": 12,
+    "mixed_animal_stream_replay_p50_ms": 2.043,
+    "mixed_animal_stream_replay_p95_ms": 2.713,
+    "authenticated_collection_samples": 30,
+    "authenticated_collection_p50_ms": 53,
+    "authenticated_collection_p95_ms": 69,
+    "web_memory_mib": 61.84,
+    "worker_memory_mib": 38.52,
+    "nginx_memory_mib": 8.414
+  },
+  "commands": [
+    "./scripts/quality/check.sh",
+    "uv run pytest -q tests/integration/test_alembic_lifecycle.py tests/integration/test_application_startup.py tests/integration/test_event_store.py tests/integration/test_animal_care.py tests/integration/test_multispecies_animals.py tests/integration/test_local_backups.py tests/integration/test_maintenance_cli.py",
+    "docker compose up --build -d --wait",
+    "docker buildx build --platform linux/arm64 --build-arg SNAKETRACKER_UID=1001 --output type=oci,dest=/tmp/snaketracker-m55-arm64.oci.tar --metadata-file /tmp/snaketracker-m55-arm64-metadata.json ."
+  ]
+}

@@ -43,6 +43,14 @@
     {% elif care_kind == 'bath' %}
     <label>Duration (minutes)<input name="duration_minutes" type="number" min="1" value="{{ values.get('duration_minutes', '') }}" required></label>
     <label>Reason<input name="reason" value="{{ values.get('reason', '') }}" required></label>
+    {% elif care_kind == 'molt' %}
+    {% set result = values.get('result', 'complete') %}
+    <label>Molt result<select name="result">{% for option in ('complete', 'partial', 'failed') %}<option value="{{ option }}" {% if result == option %}selected{% endif %}>{{ option|capitalize }}</option>{% endfor %}</select></label>
+    {% elif care_kind == 'premolt' %}
+    {% set observed = values.get('observed', 'true') %}
+    <label>Premolt state<select name="observed"><option value="true" {% if observed == 'true' %}selected{% endif %}>Observed</option><option value="false" {% if observed == 'false' %}selected{% endif %}>Cleared</option></select></label>
+    {% elif care_kind == 'misting' %}
+    <label>Duration (seconds, optional)<input name="duration_seconds" type="number" min="1" max="3600" value="{{ values.get('duration_seconds', '') }}"></label>
     {% endif %}
 
     <label>Notes<textarea name="notes" rows="3" placeholder="Optional">{{ values.get('notes', '') }}</textarea></label>

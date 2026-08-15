@@ -36,3 +36,9 @@ class EnclosureCleaningRecordedV1:
 @dataclass(frozen=True, slots=True)
 class EnclosureWaterChangeRecordedV1:
     pass
+
+
+@dataclass(frozen=True, slots=True)
+class EnclosureMistingRecordedV1:
+    duration_seconds: int | None
+    observation: str | None

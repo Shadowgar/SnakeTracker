@@ -7,9 +7,15 @@ from datetime import UTC, datetime, timedelta
 from typing import Protocol
 from uuid import UUID, uuid4
 
+from snaketracker.domains.animals.capabilities import (
+    AnimalCapability,
+    UnknownCapabilityProfileError,
+    animal_capability_registry,
+)
 from snaketracker.domains.enclosures.contracts import (
     ENCLOSURE_STATUSES,
     EnclosureCleaningRecordedV1,
+    EnclosureMistingRecordedV1,
     EnclosureProfileChangedV1,
     EnclosureRegisteredV1,
     EnclosureStatusChangedV1,
@@ -61,6 +67,12 @@ class EnclosureCurrentProjection(SynchronousProjection, Protocol):
     def occupants_for(
         self, household_id: UUID, enclosure_id: UUID
     ) -> tuple[EnclosureOccupant, ...]: ...
+
+    def occupant_capability_profile(
+        self, household_id: UUID, enclosure_id: UUID, animal_id: UUID
+    ) -> str | None:
+        """Return one current household occupant's profile, or None if absent/unassigned."""
+        ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -116,6 +128,19 @@ class RecordWaterChangeCommand:
     correlation_id: UUID
     idempotency_key: str
     occurred_at: datetime
+    notes: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class RecordMistingCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    enclosure_id: UUID
+    animal_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    occurred_at: datetime
+    duration_seconds: int | None
     notes: str | None
 
 
@@ -235,6 +260,36 @@ class EnclosureService:
             scope="enclosures.record_water_change",
         )
 
+    def record_misting(self, command: RecordMistingCommand) -> DomainEvent:
+        if command.duration_seconds is not None and not 1 <= command.duration_seconds <= 3600:
+            raise EnclosureValidationError(
+                "Misting duration must be between 1 and 3600 seconds when provided."
+            )
+        identity = self._projection.occupant_capability_profile(
+            command.household_id, command.enclosure_id, command.animal_id
+        )
+        if identity is None:
+            raise EnclosureValidationError(
+                "Misting care is not available without an assigned household occupant."
+            )
+        try:
+            profile = animal_capability_registry.require(identity)
+        except UnknownCapabilityProfileError as error:
+            raise EnclosureValidationError("Animal capability profile is unsupported.") from error
+        if not profile.permits(AnimalCapability.MISTING):
+            raise EnclosureValidationError(
+                f"Misting care is not available for the {profile.label} profile."
+            )
+        observation = _optional_text(command.notes, "misting observation")
+        return self._record_maintenance(
+            command=command,
+            event_type="enclosure.misting_recorded",
+            title="Enclosure misting recorded",
+            payload=EnclosureMistingRecordedV1(command.duration_seconds, observation),
+            scope="enclosures.record_misting",
+            related_subjects=(EventSubject("animal", command.animal_id, "related", 1),),
+        )
+
     def occupants(self, household_id: UUID, enclosure_id: UUID) -> tuple[EnclosureOccupant, ...]:
         return self._projection.occupants_for(household_id, enclosure_id)
 
@@ -247,11 +302,12 @@ class EnclosureService:
     def _record_maintenance(
         self,
         *,
-        command: RecordCleaningCommand | RecordWaterChangeCommand,
+        command: RecordCleaningCommand | RecordWaterChangeCommand | RecordMistingCommand,
         event_type: str,
         title: str,
         payload: EventPayload,
         scope: str,
+        related_subjects: tuple[EventSubject, ...] = (),
     ) -> DomainEvent:
         key = StreamKey(command.household_id, "enclosure", command.enclosure_id)
         existing = self._event_store.load_stream(key)
@@ -272,6 +328,7 @@ class EnclosureService:
             title=title,
             payload=payload,
             notes=_optional_text(command.notes, "maintenance notes"),
+            related_subjects=related_subjects,
         )
         append = self._event_store.append_many(
             AtomicAppendRequest(
@@ -283,7 +340,18 @@ class EnclosureService:
                     idempotency_key=command.idempotency_key,
                     correlation_id=command.correlation_id,
                     stored_response={"event_id": str(event.event_id)},
-                    command={"occurred_at": command.occurred_at.isoformat(), "notes": event.notes},
+                    command={
+                        "occurred_at": command.occurred_at.isoformat(),
+                        "notes": event.notes,
+                        **(
+                            {
+                                "animal_id": str(command.animal_id),
+                                "duration_seconds": command.duration_seconds,
+                            }
+                            if isinstance(command, RecordMistingCommand)
+                            else {}
+                        ),
+                    },
                     recorded_at=recorded_at,
                 ),
                 synchronous_projections=(self._projection,),
@@ -374,6 +442,7 @@ def _event(
     title: str,
     payload: EventPayload,
     notes: str | None,
+    related_subjects: tuple[EventSubject, ...] = (),
 ) -> DomainEvent:
     candidate = DomainEvent(
         event_id=event_id,
@@ -389,7 +458,7 @@ def _event(
         correlation_id=correlation_id,
         causation_id=causation_id,
         idempotency_key=idempotency_key,
-        subjects=(EventSubject("enclosure", key.stream_id, "primary", 0),),
+        subjects=(EventSubject("enclosure", key.stream_id, "primary", 0), *related_subjects),
         title=title,
         description=None,
         payload=payload,

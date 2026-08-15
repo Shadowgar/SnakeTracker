@@ -54,3 +54,11 @@ def test_accepted_amendment_paths_cover_adr_0038_scheduling_and_reference_profil
 
 def test_accepted_amendment_paths_cover_m4_shed_correction_catalog() -> None:
     assert "docs/architecture/event-catalog.md" in freeze.APPROVED_AMENDMENT_PATHS
+
+
+def test_accepted_amendment_paths_cover_adr_0039_multispecies_foundation() -> None:
+    assert "docs/adr/0039-multispecies-animal-capabilities.md" in (freeze.APPROVED_AMENDMENT_PATHS)
+    assert "docs/architecture/domain-catalog.md" in freeze.APPROVED_AMENDMENT_PATHS
+    assert "docs/architecture/event-catalog.md" in freeze.APPROVED_AMENDMENT_PATHS
+    assert "docs/architecture/projection-catalog.md" in freeze.APPROVED_AMENDMENT_PATHS
+    assert freeze.ACCEPTANCE_DATES["0039"] == "2026-08-11"

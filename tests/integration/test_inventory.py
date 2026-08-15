@@ -499,8 +499,8 @@ def test_stock_linked_feeding_void_and_reinstatement_compensate_atomically(tmp_p
                 bootstrap.user_id,
                 uuid4(),
                 "linked-register-animal",
-                "Nyx",
-                "Python regius",
+                "Charlotte",
+                "Grammostola pulchra",
                 None,
                 None,
                 None,
@@ -508,6 +508,7 @@ def test_stock_linked_feeding_void_and_reinstatement_compensate_atomically(tmp_p
                 None,
                 None,
                 None,
+                animal_type="spider",
             )
         )
         feeding = animals.record_feeding(
