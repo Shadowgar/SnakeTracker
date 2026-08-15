@@ -4,7 +4,8 @@ Result: **Pass** on August 15, 2026.
 
 The complete local gate covers formatting, Ruff, architecture boundaries/freeze, documentation
 links, strict mypy, tests with line/branch coverage, dependency audit, Compose validation, and diff
-integrity. It passed 392 tests with 94.94% line and 85.09% branch coverage and no known dependency
+integrity. After the owner-review login and disposable-demo regressions, it passed 396 tests with
+95.00% line and 85.26% branch coverage and no known dependency
 vulnerabilities. The focused migration/replay/projection/search/analytics/backup suite passed 94
 tests.
 

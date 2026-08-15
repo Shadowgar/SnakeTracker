@@ -13,6 +13,7 @@ a strict-CSP read-only PWA shell. No production husbandry guidance is enabled.
 - [Laptop performance](performance/laptop-container/README.md)
 - [Containers and ARM64](containers/README.md)
 - [Real-browser evidence](browser/README.md)
+- [Owner-review demo and login recovery](owner-review/README.md)
 - [Accessibility](accessibility/critical-journeys/README.md)
 - [Reference-content gate](references/provenance/README.md)
 - [Review status](reviews/README.md)

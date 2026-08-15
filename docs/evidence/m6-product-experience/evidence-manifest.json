@@ -3,18 +3,18 @@
   "milestone": "M6",
   "status": "M6 implementation-qualified; owner acceptance pending",
   "qualified_at": "2026-08-15",
-  "implementation_revision": "e9b29fe",
+  "implementation_revision": "cad1c58",
   "environment_classification": "laptop Docker development",
   "native_raspberry_pi_qualification": "deferred to Phase 7/pre-deployment",
   "quality": {
-    "tests": 392,
+    "tests": 396,
     "focused_compatibility_tests": 94,
-    "line_coverage_percent": 94.94,
-    "branch_coverage_percent": 85.09,
+    "line_coverage_percent": 95.0,
+    "branch_coverage_percent": 85.26,
     "dependency_vulnerabilities": 0,
     "ruff": "pass",
     "mypy_strict": "pass",
-    "documentation_files_checked": 175
+    "documentation_files_checked": 176
   },
   "migration": {
     "head": "0011_product_experience",
@@ -54,6 +54,19 @@
   "references": {
     "schema_and_provenance": "pass",
     "production_guidance": "unavailable-pending-owner-source-approval"
+  },
+  "owner_review_follow_up": {
+    "normal_url": "http://localhost:8081",
+    "normal_data_preserved": true,
+    "login_guard_regression": "pass",
+    "demo_url": "http://localhost:18087",
+    "demo_scenario": "m6-owner-review.v1",
+    "demo_animals": 5,
+    "demo_enclosures": 4,
+    "demo_events": 100,
+    "demo_profile_photos": 5,
+    "browser_checkpoint": "pass",
+    "owner_acceptance": "pending"
   },
   "commands": [
     "./scripts/quality/check.sh",
