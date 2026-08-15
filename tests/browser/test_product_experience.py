@@ -62,4 +62,9 @@ def test_today_reports_search_and_read_only_pwa_shell_are_browser_visible(tmp_pa
         assert worker.headers["service-worker-allowed"] == "/"
         assert worker.headers["cache-control"] == "no-cache"
         assert 'method !== "GET"' in worker.text
+        assert "caches.keys()" in worker.text
+        pwa = client.get("/static/pwa.js")
+        assert 'form[action="/logout"]' in pwa.text
+        assert "caches.delete" in pwa.text
         assert "indexedDB" not in worker.text
+        assert "indexedDB" not in pwa.text
