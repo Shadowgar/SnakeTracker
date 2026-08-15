@@ -13,9 +13,13 @@ from snaketracker.platform.events.registry import (
     UnknownEventContractError,
     production_event_registry,
 )
+from snaketracker.platform.projections.definitions import (
+    ProjectionRegistry,
+    production_projection_registry,
+)
 
 CURRENT_MANIFEST_VERSION = 1
-CURRENT_RELATIONAL_SCHEMA_VERSION = 10
+CURRENT_RELATIONAL_SCHEMA_VERSION = 11
 MINIMUM_RELATIONAL_SCHEMA_VERSION = 0
 MINIMUM_SQLITE_VERSION = (3, 35, 0)
 
@@ -119,6 +123,11 @@ def inspect_database_compatibility(engine: Engine) -> CompatibilityReport:
             CompatibilityMode.RECOVERY_REQUIRED,
             "compatibility_inspection_failed",
             "Stored data could not be inspected safely.",
+        )
+    if revision == "0011_product_experience":
+        return evaluate_compatibility(
+            {"manifest_version": 1, "relational_schema_version": 11},
+            database_is_empty=False,
         )
     if revision == "0010_multispecies_foundation":
         return evaluate_compatibility(
@@ -248,6 +257,43 @@ def inspect_event_contracts(engine: Engine) -> CompatibilityReport:
 inspect_household_event_contracts = inspect_event_contracts
 
 
+def inspect_projection_compatibility(
+    engine: Engine, registry: ProjectionRegistry = production_projection_registry
+) -> CompatibilityReport:
+    """Reject startup when stored projection code is newer or unknown."""
+    try:
+        with engine.connect() as connection:
+            definitions = connection.exec_driver_sql(
+                "SELECT projection_name,projection_schema_version,handler_version "
+                "FROM projection_definitions"
+            ).all()
+        for name, schema_version, handler_version in definitions:
+            try:
+                registered = registry.definition(str(name))
+            except KeyError:
+                return _report(
+                    CompatibilityMode.RECOVERY_REQUIRED,
+                    "projection_definition_unknown",
+                    "Stored projections require a compatible application release.",
+                )
+            if (
+                int(schema_version) > registered.schema_version
+                or int(handler_version) > registered.handler_version
+            ):
+                return _report(
+                    CompatibilityMode.RECOVERY_REQUIRED,
+                    "projection_definition_newer",
+                    "Stored projections require a compatible application release.",
+                )
+    except (SQLAlchemyError, TypeError, ValueError):
+        return _report(
+            CompatibilityMode.RECOVERY_REQUIRED,
+            "projection_definition_inspection_failed",
+            "Stored projections could not be inspected safely.",
+        )
+    return _report(CompatibilityMode.NORMAL, "compatible", "The application is ready.")
+
+
 def inspect_startup_compatibility(engine: Engine) -> CompatibilityReport:
     """Require both the release runtime and stored schema to be compatible."""
     runtime = inspect_runtime_compatibility(engine)
@@ -256,4 +302,7 @@ def inspect_startup_compatibility(engine: Engine) -> CompatibilityReport:
     database = inspect_database_compatibility(engine)
     if not database.normal_readiness:
         return database
-    return inspect_event_contracts(engine)
+    events = inspect_event_contracts(engine)
+    if not events.normal_readiness:
+        return events
+    return inspect_projection_compatibility(engine)

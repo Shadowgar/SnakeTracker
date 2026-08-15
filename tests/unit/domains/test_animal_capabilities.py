@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from snaketracker.domains.animals.capabilities import (
+    AnimalAnalyticsKind,
     AnimalCapability,
     AnimalCapabilityRegistry,
     AnimalType,
@@ -31,6 +32,21 @@ def test_production_registry_contains_only_versioned_snake_and_spider_profiles()
     assert AnimalCapability.MOLT in spider.capabilities
     assert AnimalCapability.PREMOLT in spider.capabilities
     assert AnimalCapability.MISTING in spider.capabilities
+    assert snake.analytics_kinds == frozenset(
+        {
+            AnimalAnalyticsKind.FEEDING,
+            AnimalAnalyticsKind.WEIGHT,
+            AnimalAnalyticsKind.LENGTH,
+            AnimalAnalyticsKind.SHED,
+        }
+    )
+    assert spider.analytics_kinds == frozenset(
+        {
+            AnimalAnalyticsKind.FEEDING,
+            AnimalAnalyticsKind.WEIGHT,
+            AnimalAnalyticsKind.MOLT,
+        }
+    )
 
 
 def test_shared_capabilities_are_declared_once_by_both_profiles() -> None:
@@ -66,7 +82,9 @@ def test_profile_definitions_are_immutable() -> None:
 
 
 def test_registry_rejects_invalid_versions_and_duplicate_contract_identities() -> None:
-    invalid_version = CapabilityProfile(AnimalType.SPIDER, 0, "Spider", frozenset(), (), ())
+    invalid_version = CapabilityProfile(
+        AnimalType.SPIDER, 0, "Spider", frozenset(), (), (), frozenset()
+    )
     spider = animal_capability_registry.require("spider.v1")
 
     with pytest.raises(ValueError, match="registration is invalid"):

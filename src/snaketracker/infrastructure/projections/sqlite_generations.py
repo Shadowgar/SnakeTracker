@@ -56,15 +56,17 @@ class SQLiteProjectionGenerationManager:
                         text(
                             "INSERT INTO projection_generations "
                             "(generation_id,projection_name,physical_identifier,status,"
-                            "high_water_position,validation_json,created_at) "
+                            "high_water_position,validation_json,source_manifest_checksum,"
+                            "created_at) "
                             "VALUES (:generation_id,:name,:physical,'building',:high_water,"
-                            "'{}',:now)"
+                            "'{}',:source_manifest_checksum,:now)"
                         ),
                         {
                             "generation_id": str(generation_ids[definition.name]),
                             "name": definition.name,
                             "physical": layout.component(definition.name, definition.components[0]),
                             "high_water": high_water,
+                            "source_manifest_checksum": definition.source_manifest_checksum,
                             "now": now,
                         },
                     )
@@ -397,13 +399,16 @@ class SQLiteProjectionGenerationManager:
             text(
                 "INSERT INTO projection_definitions "
                 "(projection_name,projection_schema_version,handler_version,consistency_class,"
-                "rebuild_group,physical_identifier,updated_at) "
-                "VALUES (:name,:schema,:handler,:consistency,:rebuild_group,:physical,:now) "
+                "rebuild_group,physical_identifier,source_kind,freshness_threshold_seconds,"
+                "updated_at) VALUES (:name,:schema,:handler,:consistency,:rebuild_group,:physical,"
+                ":source_kind,:freshness,:now) "
                 "ON CONFLICT(projection_name) DO UPDATE SET "
                 "projection_schema_version=excluded.projection_schema_version,"
                 "handler_version=excluded.handler_version,"
                 "consistency_class=excluded.consistency_class,rebuild_group=excluded.rebuild_group,"
-                "physical_identifier=excluded.physical_identifier,updated_at=excluded.updated_at"
+                "physical_identifier=excluded.physical_identifier,source_kind=excluded.source_kind,"
+                "freshness_threshold_seconds=excluded.freshness_threshold_seconds,"
+                "updated_at=excluded.updated_at"
             ),
             {
                 "name": definition.name,
@@ -412,6 +417,8 @@ class SQLiteProjectionGenerationManager:
                 "consistency": definition.consistency_class,
                 "rebuild_group": definition.rebuild_group,
                 "physical": definition.physical_identifier,
+                "source_kind": definition.source_kind,
+                "freshness": definition.freshness_threshold_seconds,
                 "now": now,
             },
         )

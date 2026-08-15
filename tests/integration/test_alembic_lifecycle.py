@@ -22,7 +22,7 @@ from snaketracker.infrastructure.identity.bootstrap_repository import (
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 
 ROOT = Path(__file__).parents[2]
-REVISION = "0010_multispecies_foundation"
+REVISION = "0011_product_experience"
 PHASE_FIVE_TABLES = {
     "aggregate_snapshots",
     "alembic_version",
@@ -125,7 +125,7 @@ def test_multispecies_migration_blocks_downgrade_when_v2_events_exist(tmp_path: 
 
     with pytest.raises(RuntimeError, match=r"M5\.5 downgrade blocked"):
         command.downgrade(config, "0009_operational_workflows")
-    assert current_revision(database) == REVISION
+    assert current_revision(database) == "0010_multispecies_foundation"
 
 
 def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -> None:
@@ -144,7 +144,16 @@ def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -
 
     engine = create_engine(f"sqlite+pysqlite:///{database}")
     try:
-        assert set(inspect(engine).get_table_names()) == PHASE_FIVE_TABLES
+        inspector = inspect(engine)
+        assert set(inspector.get_table_names()) == PHASE_FIVE_TABLES
+        definition_columns = {
+            column["name"] for column in inspector.get_columns("projection_definitions")
+        }
+        generation_columns = {
+            column["name"] for column in inspector.get_columns("projection_generations")
+        }
+        assert {"source_kind", "freshness_threshold_seconds"} <= definition_columns
+        assert "source_manifest_checksum" in generation_columns
     finally:
         engine.dispose()
 
@@ -246,19 +255,36 @@ def test_multispecies_migration_backfills_existing_animals_as_snake_v1(tmp_path:
     assert current_revision(database) == REVISION
 
 
-def test_migrations_contain_no_event_upcasters_or_phase_six_tables() -> None:
+def test_migrations_contain_no_event_upcasters() -> None:
     migration_root = ROOT / "migrations"
     assert not list(migration_root.rglob("*upcaster*"))
 
-    migration_text = "\n".join(
-        path.read_text(encoding="utf-8") for path in migration_root.rglob("*.py")
-    ).lower()
-    forbidden = {
-        "husbandry_reference_profiles",
-        "global_search_fts",
-        "dashboard_statistics",
-    }
-    assert not {name for name in forbidden if name in migration_text}
+
+def test_product_experience_migration_blocks_downgrade_with_active_m6_definitions(
+    tmp_path: Path,
+) -> None:
+    database = tmp_path / "m6-downgrade-guard.sqlite3"
+    config = alembic_config(database)
+    command.upgrade(config, "head")
+    engine = create_engine(f"sqlite+pysqlite:///{database}")
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO projection_definitions "
+                    "(projection_name,projection_schema_version,handler_version,"
+                    "consistency_class,rebuild_group,physical_identifier,source_kind,"
+                    "freshness_threshold_seconds,updated_at) VALUES "
+                    "('global_search_fts',1,1,'asynchronous','search','search','event_stream',"
+                    "60,'2026-08-15T12:00:00.000000+00:00')"
+                )
+            )
+    finally:
+        engine.dispose()
+
+    with pytest.raises(RuntimeError, match="M6 downgrade blocked"):
+        command.downgrade(config, "0010_multispecies_foundation")
+    assert current_revision(database) == REVISION
 
 
 def test_identity_schema_has_required_uniqueness_and_foreign_keys(tmp_path: Path) -> None:
