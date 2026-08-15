@@ -422,7 +422,7 @@ def _new_form_response(
     status_code: int = 200,
     context: dict[str, Any] | None = None,
 ) -> HTMLResponse:
-    csrf_token = secrets.token_urlsafe(32)
+    csrf_token = request.cookies.get(CSRF_COOKIE) or secrets.token_urlsafe(32)
     response = templates.TemplateResponse(
         request,
         template,

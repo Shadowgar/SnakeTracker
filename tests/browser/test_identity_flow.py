@@ -198,6 +198,28 @@ def test_login_failure_rate_limit_and_unauthenticated_redirect(tmp_path: Path) -
         assert denied == 1
 
 
+def test_opening_a_second_login_page_does_not_invalidate_the_first_form(tmp_path: Path) -> None:
+    with client_for(tmp_path) as client:
+        complete_setup(client)
+        home = client.get("/home")
+        client.post("/logout", data={"csrf_token": csrf_from(home.text)})
+
+        first_page = client.get("/login")
+        client.get("/login")
+        response = client.post(
+            "/login",
+            data={
+                "csrf_token": csrf_from(first_page.text),
+                "email": "owner@example.com",
+                "password": "correct horse battery staple",
+            },
+            follow_redirects=False,
+        )
+
+        assert response.status_code == 303
+        assert response.headers["location"] == "/home"
+
+
 def test_completed_setup_and_authenticated_login_pages_redirect_safely(tmp_path: Path) -> None:
     with client_for(tmp_path) as client:
         complete_setup(client)
