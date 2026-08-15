@@ -365,12 +365,13 @@ class ReminderRuleService:
             command.household_id, command.subject_type, command.subject_id
         ):
             raise ReminderValidationError("Reminder subject does not exist in this household.")
-        self._ensure_subject_capability(
-            command.household_id,
-            command.subject_type,
-            command.subject_id,
-            command.reminder_type,
-        )
+        if command.enabled:
+            self._ensure_subject_capability(
+                command.household_id,
+                command.subject_type,
+                command.subject_id,
+                command.reminder_type,
+            )
         reminder_type, kind, interval, anchor, override, channel = validated
         matches = tuple(
             rule

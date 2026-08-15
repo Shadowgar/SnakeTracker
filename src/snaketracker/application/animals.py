@@ -75,6 +75,7 @@ CONTROLLABLE_ANIMAL_EVENT_TYPES = frozenset(
         "animal.bath_recorded",
         "animal.molt_recorded",
         "animal.molt_corrected",
+        "animal.premolt_observed",
     }
 )
 

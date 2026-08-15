@@ -243,6 +243,10 @@ def test_animal_correction_contracts_are_typed_and_replayable() -> None:
             "animal.bath_recorded",
             {"duration_minutes": "20", "reason": "hydration"},
         ),
+        (
+            "animal.molt_recorded",
+            {"result": [], "observation": None},
+        ),
         ("animal.enclosure_assigned", {"enclosure_id": 7}),
         ("animal.photo_selected", {"attachment_version_id": "not-a-uuid"}),
         (

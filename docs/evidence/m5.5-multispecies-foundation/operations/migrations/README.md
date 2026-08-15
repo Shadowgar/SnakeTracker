@@ -13,6 +13,5 @@ facts, and re-upgraded to 0010. Final checks reported:
 The migration suite also proves existing M5 animal rows backfill to `snake.v1`, v2/Spider facts
 block destructive downgrade, earlier migrations are unchanged, and M6 tables are absent.
 
-Reproduce with `uv run pytest -q tests/integration/test_alembic_lifecycle.py` plus the lifecycle
-commands recorded in `evidence-manifest.json`.
-
+Reproduce the complete lifecycle and downgrade guard with `uv run pytest -q
+tests/integration/test_alembic_lifecycle.py`.

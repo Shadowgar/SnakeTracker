@@ -70,7 +70,9 @@ class EnclosureCurrentProjection(SynchronousProjection, Protocol):
 
     def occupant_capability_profile(
         self, household_id: UUID, enclosure_id: UUID, animal_id: UUID
-    ) -> str | None: ...
+    ) -> str | None:
+        """Return one current household occupant's profile, or None if absent/unassigned."""
+        ...
 
 
 @dataclass(frozen=True, slots=True)

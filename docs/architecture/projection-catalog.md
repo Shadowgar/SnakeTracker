@@ -36,8 +36,9 @@ Asynchronous projections consume transactional outbox work in global-position or
 
 Reminder facts consume only care kinds registered for the subject's capability profile. Shared
 sources include effective feeding and applicable measurements; type-specific sources include snake
-shed/bath, spider molt/premolt, and configured enclosure watering/misting, cleaning, and water-change
-history.
+shed/bath and spider molt/premolt. Enclosure-owned cleaning and water-change sources require no
+Animal capability profile. Configured misting requires a currently assigned capable occupant and
+the event's related Animal subject.
 Corrections, voids, and reinstatements therefore change their factual source and trigger deterministic
 recalculation. Each fact retains rule version, schedule kind, interval/override, source type and
 effective occurrence time, calculation time, and a technical source reference so the keeper view can

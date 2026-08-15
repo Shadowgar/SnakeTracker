@@ -72,6 +72,6 @@ A mandatory requirement is satisfied only when its governing document is accepte
   `m4-internal-baseline`. Remote deployment remains deferred.
 - **M5 operational workflows reliable** — accepted August 11, 2026; evidence under
   `m5-operations`.
-- **M5.5 multi-species animal foundation** — planned; implementation and owner acceptance are
+- **M5.5 multi-species animal foundation** — implementation-qualified; owner acceptance is
   pending. M6 through M8 have not started and remain unchecked.
 - `Raspberry Pi deployment qualified` remains pending under Phase 7/pre-deployment controls.

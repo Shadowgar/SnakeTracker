@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from types import MappingProxyType
 
+from snaketracker.domains.animals.contracts import AnimalRegisteredV1, AnimalRegisteredV2
+
 
 class AnimalType(StrEnum):
     SNAKE = "snake"
@@ -178,3 +180,15 @@ def legacy_registration_profile() -> CapabilityProfile:
     """Map immutable v1 registrations to their historical Snake semantics."""
 
     return animal_capability_registry.require("snake.v1")
+
+
+def capability_profile_for_registration(
+    registration: AnimalRegisteredV1 | AnimalRegisteredV2,
+) -> CapabilityProfile:
+    """Resolve an immutable registration contract to its trusted capability profile."""
+
+    if isinstance(registration, AnimalRegisteredV1):
+        return legacy_registration_profile()
+    return animal_capability_registry.require_parts(
+        registration.animal_type, registration.capability_profile_version
+    )

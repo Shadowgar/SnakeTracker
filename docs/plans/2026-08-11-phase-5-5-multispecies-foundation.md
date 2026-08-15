@@ -85,7 +85,7 @@ explicit owner acceptance. Until then its roadmap boxes remain unchecked and M6 
 Create one forward Alembic revision, `0010_multispecies_foundation`, after
 `0009_operational_workflows`. It adds non-null `animal_type` and `capability_profile_version`
 projection columns using an expand/backfill/constrain sequence that SQLite can upgrade and
-downgrade safely, plus an allow-listed household/type index if query measurement justifies it.
+downgrade safely, plus the allow-listed `ix_animal_current_household_type` household/type index.
 Existing rows backfill to `snake`/`1`, derived from v1 registration semantics. Event tables and
 payload bytes are untouched.
 

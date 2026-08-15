@@ -570,8 +570,10 @@ def _deserialize_animal_bath_recorded(data: Mapping[str, object]) -> EventPayloa
 def _molt_fields(data: Mapping[str, object], label: str) -> tuple[str, str | None]:
     result = data["result"]
     observation = data["observation"]
-    if result not in {"complete", "partial", "failed"} or (
-        observation is not None and not isinstance(observation, str)
+    if (
+        not isinstance(result, str)
+        or result not in {"complete", "partial", "failed"}
+        or (observation is not None and not isinstance(observation, str))
     ):
         raise ValueError(f"Stored animal {label} payload is invalid.")
     return result, observation
@@ -766,6 +768,11 @@ ANIMAL_HUSBANDRY_CONTRACTS = (
         payload_type=AnimalPremoltObservedV1,
         deserialize_payload=_deserialize_animal_premolt_observed,
         subject_requirements=(SubjectRequirement("animal", "primary"),),
+        correction=CorrectionCapabilities(
+            voidable=True,
+            reinstatable=True,
+            required_role="owner",
+        ),
     ),
 )
 

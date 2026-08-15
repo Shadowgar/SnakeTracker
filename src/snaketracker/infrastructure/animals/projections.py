@@ -9,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine, RowMapping
 
 from snaketracker.application.animals import AnimalProfile
+from snaketracker.domains.animals.capabilities import capability_profile_for_registration
 from snaketracker.domains.animals.contracts import (
     AnimalEnclosureAssignedV1,
     AnimalPhotoSelectedV1,
@@ -33,12 +34,7 @@ class SQLAlchemyAnimalCurrentProjection:
                 continue
             if event.event_type == "animal.registered":
                 registered = cast(AnimalRegisteredV1 | AnimalRegisteredV2, event.payload)
-                if isinstance(registered, AnimalRegisteredV2):
-                    animal_type = registered.animal_type
-                    profile_version = registered.capability_profile_version
-                else:
-                    animal_type = "snake"
-                    profile_version = 1
+                capability_profile = capability_profile_for_registration(registered)
                 connection.execute(
                     text(
                         "INSERT INTO animal_current "
@@ -64,8 +60,8 @@ class SQLAlchemyAnimalCurrentProjection:
                         "breeder_source": registered.breeder_source,
                         "status": registered.status,
                         "notes": registered.notes,
-                        "animal_type": animal_type,
-                        "capability_profile_version": profile_version,
+                        "animal_type": capability_profile.animal_type.value,
+                        "capability_profile_version": capability_profile.version,
                         "stream_version": event.stream_version,
                         "last_event_id": str(event.event_id),
                         "updated_at": event.recorded_at.isoformat(timespec="microseconds"),

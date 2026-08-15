@@ -60,7 +60,9 @@ def test_profile_definitions_are_immutable() -> None:
     profile = animal_capability_registry.require("spider.v1")
 
     with pytest.raises(AttributeError):
-        profile.identity = "gecko.v1"  # type: ignore[misc]
+        profile.version = 2  # type: ignore[misc]
+    with pytest.raises(AttributeError):
+        profile.capabilities = frozenset()  # type: ignore[misc]
 
 
 def test_registry_rejects_invalid_versions_and_duplicate_contract_identities() -> None:

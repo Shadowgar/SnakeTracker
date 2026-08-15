@@ -237,9 +237,8 @@ def test_multispecies_migration_backfills_existing_animals_as_snake_v1(tmp_path:
     command.downgrade(config, "0009_operational_workflows")
     engine = create_engine(f"sqlite+pysqlite:///{database}")
     try:
-        assert "animal_type" not in {
-            column["name"] for column in inspect(engine).get_columns("animal_current")
-        }
+        remaining = {column["name"] for column in inspect(engine).get_columns("animal_current")}
+        assert remaining.isdisjoint({"animal_type", "capability_profile_version"})
     finally:
         engine.dispose()
 
