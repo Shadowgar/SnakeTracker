@@ -1,0 +1,94 @@
+{
+  "classification": "M6 laptop Docker development qualification",
+  "dataset": {
+    "animal_count": 100,
+    "event_count": 102,
+    "id": "snaketracker-reference-v1-m6-product-experience",
+    "production_husbandry_guidance": "unavailable-pending-owner-source-approval",
+    "sha256": "8bb0cae1bcb75e9ca42c04e66233d62a29bb581b9d48b55ce741d991a54bc6e4"
+  },
+  "environment": {
+    "architecture": "x86_64",
+    "cache_states": [
+      "cold",
+      "warm"
+    ],
+    "encryption": "application-backups-enabled; benchmark-database-ephemeral",
+    "filesystem": "ext4",
+    "python": "3.13.14",
+    "revision": "02919d8",
+    "sqlite": "3.53.1"
+  },
+  "measurements": {
+    "collection_ms": {
+      "count": 30,
+      "max": 1.0459959994477686,
+      "median": 0.7382885005426942,
+      "p95": 0.9965530007320922
+    },
+    "database_bytes": 1626112,
+    "foreign_key_violations": 0,
+    "free_bytes": 798159499264,
+    "generation_count": 12,
+    "integrity_check": "ok",
+    "max_rss_mib": 65.10546875,
+    "peak_observed_wal_bytes": 4140632,
+    "rebuilds": [
+      {
+        "cache_state": "cold",
+        "duration_seconds": 0.051305030998264556,
+        "group": "dashboard",
+        "high_water_position": 102
+      },
+      {
+        "cache_state": "cold",
+        "duration_seconds": 0.06994354000016756,
+        "group": "insights",
+        "high_water_position": 102
+      },
+      {
+        "cache_state": "cold",
+        "duration_seconds": 0.07229540599837492,
+        "group": "search",
+        "high_water_position": 102
+      },
+      {
+        "cache_state": "warm",
+        "duration_seconds": 0.05943226599993068,
+        "group": "dashboard",
+        "high_water_position": 102
+      },
+      {
+        "cache_state": "warm",
+        "duration_seconds": 0.05638072599867883,
+        "group": "insights",
+        "high_water_position": 102
+      },
+      {
+        "cache_state": "warm",
+        "duration_seconds": 0.07166629599851149,
+        "group": "search",
+        "high_water_position": 102
+      }
+    ],
+    "search_ms": {
+      "count": 30,
+      "max": 1.5813660011190223,
+      "median": 0.3669575007734238,
+      "p95": 0.5100910002511228
+    },
+    "seed_seconds": 1.560327644001518,
+    "shadow_headroom_multiple": 490839.19143576827
+  },
+  "schema_version": 1,
+  "targets": {
+    "all_rebuilds_under_30_seconds": true,
+    "collection_p95_at_most_500_ms": true,
+    "dataset_seeded": true,
+    "foreign_keys_ok": true,
+    "integrity_check_ok": true,
+    "memory_at_most_512_mib": true,
+    "search_p95_at_most_500_ms": true,
+    "shadow_headroom_at_least_2x": true
+  }
+}

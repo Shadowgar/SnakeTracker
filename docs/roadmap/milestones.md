@@ -99,7 +99,7 @@ Accepted: August 11, 2026
 - [x] RB Lease expiry, crash recovery, retry, reconciliation, and dead letters pass. Evidence: [durable jobs](../evidence/m5-operations/tests/jobs.md) and [crash recovery](../evidence/m5-operations/operations/crash-recovery.md).
 - [x] RB External side-effect strategies handle the uncertain crash window. Evidence: [external-effect recovery](../evidence/m5-operations/tests/external-effects.md).
 
-Owner acceptance: [August 11, 2026 owner acceptance record](../evidence/m5-operations/approvals/2026-08-11-owner-acceptance.md). Phase 6 has not started.
+Owner acceptance: [August 11, 2026 owner acceptance record](../evidence/m5-operations/approvals/2026-08-11-owner-acceptance.md).
 
 ## Phase 5.5 / M5.5 — Multi-species animal foundation
 
@@ -122,9 +122,11 @@ household systems.
 - [x] QT Development-environment mixed-collection replay, response, database-growth, and container measurements are retained as non-production evidence. Evidence: [laptop/container measurements](../evidence/m5.5-multispecies-foundation/performance/laptop-container/README.md) and [container qualification](../evidence/m5.5-multispecies-foundation/containers/README.md).
 - [ ] RD Remote access remains disabled until all RD controls through M7 are accepted.
 
-Owner acceptance: [August 15, 2026 owner acceptance record](../evidence/m5.5-multispecies-foundation/approvals/2026-08-15-owner-acceptance.md). M6 has not started.
+Owner acceptance: [August 15, 2026 owner acceptance record](../evidence/m5.5-multispecies-foundation/approvals/2026-08-15-owner-acceptance.md).
 
 ## Phase 6 / M6 — Product experience complete
+
+Status: M6 implementation-qualified; owner acceptance pending
 
 M6 begins only after M5.5 acceptance. Its search, reports, dashboards, analytics, reference profiles,
 and explainable suggestions must consume the registered animal type/capability identity, effective
@@ -132,16 +134,18 @@ feeding history, applicable measurements, snake shed history, spider molt histor
 neutral enclosure care, and versioned species/life-stage reference profiles. M6 does not redefine
 the Animal aggregate or infer that every care fact applies to every type.
 
-- [ ] RB FTS5 search cannot disclose unauthorized records.
-- [ ] RB Reports reconcile with authoritative event fixtures.
-- [ ] RB Projection freshness is visible when material.
-- [ ] RB Strict CSP passes without unsafe directives.
-- [ ] RB PWA performs no offline writes and persists only allow-listed drafts.
-- [ ] RB Critical journeys meet WCAG 2.2 AA.
-- [ ] QT Dashboard, search, UI, memory, and storage meet development-environment targets.
-- [ ] RB Weight/length trends, husbandry-frequency statistics, and feeding and shed interval analytics are presented from effective history.
-- [ ] RB Suggested feeding and shed windows use sufficient effective history, expose deterministic provenance, and are labeled as estimates rather than requirements.
-- [ ] RB Optional species/life-stage husbandry reference profiles are curated and versioned with sources, prefer ranges, never invent missing guidance, and never silently replace owner schedules.
+- [x] RB FTS5 search cannot disclose unauthorized records. Evidence: [search authorization](../evidence/m6-product-experience/security/search-authorization/README.md).
+- [x] RB Reports reconcile with authoritative event fixtures. Evidence: [report tests](../evidence/m6-product-experience/tests/reports/README.md).
+- [x] RB Projection freshness is visible when material. Evidence: [freshness and rebuilding behavior](../evidence/m6-product-experience/tests/async-freshness/README.md).
+- [x] RB Strict CSP passes without unsafe directives. Evidence: [CSP evidence](../evidence/m6-product-experience/security/csp/README.md).
+- [x] RB PWA performs no offline writes and persists only allow-listed drafts. Evidence: [read-only PWA evidence](../evidence/m6-product-experience/tests/pwa/README.md); zero forms are allow-listed.
+- [x] RB Critical journeys meet WCAG 2.2 AA. Evidence: [accessibility qualification](../evidence/m6-product-experience/accessibility/critical-journeys/README.md).
+- [x] QT Dashboard, search, UI, memory, and storage meet development-environment targets. Evidence: [laptop qualification](../evidence/m6-product-experience/performance/laptop-container/README.md).
+- [x] RB Weight/length trends, husbandry-frequency statistics, and feeding and shed interval analytics are presented from effective history. Evidence: [analytics evidence](../evidence/m6-product-experience/tests/measurement-analytics/README.md) and [husbandry evidence](../evidence/m6-product-experience/tests/husbandry-analytics/README.md).
+- [x] RB Suggested feeding and shed windows use sufficient effective history, expose deterministic provenance, and are labeled as estimates rather than requirements. Evidence: [suggestion-policy evidence](../evidence/m6-product-experience/tests/husbandry-analytics/README.md).
+- [x] RB Optional species/life-stage husbandry reference profiles are curated and versioned with sources, prefer ranges, never invent missing guidance, and never silently replace owner schedules. Evidence: [reference infrastructure and content gate](../evidence/m6-product-experience/references/provenance/README.md); production guidance remains unavailable pending separate owner source approval.
+
+Owner acceptance is not yet recorded. M7 and M8 remain unstarted.
 
 ## Phase 7 / M7 — Recovery and compatibility proven
 

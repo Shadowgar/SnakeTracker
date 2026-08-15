@@ -73,5 +73,8 @@ A mandatory requirement is satisfied only when its governing document is accepte
 - **M5 operational workflows reliable** — accepted August 11, 2026; evidence under
   `m5-operations`.
 - **M5.5 multi-species animal foundation accepted** — accepted August 15, 2026; evidence under
-  `m5.5-multispecies-foundation`. M6 through M8 have not started and remain unchecked.
+  `m5.5-multispecies-foundation`.
+- **M6 implementation-qualified; owner acceptance pending** — local/Docker implementation evidence
+  is under `m6-product-experience`. Production husbandry guidance remains unavailable pending its
+  separate source-bundle approval. M7 and M8 have not started and remain unchecked.
 - `Raspberry Pi deployment qualified` remains pending under Phase 7/pre-deployment controls.

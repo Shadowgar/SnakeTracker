@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "milestone": "M6",
+  "status": "M6 implementation-qualified; owner acceptance pending",
+  "qualified_at": "2026-08-15",
+  "implementation_revision": "02919d8",
+  "environment_classification": "laptop Docker development",
+  "native_raspberry_pi_qualification": "deferred to Phase 7/pre-deployment",
+  "quality": {
+    "tests": 390,
+    "focused_compatibility_tests": 93,
+    "line_coverage_percent": 94.93,
+    "branch_coverage_percent": 85.02,
+    "dependency_vulnerabilities": 0,
+    "ruff": "pass",
+    "mypy_strict": "pass",
+    "documentation_files_checked": 175
+  },
+  "migration": {
+    "head": "0011_product_experience",
+    "upgrade_downgrade_reupgrade": "pass",
+    "integrity_check": "ok",
+    "foreign_key_violations": 0
+  },
+  "performance": {
+    "dataset": "snaketracker-reference-v1-m6-product-experience",
+    "mixed_animals": 100,
+    "events": 102,
+    "search_p95_ms": 0.5101,
+    "collection_p95_ms": 0.9966,
+    "max_rss_mib": 65.11,
+    "cold_warm_projection_groups": 6
+  },
+  "containers": {
+    "amd64_compose": "pass",
+    "live_url": "http://localhost:8081",
+    "non_root_uid": 1001,
+    "arm64_platform": "linux/arm64",
+    "arm64_manifest_digest": "sha256:a4cb9ab7d9fcf52b5011237870dcaf0cfa83b6bbaa7be3fe750822c3b6a03a39",
+    "arm64_archive_sha256": "7c653cd027fe1e1c517faa80445f94f4f690ee1bdd8237ab49a8e7e4b1c5e7e7",
+    "arm64_archive_bytes": 134224384
+  },
+  "browser": {
+    "desktop_and_mobile": "pass",
+    "mobile_viewport": "390x844",
+    "console_errors": 0,
+    "console_warnings": 0,
+    "pa11y_axe_wcag2aa_runs": 5,
+    "pa11y_issues": 0,
+    "service_worker_root_scope": "pass",
+    "offline_writes": "disabled",
+    "persisted_draft_allowlist_count": 0
+  },
+  "references": {
+    "schema_and_provenance": "pass",
+    "production_guidance": "unavailable-pending-owner-source-approval"
+  },
+  "commands": [
+    "./scripts/quality/check.sh",
+    "uv run pytest -q tests/integration/test_alembic_lifecycle.py tests/integration/test_application_startup.py tests/integration/test_event_store.py tests/integration/test_atomic_append.py tests/integration/test_projection_rebuilds.py tests/integration/test_product_projection_worker.py tests/integration/test_search.py tests/integration/test_measurement_analytics.py tests/integration/test_multispecies_animals.py tests/integration/test_local_backups.py tests/integration/test_maintenance_cli.py tests/unit/bootstrap/test_compatibility.py tests/unit/application/test_suggestion_policy.py",
+    "uv run python -m scripts.benchmarks.phase6_qualification --database /tmp/snaketracker-m6-qualification.sqlite3 --output-dir docs/evidence/m6-product-experience/performance/laptop-container --animals 100 --samples 30",
+    "docker compose up --build -d --wait",
+    "docker buildx build --platform linux/arm64 --build-arg SNAKETRACKER_UID=1001 --output type=oci,dest=/tmp/snaketracker-m6-arm64-final.oci.tar .",
+    "npx --yes pa11y@9.0.1 --runner axe --standard WCAG2AA <qualified-url>"
+  ]
+}
