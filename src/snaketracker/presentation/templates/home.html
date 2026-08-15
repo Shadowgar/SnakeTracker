@@ -30,7 +30,7 @@
   <section class="agenda-section" aria-labelledby="home-{{ key }}">
     <h2 id="home-{{ key }}">{{ label }}</h2>
     <ul class="agenda-list">
-      {% for item in rows %}<li class="card agenda-card"><div class="agenda-card-heading"><div><p class="eyebrow">{{ item.reminder_type_label }}</p><h3>{{ item.subject_name }}</h3></div><time datetime="{{ item.due_at.isoformat() }}">{{ item.due_label }}</time></div><p>{{ item.explanation }}</p></li>{% endfor %}
+      {% for row in rows %}<li class="card agenda-card"><div class="agenda-card-heading"><div><p class="eyebrow">{{ row.title }}</p><h3><a href="{{ row.subject_url }}">{{ row.subject_name }}</a></h3></div><time datetime="{{ row.item.due_at.isoformat() }}">{% if row.item.status == 'overdue' %}Overdue{% elif row.item.status == 'due_today' %}Due today{% else %}Due {{ row.item.due_at.astimezone(household_zone).strftime('%b %d') }}{% endif %}</time></div><p>{{ row.item.explanation }}</p></li>{% endfor %}
     </ul>
   </section>
   {% endif %}

@@ -796,6 +796,7 @@ def create_web_router(
             "home.html",
             {
                 "principal": principal,
+                "household_zone": ZoneInfo(principal.household_timezone),
                 "csrf_token": csrf_token,
                 "animals": animals,
                 "agenda_groups": (

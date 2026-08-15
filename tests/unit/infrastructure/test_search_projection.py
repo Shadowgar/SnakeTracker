@@ -117,7 +117,8 @@ def test_fts_strategy_handles_updates_missing_controls_validation_and_cleanup() 
             strategy.drop(connection, layout)
             assert (
                 connection.exec_driver_sql(
-                    "SELECT count(*) FROM sqlite_master WHERE name IN ('search_content','search_fts')"
+                    "SELECT count(*) FROM sqlite_master "
+                    "WHERE name IN ('search_content','search_fts')"
                 ).scalar_one()
                 == 0
             )
