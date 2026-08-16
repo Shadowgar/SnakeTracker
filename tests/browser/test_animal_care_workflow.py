@@ -635,6 +635,14 @@ def test_keeper_histories_show_effective_values_and_hide_voided_facts(tmp_path: 
             )
             assert response.status_code == 303
 
+        profile = client.get(profile_url)
+        assert "2 medium mouse" in profile.text
+        assert "510 g" in profile.text
+        assert "925 mm" in profile.text
+        assert "Animal registered" not in profile.text
+        assert "Profile photo selected" not in profile.text
+        assert "Inventory stock consumed" not in profile.text
+
         feeding_history = client.get(f"{profile_url}/feedings")
         effective_feeding = feeding_history.text.split('<details class="technical-audit"', 1)[0]
         assert "2 medium mouse" in effective_feeding

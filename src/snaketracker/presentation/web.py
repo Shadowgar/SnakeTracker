@@ -6,7 +6,7 @@ import hashlib
 import hmac
 import json
 import secrets
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
@@ -132,6 +132,7 @@ from snaketracker.platform.events.validation import household_local_to_utc
 from snaketracker.platform.jobs.models import JobRecord
 from snaketracker.platform.notifications.service import NotificationIntentService
 from snaketracker.presentation.animal_care_views import (
+    CareEventView,
     present_care_events,
     present_effective_care_events,
 )
@@ -170,6 +171,36 @@ CARE_SCHEDULE_CAPABILITIES: dict[str, tuple[str, str, str]] = {
     "cleaning": ("Enclosure cleaning", "enclosure", "last qualifying cleaning"),
     "water_change": ("Water change", "enclosure", "last water change"),
 }
+
+RECENT_CARE_EVENT_TYPES = frozenset(
+    {
+        "animal.feeding_recorded",
+        "animal.feeding_corrected",
+        "animal.weight_recorded",
+        "animal.weight_corrected",
+        "animal.length_recorded",
+        "animal.length_corrected",
+        "animal.shed_recorded",
+        "animal.shed_corrected",
+        "animal.bath_recorded",
+        "animal.molt_recorded",
+        "animal.molt_corrected",
+        "animal.premolt_observed",
+        "animal.enclosure_assigned",
+        "enclosure.misting_recorded",
+        "enclosure.cleaning_recorded",
+        "enclosure.water_changed",
+    }
+)
+
+
+def _recent_care_views(
+    events: tuple[DomainEvent, ...], *, enclosure_names: Mapping[UUID, str]
+) -> tuple[CareEventView, ...]:
+    return present_effective_care_events(
+        tuple(event for event in events if event.event_type in RECENT_CARE_EVENT_TYPES),
+        enclosure_names=enclosure_names,
+    )
 
 
 class FormValidationError(ValueError):
@@ -1924,7 +1955,7 @@ def create_web_router(
             ),
             None,
         )
-        recent_events = present_effective_care_events(
+        recent_events = _recent_care_views(
             animal_service.effective_history(principal.household_id, profile.animal_id),
             enclosure_names={enclosure.enclosure_id: enclosure.name for enclosure in enclosures},
         )
@@ -2944,7 +2975,7 @@ def _animal_form_error(
         ),
         None,
     )
-    recent_events = present_effective_care_events(
+    recent_events = _recent_care_views(
         animal_service.effective_history(principal.household_id, profile.animal_id),
         enclosure_names={enclosure.enclosure_id: enclosure.name for enclosure in enclosures},
     )
