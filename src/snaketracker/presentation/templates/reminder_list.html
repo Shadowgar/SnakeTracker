@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Reminders · SnakeTracker{% endblock %}
+{% block title %}Reminders · Care Keeper{% endblock %}
 {% block content %}
 <section class="agenda-page" aria-labelledby="page-title">
   <header>
@@ -33,7 +33,7 @@
             <dl class="agenda-details">
               {% if row.item.source_occurred_at %}<div><dt>Last {{ row.item.source_label }}</dt><dd>{{ row.item.source_occurred_at.astimezone(household_zone).strftime('%b %d') }}</dd></div>{% endif %}
               <div><dt>Schedule</dt><dd>Every {{ row.item.interval_days }} day{% if row.item.interval_days != 1 %}s{% endif %}</dd></div>
-              {% if row.item.explanation == 'Owner due-date override' %}<div><dt>Due date</dt><dd>Owner override</dd></div>{% endif %}
+              {% if row.item.explanation == 'Owner due-date override' %}<div><dt>Due date</dt><dd>Custom due date</dd></div>{% endif %}
             </dl>
           </li>
           {% endfor %}

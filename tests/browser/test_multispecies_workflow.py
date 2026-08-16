@@ -377,10 +377,10 @@ def test_five_animal_mixed_collection_shows_type_photo_and_applicable_actions(
         assert "Spider A" in agenda.text
         assert "Molt" in agenda.text
 
-        home = client.get("/home")
+        more = client.get("/more")
         logged_out = client.post(
             "/logout",
-            data={"csrf_token": _csrf(home.text)},
+            data={"csrf_token": _csrf(more.text)},
             follow_redirects=False,
         )
         assert logged_out.status_code == 303

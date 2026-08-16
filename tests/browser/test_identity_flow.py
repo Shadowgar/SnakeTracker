@@ -65,21 +65,23 @@ def test_first_run_login_home_logout_and_login_again(tmp_path: Path) -> None:
         assert first.headers["location"] == "/setup"
 
         setup = client.get("/setup")
-        assert "Create your SnakeTracker home" in setup.text
+        assert "Create your Care Keeper home" in setup.text
         complete_setup(client)
 
         home = client.get("/home")
         assert home.status_code == 200
         assert "Welcome home, Rocco" in home.text
         assert "Rocco&#39;s Reptiles" in home.text
-        assert "Add animal" in home.text
-        assert "No animals yet" in home.text
+        animals = client.get("/animals")
+        assert "Add animal" in animals.text
+        assert "No animals yet" in animals.text
         assert "arrive in Phase 3" not in home.text
         assert "viewport" in home.text
 
+        more = client.get("/more")
         logout = client.post(
             "/logout",
-            data={"csrf_token": csrf_from(home.text)},
+            data={"csrf_token": csrf_from(more.text)},
             follow_redirects=False,
         )
         assert logout.status_code == 303
@@ -171,8 +173,8 @@ def test_cross_origin_form_submission_is_rejected_even_with_a_valid_token(tmp_pa
 def test_login_failure_rate_limit_and_unauthenticated_redirect(tmp_path: Path) -> None:
     with client_for(tmp_path) as client:
         complete_setup(client)
-        home = client.get("/home")
-        client.post("/logout", data={"csrf_token": csrf_from(home.text)})
+        more = client.get("/more")
+        client.post("/logout", data={"csrf_token": csrf_from(more.text)})
         statuses: list[int] = []
         for _ in range(6):
             page = client.get("/login")
@@ -201,8 +203,8 @@ def test_login_failure_rate_limit_and_unauthenticated_redirect(tmp_path: Path) -
 def test_opening_a_second_login_page_does_not_invalidate_the_first_form(tmp_path: Path) -> None:
     with client_for(tmp_path) as client:
         complete_setup(client)
-        home = client.get("/home")
-        client.post("/logout", data={"csrf_token": csrf_from(home.text)})
+        more = client.get("/more")
+        client.post("/logout", data={"csrf_token": csrf_from(more.text)})
 
         first_page = client.get("/login")
         client.get("/login")
@@ -262,12 +264,13 @@ def test_home_recovers_a_missing_csrf_cookie_by_rotating_the_session(tmp_path: P
         home = client.get("/home")
 
         assert home.status_code == 200
-        assert csrf_from(home.text)
+        assert client.cookies.get("snaketracker_csrf")
         assert client.cookies.get("snaketracker_csrf")
         assert client.cookies.get("snaketracker_session") != original_session
+        more = client.get("/more")
         logout = client.post(
             "/logout",
-            data={"csrf_token": csrf_from(home.text)},
+            data={"csrf_token": csrf_from(more.text)},
             follow_redirects=False,
         )
         assert logout.status_code == 303

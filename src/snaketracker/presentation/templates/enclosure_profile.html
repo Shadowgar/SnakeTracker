@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ enclosure.name }} · SnakeTracker{% endblock %}
+{% block title %}{{ enclosure.name }} · Care Keeper{% endblock %}
 {% block content %}
 <section class="animal-profile" aria-labelledby="page-title">
   <header class="profile-header">
@@ -20,7 +20,7 @@
     {% else %}<p class="muted">No animals are assigned here.</p>{% endif %}
   </section>
   <section class="care-grid" aria-label="Enclosure care records">
-    <form class="card form-stack" method="post" action="/enclosures/{{ enclosure.enclosure_id }}/cleanings">
+    <form id="cleaning" class="card form-stack" method="post" action="/enclosures/{{ enclosure.enclosure_id }}/cleanings">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="idempotency_key" value="{{ command_id }}-cleaning">
       <h2>Record cleaning</h2>
@@ -28,7 +28,7 @@
       <label>Notes<textarea name="notes" rows="3" placeholder="Optional"></textarea></label>
       <button type="submit">Save cleaning</button>
     </form>
-    <form class="card form-stack" method="post" action="/enclosures/{{ enclosure.enclosure_id }}/water-changes">
+    <form id="water-change" class="card form-stack" method="post" action="/enclosures/{{ enclosure.enclosure_id }}/water-changes">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="idempotency_key" value="{{ command_id }}-water">
       <h2>Record water change</h2>

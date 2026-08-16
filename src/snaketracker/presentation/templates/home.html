@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Home · SnakeTracker{% endblock %}
+{% block title %}Today · Care Keeper{% endblock %}
 {% block content %}
 <section class="dashboard" aria-labelledby="page-title">
   <header>
@@ -7,62 +7,22 @@
     <h1 id="page-title">Today</h1>
     <p class="lede">Welcome home, {{ principal.display_name }}. See what is due, then keep the day-to-day record close at hand.</p>
   </header>
-  <div class="dashboard-actions">
-    <a class="button-link" href="/animals/new">Add animal</a>
-    <a class="button-link secondary-link" href="/enclosures">Enclosures</a>
-    <a class="button-link secondary-link" href="/settings/backups">Backups</a>
-    {% if 'inventory.view' in principal.capabilities %}<a class="button-link secondary-link" href="/inventory">Inventory</a>{% endif %}
-    {% if 'expense.view' in principal.capabilities %}<a class="button-link secondary-link" href="/expenses">Expenses</a>{% endif %}
-    {% if 'reminder.view' in principal.capabilities %}<a class="button-link secondary-link" href="/reminders">Reminders</a>{% endif %}
-    {% if 'operations.view' in principal.capabilities %}<a class="button-link secondary-link" href="/operations/jobs">Operations</a>{% endif %}
-    <a class="button-link secondary-link" href="/reports">Reports</a>
-    <form method="post" action="/logout">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <button class="secondary" type="submit">Log out</button>
-    </form>
-  </div>
-  <div class="card status-card">
-    <span class="status-dot" aria-hidden="true"></span>
-    <div><strong>Household access active</strong><p>Signed in as {{ principal.role }}.</p></div>
-  </div>
+  {% set agenda = namespace(has_items=false) %}
   {% for key, label, rows in agenda_groups %}
   {% if rows %}
+  {% set agenda.has_items = true %}
   <section class="agenda-section" aria-labelledby="home-{{ key }}">
     <h2 id="home-{{ key }}">{{ label }}</h2>
     <ul class="agenda-list">
-      {% for row in rows %}<li class="card agenda-card"><div class="agenda-card-heading"><div><p class="eyebrow">{{ row.title }}</p><h3><a href="{{ row.subject_url }}">{{ row.subject_name }}</a></h3></div><time datetime="{{ row.item.due_at.isoformat() }}">{% if row.item.status == 'overdue' %}Overdue{% elif row.item.status == 'due_today' %}Due today{% else %}Due {{ row.item.due_at.astimezone(household_zone).strftime('%b %d') }}{% endif %}</time></div><p>{{ row.item.explanation }}</p></li>{% endfor %}
+      {% for row in rows %}<li class="card agenda-card"><div class="agenda-card-heading"><div><p class="eyebrow">{{ row.title }}</p><h3><a href="{{ row.subject_url }}">{{ row.subject_name }}</a></h3>{% if row.location_name %}<span class="muted">{{ row.location_name }}</span>{% endif %}</div><time datetime="{{ row.item.due_at.isoformat() }}">{% if row.item.status == 'overdue' %}Overdue{% elif row.item.status == 'due_today' %}Due today{% else %}Due {{ row.item.due_at.astimezone(household_zone).strftime('%b %d') }}{% endif %}</time></div><p>{{ row.explanation }}</p>{% if row.action_url %}<a class="button-link agenda-action" href="{{ row.action_url }}">{{ row.action_label }}</a>{% endif %}</li>{% endfor %}
     </ul>
   </section>
   {% endif %}
   {% endfor %}
-  <section class="card" aria-labelledby="collection-summary"><h2 id="collection-summary">Collection</h2>{% if collection_statistics %}<p>{{ collection_statistics.animals }} animals · {{ collection_statistics.enclosures }} enclosures</p>{% else %}<p>Collection statistics are catching up.</p>{% endif %}</section>
-  <div class="section-heading"><h2>Your animals</h2><a href="/reports/collection">View collection report</a></div>
-  {% if animals %}
-  <ul class="animal-list" aria-label="Animals">
-    {% for animal in animals %}
-    <li>
-      <a class="animal-card" href="/animals/{{ animal.animal_id }}">
-        {% if animal.photo_attachment_version_id %}
-        <img class="animal-card-photo" src="/attachments/{{ animal.photo_attachment_version_id }}" alt="Profile photo of {{ animal.name }}">
-        {% else %}
-        <span class="animal-card-placeholder" aria-hidden="true">{{ animal.name[0]|upper }}</span>
-        {% endif %}
-        <span class="animal-card-copy">
-          <strong>{{ animal.name }}</strong>
-          <span class="animal-type-label">{{ animal.type_label }}</span>
-          <span>{{ animal.species }}{% if animal.morph %} · {{ animal.morph }}{% endif %}</span>
-          <span class="status-label">{{ animal.status|capitalize }}</span>
-        </span>
-        <span class="animal-card-open" aria-hidden="true">View</span>
-      </a>
-    </li>
-    {% endfor %}
-  </ul>
-  {% else %}
-  <div class="empty-state">
-    <h2>No animals yet</h2>
-    <p>Add an animal to begin its care record.</p>
-  </div>
-  {% endif %}
+  {% if not agenda.has_items %}<section class="empty-state calm-state"><h2>Nothing needs attention today</h2><p>Upcoming care will appear here from the schedules you set.</p></section>{% endif %}
+  <a class="card collection-summary-link" href="/animals" aria-labelledby="collection-summary">
+    <span><strong id="collection-summary">Animals</strong>{% if collection_statistics %}<span>{{ collection_statistics.animals }} animals · {{ collection_statistics.enclosures }} enclosures</span>{% else %}<span>Collection statistics are catching up.</span>{% endif %}</span>
+    <span aria-hidden="true">View collection</span>
+  </a>
 </section>
 {% endblock %}

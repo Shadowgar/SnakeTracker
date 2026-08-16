@@ -7,6 +7,7 @@ import hmac
 import json
 import secrets
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -22,6 +23,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from snaketracker.application.analytics import (
     AnalyticsNotAvailableError,
+    AnimalAnalytics,
     AnimalAnalyticsService,
 )
 from snaketracker.application.animals import (
@@ -115,6 +117,7 @@ from snaketracker.application.search import (
     SearchUnavailableError,
     SearchValidationError,
 )
+from snaketracker.application.suggestion_policy import CareWindowEstimate
 from snaketracker.domains.animals.capabilities import (
     AnimalCapability,
     animal_capability_registry,
@@ -177,6 +180,50 @@ class JobReadRepository(Protocol):
     def list_for(self, household_id: UUID) -> tuple[JobRecord, ...]: ...
 
 
+@dataclass(frozen=True, slots=True)
+class AnalyticsInsightView:
+    """Capability-aware keeper copy around a deterministic estimate."""
+
+    kind: str
+    label: str
+    progress_label: str
+    observed_count: int
+    required_count: int
+    estimate: CareWindowEstimate | None
+
+
+def _analytics_insights(analytics: AnimalAnalytics) -> tuple[AnalyticsInsightView, ...]:
+    estimates = {item.kind: item for item in analytics.suggestions}
+    accepted_feedings = sum(1 for item in analytics.feedings if item.outcome == "accepted")
+    insights = [
+        AnalyticsInsightView(
+            kind="feeding",
+            label="Feeding",
+            progress_label="accepted feedings",
+            observed_count=accepted_feedings,
+            required_count=6,
+            estimate=estimates.get("feeding"),
+        )
+    ]
+    care_actions = frozenset(analytics.animal.care_action_keys)
+    for kind, label, plural in (
+        ("shed", "Shed", "completed sheds"),
+        ("molt", "Molt", "completed molts"),
+    ):
+        if kind in care_actions:
+            insights.append(
+                AnalyticsInsightView(
+                    kind=kind,
+                    label=label,
+                    progress_label=plural,
+                    observed_count=sum(1 for item in analytics.husbandry if item.kind == kind),
+                    required_count=5,
+                    estimate=estimates.get(kind),
+                )
+            )
+    return tuple(insights)
+
+
 def _form_datetime(value: object, household_timezone: str) -> datetime:
     try:
         parsed = datetime.fromisoformat(str(value))
@@ -236,6 +283,14 @@ def _form_idempotency_key(form: Any) -> str:
 
 def _form_values(form: Any) -> dict[str, str]:
     return {str(key): str(value) for key, value in form.items()}
+
+
+def _care_return_context(value: object) -> str:
+    return "today" if str(value) == "today" else "animal"
+
+
+def _care_return_location(animal_id: str, value: object) -> str:
+    return "/home" if _care_return_context(value) == "today" else f"/animals/{animal_id}"
 
 
 def _timeline_action_ids(events: tuple[DomainEvent, ...]) -> dict[str, frozenset[UUID]]:
@@ -823,7 +878,29 @@ def create_web_router(
 
     @router.get("/animals", response_class=HTMLResponse)
     async def animal_list(request: Request) -> Response:
-        return await home(request)
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        animals = animal_service.list_profiles(principal.household_id)
+        enclosures = enclosure_service.list_profiles(principal.household_id)
+        return protected_page(
+            request,
+            "animal_list.html",
+            principal,
+            context={
+                "animals": animals,
+                "enclosure_names": {
+                    enclosure.enclosure_id: enclosure.name for enclosure in enclosures
+                },
+            },
+        )
+
+    @router.get("/more", response_class=HTMLResponse)
+    async def more(request: Request) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        return protected_page(request, "more.html", principal)
 
     @router.get("/search", response_class=HTMLResponse)
     async def search(request: Request, q: str = "") -> Response:
@@ -958,7 +1035,10 @@ def create_web_router(
             request,
             "animal_analytics.html",
             principal,
-            context={"analytics": analytics},
+            context={
+                "analytics": analytics,
+                "insights": _analytics_insights(analytics),
+            },
         )
 
     @router.get("/api/v1/animals/{animal_id}/analytics/measurements")
@@ -2067,7 +2147,9 @@ def create_web_router(
         finally:
             if isinstance(upload, UploadFile):
                 await upload.close()
-        return RedirectResponse(f"/animals/{animal_id}", status_code=303)
+        return RedirectResponse(
+            _care_return_location(animal_id, form.get("return_to", "animal")), status_code=303
+        )
 
     @router.get("/attachments/{attachment_version_id}")
     async def attachment_delivery(request: Request, attachment_version_id: str) -> Response:
@@ -2149,7 +2231,9 @@ def create_web_router(
             )
         except (AnimalValidationError, FormValidationError, ValueError) as error:
             return _animal_edit_error(request, principal, animal_id, str(error), animal_service)
-        return RedirectResponse(f"/animals/{animal_id}", status_code=303)
+        return RedirectResponse(
+            _care_return_location(animal_id, form.get("return_to", "animal")), status_code=303
+        )
 
     @router.post("/animals/{animal_id}/status", response_class=HTMLResponse)
     async def animal_status_change(request: Request, animal_id: str) -> Response:
@@ -2183,7 +2267,9 @@ def create_web_router(
                 enclosure_service,
                 reminder_projection,
             )
-        return RedirectResponse(f"/animals/{animal_id}", status_code=303)
+        return RedirectResponse(
+            _care_return_location(animal_id, form.get("return_to", "animal")), status_code=303
+        )
 
     @router.post("/animals/{animal_id}/enclosure", response_class=HTMLResponse)
     async def animal_enclosure_assign(request: Request, animal_id: str) -> Response:
@@ -2223,7 +2309,9 @@ def create_web_router(
                 enclosure_service,
                 reminder_projection,
             )
-        return RedirectResponse(f"/animals/{animal_id}", status_code=303)
+        return RedirectResponse(
+            _care_return_location(animal_id, form.get("return_to", "animal")), status_code=303
+        )
 
     @router.post("/animals/{animal_id}/feedings", response_class=HTMLResponse)
     async def animal_feeding_create(request: Request, animal_id: str) -> Response:
@@ -2273,7 +2361,9 @@ def create_web_router(
                 error=str(error),
                 values=_form_values(form),
             )
-        return RedirectResponse(f"/animals/{animal_id}", status_code=303)
+        return RedirectResponse(
+            _care_return_location(animal_id, form.get("return_to", "animal")), status_code=303
+        )
 
     @router.post("/animals/{animal_id}/weights", response_class=HTMLResponse)
     async def animal_weight_create(request: Request, animal_id: str) -> Response:
@@ -2310,7 +2400,9 @@ def create_web_router(
                 error=str(error),
                 values=_form_values(form),
             )
-        return RedirectResponse(f"/animals/{animal_id}", status_code=303)
+        return RedirectResponse(
+            _care_return_location(animal_id, form.get("return_to", "animal")), status_code=303
+        )
 
     @router.post("/animals/{animal_id}/lengths", response_class=HTMLResponse)
     async def animal_length_create(request: Request, animal_id: str) -> Response:
@@ -2347,7 +2439,9 @@ def create_web_router(
                 error=str(error),
                 values=_form_values(form),
             )
-        return RedirectResponse(f"/animals/{animal_id}", status_code=303)
+        return RedirectResponse(
+            _care_return_location(animal_id, form.get("return_to", "animal")), status_code=303
+        )
 
     @router.post("/animals/{animal_id}/sheds", response_class=HTMLResponse)
     async def animal_shed_create(request: Request, animal_id: str) -> Response:
@@ -2386,7 +2480,9 @@ def create_web_router(
                 error=str(error),
                 values=_form_values(form),
             )
-        return RedirectResponse(f"/animals/{animal_id}", status_code=303)
+        return RedirectResponse(
+            _care_return_location(animal_id, form.get("return_to", "animal")), status_code=303
+        )
 
     @router.post("/animals/{animal_id}/baths", response_class=HTMLResponse)
     async def animal_bath_create(request: Request, animal_id: str) -> Response:
@@ -2424,7 +2520,9 @@ def create_web_router(
                 error=str(error),
                 values=_form_values(form),
             )
-        return RedirectResponse(f"/animals/{animal_id}", status_code=303)
+        return RedirectResponse(
+            _care_return_location(animal_id, form.get("return_to", "animal")), status_code=303
+        )
 
     @router.post("/animals/{animal_id}/molts", response_class=HTMLResponse)
     async def animal_molt_create(request: Request, animal_id: str) -> Response:
@@ -2458,7 +2556,9 @@ def create_web_router(
                 error=str(error),
                 values=_form_values(form),
             )
-        return RedirectResponse(f"/animals/{animal_id}", status_code=303)
+        return RedirectResponse(
+            _care_return_location(animal_id, form.get("return_to", "animal")), status_code=303
+        )
 
     @router.post("/animals/{animal_id}/premolt-observations", response_class=HTMLResponse)
     async def animal_premolt_create(request: Request, animal_id: str) -> Response:
@@ -2492,7 +2592,9 @@ def create_web_router(
                 error=str(error),
                 values=_form_values(form),
             )
-        return RedirectResponse(f"/animals/{animal_id}", status_code=303)
+        return RedirectResponse(
+            _care_return_location(animal_id, form.get("return_to", "animal")), status_code=303
+        )
 
     @router.post("/animals/{animal_id}/mistings", response_class=HTMLResponse)
     async def animal_misting_create(request: Request, animal_id: str) -> Response:
@@ -2534,7 +2636,9 @@ def create_web_router(
                 error=str(error),
                 values=_form_values(form),
             )
-        return RedirectResponse(f"/animals/{animal_id}", status_code=303)
+        return RedirectResponse(
+            _care_return_location(animal_id, form.get("return_to", "animal")), status_code=303
+        )
 
     @router.get("/animals/{animal_id}/events/{event_id}/correct", response_class=HTMLResponse)
     async def animal_event_correction_form(
@@ -3003,10 +3107,20 @@ def _agenda_rows(
     }
     for item in items:
         location_name = None
+        action_url = None
+        action_label = None
         if item.subject_type == "animal":
             animal = animal_by_id.get(item.subject_id)
             subject_name = animal.name if animal is not None else "Animal"
             subject_url = f"/animals/{item.subject_id}"
+            if (
+                animal is not None
+                and item.reminder_type in animal.care_action_keys
+                and item.reminder_type in CARE_FORM_DETAILS
+            ):
+                title, _description, route = CARE_FORM_DETAILS[item.reminder_type]
+                action_url = f"{subject_url}/{route}/new?return_to=today"
+                action_label = title
         else:
             enclosure = enclosure_by_id.get(item.subject_id)
             enclosure_occupants = occupants.get(item.subject_id, [])
@@ -3018,6 +3132,17 @@ def _agenda_rows(
             else:
                 subject_name = enclosure.name if enclosure is not None else "Enclosure"
                 subject_url = f"/enclosures/{item.subject_id}"
+            if item.reminder_type == "misting" and len(enclosure_occupants) == 1:
+                animal = enclosure_occupants[0]
+                if "misting" in animal.care_action_keys:
+                    action_url = f"/animals/{animal.animal_id}/mistings/new?return_to=today"
+                    action_label = "Record misting"
+            elif item.reminder_type in {"cleaning", "water_change"}:
+                anchor = "cleaning" if item.reminder_type == "cleaning" else "water-change"
+                action_url = f"/enclosures/{item.subject_id}#{anchor}"
+                action_label = (
+                    "Record cleaning" if item.reminder_type == "cleaning" else "Record water change"
+                )
         grouped[item.status].append(
             {
                 "item": item,
@@ -3028,6 +3153,13 @@ def _agenda_rows(
                 "subject_name": subject_name,
                 "subject_url": subject_url,
                 "location_name": location_name,
+                "action_url": action_url,
+                "action_label": action_label,
+                "explanation": (
+                    "Custom due date"
+                    if item.explanation == "Owner due-date override"
+                    else item.explanation
+                ),
             }
         )
     return {key: tuple(value) for key, value in grouped.items()}
@@ -3275,6 +3407,10 @@ def _animal_care_form_page(
             status_code=422,
         )
     title, description, route = CARE_FORM_DETAILS[care_kind]
+    form_values = values or {}
+    return_context = _care_return_context(
+        form_values.get("return_to", request.query_params.get("return_to", "animal"))
+    )
     return protected_page(
         request,
         "animal_care_form.html",
@@ -3287,7 +3423,9 @@ def _animal_care_form_page(
             "page_description": description,
             "action": f"/animals/{animal_id}/{route}",
             "errors": {"form": error} if error else {},
-            "values": values or {},
+            "values": form_values,
             "inventory_items": inventory_service.list_balances(principal.household_id),
+            "return_context": return_context,
+            "return_url": _care_return_location(animal_id, return_context),
         },
     )

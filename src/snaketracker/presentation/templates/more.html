@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}More · Care Keeper{% endblock %}
+{% block content %}
+<section class="more-page" aria-labelledby="page-title">
+  <header>
+    <p class="eyebrow">{{ principal.household_name }}</p>
+    <h1 id="page-title">More</h1>
+    <p class="lede">Reports, planning, account, and household operations.</p>
+  </header>
+  <nav class="more-grid" aria-label="Additional Care Keeper destinations">
+    <a class="care-action" href="/reports"><strong>Reports</strong><span>Review and export household records</span></a>
+    {% if 'expense.view' in principal.capabilities %}<a class="care-action" href="/expenses"><strong>Expenses</strong><span>Track household care costs</span></a>{% endif %}
+    {% if 'reminder.view' in principal.capabilities %}<a class="care-action" href="/reminders"><strong>Reminders</strong><span>Manage your care schedule</span></a>{% endif %}
+    {% if 'household.manage' in principal.capabilities %}<a class="care-action" href="/settings/backups"><strong>Backups</strong><span>Protect household records and attachments</span></a>{% endif %}
+    {% if 'operations.view' in principal.capabilities %}<a class="care-action" href="/operations/jobs"><strong>Operations</strong><span>Review background delivery work</span></a>{% endif %}
+  </nav>
+  <section class="card account-card" aria-labelledby="account-heading">
+    <div><h2 id="account-heading">Account</h2><p>{{ principal.display_name }} · {{ principal.role|capitalize }}</p></div>
+    <form method="post" action="/logout">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="secondary" type="submit">Log out</button>
+    </form>
+  </section>
+</section>
+{% endblock %}

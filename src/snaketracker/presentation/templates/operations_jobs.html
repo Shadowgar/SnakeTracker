@@ -1,3 +1,3 @@
 {% extends "base.html" %}
-{% block title %}Delivery operations · SnakeTracker{% endblock %}
+{% block title %}Delivery operations · Care Keeper{% endblock %}
 {% block content %}<section class="dashboard" aria-labelledby="page-title"><header><p class="eyebrow">Operations</p><h1 id="page-title">Delivery operations</h1><p class="lede">Durable notification jobs, reconciliation requirements, and dead letters. The M5 provider is local qualification only.</p></header>{% if jobs %}<ul class="record-list">{% for job in jobs %}<li><span><strong>{{ job.job_type }}</strong> · attempt {{ job.attempt_count }} of {{ job.max_attempts }}</span><span>{{ job.status|replace('_',' ')|title }}</span></li>{% endfor %}</ul>{% else %}<div class="empty-state"><h2>No delivery jobs</h2><p>Jobs appear after due reminder facts create notification intent.</p></div>{% endif %}</section>{% endblock %}

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ page_title }} · {{ animal.name }} · SnakeTracker{% endblock %}
+{% block title %}{{ page_title }} · {{ animal.name }} · Care Keeper{% endblock %}
 {% block content %}
 <section class="form-page care-form-page" aria-labelledby="page-title">
   <header>
@@ -11,6 +11,7 @@
   <form class="card form-stack" method="post" action="{{ action }}" novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="idempotency_key" value="{{ command_id }}">
+    <input type="hidden" name="return_to" value="{{ return_context }}">
     <label>When ({{ principal.household_timezone }})
       <input name="occurred_at" type="datetime-local" value="{{ values.get('occurred_at', '') }}" required>
     </label>
@@ -18,17 +19,22 @@
     {% if care_kind == 'feeding' %}
     <label>Prey type<input name="prey_type" value="{{ values.get('prey_type', '') }}" required></label>
     <label>Prey size<input name="prey_size" value="{{ values.get('prey_size', '') }}" required></label>
-    <label>Prey weight (g)<input name="prey_weight_grams" type="number" min="1" value="{{ values.get('prey_weight_grams', '') }}"></label>
-    <label>Preparation
-      {% set preparation = values.get('preparation_method', 'frozen_thawed') %}
-      <select name="preparation_method"><option value="frozen_thawed" {% if preparation == 'frozen_thawed' %}selected{% endif %}>Frozen thawed</option><option value="live" {% if preparation == 'live' %}selected{% endif %}>Live</option><option value="other" {% if preparation == 'other' %}selected{% endif %}>Other</option></select>
-    </label>
     <label>Quantity<input name="quantity" type="number" min="1" value="{{ values.get('quantity', '1') }}" required></label>
     <label>Outcome
       {% set outcome = values.get('outcome', 'accepted') %}
       <select name="outcome"><option value="accepted" {% if outcome == 'accepted' %}selected{% endif %}>Accepted</option><option value="refused" {% if outcome == 'refused' %}selected{% endif %}>Refused</option><option value="regurgitated" {% if outcome == 'regurgitated' %}selected{% endif %}>Regurgitated</option></select>
     </label>
-    {% if inventory_items %}<label>Use inventory<select name="inventory_item_id"><option value="">Do not deduct inventory</option>{% for item in inventory_items %}<option value="{{ item.item_id }}:{{ item.stream_version }}">{{ item.name }} · {{ item.on_hand_quantity }} {{ item.unit }} available</option>{% endfor %}</select></label><label>Inventory quantity<input name="inventory_quantity" type="number" min="1" value="{{ values.get('inventory_quantity','1') }}"></label>{% endif %}
+    <details class="form-advanced"{% if values.get('prey_weight_grams') or values.get('inventory_item_id') %} open{% endif %}>
+      <summary>More feeding details</summary>
+      <div class="form-stack">
+        <label>Prey weight (g)<input name="prey_weight_grams" type="number" inputmode="numeric" min="1" value="{{ values.get('prey_weight_grams', '') }}"></label>
+        <label>Preparation
+          {% set preparation = values.get('preparation_method', 'frozen_thawed') %}
+          <select name="preparation_method"><option value="frozen_thawed" {% if preparation == 'frozen_thawed' %}selected{% endif %}>Frozen thawed</option><option value="live" {% if preparation == 'live' %}selected{% endif %}>Live</option><option value="other" {% if preparation == 'other' %}selected{% endif %}>Other</option></select>
+        </label>
+        {% if inventory_items %}<label>Use inventory<select name="inventory_item_id"><option value="">Do not deduct inventory</option>{% for item in inventory_items %}<option value="{{ item.item_id }}:{{ item.stream_version }}">{{ item.name }} · {{ item.on_hand_quantity }} {{ item.unit }} available</option>{% endfor %}</select></label><label>Inventory quantity<input name="inventory_quantity" type="number" inputmode="numeric" min="1" value="{{ values.get('inventory_quantity','1') }}"></label>{% endif %}
+      </div>
+    </details>
     {% elif care_kind == 'weight' %}
     <label>Weight (g)<input name="weight_grams" type="number" min="1" value="{{ values.get('weight_grams', '') }}" required></label>
     {% elif care_kind == 'length' %}
@@ -55,7 +61,7 @@
 
     <label>Notes<textarea name="notes" rows="3" placeholder="Optional">{{ values.get('notes', '') }}</textarea></label>
     <div class="form-actions">
-      <a href="/animals/{{ animal.animal_id }}">Cancel</a>
+      <a href="{{ return_url }}">Cancel</a>
       <button type="submit">Save {{ care_kind }}</button>
     </div>
   </form>

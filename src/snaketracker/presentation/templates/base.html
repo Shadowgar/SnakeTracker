@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}SnakeTracker{% endblock %}</title>
+    <title>{% block title %}Care Keeper{% endblock %}</title>
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/static/app.css">
     <link rel="manifest" href="/static/manifest.webmanifest">
@@ -15,11 +15,18 @@
   <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
-      <a class="brand" href="/" aria-label="SnakeTracker home">
-        <span class="brand-mark" aria-hidden="true">S</span>
-        <span>SnakeTracker</span>
+      <a class="brand" href="/" aria-label="Care Keeper home">
+        <span class="brand-mark" aria-hidden="true">C</span>
+        <span>Care Keeper</span>
       </a>
       {% if principal is defined %}
+      <nav class="primary-nav" aria-label="Primary navigation">
+        <a href="/home"{% if request.url.path == '/home' %} aria-current="page"{% endif %}>Today</a>
+        <a href="/animals"{% if request.url.path.startswith('/animals') %} aria-current="page"{% endif %}>Animals</a>
+        <a href="/enclosures"{% if request.url.path.startswith('/enclosures') %} aria-current="page"{% endif %}>Enclosures</a>
+        {% if 'inventory.view' in principal.capabilities %}<a href="/inventory"{% if request.url.path.startswith('/inventory') %} aria-current="page"{% endif %}>Inventory</a>{% endif %}
+        <a href="/more"{% if request.url.path == '/more' %} aria-current="page"{% endif %}>More</a>
+      </nav>
       <form class="site-search" action="/search" method="get" role="search">
         <label class="visually-hidden" for="global-search">Search your household</label>
         <input id="global-search" name="q" type="search" maxlength="100" placeholder="Search" value="{{ query|default('') }}">

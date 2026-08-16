@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Animals · Care Keeper{% endblock %}
+{% block content %}
+<section class="animal-collection" aria-labelledby="page-title">
+  <header class="section-heading collection-heading">
+    <div><p class="eyebrow">{{ principal.household_name }}</p><h1 id="page-title">Animals</h1><p class="lede">Your snakes and spiders, together in one care collection.</p></div>
+    <a class="button-link" href="/animals/new">Add animal</a>
+  </header>
+  {% if animals %}
+  <ul class="animal-list" aria-label="Animals">
+    {% for animal in animals %}
+    <li>
+      <a class="animal-card" href="/animals/{{ animal.animal_id }}">
+        {% if animal.photo_attachment_version_id %}
+        <img class="animal-card-photo" src="/attachments/{{ animal.photo_attachment_version_id }}" alt="Profile photo of {{ animal.name }}">
+        {% else %}
+        <span class="animal-card-placeholder" aria-hidden="true">{{ animal.name[0]|upper }}</span>
+        {% endif %}
+        <span class="animal-card-copy">
+          <strong>{{ animal.name }}</strong>
+          <span class="animal-type-label">{{ animal.type_label }}</span>
+          <span>{{ animal.species }}{% if animal.morph %} · {{ animal.morph }}{% endif %}</span>
+          <span>{% if animal.current_enclosure_id and enclosure_names.get(animal.current_enclosure_id) %}{{ enclosure_names.get(animal.current_enclosure_id) }}{% else %}No enclosure assigned{% endif %}</span>
+          <span class="status-label">{{ animal.status|capitalize }}</span>
+        </span>
+        <span class="animal-card-open" aria-hidden="true">View</span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="empty-state onboarding-state">
+    <p class="eyebrow">Start your collection</p>
+    <h2>No animals yet</h2>
+    <p>Add the first animal to begin its profile, care history, enclosure, and reminders.</p>
+    <a class="button-link" href="/animals/new">Add your first animal</a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

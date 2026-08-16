@@ -69,10 +69,10 @@ def test_authenticated_keeper_can_track_animal_care_and_enclosure_workflow(
     with client_for(tmp_path) as client:
         setup_and_sign_in(client)
 
-        home = client.get("/home")
-        assert "Add animal" in home.text
-        assert 'href="/settings/backups"' in home.text
-        assert "No animals yet" in home.text
+        animals_page = client.get("/animals")
+        assert "Add animal" in animals_page.text
+        assert 'href="/settings/backups"' in client.get("/more").text
+        assert "No animals yet" in animals_page.text
 
         add_animal = client.get("/animals/new")
         registered = client.post(
@@ -558,6 +558,8 @@ def test_animal_list_and_profile_present_a_focused_keeper_experience(tmp_path: P
         assert f'href="{profile_url}/weights/new"' in profile.text
         assert f'action="{profile_url}/feedings"' not in profile.text
         assert f'action="{profile_url}/weights"' not in profile.text
+        assert profile.text.index("Care actions") < profile.text.index("Recent care")
+        assert profile.text.index("Recent care") < profile.text.index("Care schedule")
 
         care_pages = {
             "feedings/new": ("Record feeding", f"{profile_url}/feedings"),
@@ -572,6 +574,12 @@ def test_animal_list_and_profile_present_a_focused_keeper_experience(tmp_path: P
             assert title in page.text
             assert f'action="{action}"' in page.text
             assert 'href="' + profile_url + '"' in page.text
+        feeding_form = client.get(f"{profile_url}/feedings/new")
+        assert '<details class="form-advanced">' in feeding_form.text
+        assert "More feeding details" in feeding_form.text
+        assert feeding_form.text.index("Prey type") < feeding_form.text.index(
+            "More feeding details"
+        )
 
 
 def test_keeper_histories_show_effective_values_and_hide_voided_facts(tmp_path: Path) -> None:
@@ -1092,7 +1100,7 @@ def test_phase4_missing_resources_fail_closed_without_tenant_disclosure(tmp_path
         ):
             assert client.get(path).status_code == 404, path
 
-        csrf = csrf_from(client.get("/home").text)
+        csrf = csrf_from(client.get("/more").text)
         for index, path in enumerate(
             (
                 f"/animals/{missing_id}/edit",

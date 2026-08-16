@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Reports · SnakeTracker{% endblock %}
+{% block title %}Reports · Care Keeper{% endblock %}
 {% block content %}
 <section class="dashboard" aria-labelledby="page-title">
   <header><p class="eyebrow">{{ principal.household_name }}</p><h1 id="page-title">Reports</h1><p class="lede">Accessible, reconciled views of effective household records.</p></header>
@@ -10,10 +10,14 @@
   {% endif %}
   {% if report %}
   <div class="section-heading"><h2>{{ report.title }}</h2><a class="button-link secondary-link" href="{{ request.url.path }}.csv">Download CSV</a></div>
+  {% if report.rows %}
   <div class="table-scroll" tabindex="0" aria-label="{{ report.title }} table">
     <table><thead><tr>{% for column in report.columns %}<th scope="col">{{ column }}</th>{% endfor %}</tr></thead>
     <tbody>{% for row in report.rows %}<tr>{% for value in row.values %}<td>{{ value }}</td>{% endfor %}</tr>{% endfor %}</tbody></table>
   </div>
+  {% else %}
+  <div class="empty-state"><h2>No report records yet.</h2><p>Records will appear here after you add the related household activity.</p></div>
+  {% endif %}
   {% endif %}
 </section>
 {% endblock %}
