@@ -7,32 +7,38 @@ import argparse
 import hashlib
 import json
 import re
-import shutil
 import sqlite3
 from dataclasses import asdict, dataclass
 from datetime import UTC, date, datetime, time, timedelta
 from io import BytesIO
 from pathlib import Path
 
-from alembic import command
-from alembic.config import Config
 from fastapi.testclient import TestClient
 from PIL import Image, ImageDraw
+from pydantic import SecretStr
 
+from snaketracker.application.household_bootstrap import DEMO_EMAIL
 from snaketracker.bootstrap.application import build_application
 from snaketracker.bootstrap.configuration import Environment, Settings
+from snaketracker.operations.demo_household import provision_demo_household
 
 ROOT = Path(__file__).parents[2]
-DEMO_EMAIL = "owner@m6-demo.invalid"
 DEMO_PASSWORD = "m6-demo-local-only-password"
-DEMO_PORT = 18087
-DEMO_SCENARIO_VERSION = "m6-owner-review.v1"
+DEMO_SCENARIO_VERSION = "m6-owner-review.v2"
+DEMO_RUNTIME_SECRET = "m6-owner-review-demo-runtime-secret"
 PHOTO_COLORS = {
     "juniper": (72, 112, 67),
     "atlas": (155, 103, 62),
     "ember": (157, 70, 45),
     "sable": (66, 60, 73),
     "pip": (61, 114, 126),
+    "willow": (84, 92, 51),
+    "nova": (89, 72, 126),
+    "cedar": (135, 83, 45),
+    "mica": (83, 98, 105),
+    "cinder": (112, 58, 52),
+    "moss": (55, 96, 70),
+    "pearl": (126, 111, 133),
 }
 
 
@@ -41,7 +47,9 @@ class DemoSeedResult:
     scenario_version: str
     database: str
     as_of: str
+    household_id: str
     animal_count: int
+    enclosure_count: int
     snake_count: int
     spider_count: int
     profile_photo_count: int
@@ -79,7 +87,7 @@ def _csrf(client: TestClient) -> str:
     token = client.cookies.get("snaketracker_csrf")
     if token is None:
         raise RuntimeError("Demo browser session has no CSRF token.")
-    return token
+    return str(token)
 
 
 def _post(
@@ -99,7 +107,7 @@ def _post(
         raise RuntimeError(
             f"Demo seed request {path} failed with {response.status_code}: {response.text[:500]}"
         )
-    return response.headers.get("location", "")
+    return str(response.headers.get("location", ""))
 
 
 def _register_animal(
@@ -228,63 +236,95 @@ def _require_page_text(response_text: str, *, page: str, expected: tuple[str, ..
         raise RuntimeError(f"Demo {page} is missing expected keeper content: {missing!r}")
 
 
-def _prepare_target(data_dir: Path, *, replace: bool) -> Path:
+def _prepare_target(data_dir: Path) -> Path:
     resolved = data_dir.resolve()
-    if "demo" not in resolved.name.lower():
-        raise ValueError("The owner-review data directory name must contain 'demo'.")
     database = resolved / "snaketracker.sqlite3"
-    if database.exists() and not replace:
-        raise FileExistsError(f"{database} already exists; use --replace for disposable demo data.")
-    if replace:
-        for child in (database, resolved / "attachments", resolved / "backups"):
-            if child.is_dir():
-                shutil.rmtree(child)
-            elif child.exists():
-                child.unlink()
-    resolved.mkdir(parents=True, exist_ok=True)
+    if not database.is_file():
+        raise FileNotFoundError(f"The promoted database does not exist: {database}")
     return database
 
 
-def seed_demo(
-    data_dir: Path, *, as_of: date | None = None, replace: bool = False
-) -> DemoSeedResult:
-    """Seed a separate M6 demo exclusively through authenticated application routes."""
-    qualification_date = as_of or datetime.now(UTC).date()
-    database = _prepare_target(data_dir, replace=replace)
-    config = Config(ROOT / "alembic.ini")
-    config.set_main_option("script_location", str(ROOT / "migrations"))
-    config.set_main_option("sqlalchemy.url", f"sqlite+pysqlite:///{database}")
-    command.upgrade(config, "head")
-    app = build_application(
-        Settings(
-            environment=Environment.TEST,
-            database_path=database,
-            attachment_storage_path=database.parent / "attachments",
-            backup_storage_path=database.parent / "backups",
-            runtime_secret="m6-owner-review-demo-runtime-secret",
-            session_cookie_secure=False,
-        )
+def _login(client: TestClient) -> None:
+    page = client.get("/login")
+    token = re.search(r'name="csrf_token" value="([^"]+)"', page.text)
+    if token is None:
+        raise RuntimeError("Demo login page did not contain a CSRF token.")
+    response = client.post(
+        "/login",
+        data={
+            "csrf_token": token.group(1),
+            "email": DEMO_EMAIL,
+            "password": DEMO_PASSWORD,
+        },
+        follow_redirects=False,
     )
-    with TestClient(app) as client:
-        setup = client.get("/setup")
-        token = re.search(r'name="csrf_token" value="([^"]+)"', setup.text)
-        if token is None:
-            raise RuntimeError("Demo setup page did not contain a CSRF token.")
-        response = client.post(
-            "/setup",
-            data={
-                "csrf_token": token.group(1),
-                "household_name": "M6 Fictional Keeper Lab",
-                "timezone": "UTC",
-                "display_name": "Demo Keeper",
-                "email": DEMO_EMAIL,
-                "password": DEMO_PASSWORD,
-                "password_confirmation": DEMO_PASSWORD,
-            },
-            follow_redirects=False,
+    if response.status_code != 303:
+        raise RuntimeError(f"Demo login failed with {response.status_code}.")
+
+
+def _stored_result(manifest_path: Path, database: Path, household_id: str) -> DemoSeedResult | None:
+    if not manifest_path.is_file():
+        return None
+    data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if data.get("scenario_version") != DEMO_SCENARIO_VERSION:
+        raise RuntimeError("Existing demo manifest uses a conflicting scenario version.")
+    with sqlite3.connect(database) as connection:
+        actual = connection.execute(
+            "SELECT count(*) FROM animal_current WHERE household_id=?", (household_id,)
+        ).fetchone()[0]
+    if actual != data.get("animal_count"):
+        raise RuntimeError("Existing demo manifest conflicts with the promoted database.")
+    return DemoSeedResult(
+        scenario_version=str(data["scenario_version"]),
+        database=str(data["database"]),
+        as_of=str(data["as_of"]),
+        household_id=str(data["household_id"]),
+        animal_count=int(data["animal_count"]),
+        enclosure_count=int(data["enclosure_count"]),
+        snake_count=int(data["snake_count"]),
+        spider_count=int(data["spider_count"]),
+        profile_photo_count=int(data["profile_photo_count"]),
+        event_count=int(data["event_count"]),
+        prediction_ready=tuple(data["prediction_ready"]),
+        insufficient_history_animal=str(data["insufficient_history_animal"]),
+        animal_ids={str(key): str(value) for key, value in data["animal_ids"].items()},
+    )
+
+
+def seed_demo(
+    data_dir: Path,
+    *,
+    as_of: date | None = None,
+    runtime_secret: str = DEMO_RUNTIME_SECRET,
+) -> DemoSeedResult:
+    """Populate the reserved household in an existing promoted local database."""
+    qualification_date = as_of or datetime.now(UTC).date()
+    database = _prepare_target(data_dir)
+    settings = Settings(
+        environment=Environment.TEST,
+        database_path=database,
+        attachment_storage_path=database.parent / "attachments",
+        backup_storage_path=database.parent / "backups",
+        runtime_secret=SecretStr(runtime_secret),
+        session_cookie_secure=False,
+    )
+    provisioned = provision_demo_household(settings, password=DEMO_PASSWORD)
+    manifest_path = database.parent / "demo-manifest.json"
+    stored = _stored_result(manifest_path, database, str(provisioned.household_id))
+    if stored is not None:
+        return stored
+    with sqlite3.connect(database) as connection:
+        partial_animals = connection.execute(
+            "SELECT count(*) FROM animal_current WHERE household_id=?",
+            (str(provisioned.household_id),),
+        ).fetchone()[0]
+    if partial_animals:
+        raise RuntimeError(
+            "Partial demo data exists without a verified manifest; refusing changes."
         )
-        if response.status_code != 303:
-            raise RuntimeError(f"Demo bootstrap failed with {response.status_code}.")
+    app = build_application(settings)
+    with TestClient(app) as client:
+        _login(client)
 
         animals = {
             "Juniper": _register_animal(
@@ -327,6 +367,62 @@ def seed_demo(
                 species="Avicularia avicularia",
                 notes="New fictional demo spider with deliberately limited history.",
             ),
+            "Willow": _register_animal(
+                client,
+                key="willow",
+                animal_type="snake",
+                name="Willow",
+                species="Pantherophis guttatus",
+                notes="Fictional demo corn snake with a steady feeding history.",
+            ),
+            "Nova": _register_animal(
+                client,
+                key="nova",
+                animal_type="snake",
+                name="Nova",
+                species="Lampropeltis getula",
+                notes="Fictional demo kingsnake with prediction-ready care history.",
+            ),
+            "Cedar": _register_animal(
+                client,
+                key="cedar",
+                animal_type="snake",
+                name="Cedar",
+                species="Python regius",
+                notes="Fictional demo ball python with varied accepted feedings.",
+            ),
+            "Mica": _register_animal(
+                client,
+                key="mica",
+                animal_type="snake",
+                name="Mica",
+                species="Boa imperator",
+                notes="Fictional demo boa used for mobile collection density.",
+            ),
+            "Cinder": _register_animal(
+                client,
+                key="cinder",
+                animal_type="spider",
+                name="Cinder",
+                species="Brachypelma hamorii",
+                notes="Fictional demo spider with mature care history.",
+            ),
+            "Moss": _register_animal(
+                client,
+                key="moss",
+                animal_type="spider",
+                name="Moss",
+                species="Caribena versicolor",
+                notes="Fictional arboreal spider with enclosure care records.",
+            ),
+            "Pearl": _register_animal(
+                client,
+                key="pearl",
+                animal_type="spider",
+                name="Pearl",
+                species="Grammostola pulchripes",
+                notes="Fictional demo spider with prediction-ready molt history.",
+            ),
         }
 
         enclosures: dict[str, str] = {}
@@ -335,6 +431,11 @@ def seed_demo(
             ("canopy", "Copper Canopy Habitat", "terrarium", "Searchable climbing habitat."),
             ("burrow", "Velvet Burrow", "terrarium", "Searchable deep substrate habitat."),
             ("nursery", "Obsidian Nursery", "terrarium", "Searchable juvenile spider habitat."),
+            ("willow", "Willow Creek Habitat", "vivarium", "Fictional corn snake habitat."),
+            ("nova", "Nova Stone Terrarium", "terrarium", "Fictional kingsnake habitat."),
+            ("cedar", "Cedar Hollow Vivarium", "vivarium", "Fictional ball python habitat."),
+            ("moss", "Moss Canopy Cube", "terrarium", "Fictional arboreal spider habitat."),
+            ("pearl", "Pearl Prairie Terrarium", "terrarium", "Fictional terrestrial habitat."),
         ):
             location = _post(
                 client,
@@ -356,6 +457,13 @@ def seed_demo(
             ("ember-current", "Ember", "burrow", qualification_date - timedelta(days=110)),
             ("sable", "Sable", "burrow", qualification_date - timedelta(days=80)),
             ("pip", "Pip", "nursery", qualification_date - timedelta(days=20)),
+            ("willow", "Willow", "willow", qualification_date - timedelta(days=150)),
+            ("nova", "Nova", "nova", qualification_date - timedelta(days=170)),
+            ("cedar", "Cedar", "cedar", qualification_date - timedelta(days=130)),
+            ("mica", "Mica", "forest", qualification_date - timedelta(days=105)),
+            ("cinder", "Cinder", "pearl", qualification_date - timedelta(days=190)),
+            ("moss", "Moss", "moss", qualification_date - timedelta(days=95)),
+            ("pearl", "Pearl", "pearl", qualification_date - timedelta(days=210)),
         ):
             _post(
                 client,
@@ -567,11 +675,73 @@ def seed_demo(
                 notes="Limited fictional history for the insufficient-sample state.",
             )
 
-        for key, enclosure_key, route, days_ago, extra in (
-            ("forest-clean", "forest", "cleanings", 20, {}),
-            ("forest-water", "forest", "water-changes", 2, {}),
-            ("burrow-clean", "burrow", "cleanings", 18, {}),
-            ("burrow-water", "burrow", "water-changes", 1, {}),
+        bulk_history = {
+            "Atlas": ("mouse", "small adult", 18, 9),
+            "Sable": ("cricket", "medium", 2, 13),
+            "Willow": ("mouse", "hopper", 12, 8),
+            "Nova": ("mouse", "small adult", 19, 10),
+            "Cedar": ("mouse", "small adult", 21, 12),
+            "Mica": ("rat", "weaned", 34, 15),
+            "Cinder": ("roach", "medium", 3, 14),
+            "Moss": ("cricket", "small", 1, 7),
+            "Pearl": ("roach", "medium", 3, 16),
+        }
+        for animal_name, (prey, size, weight, interval_days) in bulk_history.items():
+            key_name = animal_name.casefold()
+            for index in range(25):
+                occurred = qualification_date - timedelta(
+                    days=(24 - index) * interval_days + 2
+                )
+                _record_feeding(
+                    client,
+                    animals[animal_name],
+                    key=f"{key_name}-history-{index}",
+                    occurred=occurred,
+                    prey=prey,
+                    size=size,
+                    weight=weight + index % 3,
+                    outcome="accepted",
+                    notes=f"Fictional {animal_name} historical feeding {index + 1}.",
+                )
+
+        for index, occurred in enumerate(
+            _dates_from_intervals(
+                qualification_date - timedelta(days=18), (41, 43, 42, 44, 41)
+            )
+        ):
+            _post(
+                client,
+                f"/animals/{animals['Nova']}/sheds",
+                {
+                    "idempotency_key": f"demo-shed-nova-{index}",
+                    "occurred_at": _form_time(occurred),
+                    "blue_state": "false",
+                    "completed": "true",
+                    "result": "complete",
+                    "notes": "Fictional Nova complete shed.",
+                },
+            )
+        for index, occurred in enumerate(
+            _dates_from_intervals(
+                qualification_date - timedelta(days=22), (61, 64, 62, 63, 60)
+            )
+        ):
+            _post(
+                client,
+                f"/animals/{animals['Pearl']}/molts",
+                {
+                    "idempotency_key": f"demo-molt-pearl-{index}",
+                    "occurred_at": _form_time(occurred),
+                    "result": "complete",
+                    "notes": "Fictional Pearl complete molt.",
+                },
+            )
+
+        for key, enclosure_key, route, days_ago in (
+            ("forest-clean", "forest", "cleanings", 20),
+            ("forest-water", "forest", "water-changes", 2),
+            ("burrow-clean", "burrow", "cleanings", 18),
+            ("burrow-water", "burrow", "water-changes", 1),
         ):
             _post(
                 client,
@@ -580,7 +750,6 @@ def seed_demo(
                     "idempotency_key": f"demo-{key}",
                     "occurred_at": _form_time(qualification_date - timedelta(days=days_ago)),
                     "notes": "Fictional demo habitat maintenance.",
-                    **extra,
                 },
             )
         _post(
@@ -620,6 +789,9 @@ def seed_demo(
         )
         _schedule(client, animals["Juniper"], kind="feeding", key="juniper-feed", interval=10)
         _schedule(client, animals["Ember"], kind="molt", key="ember-molt", interval=60)
+        _schedule(client, animals["Nova"], kind="feeding", key="nova-feed", interval=10)
+        _schedule(client, animals["Pearl"], kind="molt", key="pearl-molt", interval=62)
+        _schedule(client, animals["Moss"], kind="misting", key="moss-mist", interval=3)
 
         expense_locations: list[str] = []
         for index, amount, category, payee, notes in (
@@ -686,7 +858,7 @@ def seed_demo(
         )
 
         home = client.get("/home")
-        home_expectations = ["5 animals", "4 enclosures"]
+        home_expectations = ["12 animals", "9 enclosures"]
         if qualification_date == datetime.now(UTC).date():
             home_expectations.extend(("Overdue", "Due today", "Upcoming"))
         _require_page_text(
@@ -711,6 +883,8 @@ def seed_demo(
         analytics_expectations = {
             "Juniper": ("feeding estimate", "shed estimate"),
             "Ember": ("feeding estimate", "molt estimate"),
+            "Nova": ("feeding estimate", "shed estimate"),
+            "Pearl": ("feeding estimate", "molt estimate"),
             "Pip": ("Not enough history yet",),
         }
         for name, expected in analytics_expectations.items():
@@ -721,20 +895,30 @@ def seed_demo(
     app.state.database_engine.dispose()
 
     with sqlite3.connect(database) as connection:
-        event_count = int(connection.execute("SELECT count(*) FROM domain_events").fetchone()[0])
+        event_count = int(
+            connection.execute(
+                "SELECT count(*) FROM domain_events WHERE household_id=?",
+                (str(provisioned.household_id),),
+            ).fetchone()[0]
+        )
         photo_count = int(
-            connection.execute("SELECT count(*) FROM attachment_versions").fetchone()[0]
+            connection.execute(
+                "SELECT count(*) FROM attachment_versions WHERE household_id=?",
+                (str(provisioned.household_id),),
+            ).fetchone()[0]
         )
     result = DemoSeedResult(
         scenario_version=DEMO_SCENARIO_VERSION,
         database=str(database),
         as_of=qualification_date.isoformat(),
-        animal_count=5,
-        snake_count=2,
-        spider_count=3,
+        household_id=str(provisioned.household_id),
+        animal_count=12,
+        enclosure_count=9,
+        snake_count=6,
+        spider_count=6,
         profile_photo_count=photo_count,
         event_count=event_count,
-        prediction_ready=("Ember", "Juniper"),
+        prediction_ready=("Ember", "Juniper", "Nova", "Pearl"),
         insufficient_history_animal="Pip",
         animal_ids=animals,
     )
@@ -751,7 +935,7 @@ def seed_demo(
             sort_keys=True,
         ).encode()
     ).hexdigest()
-    (database.parent / "demo-manifest.json").write_text(
+    manifest_path.write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     return result
@@ -759,15 +943,18 @@ def seed_demo(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data-dir", type=Path, default=ROOT / "runtime" / "m6-owner-review-demo")
+    parser.add_argument("--data-dir", type=Path, default=ROOT / "runtime" / "phase2")
     parser.add_argument("--as-of", type=date.fromisoformat)
-    parser.add_argument("--replace", action="store_true")
+    parser.add_argument("--runtime-secret-file", type=Path)
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    result = seed_demo(args.data_dir, as_of=args.as_of, replace=args.replace)
+    runtime_secret = DEMO_RUNTIME_SECRET
+    if args.runtime_secret_file is not None:
+        runtime_secret = args.runtime_secret_file.read_text(encoding="utf-8").strip()
+    result = seed_demo(args.data_dir, as_of=args.as_of, runtime_secret=runtime_secret)
     print(json.dumps(asdict(result), indent=2, sort_keys=True))
     return 0
 
