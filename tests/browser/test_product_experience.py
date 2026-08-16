@@ -133,8 +133,7 @@ def test_analytics_explains_estimates_and_passed_windows_in_plain_language(tmp_p
                 data={
                     "csrf_token": csrf_from(feeding_form.text),
                     "idempotency_key": f"plain-estimate-{index}",
-                    "occurred_at": (first_day + timedelta(days=index * 10)).isoformat()
-                    + "T12:00",
+                    "occurred_at": (first_day + timedelta(days=index * 10)).isoformat() + "T12:00",
                     "prey_type": "Mouse",
                     "prey_size": "Small",
                     "preparation_method": "frozen_thawed",

@@ -12,3 +12,6 @@ analytical projection checkpoints.
 Retained screenshots: [Today](desktop-today.png), [desktop analytics](desktop-analytics.png),
 [mobile analytics](mobile-analytics.png), [mobile reports](mobile-reports.png), and
 [authorized search](desktop-search.png).
+
+The later consolidated-runtime mobile-first correction is retained separately in the
+[mobile-first browser record](mobile-first/README.md).

@@ -105,9 +105,12 @@ def test_owner_review_demo_rerun_is_idempotent(tmp_path: Path) -> None:
 
     assert second == first
     with sqlite3.connect(database) as connection:
-        assert connection.execute(
-            "SELECT count(*), max(global_position) FROM domain_events"
-        ).fetchone() == counts_before
+        assert (
+            connection.execute(
+                "SELECT count(*), max(global_position) FROM domain_events"
+            ).fetchone()
+            == counts_before
+        )
 
 
 def test_owner_review_demo_recovers_after_final_verification_interruption(

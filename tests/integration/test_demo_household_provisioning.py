@@ -43,9 +43,7 @@ def provision(service):
 
 
 @pytest.mark.parametrize("environment", ["production", "", "staging"])
-def test_demo_provisioning_hard_fails_outside_allow_list(
-    tmp_path: Path, environment: str
-) -> None:
+def test_demo_provisioning_hard_fails_outside_allow_list(tmp_path: Path, environment: str) -> None:
     engine = migrated_engine(tmp_path / f"forbidden-{environment or 'empty'}.sqlite3")
 
     with pytest.raises(RuntimeError, match="not permitted"):

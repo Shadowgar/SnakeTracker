@@ -845,9 +845,7 @@ def seed_demo(
         for animal_name, (prey, size, weight, interval_days) in bulk_history.items():
             key_name = animal_name.casefold()
             for index in range(25):
-                occurred = qualification_date - timedelta(
-                    days=(24 - index) * interval_days + 2
-                )
+                occurred = qualification_date - timedelta(days=(24 - index) * interval_days + 2)
                 _record_feeding(
                     client,
                     animals[animal_name],
@@ -861,9 +859,7 @@ def seed_demo(
                 )
 
         for index, occurred in enumerate(
-            _dates_from_intervals(
-                qualification_date - timedelta(days=18), (41, 43, 42, 44, 41)
-            )
+            _dates_from_intervals(qualification_date - timedelta(days=18), (41, 43, 42, 44, 41))
         ):
             _post(
                 client,
@@ -878,9 +874,7 @@ def seed_demo(
                 },
             )
         for index, occurred in enumerate(
-            _dates_from_intervals(
-                qualification_date - timedelta(days=22), (61, 64, 62, 63, 60)
-            )
+            _dates_from_intervals(qualification_date - timedelta(days=22), (61, 64, 62, 63, 60))
         ):
             _post(
                 client,
