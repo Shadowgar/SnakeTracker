@@ -65,6 +65,13 @@
     "schema_and_provenance": "pass",
     "production_guidance": "unavailable-pending-owner-source-approval"
   },
+  "hosted_checks": {
+    "revision": "c7079ca0f896f7e80908b6bcdb9d6ceba4cb60e6",
+    "github_quality": "pass",
+    "container_and_trivy": "pass",
+    "gitguardian": "pass",
+    "coderabbit": "skipped-draft-owner-inspection"
+  },
   "owner_review_follow_up": {
     "normal_url": "http://localhost:8081",
     "normal_data_preserved": true,
