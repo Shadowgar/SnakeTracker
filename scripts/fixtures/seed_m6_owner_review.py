@@ -40,6 +40,22 @@ PHOTO_COLORS = {
     "moss": (55, 96, 70),
     "pearl": (126, 111, 133),
 }
+DEMO_ANIMAL_NAMES = frozenset(
+    {
+        "Juniper",
+        "Atlas",
+        "Ember",
+        "Sable",
+        "Pip",
+        "Willow",
+        "Nova",
+        "Cedar",
+        "Mica",
+        "Cinder",
+        "Moss",
+        "Pearl",
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -291,6 +307,142 @@ def _stored_result(manifest_path: Path, database: Path, household_id: str) -> De
     )
 
 
+def _store_result(
+    manifest_path: Path,
+    database: Path,
+    household_id: str,
+    qualification_date: date,
+    animals: dict[str, str],
+) -> DemoSeedResult:
+    with sqlite3.connect(database) as connection:
+        event_count = int(
+            connection.execute(
+                "SELECT count(*) FROM domain_events WHERE household_id=?", (household_id,)
+            ).fetchone()[0]
+        )
+        photo_count = int(
+            connection.execute(
+                "SELECT count(*) FROM attachment_versions WHERE household_id=?", (household_id,)
+            ).fetchone()[0]
+        )
+    result = DemoSeedResult(
+        scenario_version=DEMO_SCENARIO_VERSION,
+        database=str(database),
+        as_of=qualification_date.isoformat(),
+        household_id=household_id,
+        animal_count=12,
+        enclosure_count=9,
+        snake_count=6,
+        spider_count=6,
+        profile_photo_count=photo_count,
+        event_count=event_count,
+        prediction_ready=("Ember", "Juniper", "Nova", "Pearl"),
+        insufficient_history_animal="Pip",
+        animal_ids=animals,
+    )
+    manifest = asdict(result)
+    manifest["scenario_hash"] = hashlib.sha256(
+        json.dumps(
+            {
+                "scenario_version": DEMO_SCENARIO_VERSION,
+                "as_of": result.as_of,
+                "animals": sorted(animals),
+                "event_count": event_count,
+            },
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode()
+    ).hexdigest()
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return result
+
+
+def _recover_completed_dataset(
+    database: Path,
+    settings: Settings,
+    household_id: str,
+    qualification_date: date,
+    manifest_path: Path,
+) -> DemoSeedResult:
+    """Finalize an exactly complete dataset after verification was interrupted."""
+    with sqlite3.connect(database) as connection:
+        rows = connection.execute(
+            "SELECT name, animal_id, animal_type FROM animal_current WHERE household_id=?",
+            (household_id,),
+        ).fetchall()
+        animals = {str(name): str(animal_id) for name, animal_id, _kind in rows}
+        animal_types = [str(kind) for _name, _animal_id, kind in rows]
+        shape = (
+            set(animals) == DEMO_ANIMAL_NAMES,
+            animal_types.count("snake") == 6,
+            animal_types.count("spider") == 6,
+            connection.execute(
+                "SELECT count(*) FROM enclosure_current WHERE household_id=?", (household_id,)
+            ).fetchone()[0]
+            == 9,
+            connection.execute(
+                "SELECT count(*) FROM attachment_versions WHERE household_id=?", (household_id,)
+            ).fetchone()[0]
+            == 12,
+            connection.execute(
+                "SELECT count(*) FROM domain_events WHERE household_id=?", (household_id,)
+            ).fetchone()[0]
+            >= 300,
+        )
+    if not all(shape):
+        raise RuntimeError(
+            "Partial demo data exists without a verified manifest; refusing changes."
+        )
+
+    app = build_application(settings)
+    try:
+        with TestClient(app) as client:
+            _login(client)
+            _verify_keeper_pages(client, animals, qualification_date)
+    finally:
+        app.state.database_engine.dispose()
+    return _store_result(manifest_path, database, household_id, qualification_date, animals)
+
+
+def _verify_keeper_pages(
+    client: TestClient, animals: dict[str, str], qualification_date: date
+) -> None:
+    home = client.get("/home")
+    home_expectations = ["12 animals", "9 enclosures"]
+    if qualification_date == datetime.now(UTC).date():
+        home_expectations.extend(("Overdue", "Due today", "Upcoming"))
+    _require_page_text(home.text, page="Today page", expected=tuple(home_expectations))
+    _require_page_text(
+        client.get("/reports/care").text,
+        page="care report",
+        expected=("Juniper", "Ember"),
+    )
+    _require_page_text(
+        client.get("/reports/expenses").text,
+        page="expense report",
+        expected=("Feeders", "Habitat", "48.50", "78.25"),
+    )
+    _require_page_text(
+        client.get("/search?q=moonlit").text,
+        page="search",
+        expected=("Moonlit Forest Vivarium", "Juniper", "2 results"),
+    )
+    analytics_expectations = {
+        "Juniper": ("Feeding estimate", "Shed estimate"),
+        "Ember": ("Feeding estimate", "Molt estimate"),
+        "Nova": ("Feeding estimate", "Shed estimate"),
+        "Pearl": ("Feeding estimate", "Molt estimate"),
+        "Pip": ("Not enough history yet",),
+    }
+    for name, expected in analytics_expectations.items():
+        response = client.get(f"/animals/{animals[name]}/analytics")
+        if response.status_code != 200:
+            raise RuntimeError(f"Demo analytics for {name} failed with {response.status_code}.")
+        _require_page_text(response.text, page=f"{name} analytics", expected=expected)
+
+
 def seed_demo(
     data_dir: Path,
     *,
@@ -319,8 +471,12 @@ def seed_demo(
             (str(provisioned.household_id),),
         ).fetchone()[0]
     if partial_animals:
-        raise RuntimeError(
-            "Partial demo data exists without a verified manifest; refusing changes."
+        return _recover_completed_dataset(
+            database,
+            settings,
+            str(provisioned.household_id),
+            qualification_date,
+            manifest_path,
         )
     app = build_application(settings)
     with TestClient(app) as client:
@@ -857,88 +1013,16 @@ def seed_demo(
             },
         )
 
-        home = client.get("/home")
-        home_expectations = ["12 animals", "9 enclosures"]
-        if qualification_date == datetime.now(UTC).date():
-            home_expectations.extend(("Overdue", "Due today", "Upcoming"))
-        _require_page_text(
-            home.text,
-            page="Today page",
-            expected=tuple(home_expectations),
-        )
-        care_report = client.get("/reports/care")
-        _require_page_text(care_report.text, page="care report", expected=("Juniper", "Ember"))
-        expense_report = client.get("/reports/expenses")
-        _require_page_text(
-            expense_report.text,
-            page="expense report",
-            expected=("Feeders", "Habitat", "48.50", "78.25"),
-        )
-        search = client.get("/search?q=moonlit")
-        _require_page_text(
-            search.text,
-            page="search",
-            expected=("Moonlit Forest Vivarium", "Juniper", "2 results"),
-        )
-        analytics_expectations = {
-            "Juniper": ("feeding estimate", "shed estimate"),
-            "Ember": ("feeding estimate", "molt estimate"),
-            "Nova": ("feeding estimate", "shed estimate"),
-            "Pearl": ("feeding estimate", "molt estimate"),
-            "Pip": ("Not enough history yet",),
-        }
-        for name, expected in analytics_expectations.items():
-            response = client.get(f"/animals/{animals[name]}/analytics")
-            if response.status_code != 200:
-                raise RuntimeError(f"Demo analytics for {name} failed with {response.status_code}.")
-            _require_page_text(response.text, page=f"{name} analytics", expected=expected)
+        _verify_keeper_pages(client, animals, qualification_date)
     app.state.database_engine.dispose()
 
-    with sqlite3.connect(database) as connection:
-        event_count = int(
-            connection.execute(
-                "SELECT count(*) FROM domain_events WHERE household_id=?",
-                (str(provisioned.household_id),),
-            ).fetchone()[0]
-        )
-        photo_count = int(
-            connection.execute(
-                "SELECT count(*) FROM attachment_versions WHERE household_id=?",
-                (str(provisioned.household_id),),
-            ).fetchone()[0]
-        )
-    result = DemoSeedResult(
-        scenario_version=DEMO_SCENARIO_VERSION,
-        database=str(database),
-        as_of=qualification_date.isoformat(),
-        household_id=str(provisioned.household_id),
-        animal_count=12,
-        enclosure_count=9,
-        snake_count=6,
-        spider_count=6,
-        profile_photo_count=photo_count,
-        event_count=event_count,
-        prediction_ready=("Ember", "Juniper", "Nova", "Pearl"),
-        insufficient_history_animal="Pip",
-        animal_ids=animals,
+    return _store_result(
+        manifest_path,
+        database,
+        str(provisioned.household_id),
+        qualification_date,
+        animals,
     )
-    manifest = asdict(result)
-    manifest["scenario_hash"] = hashlib.sha256(
-        json.dumps(
-            {
-                "scenario_version": DEMO_SCENARIO_VERSION,
-                "as_of": result.as_of,
-                "animals": sorted(animals),
-                "event_count": event_count,
-            },
-            separators=(",", ":"),
-            sort_keys=True,
-        ).encode()
-    ).hexdigest()
-    manifest_path.write_text(
-        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
-    return result
 
 
 def parse_args() -> argparse.Namespace:

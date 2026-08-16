@@ -57,6 +57,12 @@ def csrf(text: str) -> str:
     return match.group(1)
 
 
+def session_csrf(client: TestClient) -> str:
+    token = client.cookies.get("snaketracker_csrf")
+    assert token is not None
+    return str(token)
+
+
 def login(client: TestClient, email: str, password: str) -> None:
     page = client.get("/login")
     response = client.post(
@@ -133,7 +139,7 @@ def test_real_and_demo_households_cannot_read_or_mutate_each_other(tmp_path: Pat
         mutation = real_client.post(
             f"{demo_animal_url}/feedings",
             data={
-                "csrf_token": csrf(real_client.get("/home").text),
+                "csrf_token": session_csrf(real_client),
                 "idempotency_key": "real-to-demo-denied",
                 "occurred_at": "2026-08-16T12:00",
                 "prey_type": "mouse",

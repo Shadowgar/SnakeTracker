@@ -110,6 +110,47 @@ def test_owner_review_demo_rerun_is_idempotent(tmp_path: Path) -> None:
         ).fetchone() == counts_before
 
 
+def test_owner_review_demo_recovers_after_final_verification_interruption(
+    tmp_path: Path, monkeypatch
+) -> None:
+    data_dir = tmp_path / "promoted-runtime"
+    data_dir.mkdir()
+    database = data_dir / "snaketracker.sqlite3"
+    engine = migrated_engine(database)
+    HouseholdBootstrapService(
+        SQLAlchemyHouseholdBootstrapRepository(engine),
+        Argon2PasswordHasher.for_testing(),
+        command_hash_secret=b"test-bootstrap-command-secret-32b",
+    ).bootstrap(command_for())
+    engine.dispose()
+
+    original = seeder._require_page_text
+    failed = False
+
+    def interrupt_once(response_text: str, *, page: str, expected: tuple[str, ...]) -> None:
+        nonlocal failed
+        if page == "Juniper analytics" and not failed:
+            failed = True
+            raise RuntimeError("simulated final verification interruption")
+        original(response_text, page=page, expected=expected)
+
+    monkeypatch.setattr(seeder, "_require_page_text", interrupt_once)
+    try:
+        seed_demo(data_dir, as_of=date(2026, 8, 15))
+    except RuntimeError as error:
+        assert "simulated final verification interruption" in str(error)
+    else:
+        raise AssertionError("The final verification interruption must be observed.")
+
+    monkeypatch.setattr(seeder, "_require_page_text", original)
+    recovered = seed_demo(data_dir, as_of=date(2026, 8, 15))
+
+    assert recovered.animal_count == 12
+    assert recovered.enclosure_count == 9
+    assert recovered.event_count >= 300
+    assert (data_dir / "demo-manifest.json").is_file()
+
+
 def test_owner_review_demo_requires_an_existing_promoted_database(tmp_path: Path) -> None:
     target = tmp_path / "missing-runtime"
 
