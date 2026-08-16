@@ -62,3 +62,10 @@ def test_accepted_amendment_paths_cover_adr_0039_multispecies_foundation() -> No
     assert "docs/architecture/event-catalog.md" in freeze.APPROVED_AMENDMENT_PATHS
     assert "docs/architecture/projection-catalog.md" in freeze.APPROVED_AMENDMENT_PATHS
     assert freeze.ACCEPTANCE_DATES["0039"] == "2026-08-11"
+
+
+def test_accepted_amendment_paths_cover_adr_0040_local_demo_provisioning() -> None:
+    assert "docs/adr/0040-trusted-local-demo-household-provisioning.md" in (
+        freeze.APPROVED_AMENDMENT_PATHS
+    )
+    assert freeze.ACCEPTANCE_DATES["0040"] == "2026-08-16"

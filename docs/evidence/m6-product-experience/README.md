@@ -21,3 +21,7 @@ a strict-CSP read-only PWA shell. No production husbandry guidance is enabled.
 
 Native Raspberry Pi execution, SSD/ext4 placement, thermal behavior, and deployment performance
 remain Phase 7/pre-deployment qualifications. M6 does not approve remote or production deployment.
+
+The accepted [ADR-0040](../../adr/0040-trusted-local-demo-household-provisioning.md) correction is
+currently in progress. Its consolidated single-instance demo/isolation evidence and the approved
+mobile-first owner-review correction must pass before M6 owner acceptance.

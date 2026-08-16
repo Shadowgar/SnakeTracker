@@ -23,6 +23,8 @@ Post-freeze amendments are append-oriented and retain their approval and consequ
 this directory. See the [2026-08-05 qualification-timing amendment](2026-08-05-qualification-timing-amendment.md).
 The [Phase 2 household-event phase-order amendment](2026-08-05-household-event-phase-order-amendment.md)
 records approval of ADR-0037.
+The [trusted local demo-household amendment](2026-08-16-local-demo-household-amendment.md) records
+the narrow M6 owner-review approval of ADR-0040.
 
 M2 is accepted in the controlling milestone checklist. M3 through M8 remain unaccepted until their
 respective owner-acceptance gates.

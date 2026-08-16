@@ -57,6 +57,7 @@ This matrix is authoritative for architecture acceptance. Evidence paths are rel
 | R-051 | Mixed collections reuse neutral enclosures, feeding/inventory, expenses, reminders, attachments, and effective history without duplicating subsystems | RB | 0004, 0007, 0011, 0014, 0017, 0039 | TM-04, TM-09, TM-11 | 5.5 | AT-MSP-05 mixed-household occupancy and shared-workflow suite | m5.5-multispecies-foundation/tests/mixed-collection | M5.5 |
 | R-052 | M6 consumers use animal type/capability and applicable effective facts without treating missing or inapplicable data as negative evidence | RB | 0007, 0019, 0038, 0039 | TM-04, TM-09, TM-18 | 5.5–6 | AT-MSP-06 read-contract and M6 extension-boundary suite | m5.5-multispecies-foundation/tests/m6-read-boundary | M5.5 |
 | R-053 | Mixed Snake/Spider keeper journeys are responsive, keyboard/screen-reader usable, and WCAG 2.2 AA without irrelevant controls | RB | 0034, 0039 | TM-05 | 5.5 | AT-MSP-07 desktop/mobile browser and accessibility suite | m5.5-multispecies-foundation/accessibility/mixed-collection | M5.5 |
+| R-054 | A reserved fictional household may be provisioned only through a fail-closed local adapter using canonical household events, atomic identity/auth/idempotency/audit state, and bidirectional tenant isolation | RB for M6 owner review | 0012, 0015, 0032, 0037, 0040 | TM-04, TM-09, TM-16, TM-20 | 6 | AT-DEMO-01 environment guard, atomicity, conflict, idempotency, and cross-household access suite | m6-product-experience/owner-review/consolidated-demo | M6 |
 
 ## Coverage rule
 
