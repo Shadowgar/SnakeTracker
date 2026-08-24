@@ -20,6 +20,13 @@ real-browser qualification, Docker Compose, and Buildx ARM64 builds.
 **Owner approval:** Approved August 15, 2026, with the proportional minimum-uncertainty amendment
 recorded below.
 
+> **August 24 capability-extension amendment:** Major M6 UX work is paused. ADR-0041 inserts
+> `lizard.v1`, `scorpion.v1`, capability-neutral molt/premolt schema v2, reminder/search fixes, and
+> a reproducible four-group demo before final M6 UX work. Statements below that describe the
+> originally approved Snake/Spider scope remain historical; the current controlling requirements
+> are R-055 through R-060 and ADR-0041. This amendment does not record M6 owner acceptance or begin
+> M7.
+
 ---
 
 ## Scope and controlling requirements

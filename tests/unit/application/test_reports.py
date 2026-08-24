@@ -30,11 +30,30 @@ class Expenses:
 
 def test_collection_report_and_csv_are_stable_and_formula_safe() -> None:
     now = datetime(2026, 8, 15, tzinfo=UTC)
-    service = ReportService(Animals(), Expenses())  # type: ignore[arg-type]
+
+    class FourGroupAnimals(Animals):
+        def list_profiles(self, _household_id):
+            return tuple(
+                SimpleNamespace(
+                    animal_id=uuid4(),
+                    name=name,
+                    type_label=label,
+                    species=species,
+                    status="active",
+                )
+                for name, label, species in (
+                    ("Nyx", "Snake", "Python regius"),
+                    ("Webster", "Spider", "Fictional burrowing spider"),
+                    ("Sol", "Lizard", "Fictional ridge lizard"),
+                    ("Onyx", "Scorpion", "Fictional forest scorpion"),
+                )
+            )
+
+    service = ReportService(FourGroupAnimals(), Expenses())  # type: ignore[arg-type]
     report = service.collection(uuid4(), generated_at=now)
 
     assert report.columns == ("Name", "Type", "Species", "Status")
-    assert report.rows[0].values == ("Nyx", "Snake", "Python regius", "active")
+    assert {row.values[1] for row in report.rows} == {"Snake", "Spider", "Lizard", "Scorpion"}
     dangerous = KeeperReport("Export", ("Value",), (ReportRow(("=2+2",)),), now)
     assert service.csv(dangerous) == "Value\r\n'=2+2\r\n"
 

@@ -1,4 +1,4 @@
-# SnakeTracker System Architecture
+# Care Keeper System Architecture
 
 Status: Approved
 Acceptance date: 2026-08-04
@@ -12,7 +12,11 @@ ADR-0036.
 
 ## Purpose and scope
 
-SnakeTracker is a self-hosted, mobile-first progressive web application for reptile keepers. Version 1 supports multiple users in one household and is tenant-ready without implementing full organizations. It uses a modular monolith, an event-sourced business core, synchronous correctness projections, asynchronous analytical projections, and conventional operational records.
+Care Keeper is a self-hosted, mobile-first progressive web application for exotic-animal keepers.
+Its trusted first-party profiles support Snakes, Spiders, Lizards, and Scorpions. Version 1 supports
+multiple users in one household and is tenant-ready without implementing full organizations. It
+uses a modular monolith, an event-sourced business core, synchronous correctness projections,
+asynchronous analytical projections, and conventional operational records.
 
 The first production deployment uses Python 3.13+, FastAPI, SQLAlchemy 2.x, Alembic, Pydantic v2, SQLite with FTS5, Jinja2, Bootstrap 5, HTMX, Alpine CSP build, Chart.js, Nginx, Docker Compose, and Cloudflare Tunnel. It does not require Node.js at runtime.
 
@@ -44,6 +48,11 @@ See [diagrams](diagrams.md) for context, component, command, correction, rebuild
 - **Bootstrap:** validates compatibility, builds the event/plugin registry, constructs infrastructure implementations, injects handlers, and mounts routes. It is the only composition root.
 
 The intended source tree is documented in the [folder-structure contract](folder-structure.md), [ADR-0001](../adr/0001-modular-monolith.md), and [ADR-0004](../adr/0004-aggregate-and-stream-boundaries.md). Husbandry and health are feature slices within the Animals bounded context because they write the animal stream. They do not import one another.
+
+Animal behavior is selected from the trusted `snake.v1`, `spider.v1`, `lizard.v1`, and
+`scorpion.v1` capability profiles. Species is keeper-entered identity, not executable policy.
+Shared aggregate and infrastructure boundaries remain type-neutral; actions, reminder kinds, and
+analytics are exposed only when declared by the profile. See ADR-0039 and ADR-0041.
 
 ## Event store
 

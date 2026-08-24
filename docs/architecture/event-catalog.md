@@ -79,13 +79,17 @@ a distinct event contract identity and never rewrites an event stored under an e
 | `animal.handling_recorded` | Records handling session |
 | `animal.behavior_recorded` | Records a behavior observation |
 | `animal.bath_recorded` | Records a bath |
-| `animal.molt_recorded` | Records a spider molt occurrence, result, and keeper observations |
-| `animal.molt_corrected` | Replaces effective spider molt facts for a same-stream target event |
-| `animal.premolt_observed` | Records or clears an observed spider premolt state with notes |
+| `animal.molt_recorded` v1 | Historical Spider-only molt occurrence, result, and keeper observations; never reinterpreted or upcast |
+| `animal.molt_recorded` v2 | Records a capability-neutral molt occurrence and result for a molt-capable Animal |
+| `animal.molt_corrected` v1 | Historical Spider-only replacement for effective molt facts; never reinterpreted or upcast |
+| `animal.molt_corrected` v2 | Replaces capability-neutral effective molt facts for a same-stream target event |
+| `animal.premolt_observed` v1 | Historical Spider-only premolt state; never reinterpreted or upcast |
+| `animal.premolt_observed` v2 | Records or clears a capability-neutral premolt state with keeper observation |
 
-Length, shed, and bath contracts require a profile declaring the corresponding snake capability.
-Molt and premolt contracts require a profile declaring the corresponding spider capability.
-Feeding and weight remain shared where the active profile permits them; spider weight is optional.
+Length, shed, and bath contracts require the corresponding declared capability; shed remains
+snake-specific in v1, while length and bath are also valid for `lizard.v1`. Molt and premolt v2
+require a molt-capable profile and are shared by `spider.v1` and `scorpion.v1`. Feeding and weight
+remain shared where the active profile permits them.
 
 ### Health feature slice
 

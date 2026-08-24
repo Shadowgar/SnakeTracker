@@ -9,22 +9,29 @@ import json
 from pathlib import Path
 from typing import Any
 
-DATASET_ID = "snaketracker-reference-v1-m6-product-experience"
+DATASET_ID = "care-keeper-reference-v2-four-group-capabilities"
+ANIMAL_GROUPS = ("snake",) * 4 + ("spider",) * 3 + ("lizard",) * 3 + ("scorpion",) * 3
+SPECIES = {
+    "snake": "Python regius",
+    "spider": "Tliltocatl albopilosus",
+    "lizard": "Pogona vitticeps",
+    "scorpion": "Heterometrus spinifer",
+}
 
 
 def build_dataset(*, animal_count: int = 100) -> dict[str, Any]:
-    if animal_count < 5:
-        raise ValueError("The M6 dataset requires at least five animals.")
+    if animal_count < 8:
+        raise ValueError("The four-group dataset requires at least eight animals.")
     animals = []
     for index in range(animal_count):
-        animal_type = "snake" if index % 5 < 3 else "spider"
+        animal_type = ANIMAL_GROUPS[index % len(ANIMAL_GROUPS)]
         animals.append(
             {
                 "fixture_id": f"animal-{index + 1:04d}",
                 "animal_type": animal_type,
                 "capability_profile": f"{animal_type}.v1",
                 "name": f"{animal_type.title()} {index + 1:04d}",
-                "species": "Python regius" if animal_type == "snake" else "Tliltocatl albopilosus",
+                "species": SPECIES[animal_type],
                 "notes": f"M6 deterministic search note {index % 10}",
             }
         )
@@ -36,7 +43,11 @@ def build_dataset(*, animal_count: int = 100) -> dict[str, Any]:
         "history_policy": {
             "accepted_feeding_intervals_days": [10, 11, 9, 10, 10, 12, 10, 9],
             "snake_shed_intervals_days": [45, 48, 46, 47, 45, 46],
-            "spider_molt_intervals_days": [60, 60, 60, 60, 60, 60],
+            "molt_intervals_days": {
+                "spider": [60, 60, 60, 60, 60, 60],
+                "scorpion": [70, 73, 71, 74, 72, 71],
+            },
+            "lizard_measurement_kinds": ["weight", "length"],
             "correction_void_reinstatement_cases": 3,
         },
         "household_isolation_fixtures": 2,

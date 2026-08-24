@@ -139,6 +139,44 @@ def test_worker_creates_encrypted_verified_backup_and_rehearses_restore(tmp_path
             )
         )
         assert spider.profile.capability_profile_identity == "spider.v1"
+        lizard = animals.register(
+            RegisterAnimalCommand(
+                household_id=bootstrap.household_id,
+                actor_user_id=bootstrap.user_id,
+                correlation_id=uuid4(),
+                idempotency_key="backup-register-lizard",
+                name="Sol",
+                species="Fictional ridge lizard",
+                morph=None,
+                genetics=None,
+                sex=None,
+                birth_hatch_date=None,
+                acquisition_date=None,
+                breeder_source=None,
+                notes="Mixed backup fixture.",
+                animal_type="lizard",
+            )
+        )
+        scorpion = animals.register(
+            RegisterAnimalCommand(
+                household_id=bootstrap.household_id,
+                actor_user_id=bootstrap.user_id,
+                correlation_id=uuid4(),
+                idempotency_key="backup-register-scorpion",
+                name="Onyx",
+                species="Fictional forest scorpion",
+                morph=None,
+                genetics=None,
+                sex=None,
+                birth_hatch_date=None,
+                acquisition_date=None,
+                breeder_source=None,
+                notes="Mixed backup fixture.",
+                animal_type="scorpion",
+            )
+        )
+        assert lizard.profile.capability_profile_identity == "lizard.v1"
+        assert scorpion.profile.capability_profile_identity == "scorpion.v1"
         attachment_storage = LocalAttachmentStorage(tmp_path / "attachments")
         attachments = AttachmentService(
             animals=animals,
@@ -224,7 +262,12 @@ def test_worker_creates_encrypted_verified_backup_and_rehearses_restore(tmp_path
             assert restored_database.execute(
                 "SELECT animal_type,count(*) FROM animal_current GROUP BY animal_type "
                 "ORDER BY animal_type"
-            ).fetchall() == [("snake", 1), ("spider", 1)]
+            ).fetchall() == [
+                ("lizard", 1),
+                ("scorpion", 1),
+                ("snake", 1),
+                ("spider", 1),
+            ]
         assert restored.attachment_storage.finalized_exists(finalized.storage_key, "image/png")
 
         operator_restore = run_restore_rehearsal(

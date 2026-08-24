@@ -23,10 +23,11 @@ from snaketracker.domains.animals.contracts import (
     AnimalFeedingRecordedV1,
     AnimalLengthCorrectedV1,
     AnimalLengthRecordedV1,
-    AnimalMoltCorrectedV1,
-    AnimalMoltRecordedV1,
+    AnimalMoltCorrectedV2,
+    AnimalMoltRecordedV2,
     AnimalPhotoSelectedV1,
     AnimalPremoltObservedV1,
+    AnimalPremoltObservedV2,
     AnimalProfileCorrectedV1,
     AnimalRegisteredV2,
     AnimalShedCorrectedV1,
@@ -722,8 +723,9 @@ class AnimalService:
                 operation_scope="animals.record_molt",
                 occurred_at=command.occurred_at,
                 event_type="animal.molt_recorded",
+                schema_version=2,
                 title="Molt recorded",
-                payload=AnimalMoltRecordedV1(result, observation),
+                payload=AnimalMoltRecordedV2(result, observation),
                 notes=observation,
                 command_hash_fields={
                     "occurred_at": command.occurred_at.isoformat(),
@@ -747,8 +749,9 @@ class AnimalService:
                 operation_scope="animals.record_premolt",
                 occurred_at=command.occurred_at,
                 event_type="animal.premolt_observed",
+                schema_version=2,
                 title="Premolt observation recorded",
-                payload=AnimalPremoltObservedV1(command.observed, observation),
+                payload=AnimalPremoltObservedV2(command.observed, observation),
                 notes=observation,
                 command_hash_fields={
                     "occurred_at": command.occurred_at.isoformat(),
@@ -908,8 +911,9 @@ class AnimalService:
                 idempotency_key=command.idempotency_key,
                 occurred_at=command.occurred_at,
                 event_type="animal.molt_corrected",
+                schema_version=2,
                 title="Molt corrected",
-                payload=AnimalMoltCorrectedV1(command.target_event_id, result, observation),
+                payload=AnimalMoltCorrectedV2(command.target_event_id, result, observation),
                 notes=observation,
                 command_hash_fields={
                     "target_event_id": str(command.target_event_id),
@@ -996,7 +1000,7 @@ class AnimalService:
         candidates = tuple(
             event
             for event in self.effective_history(household_id, animal_id)
-            if isinstance(event.payload, AnimalPremoltObservedV1)
+            if isinstance(event.payload, (AnimalPremoltObservedV1, AnimalPremoltObservedV2))
         )
         if not candidates:
             return None
@@ -1004,7 +1008,7 @@ class AnimalService:
             candidates,
             key=lambda event: (event.occurred_at, event.recorded_at, event.stream_version),
         )
-        payload = cast(AnimalPremoltObservedV1, latest.payload)
+        payload = cast(AnimalPremoltObservedV1 | AnimalPremoltObservedV2, latest.payload)
         return PremoltState(
             observed=payload.observed,
             occurred_at=latest.occurred_at,
@@ -1154,6 +1158,7 @@ class AnimalService:
         notes: str | None,
         command_hash_fields: dict[str, object],
         related_subjects: tuple[EventSubject, ...] = (),
+        schema_version: int = 1,
     ) -> DomainEvent:
         capability = required_event_capability(event_type)
         if capability is not None:
@@ -1170,7 +1175,7 @@ class AnimalService:
             stream_id=animal_id,
             stream_version=len(existing) + 1,
             event_type=event_type,
-            schema_version=1,
+            schema_version=schema_version,
             occurred_at=occurred_at,
             recorded_at=recorded_at,
             actor_user_id=actor_user_id,
@@ -1230,6 +1235,7 @@ class AnimalService:
         notes: str | None,
         command_hash_fields: dict[str, object],
         inventory_quantity: int | None = None,
+        schema_version: int = 1,
     ) -> DomainEvent:
         key = StreamKey(household_id, "animal", animal_id)
         existing = self._event_store.load_stream(key)
@@ -1250,7 +1256,7 @@ class AnimalService:
             stream_id=animal_id,
             stream_version=len(existing) + 1,
             event_type=event_type,
-            schema_version=1,
+            schema_version=schema_version,
             occurred_at=occurred_at,
             recorded_at=recorded_at,
             actor_user_id=actor_user_id,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -96,10 +97,35 @@ def test_fts_strategy_handles_updates_missing_controls_validation_and_cleanup() 
             strategy.create(connection, layout)
             registered = event("animal.registered", {"name": "Nyx", "species": "Python"})
             strategy.apply(connection, layout, registered)
+            corrected = event(
+                "animal.profile_corrected", {"name": "Nysa", "species": "Pogona vitticeps"}
+            )
+            connection.exec_driver_sql(
+                "CREATE TABLE domain_events (household_id TEXT,stream_type TEXT,stream_id TEXT,"
+                "event_type TEXT,stream_version INTEGER,schema_version INTEGER,payload_json TEXT)"
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO domain_events VALUES "
+                    "(:household,'animal',:stream,'animal.registered',1,2,:payload)"
+                ),
+                {
+                    "household": str(corrected.household_id),
+                    "stream": str(corrected.stream_id),
+                    "payload": json.dumps(
+                        {
+                            "animal_type": "lizard",
+                            "capability_profile_version": 1,
+                            "name": "Nyx",
+                            "species": "Pogona vitticeps",
+                        }
+                    ),
+                },
+            )
             strategy.apply(
                 connection,
                 layout,
-                event("animal.profile_corrected", {"name": "Nysa", "species": "Python"}),
+                corrected,
             )
             strategy.apply(connection, layout, event("event.voided", {}))
             strategy.apply(
@@ -113,6 +139,14 @@ def test_fts_strategy_handles_updates_missing_controls_validation_and_cleanup() 
                 event("animal.weight_corrected", {"weight_grams": 500}),
             )
             assert strategy.validate(connection, layout)["row_count"] == 2
+            assert (
+                connection.execute(
+                    text("SELECT body FROM search_content WHERE document_key=:key"),
+                    {"key": f"animal:{corrected.stream_id}"},
+                )
+                .scalar_one()
+                .startswith("lizard")
+            )
             assert connection.execute(text("SELECT count(*) FROM search_fts")).scalar_one() == 2
             strategy.drop(connection, layout)
             assert (

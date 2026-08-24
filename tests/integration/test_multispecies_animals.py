@@ -44,6 +44,7 @@ from snaketracker.application.reminders import (
     ReminderValidationError,
     SaveSubjectScheduleCommand,
 )
+from snaketracker.domains.animals.contracts import AnimalMoltRecordedV1
 from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
 from snaketracker.infrastructure.database.engine import create_sqlite_engine
 from snaketracker.infrastructure.enclosures.projections import SQLAlchemyEnclosureCurrentProjection
@@ -53,7 +54,15 @@ from snaketracker.infrastructure.identity.bootstrap_repository import (
 )
 from snaketracker.infrastructure.reminders.projections import SQLAlchemyReminderProjection
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
-from snaketracker.presentation.animal_care_views import present_care_events
+from snaketracker.platform.events.envelope import (
+    DomainEvent,
+    EventSubject,
+    event_checksum,
+)
+from snaketracker.presentation.animal_care_views import (
+    present_care_events,
+    present_effective_care_events,
+)
 
 ROOT = Path(__file__).parents[2]
 NOW = datetime(2026, 8, 11, 15, 0, tzinfo=UTC)
@@ -102,7 +111,12 @@ def _register(
             correlation_id=uuid4(),
             idempotency_key=f"m55-register-{name.lower()}",
             name=name,
-            species="Grammostola pulchra" if animal_type == "spider" else "Python regius",
+            species={
+                "snake": "Python regius",
+                "spider": "Grammostola pulchra",
+                "lizard": "Fictional ridge lizard",
+                "scorpion": "Fictional forest scorpion",
+            }[animal_type],
             morph=None,
             genetics=None,
             sex=None,
@@ -213,7 +227,10 @@ def test_spider_molt_premolt_and_correction_are_effective_typed_history(tmp_path
 
         events = store.load_stream(spider.stream_key)
         assert premolt.event.event_type == "animal.premolt_observed"
+        assert premolt.event.schema_version == 2
+        assert molt.event.schema_version == 2
         assert corrected.event.event_type == "animal.molt_corrected"
+        assert corrected.event.schema_version == 2
         views = present_care_events(events)
         assert any(view.description == "Premolt observed · Darkened abdomen." for view in views)
         assert any(view.description == "Partial · One leg retained." for view in views)
@@ -336,6 +353,201 @@ def test_spider_molt_premolt_and_correction_are_effective_typed_history(tmp_path
         }
         assert descriptions[plain_molt.event.event_id] == "Complete"
         assert descriptions[plain_premolt.event.event_id] == "Premolt cleared"
+    finally:
+        engine.dispose()
+
+
+def test_lizard_and_scorpion_commands_follow_their_trusted_profiles(tmp_path: Path) -> None:
+    service, store, bootstrap, engine = _services(tmp_path)
+    try:
+        lizard = _register(service, bootstrap, "lizard", "Sol")
+        scorpion = _register(service, bootstrap, "scorpion", "Onyx")
+
+        service.record_length(
+            RecordLengthCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                lizard.animal_id,
+                uuid4(),
+                "lizard-length",
+                NOW,
+                420,
+                None,
+            )
+        )
+        service.record_bath(
+            RecordBathCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                lizard.animal_id,
+                uuid4(),
+                "lizard-bath",
+                NOW,
+                10,
+                "Keeper-configured soak",
+                None,
+            )
+        )
+        with pytest.raises(AnimalValidationError, match="Shed care is not available"):
+            service.record_shed(
+                RecordShedCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    lizard.animal_id,
+                    uuid4(),
+                    "lizard-shed-rejected",
+                    NOW,
+                    False,
+                    True,
+                    "complete",
+                    None,
+                )
+            )
+        with pytest.raises(AnimalValidationError, match="Molt care is not available"):
+            service.record_molt(
+                RecordMoltCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    lizard.animal_id,
+                    uuid4(),
+                    "lizard-molt-rejected",
+                    NOW,
+                    "complete",
+                    None,
+                )
+            )
+
+        molt = service.record_molt(
+            RecordMoltCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                scorpion.animal_id,
+                uuid4(),
+                "scorpion-molt",
+                NOW,
+                "complete",
+                "Fictional intact exuvia.",
+            )
+        )
+        premolt = service.record_premolt(
+            RecordPremoltCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                scorpion.animal_id,
+                uuid4(),
+                "scorpion-premolt",
+                NOW,
+                True,
+                "Keeper observed premolt.",
+            )
+        )
+        assert molt.event.schema_version == 2
+        assert premolt.event.schema_version == 2
+        for command in (
+            RecordLengthCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                scorpion.animal_id,
+                uuid4(),
+                "scorpion-length-rejected",
+                NOW,
+                100,
+                None,
+            ),
+            RecordShedCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                scorpion.animal_id,
+                uuid4(),
+                "scorpion-shed-rejected",
+                NOW,
+                False,
+                True,
+                "complete",
+                None,
+            ),
+            RecordBathCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                scorpion.animal_id,
+                uuid4(),
+                "scorpion-bath-rejected",
+                NOW,
+                5,
+                "Not applicable",
+                None,
+            ),
+        ):
+            method = {
+                RecordLengthCommand: service.record_length,
+                RecordShedCommand: service.record_shed,
+                RecordBathCommand: service.record_bath,
+            }[type(command)]
+            with pytest.raises(AnimalValidationError, match="is not available"):
+                method(command)  # type: ignore[arg-type]
+
+        assert len(store.load_stream(lizard.stream_key)) == 3
+        assert len(store.load_stream(scorpion.stream_key)) == 3
+    finally:
+        engine.dispose()
+
+
+def test_historical_spider_molt_v1_replays_beside_new_neutral_v2(tmp_path: Path) -> None:
+    service, store, bootstrap, engine = _services(tmp_path)
+    try:
+        spider = _register(service, bootstrap, "spider", "Archive")
+        legacy_candidate = DomainEvent(
+            event_id=uuid4(),
+            household_id=bootstrap.household_id,
+            stream_type="animal",
+            stream_id=spider.animal_id,
+            stream_version=2,
+            event_type="animal.molt_recorded",
+            schema_version=1,
+            occurred_at=NOW - timedelta(days=60),
+            recorded_at=NOW - timedelta(days=60),
+            actor_user_id=bootstrap.user_id,
+            correlation_id=uuid4(),
+            causation_id=None,
+            idempotency_key="historical-spider-molt-v1",
+            subjects=(EventSubject("animal", spider.animal_id, "primary", 0),),
+            title="Spider molt recorded",
+            description=None,
+            payload=AnimalMoltRecordedV1("complete", "Historical Spider molt."),
+            metadata={},
+            notes="Historical Spider molt.",
+            checksum="",
+        )
+        legacy = legacy_candidate.with_checksum(event_checksum(legacy_candidate))
+        store.append(spider.stream_key, expected_version=1, events=(legacy,))
+
+        current = service.record_molt(
+            RecordMoltCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                spider.animal_id,
+                uuid4(),
+                "new-spider-molt-v2",
+                NOW,
+                "complete",
+                "New neutral contract.",
+            )
+        )
+
+        stream = store.load_stream(spider.stream_key)
+        assert [(event.event_type, event.schema_version) for event in stream] == [
+            ("animal.registered", 2),
+            ("animal.molt_recorded", 1),
+            ("animal.molt_recorded", 2),
+        ]
+        assert current.event.schema_version == 2
+        views = present_effective_care_events(
+            service.effective_history(bootstrap.household_id, spider.animal_id)
+        )
+        assert {view.description for view in views} >= {
+            "Complete · Historical Spider molt.",
+            "Complete · New neutral contract.",
+        }
     finally:
         engine.dispose()
 

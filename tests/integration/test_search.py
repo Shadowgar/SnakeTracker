@@ -12,6 +12,7 @@ from snaketracker.application.animals import (
     RecordBathCommand,
     RegisterAnimalCommand,
     ReinstateAnimalEventCommand,
+    UpdateAnimalProfileCommand,
     VoidAnimalEventCommand,
 )
 from snaketracker.application.search import SearchService, SearchValidationError
@@ -128,6 +129,62 @@ def test_search_rejects_empty_or_oversized_queries_before_fts(tmp_path: Path) ->
         assert service.search(bootstrap.household_id, frozenset(), "   ") == ()
         with pytest.raises(SearchValidationError, match="100 characters"):
             service.search(bootstrap.household_id, frozenset(), "x" * 101)
+    finally:
+        engine.dispose()
+
+
+def test_profile_correction_retains_registered_animal_type_in_search(tmp_path: Path) -> None:
+    engine, bootstrap = migrated_household(tmp_path)
+    try:
+        animals = AnimalService(
+            SQLAlchemyEventStore(engine), SQLAlchemyAnimalCurrentProjection(engine)
+        )
+        lizard = animals.register(
+            RegisterAnimalCommand(
+                household_id=bootstrap.household_id,
+                actor_user_id=bootstrap.user_id,
+                correlation_id=uuid4(),
+                idempotency_key="m6-search-lizard",
+                name="Sol",
+                species="Fictional desert lizard",
+                morph="Amber",
+                genetics=None,
+                sex=None,
+                birth_hatch_date=None,
+                acquisition_date=None,
+                breeder_source=None,
+                notes="Warm ledge",
+                animal_type="lizard",
+            )
+        )
+        manager = ensure_product_projection_generations(engine)
+        search = SearchService(SQLAlchemyFTSSearchRepository(engine, manager))
+        assert search.search(bootstrap.household_id, frozenset(), "lizard")[0].title == "Sol"
+
+        animals.update_profile(
+            UpdateAnimalProfileCommand(
+                household_id=bootstrap.household_id,
+                actor_user_id=bootstrap.user_id,
+                animal_id=lizard.animal_id,
+                correlation_id=uuid4(),
+                idempotency_key="m6-search-lizard-correction",
+                name="Solstice",
+                species="Fictional ridge lizard",
+                morph="Amber",
+                genetics=None,
+                sex=None,
+                birth_hatch_date=None,
+                acquisition_date=None,
+                breeder_source=None,
+                notes="Warm ridge",
+            )
+        )
+        ProjectionWorker(engine, manager, product_projection_registry).run_once()
+
+        corrected = search.search(bootstrap.household_id, frozenset(), "lizard")
+        assert [item.title for item in corrected] == ["Solstice"]
+        assert "Fictional ridge lizard" in corrected[0].body
+        assert search.search(bootstrap.household_id, frozenset(), "desert") == ()
     finally:
         engine.dispose()
 

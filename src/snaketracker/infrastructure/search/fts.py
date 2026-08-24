@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Mapping
+from dataclasses import replace
 from datetime import datetime
 from typing import Final
 from uuid import UUID
@@ -85,7 +86,12 @@ class FTSSearchProjectionStrategy:
                 source_position=event.global_position,
             )
             return
-        document = _document(event)
+        document_event = (
+            replace(event, payload=_animal_identity_payload(connection, event))
+            if event.event_type == "animal.profile_corrected"
+            else event
+        )
+        document = _document(document_event)
         if document is None:
             return
         key, kind, title, body, route, capability = document
@@ -336,6 +342,32 @@ def _body(payload: Mapping[str, object], notes: str | None) -> str:
     if notes:
         values.append(notes)
     return " · ".join(values)
+
+
+def _animal_identity_payload(
+    connection: Connection, event: ProjectionEvent
+) -> Mapping[str, object]:
+    """Merge a full profile correction with immutable registered type identity."""
+    row = (
+        connection.execute(
+            text(
+                "SELECT schema_version,payload_json FROM domain_events "
+                "WHERE household_id=:household_id AND stream_type='animal' "
+                "AND stream_id=:stream_id AND event_type='animal.registered' "
+                "ORDER BY stream_version LIMIT 1"
+            ),
+            {"household_id": str(event.household_id), "stream_id": str(event.stream_id)},
+        )
+        .mappings()
+        .one_or_none()
+    )
+    if row is None:
+        return event.payload
+    registered = json.loads(str(row["payload_json"]))
+    if int(row["schema_version"]) == 1:
+        registered["animal_type"] = "snake"
+        registered["capability_profile_version"] = 1
+    return {**registered, **event.payload}
 
 
 def _terms(query: str) -> tuple[str, ...]:

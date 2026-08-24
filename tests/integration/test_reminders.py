@@ -246,6 +246,97 @@ def test_feeding_rule_uses_last_effective_accepted_feeding_only(tmp_path: Path) 
         engine.dispose()
 
 
+def test_one_time_due_override_is_consumed_by_later_effective_feeding(tmp_path: Path) -> None:
+    (
+        engine,
+        bootstrap,
+        animals,
+        _enclosures,
+        animal_id,
+        _enclosure_id,
+        rules,
+        facts,
+        _projection,
+    ) = _setup(tmp_path)
+    try:
+        rule = rules.create(
+            _rule_command(
+                bootstrap,
+                animal_id,
+                interval_days=5,
+                override_due_at="2026-08-11T16:00:00+00:00",
+            )
+        )
+        feeding = animals.record_feeding(
+            RecordFeedingCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                animal_id,
+                uuid4(),
+                "feeding-after-one-time-override",
+                datetime(2026, 8, 16, 16, 0, tzinfo=UTC),
+                "mouse",
+                "small",
+                None,
+                "frozen_thawed",
+                1,
+                "accepted",
+                None,
+            )
+        )
+
+        agenda = facts.agenda_for(
+            bootstrap.household_id,
+            now=datetime(2026, 8, 17, 16, 0, tzinfo=UTC),
+        )
+        item = next(item for item in agenda if item.rule_id == rule.rule_id)
+        assert item.due_at == datetime(2026, 8, 21, 16, 0, tzinfo=UTC)
+        assert item.status == "upcoming"
+        assert item.source_event_id == feeding.event.event_id
+        assert item.explanation == "5 days after last accepted feeding"
+
+        animals.void_event(
+            VoidAnimalEventCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                "owner",
+                animal_id,
+                feeding.event.event_id,
+                "void-feeding-after-one-time-override",
+                "Entry was not valid.",
+            )
+        )
+        reverted = facts.agenda_for(
+            bootstrap.household_id,
+            now=datetime(2026, 8, 17, 16, 0, tzinfo=UTC),
+        )
+        reverted_item = next(item for item in reverted if item.rule_id == rule.rule_id)
+        assert reverted_item.due_at == datetime(2026, 8, 11, 16, 0, tzinfo=UTC)
+        assert reverted_item.status == "overdue"
+        assert reverted_item.explanation == "Owner due-date override"
+
+        animals.reinstate_event(
+            ReinstateAnimalEventCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                "owner",
+                animal_id,
+                feeding.event.event_id,
+                "reinstate-feeding-after-one-time-override",
+                "Entry was confirmed.",
+            )
+        )
+        restored = facts.recalculate_rule(
+            bootstrap.household_id,
+            rule.rule_id,
+            now=datetime(2026, 8, 22, 16, 0, tzinfo=UTC),
+        )
+        assert restored[0].due_at == datetime(2026, 8, 21, 16, 0, tzinfo=UTC)
+        assert restored[0].source_event_id == feeding.event.event_id
+    finally:
+        engine.dispose()
+
+
 def test_correct_void_and_reinstate_recalculate_from_effective_weight_history(
     tmp_path: Path,
 ) -> None:

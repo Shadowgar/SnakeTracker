@@ -2,7 +2,10 @@
 
 ## Product principles
 
-SnakeTracker minimizes taps for frequent keeper work, keeps urgent husbandry facts visible, and uses progressive disclosure for clinical and administrative detail. Mobile is primary; desktop adds density rather than a different mental model.
+Care Keeper minimizes taps for frequent keeper work, keeps urgent care facts visible, and uses
+progressive disclosure for clinical and administrative detail. Mobile is primary; desktop adds
+density rather than a different mental model. Trusted profiles support Snake, Spider, Lizard, and
+Scorpion collections; screens derive relevant actions from capabilities rather than species text.
 
 ## Primary navigation
 
@@ -37,8 +40,8 @@ Animal profile sections:
 - Overview: photo, identity, status, enclosure, urgent facts
 - Timeline: effective chronological history with correction markers
 - Feeding
-- Growth: weight and length tables/charts
-- Sheds
+- Growth: capability-applicable weight and length tables/charts
+- Capability-applicable shed or molt history
 - Health
 - Documents/photos
 - Profile and lifecycle settings

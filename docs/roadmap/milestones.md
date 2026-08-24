@@ -124,13 +124,31 @@ household systems.
 
 Owner acceptance: [August 15, 2026 owner acceptance record](../evidence/m5.5-multispecies-foundation/approvals/2026-08-15-owner-acceptance.md).
 
+## Pre-M6 capability extension — Four supported animal groups
+
+Status: Implementation-qualified August 24, 2026; M6 owner acceptance remains pending
+
+This additive extension follows accepted M5.5 history. It adds `lizard.v1` and `scorpion.v1`,
+neutral molt/premolt schema v2, and four-group owner-review data under ADR-0041 without claiming
+that M5.5 originally qualified more than Snake and Spider.
+
+- [x] RB Four trusted profile matrices expose only the approved care, reminder, and analytics capabilities. Evidence: [four-group qualification](../evidence/m6-product-experience/four-group-expansion/README.md).
+- [x] RB Historical Spider molt/premolt v1 and neutral Spider/Scorpion v2 replay, correct, rebuild, report, search, and analyze side by side. Evidence: [four-group qualification](../evidence/m6-product-experience/four-group-expansion/README.md).
+- [x] RB One-time reminder overrides are consumed by later qualifying effective care, and standalone reminder choices are profile-aware. Evidence: [four-group qualification](../evidence/m6-product-experience/four-group-expansion/README.md).
+- [x] RB Profile corrections retain animal type in household-isolated search documents. Evidence: [four-group qualification](../evidence/m6-product-experience/four-group-expansion/README.md).
+- [x] RB Backup/restore and the deterministic demo-only reset preserve all four groups while the real household remains unchanged. Evidence: [four-group qualification](../evidence/m6-product-experience/four-group-expansion/README.md).
+- [x] RB Four-group browser, accessibility, compatibility, migration, integrity, and Raspberry Pi ARM64 runtime qualification pass on the promoted port-8081 instance. Evidence: [four-group qualification](../evidence/m6-product-experience/four-group-expansion/README.md).
+
+This extension does not authorize the deferred M6 UX redesign, M6 owner acceptance, PR #8 merge,
+or M7 work.
+
 ## Phase 6 / M6 — Product experience complete
 
 Status: M6 implementation-qualified; owner acceptance pending
 
 M6 begins only after M5.5 acceptance. Its search, reports, dashboards, analytics, reference profiles,
 and explainable suggestions must consume the registered animal type/capability identity, effective
-feeding history, applicable measurements, snake shed history, spider molt history, reminder facts,
+feeding history, applicable measurements, snake shed history, Spider/Scorpion molt history, reminder facts,
 neutral enclosure care, and versioned species/life-stage reference profiles. M6 does not redefine
 the Animal aggregate or infer that every care fact applies to every type.
 

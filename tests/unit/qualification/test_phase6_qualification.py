@@ -21,20 +21,31 @@ canonical_bytes = generator.canonical_bytes
 
 
 def test_m6_dataset_is_deterministic_mixed_and_contains_no_guidance() -> None:
-    first = build_dataset(animal_count=10)
-    second = build_dataset(animal_count=10)
+    first = build_dataset(animal_count=13)
+    second = build_dataset(animal_count=13)
 
     assert (
         hashlib.sha256(canonical_bytes(first)).digest()
         == hashlib.sha256(canonical_bytes(second)).digest()
     )
-    assert {animal["animal_type"] for animal in first["animals"]} == {"snake", "spider"}
+    assert {animal["animal_type"] for animal in first["animals"]} == {
+        "snake",
+        "spider",
+        "lizard",
+        "scorpion",
+    }
+    assert {animal["capability_profile"] for animal in first["animals"]} == {
+        "snake.v1",
+        "spider.v1",
+        "lizard.v1",
+        "scorpion.v1",
+    }
     assert first["production_husbandry_guidance"].startswith("unavailable")
 
 
 def test_m6_dataset_rejects_nonrepresentative_size() -> None:
-    with pytest.raises(ValueError, match="at least five"):
-        build_dataset(animal_count=4)
+    with pytest.raises(ValueError, match="at least eight"):
+        build_dataset(animal_count=7)
 
 
 def test_phase6_qualification_runner_has_reproducible_cli() -> None:

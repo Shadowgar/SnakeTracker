@@ -27,17 +27,20 @@ Authentication credentials and sessions are platform records. Membership transit
 Husbandry and health are not peer bounded contexts. They issue commands through animal-owned application ports and cannot import one another. Common types live in `animals.domain.common`. Reports, reminders, and search consume public event contracts.
 
 Animal type is modeled by a trusted, versioned care-capability profile within this aggregate, not by
-creating a new aggregate per species. The initial profiles are `snake.v1` and `spider.v1`. Profiles
-declare applicable typed commands, measurements, husbandry contracts, reminder kinds, and
-presentation actions. Application services and domain handlers both reject inapplicable actions.
-They do not embed universal husbandry intervals or permit arbitrary user-defined code.
+creating a new aggregate per species. The registered profiles are `snake.v1`, `spider.v1`,
+`lizard.v1`, and `scorpion.v1`. Profiles declare applicable typed commands, measurements,
+husbandry contracts, reminder kinds, analytics, and presentation actions. Application services and
+domain handlers both reject inapplicable actions. They do not embed universal husbandry intervals
+or permit arbitrary user-defined code.
 
 Legacy `animal.registered` version 1 streams deterministically resolve to `snake.v1`; they are not
 rewritten. Version 2 registration records the profile identity for new animals. Common identity,
 photos, feeding, enclosure assignment, inventory and expense associations, reminders, attachments,
-timeline, backup, and authorization remain shared. Snake length, shed, and bath facts remain
-snake-capability features. Spider molt and premolt facts are additive Animal contracts. Enclosure
-care remains in the neutral Enclosure aggregate.
+timeline, backup, and authorization remain shared. Snake shed remains snake-specific because its
+contract includes snake semantics. Lizard enables shared length, bath, and misting capabilities but
+does not reuse snake shed. Historical molt/premolt schema v1 remains Spider-only; neutral schema v2
+is shared by molt-capable Spider and Scorpion profiles. Scorpion does not expose length, shed, or
+bath. Enclosure care remains in the neutral Enclosure aggregate.
 
 ### Enclosures
 

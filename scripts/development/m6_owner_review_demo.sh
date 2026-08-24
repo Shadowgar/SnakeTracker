@@ -22,7 +22,7 @@ case "${1:-}" in
         ;;
     *)
         printf '%s\n' \
-            'Usage: scripts/development/m6_owner_review_demo.sh seed [--as-of YYYY-MM-DD]' \
+            'Usage: scripts/development/m6_owner_review_demo.sh seed [--as-of YYYY-MM-DD] [--reset-existing-demo]' \
             '       scripts/development/m6_owner_review_demo.sh status' >&2
         exit 2
         ;;

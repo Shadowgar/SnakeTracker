@@ -13,14 +13,23 @@ from snaketracker.domains.animals.capabilities import (
 )
 
 
-def test_production_registry_contains_only_versioned_snake_and_spider_profiles() -> None:
-    assert animal_capability_registry.identities == ("snake.v1", "spider.v1")
+def test_production_registry_contains_the_four_trusted_versioned_profiles() -> None:
+    assert animal_capability_registry.identities == (
+        "snake.v1",
+        "spider.v1",
+        "lizard.v1",
+        "scorpion.v1",
+    )
 
     snake = animal_capability_registry.require("snake.v1")
     spider = animal_capability_registry.require("spider.v1")
+    lizard = animal_capability_registry.require("lizard.v1")
+    scorpion = animal_capability_registry.require("scorpion.v1")
 
     assert snake.animal_type is AnimalType.SNAKE
     assert spider.animal_type is AnimalType.SPIDER
+    assert lizard.animal_type is AnimalType.LIZARD
+    assert scorpion.animal_type is AnimalType.SCORPION
     assert AnimalCapability.LENGTH in snake.capabilities
     assert AnimalCapability.SHED in snake.capabilities
     assert AnimalCapability.BATH in snake.capabilities
@@ -32,6 +41,33 @@ def test_production_registry_contains_only_versioned_snake_and_spider_profiles()
     assert AnimalCapability.MOLT in spider.capabilities
     assert AnimalCapability.PREMOLT in spider.capabilities
     assert AnimalCapability.MISTING in spider.capabilities
+    assert lizard.care_actions == ("feeding", "weight", "length", "bath", "misting")
+    assert lizard.reminder_kinds == (
+        "feeding",
+        "weight",
+        "length",
+        "bath",
+        "misting",
+        "cleaning",
+        "water_change",
+    )
+    assert AnimalCapability.SHED not in lizard.capabilities
+    assert AnimalCapability.MOLT not in lizard.capabilities
+    assert scorpion.care_actions == ("feeding", "weight", "molt", "premolt", "misting")
+    assert scorpion.reminder_kinds == (
+        "feeding",
+        "weight",
+        "molt",
+        "misting",
+        "cleaning",
+        "water_change",
+    )
+    assert AnimalCapability.LENGTH not in scorpion.capabilities
+    assert AnimalCapability.SHED not in scorpion.capabilities
+    assert AnimalCapability.BATH not in scorpion.capabilities
+    assert AnimalCapability.MOLT in scorpion.capabilities
+    assert AnimalCapability.PREMOLT in scorpion.capabilities
+    assert AnimalCapability.MISTING in scorpion.capabilities
     assert snake.analytics_kinds == frozenset(
         {
             AnimalAnalyticsKind.FEEDING,
@@ -41,6 +77,20 @@ def test_production_registry_contains_only_versioned_snake_and_spider_profiles()
         }
     )
     assert spider.analytics_kinds == frozenset(
+        {
+            AnimalAnalyticsKind.FEEDING,
+            AnimalAnalyticsKind.WEIGHT,
+            AnimalAnalyticsKind.MOLT,
+        }
+    )
+    assert lizard.analytics_kinds == frozenset(
+        {
+            AnimalAnalyticsKind.FEEDING,
+            AnimalAnalyticsKind.WEIGHT,
+            AnimalAnalyticsKind.LENGTH,
+        }
+    )
+    assert scorpion.analytics_kinds == frozenset(
         {
             AnimalAnalyticsKind.FEEDING,
             AnimalAnalyticsKind.WEIGHT,

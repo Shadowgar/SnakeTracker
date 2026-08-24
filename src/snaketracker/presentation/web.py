@@ -148,10 +148,10 @@ CARE_FORM_DETAILS: dict[str, tuple[str, str, str]] = {
     "length": ("Record length", "Add the animal's measured length in millimetres.", "lengths"),
     "shed": ("Record shed", "Add the observed shed state or completed result.", "sheds"),
     "bath": ("Record bath", "Add a completed bath or soak.", "baths"),
-    "molt": ("Record molt", "Add the observed Spider molt result.", "molts"),
+    "molt": ("Record molt", "Add the observed molt result.", "molts"),
     "premolt": (
         "Premolt observation",
-        "Record or clear the observed Spider premolt state.",
+        "Record or clear the observed premolt state.",
         "premolt-observations",
     ),
     "misting": (
@@ -1528,6 +1528,8 @@ def create_web_router(
             return RedirectResponse("/login", status_code=303)
         if "reminder.manage" not in principal.capabilities:
             return _access_denied(request, "Reminder access denied")
+        animals = animal_service.list_profiles(principal.household_id)
+        enclosures = enclosure_service.list_profiles(principal.household_id)
         return protected_page(
             request,
             "reminder_new.html",
@@ -1535,8 +1537,7 @@ def create_web_router(
             context={
                 "errors": {},
                 "values": {},
-                "animals": animal_service.list_profiles(principal.household_id),
-                "enclosures": enclosure_service.list_profiles(principal.household_id),
+                "reminder_subjects": _reminder_subject_rows(animals, enclosures),
             },
         )
 
@@ -1581,6 +1582,8 @@ def create_web_router(
                 )
             )
         except (ReminderValidationError, FormValidationError, ValueError) as error:
+            animals = animal_service.list_profiles(principal.household_id)
+            enclosures = enclosure_service.list_profiles(principal.household_id)
             return protected_page(
                 request,
                 "reminder_new.html",
@@ -1589,8 +1592,7 @@ def create_web_router(
                 context={
                     "errors": {"form": str(error)},
                     "values": _form_values(form),
-                    "animals": animal_service.list_profiles(principal.household_id),
-                    "enclosures": enclosure_service.list_profiles(principal.household_id),
+                    "reminder_subjects": _reminder_subject_rows(animals, enclosures),
                 },
             )
         return RedirectResponse(f"/reminders#{result.rule_id}", status_code=303)
@@ -3092,6 +3094,46 @@ def _animal_type_options() -> tuple[dict[str, str], ...]:
         for identity in animal_capability_registry.identities
         for profile in (animal_capability_registry.require(identity),)
     )
+
+
+def _reminder_subject_rows(
+    animals: tuple[Any, ...], enclosures: tuple[Any, ...]
+) -> tuple[dict[str, Any], ...]:
+    rows: list[dict[str, Any]] = []
+    for animal in animals:
+        options = tuple(
+            (reminder_type, CARE_SCHEDULE_CAPABILITIES[reminder_type][0])
+            for reminder_type in animal.reminder_kinds
+            if CARE_SCHEDULE_CAPABILITIES[reminder_type][1] == "animal"
+        )
+        if options:
+            rows.append(
+                {
+                    "subject": f"animal:{animal.animal_id}",
+                    "label": animal.name,
+                    "context": animal.type_label,
+                    "options": options,
+                }
+            )
+    for enclosure in enclosures:
+        occupants = tuple(
+            animal for animal in animals if animal.current_enclosure_id == enclosure.enclosure_id
+        )
+        reminder_types = ["cleaning", "water_change"]
+        if any("misting" in animal.reminder_kinds for animal in occupants):
+            reminder_types.append("misting")
+        rows.append(
+            {
+                "subject": f"enclosure:{enclosure.enclosure_id}",
+                "label": enclosure.name,
+                "context": "Enclosure",
+                "options": tuple(
+                    (reminder_type, CARE_SCHEDULE_CAPABILITIES[reminder_type][0])
+                    for reminder_type in reminder_types
+                ),
+            }
+        )
+    return tuple(rows)
 
 
 def _care_action_rows(animal: Any) -> tuple[dict[str, str], ...]:

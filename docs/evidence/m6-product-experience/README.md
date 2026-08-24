@@ -26,3 +26,8 @@ The accepted [ADR-0040](../../adr/0040-trusted-local-demo-household-provisioning
 implemented and qualified. The [single-instance demo/isolation evidence](owner-review/consolidated-demo/README.md)
 and [mobile-first owner-review correction](browser/mobile-first/README.md) pass. M6 owner acceptance
 remains pending.
+
+The later [ADR-0041 four-group extension](four-group-expansion/README.md) is
+implementation-qualified on the promoted Raspberry Pi 5 and tracked separately so
+the accepted M5.5 and earlier M6 evidence continues to describe its original Snake/Spider scope.
+Major M6 UX redesign remains paused, and M6 owner acceptance is still pending.

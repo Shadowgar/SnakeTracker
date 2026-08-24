@@ -194,7 +194,7 @@ def _feed_from_stock(
     assert response.status_code == 303
 
 
-def test_five_animal_mixed_collection_shows_type_photo_and_applicable_actions(
+def test_four_group_collection_shows_type_photo_and_applicable_actions(
     tmp_path: Path,
 ) -> None:
     with _client(tmp_path) as client:
@@ -205,6 +205,8 @@ def test_five_animal_mixed_collection_shows_type_photo_and_applicable_actions(
             "Spider A": _register(client, "Spider A", "spider", "Grammostola pulchra"),
             "Spider B": _register(client, "Spider B", "spider", "Tliltocatl albopilosus"),
             "Spider C": _register(client, "Spider C", "spider", "Avicularia avicularia"),
+            "Lizard A": _register(client, "Lizard A", "lizard", "Fictional ridge lizard"),
+            "Scorpion A": _register(client, "Scorpion A", "scorpion", "Fictional forest scorpion"),
         }
 
         collection = client.get("/animals")
@@ -214,6 +216,9 @@ def test_five_animal_mixed_collection_shows_type_photo_and_applicable_actions(
             assert f'alt="Profile photo of {name}"' in collection.text
         assert collection.text.count(">Snake<") >= 2
         assert collection.text.count(">Spider<") >= 3
+        assert collection.text.count(">Lizard<") >= 1
+        assert collection.text.count(">Scorpion<") >= 1
+        assert "Your animals and their care records." in collection.text
 
         snake = client.get(profiles["Snake A"])
         assert all(
@@ -251,22 +256,62 @@ def test_five_animal_mixed_collection_shows_type_photo_and_applicable_actions(
         assert "Premolt state" in spider.text
         assert "Not recorded" in spider.text
 
+        lizard = client.get(profiles["Lizard A"])
+        assert all(
+            label in lizard.text
+            for label in (
+                "Record feeding",
+                "Record weight",
+                "Record length",
+                "Record bath",
+                "Record misting",
+            )
+        )
+        assert "Record shed" not in lizard.text
+        assert "Record molt" not in lizard.text
+        assert "Premolt observation" not in lizard.text
+        assert "Length check" in lizard.text
+        assert "Molt check" not in lizard.text
+
+        scorpion = client.get(profiles["Scorpion A"])
+        assert all(
+            label in scorpion.text
+            for label in (
+                "Record feeding",
+                "Record weight",
+                "Record molt",
+                "Premolt observation",
+                "Record misting",
+            )
+        )
+        assert "Record length" not in scorpion.text
+        assert "Record shed" not in scorpion.text
+        assert "Record bath" not in scorpion.text
+        assert "Molt check" in scorpion.text
+
         direct_snake_form = client.get(f"{profiles['Spider A']}/lengths/new")
         assert direct_snake_form.status_code == 422
         assert "not available" in direct_snake_form.text
         malformed_animal_form = client.get("/animals/not-a-uuid/molts/new")
         assert malformed_animal_form.status_code == 404
         assert "Animal not found" in malformed_animal_form.text
+        assert client.get(f"{profiles['Lizard A']}/sheds/new").status_code == 422
+        for path in ("lengths/new", "sheds/new", "baths/new"):
+            assert client.get(f"{profiles['Scorpion A']}/{path}").status_code == 422
 
         snake_habitat = _create_enclosure(client, "Snake Habitat")
         spider_tower = _create_enclosure(client, "Spider Tower")
         spider_nursery = _create_enclosure(client, "Spider Nursery")
+        lizard_vivarium = _create_enclosure(client, "Lizard Vivarium")
+        scorpion_habitat = _create_enclosure(client, "Scorpion Habitat")
         _assign(client, profiles["Snake A"], snake_habitat, "m55-assign-snake-a")
         _assign(client, profiles["Snake B"], snake_habitat, "m55-assign-snake-b")
         _assign(client, profiles["Spider A"], spider_tower, "m55-assign-spider-a-first")
         _assign(client, profiles["Spider B"], spider_nursery, "m55-assign-spider-b")
         _assign(client, profiles["Spider C"], spider_nursery, "m55-assign-spider-c")
         _assign(client, profiles["Spider A"], spider_nursery, "m55-assign-spider-a-second")
+        _assign(client, profiles["Lizard A"], lizard_vivarium, "m55-assign-lizard-a")
+        _assign(client, profiles["Scorpion A"], scorpion_habitat, "m55-assign-scorpion-a")
 
         old_occupancy = client.get(spider_tower)
         current_occupancy = client.get(spider_nursery)
@@ -293,6 +338,65 @@ def test_five_animal_mixed_collection_shows_type_photo_and_applicable_actions(
             occurred_at=occurred_at,
         )
         assert "3 item" in client.get(shared_stock).text
+
+        lizard_profile = client.get(profiles["Lizard A"])
+        lizard_length = client.post(
+            f"{profiles['Lizard A']}/lengths",
+            data={
+                "csrf_token": _csrf(lizard_profile.text),
+                "idempotency_key": "four-group-browser-lizard-length",
+                "occurred_at": occurred_at,
+                "length_mm": "410",
+                "notes": "Fictional measured length.",
+            },
+            follow_redirects=False,
+        )
+        assert lizard_length.status_code == 303
+
+        scorpion_profile = client.get(profiles["Scorpion A"])
+        scorpion_molt = client.post(
+            f"{profiles['Scorpion A']}/molts",
+            data={
+                "csrf_token": _csrf(scorpion_profile.text),
+                "idempotency_key": "four-group-browser-scorpion-molt",
+                "occurred_at": occurred_at,
+                "result": "complete",
+                "notes": "Fictional complete molt.",
+            },
+            follow_redirects=False,
+        )
+        assert scorpion_molt.status_code == 303
+        scorpion_profile = client.get(profiles["Scorpion A"])
+        scorpion_premolt = client.post(
+            f"{profiles['Scorpion A']}/premolt-observations",
+            data={
+                "csrf_token": _csrf(scorpion_profile.text),
+                "idempotency_key": "four-group-browser-scorpion-premolt",
+                "occurred_at": occurred_at,
+                "observed": "true",
+                "notes": "Fictional premolt observation.",
+            },
+            follow_redirects=False,
+        )
+        assert scorpion_premolt.status_code == 303
+        scorpion_timeline = client.get(f"{profiles['Scorpion A']}/timeline")
+        assert "Complete · Fictional complete molt." in scorpion_timeline.text
+        assert "Premolt observed · Fictional premolt observation." in scorpion_timeline.text
+
+        reminder_page = client.get("/reminders/new")
+        lizard_marker = f'data-reminder-subject="animal:{profiles["Lizard A"].rsplit("/", 1)[-1]}"'
+        scorpion_marker = (
+            f'data-reminder-subject="animal:{profiles["Scorpion A"].rsplit("/", 1)[-1]}"'
+        )
+        lizard_section = reminder_page.text.split(lizard_marker, 1)[1].split("</section>", 1)[0]
+        scorpion_section = reminder_page.text.split(scorpion_marker, 1)[1].split("</section>", 1)[0]
+        assert all(
+            f'value="{kind}"' in lizard_section for kind in ("feeding", "weight", "length", "bath")
+        )
+        assert 'value="molt"' not in lizard_section
+        assert all(f'value="{kind}"' in scorpion_section for kind in ("feeding", "weight", "molt"))
+        assert 'value="length"' not in scorpion_section
+        assert 'value="bath"' not in scorpion_section
 
         spider_profile = client.get(profiles["Spider A"])
         molt = client.post(

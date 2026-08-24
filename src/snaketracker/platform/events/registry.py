@@ -21,9 +21,12 @@ from snaketracker.domains.animals.contracts import (
     AnimalLengthCorrectedV1,
     AnimalLengthRecordedV1,
     AnimalMoltCorrectedV1,
+    AnimalMoltCorrectedV2,
     AnimalMoltRecordedV1,
+    AnimalMoltRecordedV2,
     AnimalPhotoSelectedV1,
     AnimalPremoltObservedV1,
+    AnimalPremoltObservedV2,
     AnimalProfileCorrectedV1,
     AnimalRegisteredV1,
     AnimalRegisteredV2,
@@ -585,10 +588,24 @@ def _deserialize_animal_molt_recorded(data: Mapping[str, object]) -> EventPayloa
     return AnimalMoltRecordedV1(result, observation)
 
 
+def _deserialize_animal_molt_recorded_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalMoltRecordedV2, data)
+    result, observation = _molt_fields(data, "molt")
+    return AnimalMoltRecordedV2(result, observation)
+
+
 def _deserialize_animal_molt_corrected(data: Mapping[str, object]) -> EventPayload:
     _require_exact_fields(AnimalMoltCorrectedV1, data)
     result, observation = _molt_fields(data, "molt correction")
     return AnimalMoltCorrectedV1(
+        _uuid_field(data, "target_event_id", "molt correction"), result, observation
+    )
+
+
+def _deserialize_animal_molt_corrected_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalMoltCorrectedV2, data)
+    result, observation = _molt_fields(data, "molt correction")
+    return AnimalMoltCorrectedV2(
         _uuid_field(data, "target_event_id", "molt correction"), result, observation
     )
 
@@ -600,6 +617,15 @@ def _deserialize_animal_premolt_observed(data: Mapping[str, object]) -> EventPay
     if type(observed) is not bool or (observation is not None and not isinstance(observation, str)):
         raise ValueError("Stored animal premolt payload is invalid.")
     return AnimalPremoltObservedV1(observed, observation)
+
+
+def _deserialize_animal_premolt_observed_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalPremoltObservedV2, data)
+    observed = data["observed"]
+    observation = data["observation"]
+    if type(observed) is not bool or (observation is not None and not isinstance(observation, str)):
+        raise ValueError("Stored animal premolt payload is invalid.")
+    return AnimalPremoltObservedV2(observed, observation)
 
 
 def _deserialize_animal_enclosure_assigned(data: Mapping[str, object]) -> EventPayload:
@@ -753,6 +779,21 @@ ANIMAL_HUSBANDRY_CONTRACTS = (
         ),
     ),
     EventContractRegistration(
+        event_type="animal.molt_recorded",
+        schema_version=2,
+        owner="animals.husbandry",
+        payload_type=AnimalMoltRecordedV2,
+        deserialize_payload=_deserialize_animal_molt_recorded_v2,
+        subject_requirements=(SubjectRequirement("animal", "primary"),),
+        correction=CorrectionCapabilities(
+            correctable=True,
+            voidable=True,
+            reinstatable=True,
+            required_role="owner",
+            correction_event_types=("animal.molt_corrected",),
+        ),
+    ),
+    EventContractRegistration(
         event_type="animal.molt_corrected",
         schema_version=1,
         owner="animals.husbandry",
@@ -762,11 +803,33 @@ ANIMAL_HUSBANDRY_CONTRACTS = (
         correction=CorrectionCapabilities(voidable=True, reinstatable=True, required_role="owner"),
     ),
     EventContractRegistration(
+        event_type="animal.molt_corrected",
+        schema_version=2,
+        owner="animals.husbandry",
+        payload_type=AnimalMoltCorrectedV2,
+        deserialize_payload=_deserialize_animal_molt_corrected_v2,
+        subject_requirements=(SubjectRequirement("animal", "primary"),),
+        correction=CorrectionCapabilities(voidable=True, reinstatable=True, required_role="owner"),
+    ),
+    EventContractRegistration(
         event_type="animal.premolt_observed",
         schema_version=1,
         owner="animals.husbandry",
         payload_type=AnimalPremoltObservedV1,
         deserialize_payload=_deserialize_animal_premolt_observed,
+        subject_requirements=(SubjectRequirement("animal", "primary"),),
+        correction=CorrectionCapabilities(
+            voidable=True,
+            reinstatable=True,
+            required_role="owner",
+        ),
+    ),
+    EventContractRegistration(
+        event_type="animal.premolt_observed",
+        schema_version=2,
+        owner="animals.husbandry",
+        payload_type=AnimalPremoltObservedV2,
+        deserialize_payload=_deserialize_animal_premolt_observed_v2,
         subject_requirements=(SubjectRequirement("animal", "primary"),),
         correction=CorrectionCapabilities(
             voidable=True,

@@ -146,7 +146,7 @@ product_projection_registry = ProjectionRegistry(
             "search",
             strategy=FTSSearchProjectionStrategy(),
             components=("content", "fts"),
-            handler_version=3,
+            handler_version=4,
         ),
         _definition("measurement_analytics", "insights"),
         _definition("feeding_analytics", "insights"),

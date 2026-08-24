@@ -293,7 +293,7 @@ def test_operational_routes_fail_closed_for_invalid_and_unauthorized_requests(
         assert invalid_void.status_code == 422
 
         reminder_form = client.get("/reminders/new")
-        token = _csrf(reminder_form.text)
+        assert "No reminder subjects yet" in reminder_form.text
         invalid_reminder = client.post(
             "/reminders",
             data={

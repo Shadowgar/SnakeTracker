@@ -22,7 +22,9 @@ from snaketracker.domains.animals.contracts import (
     AnimalLengthCorrectedV1,
     AnimalLengthRecordedV1,
     AnimalMoltCorrectedV1,
+    AnimalMoltCorrectedV2,
     AnimalMoltRecordedV1,
+    AnimalMoltRecordedV2,
     AnimalWeightCorrectedV1,
     AnimalWeightRecordedV1,
 )
@@ -694,7 +696,9 @@ class ReminderFactService:
         self, rule: ReminderRuleCurrent
     ) -> tuple[datetime, str, DomainEvent | None] | None:
         source = self._latest_source(rule)
-        if rule.override_due_at is not None:
+        if rule.override_due_at is not None and (
+            source is None or source.occurred_at < rule.override_due_at
+        ):
             return rule.override_due_at, "Owner due-date override", source
         if rule.schedule_kind == "fixed_interval":
             if rule.anchor_at is None:
@@ -753,7 +757,13 @@ def _qualifies(reminder_type: str, event: DomainEvent) -> bool:
         or (reminder_type == "bath" and isinstance(payload, AnimalBathRecordedV1))
         or (
             reminder_type == "molt"
-            and isinstance(payload, AnimalMoltRecordedV1 | AnimalMoltCorrectedV1)
+            and isinstance(
+                payload,
+                AnimalMoltRecordedV1
+                | AnimalMoltRecordedV2
+                | AnimalMoltCorrectedV1
+                | AnimalMoltCorrectedV2,
+            )
         )
         or (reminder_type == "cleaning" and isinstance(payload, EnclosureCleaningRecordedV1))
         or (reminder_type == "water_change" and isinstance(payload, EnclosureWaterChangeRecordedV1))

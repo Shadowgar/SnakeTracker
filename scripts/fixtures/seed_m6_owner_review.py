@@ -12,48 +12,57 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, date, datetime, time, timedelta
 from io import BytesIO
 from pathlib import Path
+from uuid import UUID
 
 from fastapi.testclient import TestClient
 from PIL import Image, ImageDraw
 from pydantic import SecretStr
 
-from snaketracker.application.household_bootstrap import DEMO_EMAIL
+from snaketracker.application.household_bootstrap import DEMO_EMAIL, DEMO_HOUSEHOLD_ID
 from snaketracker.bootstrap.application import build_application
 from snaketracker.bootstrap.configuration import Environment, Settings
+from snaketracker.infrastructure.attachments.storage import LocalAttachmentStorage
+from snaketracker.infrastructure.database.engine import create_sqlite_engine
+from snaketracker.infrastructure.product_experience.projections import product_projection_registry
+from snaketracker.infrastructure.projections.sqlite_generations import (
+    SQLiteProjectionGenerationManager,
+)
 from snaketracker.operations.demo_household import provision_demo_household
 
 ROOT = Path(__file__).parents[2]
 DEMO_PASSWORD = "m6-demo-local-only-password"
-DEMO_SCENARIO_VERSION = "m6-owner-review.v2"
+DEMO_SCENARIO_VERSION = "four-group-owner-review.v1"
 DEMO_RUNTIME_SECRET = "m6-owner-review-demo-runtime-secret"
 PHOTO_COLORS = {
     "juniper": (72, 112, 67),
     "atlas": (155, 103, 62),
     "ember": (157, 70, 45),
-    "sable": (66, 60, 73),
     "pip": (61, 114, 126),
-    "willow": (84, 92, 51),
     "nova": (89, 72, 126),
     "cedar": (135, 83, 45),
-    "mica": (83, 98, 105),
-    "cinder": (112, 58, 52),
-    "moss": (55, 96, 70),
     "pearl": (126, 111, 133),
+    "sol": (198, 143, 55),
+    "bramble": (83, 112, 69),
+    "dune": (177, 128, 79),
+    "onyx": (44, 48, 55),
+    "cobalt": (47, 79, 126),
+    "saffron": (184, 113, 42),
 }
 DEMO_ANIMAL_NAMES = frozenset(
     {
         "Juniper",
         "Atlas",
         "Ember",
-        "Sable",
         "Pip",
-        "Willow",
         "Nova",
         "Cedar",
-        "Mica",
-        "Cinder",
-        "Moss",
         "Pearl",
+        "Sol",
+        "Bramble",
+        "Dune",
+        "Onyx",
+        "Cobalt",
+        "Saffron",
     }
 )
 
@@ -68,10 +77,12 @@ class DemoSeedResult:
     enclosure_count: int
     snake_count: int
     spider_count: int
+    lizard_count: int
+    scorpion_count: int
     profile_photo_count: int
     event_count: int
     prediction_ready: tuple[str, ...]
-    insufficient_history_animal: str
+    insufficient_history_animals: tuple[str, ...]
     animal_ids: dict[str, str]
 
 
@@ -260,6 +271,158 @@ def _prepare_target(data_dir: Path) -> Path:
     return database
 
 
+def _quoted_identifier(value: str) -> str:
+    return '"' + value.replace('"', '""') + '"'
+
+
+def _reset_demo_household(database: Path, household_id: str) -> None:
+    """Remove only disposable demo-owned state while retaining its trusted identity."""
+    if household_id != DEMO_HOUSEHOLD_ID:
+        raise RuntimeError("Demo reset refused a household outside the reserved demo identity.")
+    attachment_rows: list[tuple[str, str]] = []
+    staging_ids: list[str] = []
+    with sqlite3.connect(database) as connection:
+        connection.execute("PRAGMA foreign_keys=ON")
+        connection.execute("BEGIN IMMEDIATE")
+        reserved = connection.execute(
+            "SELECT count(*) FROM household_summaries WHERE household_id=?",
+            (household_id,),
+        ).fetchone()[0]
+        if reserved != 1:
+            raise RuntimeError("Reserved demo household is missing; reset refused.")
+        attachment_rows = [
+            (str(storage_key), str(media_type))
+            for storage_key, media_type in connection.execute(
+                "SELECT storage_key,media_type FROM attachment_versions WHERE household_id=?",
+                (household_id,),
+            )
+        ]
+        staging_ids = [
+            str(staged_id)
+            for (staged_id,) in connection.execute(
+                "SELECT staged_attachment_id FROM attachment_staging WHERE household_id=?",
+                (household_id,),
+            )
+        ]
+        event_ids = [
+            str(event_id)
+            for (event_id,) in connection.execute(
+                "SELECT event_id FROM domain_events WHERE household_id=? "
+                "AND stream_type<>'household'",
+                (household_id,),
+            )
+        ]
+        job_ids = [
+            str(job_id)
+            for (job_id,) in connection.execute(
+                "SELECT job_id FROM jobs WHERE household_id=?", (household_id,)
+            )
+        ]
+        if job_ids:
+            placeholders = ",".join("?" for _ in job_ids)
+            connection.execute(
+                f"DELETE FROM delivery_attempts WHERE job_id IN ({placeholders})", job_ids
+            )
+        if event_ids:
+            placeholders = ",".join("?" for _ in event_ids)
+            connection.execute(
+                f"DELETE FROM event_subjects WHERE event_id IN ({placeholders})", event_ids
+            )
+        for (content_table,) in connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' "
+            "AND name LIKE 'global_search_fts_content_g_%'"
+        ).fetchall():
+            content = str(content_table)
+            fts = content.replace("_content_g_", "_fts_g_")
+            rowids = [
+                int(rowid)
+                for (rowid,) in connection.execute(
+                    f"SELECT rowid FROM {_quoted_identifier(content)} WHERE household_id=?",
+                    (household_id,),
+                )
+            ]
+            if rowids:
+                placeholders = ",".join("?" for _ in rowids)
+                connection.execute(
+                    f"DELETE FROM {_quoted_identifier(fts)} WHERE rowid IN ({placeholders})",
+                    rowids,
+                )
+
+        connection.execute("DELETE FROM attachment_versions WHERE household_id=?", (household_id,))
+        connection.execute("DELETE FROM attachment_staging WHERE household_id=?", (household_id,))
+        preserved_tables = {
+            "authorization_memberships",
+            "household_summaries",
+            "domain_events",
+            "event_streams",
+            "idempotency_operations",
+            "attachment_staging",
+            "attachment_versions",
+            "backup_requests",
+            "backup_runs",
+        }
+        tables = [
+            str(name)
+            for (name,) in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+            )
+        ]
+        for table in tables:
+            if table in preserved_tables:
+                continue
+            columns = {
+                str(row[1])
+                for row in connection.execute(f"PRAGMA table_info({_quoted_identifier(table)})")
+            }
+            if "household_id" in columns:
+                connection.execute(
+                    f"DELETE FROM {_quoted_identifier(table)} WHERE household_id=?",
+                    (household_id,),
+                )
+        connection.execute(
+            "DELETE FROM domain_events WHERE household_id=? AND stream_type<>'household'",
+            (household_id,),
+        )
+        connection.execute(
+            "DELETE FROM event_streams WHERE household_id=? AND stream_type<>'household'",
+            (household_id,),
+        )
+        connection.execute(
+            "DELETE FROM idempotency_operations WHERE household_id=? "
+            "AND operation_scope<>'household.demo_provision'",
+            (household_id,),
+        )
+        remaining_high_water = int(
+            connection.execute(
+                "SELECT coalesce(max(global_position),0) FROM domain_events"
+            ).fetchone()[0]
+        )
+        connection.execute(
+            "UPDATE projection_generations SET high_water_position=?",
+            (remaining_high_water,),
+        )
+        if connection.execute("PRAGMA integrity_check").fetchone() != ("ok",):
+            raise RuntimeError("Demo reset failed SQLite integrity validation.")
+        connection.commit()
+
+    attachment_storage = LocalAttachmentStorage(database.parent / "attachments")
+    for storage_key, media_type in attachment_rows:
+        attachment_storage.discard_finalized(UUID(storage_key), media_type)
+    for staged_id in staging_ids:
+        attachment_storage.discard_staged(UUID(staged_id))
+    (database.parent / "demo-manifest.json").unlink(missing_ok=True)
+
+
+def _rebuild_product_projections(database: Path) -> None:
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    try:
+        manager = SQLiteProjectionGenerationManager(engine, product_projection_registry)
+        for group in ("search", "insights", "dashboard"):
+            manager.rebuild(group)
+    finally:
+        engine.dispose()
+
+
 def _login(client: TestClient) -> None:
     page = client.get("/login")
     token = re.search(r'name="csrf_token" value="([^"]+)"', page.text)
@@ -299,10 +462,12 @@ def _stored_result(manifest_path: Path, database: Path, household_id: str) -> De
         enclosure_count=int(data["enclosure_count"]),
         snake_count=int(data["snake_count"]),
         spider_count=int(data["spider_count"]),
+        lizard_count=int(data["lizard_count"]),
+        scorpion_count=int(data["scorpion_count"]),
         profile_photo_count=int(data["profile_photo_count"]),
         event_count=int(data["event_count"]),
         prediction_ready=tuple(data["prediction_ready"]),
-        insufficient_history_animal=str(data["insufficient_history_animal"]),
+        insufficient_history_animals=tuple(data["insufficient_history_animals"]),
         animal_ids={str(key): str(value) for key, value in data["animal_ids"].items()},
     )
 
@@ -330,14 +495,16 @@ def _store_result(
         database=str(database),
         as_of=qualification_date.isoformat(),
         household_id=household_id,
-        animal_count=12,
-        enclosure_count=9,
-        snake_count=6,
-        spider_count=6,
+        animal_count=13,
+        enclosure_count=11,
+        snake_count=4,
+        spider_count=3,
+        lizard_count=3,
+        scorpion_count=3,
         profile_photo_count=photo_count,
         event_count=event_count,
-        prediction_ready=("Ember", "Juniper", "Nova", "Pearl"),
-        insufficient_history_animal="Pip",
+        prediction_ready=("Ember", "Juniper", "Nova", "Onyx", "Pearl", "Sol"),
+        insufficient_history_animals=("Bramble", "Cobalt", "Pip"),
         animal_ids=animals,
     )
     manifest = asdict(result)
@@ -376,20 +543,22 @@ def _recover_completed_dataset(
         animal_types = [str(kind) for _name, _animal_id, kind in rows]
         shape = (
             set(animals) == DEMO_ANIMAL_NAMES,
-            animal_types.count("snake") == 6,
-            animal_types.count("spider") == 6,
+            animal_types.count("snake") == 4,
+            animal_types.count("spider") == 3,
+            animal_types.count("lizard") == 3,
+            animal_types.count("scorpion") == 3,
             connection.execute(
                 "SELECT count(*) FROM enclosure_current WHERE household_id=?", (household_id,)
             ).fetchone()[0]
-            == 9,
+            == 11,
             connection.execute(
                 "SELECT count(*) FROM attachment_versions WHERE household_id=?", (household_id,)
             ).fetchone()[0]
-            == 12,
+            == 13,
             connection.execute(
                 "SELECT count(*) FROM domain_events WHERE household_id=?", (household_id,)
             ).fetchone()[0]
-            >= 300,
+            >= 175,
         )
     if not all(shape):
         raise RuntimeError(
@@ -410,14 +579,14 @@ def _verify_keeper_pages(
     client: TestClient, animals: dict[str, str], qualification_date: date
 ) -> None:
     home = client.get("/home")
-    home_expectations = ["12 animals", "9 enclosures"]
+    home_expectations = ["13 animals", "11 enclosures"]
     if qualification_date == datetime.now(UTC).date():
         home_expectations.extend(("Overdue", "Due today", "Upcoming"))
     _require_page_text(home.text, page="Today page", expected=tuple(home_expectations))
     _require_page_text(
         client.get("/reports/care").text,
         page="care report",
-        expected=("Juniper", "Ember"),
+        expected=("Juniper", "Ember", "Sol", "Onyx"),
     )
     _require_page_text(
         client.get("/reports/expenses").text,
@@ -435,6 +604,10 @@ def _verify_keeper_pages(
         "Nova": ("Feeding estimate", "Shed estimate"),
         "Pearl": ("Feeding estimate", "Molt estimate"),
         "Pip": ("Not enough history yet",),
+        "Sol": ("Feeding estimate",),
+        "Bramble": ("Not enough history yet",),
+        "Onyx": ("Feeding estimate", "Molt estimate"),
+        "Cobalt": ("Not enough history yet",),
     }
     for name, expected in analytics_expectations.items():
         response = client.get(f"/animals/{animals[name]}/analytics")
@@ -448,6 +621,7 @@ def seed_demo(
     *,
     as_of: date | None = None,
     runtime_secret: str = DEMO_RUNTIME_SECRET,
+    reset_existing: bool = False,
 ) -> DemoSeedResult:
     """Populate the reserved household in an existing promoted local database."""
     qualification_date = as_of or datetime.now(UTC).date()
@@ -462,6 +636,8 @@ def seed_demo(
     )
     provisioned = provision_demo_household(settings, password=DEMO_PASSWORD)
     manifest_path = database.parent / "demo-manifest.json"
+    if reset_existing:
+        _reset_demo_household(database, str(provisioned.household_id))
     stored = _stored_result(manifest_path, database, str(provisioned.household_id))
     if stored is not None:
         return stored
@@ -507,14 +683,6 @@ def seed_demo(
                 species="Tliltocatl albopilosus",
                 notes="Fictional demo spider; searches for velvet burrow.",
             ),
-            "Sable": _register_animal(
-                client,
-                key="sable",
-                animal_type="spider",
-                name="Sable",
-                species="Grammostola pulchra",
-                notes="Fictional demo spider; searches for obsidian retreat.",
-            ),
             "Pip": _register_animal(
                 client,
                 key="pip",
@@ -522,14 +690,6 @@ def seed_demo(
                 name="Pip",
                 species="Avicularia avicularia",
                 notes="New fictional demo spider with deliberately limited history.",
-            ),
-            "Willow": _register_animal(
-                client,
-                key="willow",
-                animal_type="snake",
-                name="Willow",
-                species="Pantherophis guttatus",
-                notes="Fictional demo corn snake with a steady feeding history.",
             ),
             "Nova": _register_animal(
                 client,
@@ -547,30 +707,6 @@ def seed_demo(
                 species="Python regius",
                 notes="Fictional demo ball python with varied accepted feedings.",
             ),
-            "Mica": _register_animal(
-                client,
-                key="mica",
-                animal_type="snake",
-                name="Mica",
-                species="Boa imperator",
-                notes="Fictional demo boa used for mobile collection density.",
-            ),
-            "Cinder": _register_animal(
-                client,
-                key="cinder",
-                animal_type="spider",
-                name="Cinder",
-                species="Brachypelma hamorii",
-                notes="Fictional demo spider with mature care history.",
-            ),
-            "Moss": _register_animal(
-                client,
-                key="moss",
-                animal_type="spider",
-                name="Moss",
-                species="Caribena versicolor",
-                notes="Fictional arboreal spider with enclosure care records.",
-            ),
             "Pearl": _register_animal(
                 client,
                 key="pearl",
@@ -578,6 +714,54 @@ def seed_demo(
                 name="Pearl",
                 species="Grammostola pulchripes",
                 notes="Fictional demo spider with prediction-ready molt history.",
+            ),
+            "Sol": _register_animal(
+                client,
+                key="sol",
+                animal_type="lizard",
+                name="Sol",
+                species="Pogona vitticeps",
+                notes="Established fictional lizard; searches for sunstone ledge.",
+            ),
+            "Bramble": _register_animal(
+                client,
+                key="bramble",
+                animal_type="lizard",
+                name="Bramble",
+                species="Correlophus ciliatus",
+                notes="New fictional lizard with deliberately limited history.",
+            ),
+            "Dune": _register_animal(
+                client,
+                key="dune",
+                animal_type="lizard",
+                name="Dune",
+                species="Eublepharis macularius",
+                notes="Fictional lizard with bath, misting, and measurement records.",
+            ),
+            "Onyx": _register_animal(
+                client,
+                key="onyx",
+                animal_type="scorpion",
+                name="Onyx",
+                species="Heterometrus spinifer",
+                notes="Established fictional scorpion; searches for deep burrow.",
+            ),
+            "Cobalt": _register_animal(
+                client,
+                key="cobalt",
+                animal_type="scorpion",
+                name="Cobalt",
+                species="Pandinus imperator",
+                notes="New fictional scorpion with deliberately limited history.",
+            ),
+            "Saffron": _register_animal(
+                client,
+                key="saffron",
+                animal_type="scorpion",
+                name="Saffron",
+                species="Hadrurus arizonensis",
+                notes="Fictional desert scorpion with concise care history.",
             ),
         }
 
@@ -587,11 +771,13 @@ def seed_demo(
             ("canopy", "Copper Canopy Habitat", "terrarium", "Searchable climbing habitat."),
             ("burrow", "Velvet Burrow", "terrarium", "Searchable deep substrate habitat."),
             ("nursery", "Obsidian Nursery", "terrarium", "Searchable juvenile spider habitat."),
-            ("willow", "Willow Creek Habitat", "vivarium", "Fictional corn snake habitat."),
             ("nova", "Nova Stone Terrarium", "terrarium", "Fictional kingsnake habitat."),
             ("cedar", "Cedar Hollow Vivarium", "vivarium", "Fictional ball python habitat."),
-            ("moss", "Moss Canopy Cube", "terrarium", "Fictional arboreal spider habitat."),
-            ("pearl", "Pearl Prairie Terrarium", "terrarium", "Fictional terrestrial habitat."),
+            ("sunstone", "Sunstone Lizard Ledge", "vivarium", "Searchable lizard habitat."),
+            ("bramble", "Bramble Nursery", "vivarium", "Fictional juvenile lizard habitat."),
+            ("dune", "Dune Ridge Habitat", "terrarium", "Fictional arid lizard habitat."),
+            ("onyx", "Onyx Deep Burrow", "terrarium", "Searchable scorpion habitat."),
+            ("saffron", "Saffron Desert Habitat", "terrarium", "Fictional arid scorpion habitat."),
         ):
             location = _post(
                 client,
@@ -611,15 +797,18 @@ def seed_demo(
             ("atlas", "Atlas", "canopy", qualification_date - timedelta(days=120)),
             ("ember-first", "Ember", "nursery", qualification_date - timedelta(days=210)),
             ("ember-current", "Ember", "burrow", qualification_date - timedelta(days=110)),
-            ("sable", "Sable", "burrow", qualification_date - timedelta(days=80)),
             ("pip", "Pip", "nursery", qualification_date - timedelta(days=20)),
-            ("willow", "Willow", "willow", qualification_date - timedelta(days=150)),
             ("nova", "Nova", "nova", qualification_date - timedelta(days=170)),
             ("cedar", "Cedar", "cedar", qualification_date - timedelta(days=130)),
-            ("mica", "Mica", "forest", qualification_date - timedelta(days=105)),
-            ("cinder", "Cinder", "pearl", qualification_date - timedelta(days=190)),
-            ("moss", "Moss", "moss", qualification_date - timedelta(days=95)),
-            ("pearl", "Pearl", "pearl", qualification_date - timedelta(days=210)),
+            ("pearl", "Pearl", "burrow", qualification_date - timedelta(days=210)),
+            ("sol-first", "Sol", "bramble", qualification_date - timedelta(days=220)),
+            ("sol-current", "Sol", "sunstone", qualification_date - timedelta(days=100)),
+            ("bramble", "Bramble", "bramble", qualification_date - timedelta(days=18)),
+            ("dune", "Dune", "dune", qualification_date - timedelta(days=140)),
+            ("onyx-first", "Onyx", "nursery", qualification_date - timedelta(days=230)),
+            ("onyx-current", "Onyx", "onyx", qualification_date - timedelta(days=115)),
+            ("cobalt", "Cobalt", "onyx", qualification_date - timedelta(days=25)),
+            ("saffron", "Saffron", "saffron", qualification_date - timedelta(days=160)),
         ):
             _post(
                 client,
@@ -833,19 +1022,14 @@ def seed_demo(
 
         bulk_history = {
             "Atlas": ("mouse", "small adult", 18, 9),
-            "Sable": ("cricket", "medium", 2, 13),
-            "Willow": ("mouse", "hopper", 12, 8),
             "Nova": ("mouse", "small adult", 19, 10),
             "Cedar": ("mouse", "small adult", 21, 12),
-            "Mica": ("rat", "weaned", 34, 15),
-            "Cinder": ("roach", "medium", 3, 14),
-            "Moss": ("cricket", "small", 1, 7),
             "Pearl": ("roach", "medium", 3, 16),
         }
         for animal_name, (prey, size, weight, interval_days) in bulk_history.items():
             key_name = animal_name.casefold()
-            for index in range(25):
-                occurred = qualification_date - timedelta(days=(24 - index) * interval_days + 2)
+            for index in range(7):
+                occurred = qualification_date - timedelta(days=(6 - index) * interval_days + 2)
                 _record_feeding(
                     client,
                     animals[animal_name],
@@ -857,6 +1041,295 @@ def seed_demo(
                     outcome="accepted",
                     notes=f"Fictional {animal_name} historical feeding {index + 1}.",
                 )
+
+        sol_feedings = _dates_from_intervals(
+            qualification_date - timedelta(days=3), (4, 5, 4, 6, 5, 4)
+        )
+        for index, occurred in enumerate(sol_feedings):
+            _record_feeding(
+                client,
+                animals["Sol"],
+                key=f"sol-{index}",
+                occurred=occurred,
+                prey="dubia roach",
+                size="medium",
+                weight=3 + index % 2,
+                outcome="accepted",
+                notes="Fictional established lizard feeding.",
+            )
+        _record_feeding(
+            client,
+            animals["Sol"],
+            key="sol-refused",
+            occurred=qualification_date - timedelta(days=14),
+            prey="dubia roach",
+            size="medium",
+            weight=4,
+            outcome="refused",
+            notes="Fictional lizard refusal retained outside estimate history.",
+        )
+        for index, days_ago in enumerate((120, 80, 40, 5)):
+            _record_measurement(
+                client,
+                animals["Sol"],
+                kind="weights",
+                key=f"sol-{index}",
+                occurred=qualification_date - timedelta(days=days_ago),
+                value=310 + index * 18,
+                notes="Fictional lizard weight trend.",
+            )
+        for index, days_ago in enumerate((150, 110, 70, 30, 4)):
+            _record_measurement(
+                client,
+                animals["Sol"],
+                kind="lengths",
+                key=f"sol-{index}",
+                occurred=qualification_date - timedelta(days=days_ago),
+                value=390 + index * 12,
+                notes="Fictional lizard length trend.",
+            )
+        _post(
+            client,
+            f"/animals/{animals['Sol']}/baths",
+            {
+                "idempotency_key": "demo-bath-sol",
+                "occurred_at": _form_time(qualification_date - timedelta(days=9)),
+                "duration_minutes": "10",
+                "reason": "Fictional supervised hydration",
+                "notes": "Fictional lizard bath record.",
+            },
+        )
+        for index, days_ago in enumerate((5, 1)):
+            _post(
+                client,
+                f"/animals/{animals['Sol']}/mistings",
+                {
+                    "idempotency_key": f"demo-misting-sol-{index}",
+                    "occurred_at": _form_time(qualification_date - timedelta(days=days_ago)),
+                    "duration_seconds": "25",
+                    "notes": "Fictional lizard misting record.",
+                },
+            )
+
+        for index, days_ago in enumerate((9, 2)):
+            _record_feeding(
+                client,
+                animals["Bramble"],
+                key=f"bramble-{index}",
+                occurred=qualification_date - timedelta(days=days_ago),
+                prey="cricket",
+                size="small",
+                weight=1,
+                outcome="accepted",
+                notes="Sparse fictional lizard history.",
+            )
+        _record_measurement(
+            client,
+            animals["Bramble"],
+            kind="weights",
+            key="bramble",
+            occurred=qualification_date - timedelta(days=3),
+            value=42,
+            notes="First fictional weight.",
+        )
+        _record_measurement(
+            client,
+            animals["Bramble"],
+            kind="lengths",
+            key="bramble",
+            occurred=qualification_date - timedelta(days=3),
+            value=160,
+            notes="First fictional length.",
+        )
+
+        for index, days_ago in enumerate((31, 20, 10, 2)):
+            _record_feeding(
+                client,
+                animals["Dune"],
+                key=f"dune-{index}",
+                occurred=qualification_date - timedelta(days=days_ago),
+                prey="mealworm",
+                size="medium",
+                weight=2,
+                outcome="accepted",
+                notes="Fictional lizard care history.",
+            )
+        for index, days_ago in enumerate((70, 8)):
+            _record_measurement(
+                client,
+                animals["Dune"],
+                kind="weights",
+                key=f"dune-{index}",
+                occurred=qualification_date - timedelta(days=days_ago),
+                value=58 + index * 7,
+                notes="Fictional lizard weight.",
+            )
+            _record_measurement(
+                client,
+                animals["Dune"],
+                kind="lengths",
+                key=f"dune-{index}",
+                occurred=qualification_date - timedelta(days=days_ago),
+                value=190 + index * 8,
+                notes="Fictional lizard length.",
+            )
+            _post(
+                client,
+                f"/animals/{animals['Dune']}/baths",
+                {
+                    "idempotency_key": f"demo-bath-dune-{index}",
+                    "occurred_at": _form_time(qualification_date - timedelta(days=days_ago)),
+                    "duration_minutes": "8",
+                    "reason": "Fictional supervised care",
+                    "notes": "Fictional lizard bath.",
+                },
+            )
+            _post(
+                client,
+                f"/animals/{animals['Dune']}/mistings",
+                {
+                    "idempotency_key": f"demo-misting-dune-{index}",
+                    "occurred_at": _form_time(qualification_date - timedelta(days=days_ago)),
+                    "duration_seconds": "15",
+                    "notes": "Fictional lizard misting.",
+                },
+            )
+
+        onyx_feedings = _dates_from_intervals(
+            qualification_date - timedelta(days=7), (12, 13, 11, 14, 12, 13)
+        )
+        for index, occurred in enumerate(onyx_feedings):
+            _record_feeding(
+                client,
+                animals["Onyx"],
+                key=f"onyx-{index}",
+                occurred=occurred,
+                prey="cricket",
+                size="large",
+                weight=2,
+                outcome="accepted",
+                notes="Fictional established scorpion feeding.",
+            )
+        _record_feeding(
+            client,
+            animals["Onyx"],
+            key="onyx-refused",
+            occurred=qualification_date - timedelta(days=19),
+            prey="cricket",
+            size="large",
+            weight=2,
+            outcome="refused",
+            notes="Fictional premolt refusal.",
+        )
+        for index, days_ago in enumerate((200, 130, 65, 6)):
+            _record_measurement(
+                client,
+                animals["Onyx"],
+                kind="weights",
+                key=f"onyx-{index}",
+                occurred=qualification_date - timedelta(days=days_ago),
+                value=28 + index * 4,
+                notes="Fictional scorpion weight.",
+            )
+        for index, occurred in enumerate(
+            _dates_from_intervals(qualification_date - timedelta(days=28), (70, 73, 71, 74, 72))
+        ):
+            _post(
+                client,
+                f"/animals/{animals['Onyx']}/molts",
+                {
+                    "idempotency_key": f"demo-molt-onyx-{index}",
+                    "occurred_at": _form_time(occurred),
+                    "result": "complete",
+                    "notes": "Fictional scorpion molt recorded with neutral schema v2.",
+                },
+            )
+        _post(
+            client,
+            f"/animals/{animals['Onyx']}/premolt-observations",
+            {
+                "idempotency_key": "demo-premolt-onyx",
+                "occurred_at": _form_time(qualification_date - timedelta(days=36)),
+                "observed": "true",
+                "notes": "Fictional premolt observation.",
+            },
+        )
+        for index, days_ago in enumerate((12, 2)):
+            _post(
+                client,
+                f"/animals/{animals['Onyx']}/mistings",
+                {
+                    "idempotency_key": f"demo-misting-onyx-{index}",
+                    "occurred_at": _form_time(qualification_date - timedelta(days=days_ago)),
+                    "duration_seconds": "18",
+                    "notes": "Fictional scorpion enclosure misting.",
+                },
+            )
+
+        for index, days_ago in enumerate((16, 4)):
+            _record_feeding(
+                client,
+                animals["Cobalt"],
+                key=f"cobalt-{index}",
+                occurred=qualification_date - timedelta(days=days_ago),
+                prey="cricket",
+                size="small",
+                weight=1,
+                outcome="accepted",
+                notes="Sparse fictional scorpion history.",
+            )
+        _record_measurement(
+            client,
+            animals["Cobalt"],
+            kind="weights",
+            key="cobalt",
+            occurred=qualification_date - timedelta(days=5),
+            value=17,
+            notes="First fictional scorpion weight.",
+        )
+
+        for index, days_ago in enumerate((46, 31, 17, 3)):
+            _record_feeding(
+                client,
+                animals["Saffron"],
+                key=f"saffron-{index}",
+                occurred=qualification_date - timedelta(days=days_ago),
+                prey="roach",
+                size="medium",
+                weight=2,
+                outcome="accepted",
+                notes="Fictional desert scorpion feeding.",
+            )
+        _record_measurement(
+            client,
+            animals["Saffron"],
+            kind="weights",
+            key="saffron",
+            occurred=qualification_date - timedelta(days=6),
+            value=24,
+            notes="Fictional desert scorpion weight.",
+        )
+        _post(
+            client,
+            f"/animals/{animals['Saffron']}/molts",
+            {
+                "idempotency_key": "demo-molt-saffron",
+                "occurred_at": _form_time(qualification_date - timedelta(days=50)),
+                "result": "complete",
+                "notes": "Single fictional scorpion molt.",
+            },
+        )
+        for index, days_ago in enumerate((15, 1)):
+            _post(
+                client,
+                f"/animals/{animals['Saffron']}/mistings",
+                {
+                    "idempotency_key": f"demo-misting-saffron-{index}",
+                    "occurred_at": _form_time(qualification_date - timedelta(days=days_ago)),
+                    "duration_seconds": "12",
+                    "notes": "Fictional light scorpion misting.",
+                },
+            )
 
         for index, occurred in enumerate(
             _dates_from_intervals(qualification_date - timedelta(days=18), (41, 43, 42, 44, 41))
@@ -941,7 +1414,11 @@ def seed_demo(
         _schedule(client, animals["Ember"], kind="molt", key="ember-molt", interval=60)
         _schedule(client, animals["Nova"], kind="feeding", key="nova-feed", interval=10)
         _schedule(client, animals["Pearl"], kind="molt", key="pearl-molt", interval=62)
-        _schedule(client, animals["Moss"], kind="misting", key="moss-mist", interval=3)
+        _schedule(client, animals["Sol"], kind="length", key="sol-length", interval=30)
+        _schedule(client, animals["Dune"], kind="misting", key="dune-mist", interval=3)
+        _schedule(client, animals["Onyx"], kind="feeding", key="onyx-feed", interval=12)
+        _schedule(client, animals["Onyx"], kind="molt", key="onyx-molt", interval=72)
+        _schedule(client, animals["Saffron"], kind="misting", key="saffron-mist", interval=4)
 
         expense_locations: list[str] = []
         for index, amount, category, payee, notes in (
@@ -1007,6 +1484,8 @@ def seed_demo(
             },
         )
 
+        if reset_existing:
+            _rebuild_product_projections(database)
         _verify_keeper_pages(client, animals, qualification_date)
     app.state.database_engine.dispose()
 
@@ -1024,6 +1503,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data-dir", type=Path, default=ROOT / "runtime" / "phase2")
     parser.add_argument("--as-of", type=date.fromisoformat)
     parser.add_argument("--runtime-secret-file", type=Path)
+    parser.add_argument(
+        "--reset-existing-demo",
+        action="store_true",
+        help="Replace only the reserved fictional demo household before seeding.",
+    )
     return parser.parse_args()
 
 
@@ -1032,7 +1516,12 @@ def main() -> int:
     runtime_secret = DEMO_RUNTIME_SECRET
     if args.runtime_secret_file is not None:
         runtime_secret = args.runtime_secret_file.read_text(encoding="utf-8").strip()
-    result = seed_demo(args.data_dir, as_of=args.as_of, runtime_secret=runtime_secret)
+    result = seed_demo(
+        args.data_dir,
+        as_of=args.as_of,
+        runtime_secret=runtime_secret,
+        reset_existing=args.reset_existing_demo,
+    )
     print(json.dumps(asdict(result), indent=2, sort_keys=True))
     return 0
 

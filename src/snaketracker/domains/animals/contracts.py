@@ -174,6 +174,31 @@ class AnimalPremoltObservedV1:
 
 
 @dataclass(frozen=True, slots=True)
+class AnimalMoltRecordedV2:
+    """Completed molt result for an Animal profile declaring the Molt capability."""
+
+    result: str
+    observation: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class AnimalMoltCorrectedV2:
+    """Typed replacement facts for one molt-capable Animal's molt event."""
+
+    target_event_id: UUID
+    result: str
+    observation: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class AnimalPremoltObservedV2:
+    """Observed premolt state for an Animal profile declaring the Premolt capability."""
+
+    observed: bool
+    observation: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class AnimalEnclosureAssignedV1:
     """Animal-owned current enclosure transition."""
 

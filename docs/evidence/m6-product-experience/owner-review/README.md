@@ -16,10 +16,12 @@ The six older review projects have been stopped without deleting their runtime d
 
 - Email: `owner@m6-demo.invalid`
 - Password: `m6-demo-local-only-password`
-- Scenario: `m6-owner-review.v2`
-- Contents: six Snakes and six Spiders, nine enclosures, 12 distinct fictional photos, 366 domain
-  events, shared inventory, expenses, reminders, reports, search, and prediction-ready plus
-  insufficient-history examples.
+- Scenario: `four-group-owner-review.v1`
+- Contents: four Snakes, three Spiders, three Lizards, and three Scorpions; 11 enclosures; 13
+  distinct fictional photos; 248 domain events; shared inventory; expenses; reminders; reports;
+  search; and prediction-ready plus insufficient-history examples.
+- Prediction-ready: Ember, Juniper, Nova, Onyx, Pearl, and Sol.
+- Intentionally insufficient: Bramble, Cobalt, and Pip.
 
 The household itself is created atomically through the accepted ADR-0040 internal provisioner and
 canonical `household.created` and `household.owner_added` events. All fictional product data is then
@@ -27,15 +29,22 @@ created through supported application/domain interfaces. Reruns return the verif
 interruption after complete population is recovered by exact shape and keeper-page verification,
 without deleting or duplicating data.
 
+An explicit `--reset-existing-demo` replacement is restricted to the deterministic demo household
+ID. It retains the demo household identity and backup records, removes only its disposable product
+state and files, and rebuilds its projections. It never resets the shared database or the real
+household.
+
 From the repository root:
 
 ```bash
 ./scripts/development/m6_owner_review_demo.sh status
-./scripts/development/m6_owner_review_demo.sh seed --as-of 2026-08-16
+./scripts/development/m6_owner_review_demo.sh seed --as-of 2026-08-24
+./scripts/development/m6_owner_review_demo.sh seed --as-of 2026-08-24 --reset-existing-demo
 ```
 
 The wrapper neither starts an alternate stack nor targets another port. It requires the existing
-promoted database and refuses incomplete/conflicting state.
+promoted database and refuses incomplete/conflicting state. The reset form is only for deliberate
+replacement of the reserved demo fixture.
 
 ## Safety and scope
 
@@ -44,5 +53,8 @@ their pre-provisioning hashes. Automated tests cover bidirectional direct-identi
 attachment, search, report, and list isolation. No production husbandry reference content is
 enabled.
 
-This environment is local owner-review evidence only. It does not approve M6, production
-deployment, remote access, or Raspberry Pi qualification.
+The current [four-group qualification](../four-group-expansion/README.md) records the backup,
+real-household hashes, tests, and promoted Raspberry Pi 5 runtime.
+
+This environment is local owner-review evidence only. It does not approve M6, production or remote
+access, M7 deployment-performance qualification, or PR #8.

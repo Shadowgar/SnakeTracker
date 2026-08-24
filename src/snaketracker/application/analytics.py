@@ -20,7 +20,9 @@ from snaketracker.domains.animals.contracts import (
     AnimalLengthCorrectedV1,
     AnimalLengthRecordedV1,
     AnimalMoltCorrectedV1,
+    AnimalMoltCorrectedV2,
     AnimalMoltRecordedV1,
+    AnimalMoltRecordedV2,
     AnimalShedCorrectedV1,
     AnimalShedRecordedV1,
     AnimalWeightCorrectedV1,
@@ -145,7 +147,15 @@ class AnimalAnalyticsService:
             elif (
                 event.event_type in {"animal.molt_recorded", "animal.molt_corrected"}
                 and ("molt" in capability.analytics_kinds)
-                and isinstance(payload, (AnimalMoltRecordedV1, AnimalMoltCorrectedV1))
+                and isinstance(
+                    payload,
+                    (
+                        AnimalMoltRecordedV1,
+                        AnimalMoltRecordedV2,
+                        AnimalMoltCorrectedV1,
+                        AnimalMoltCorrectedV2,
+                    ),
+                )
             ):
                 husbandry.append(HusbandryPoint("molt", event.occurred_at, payload.result))
         accepted_dates = tuple(

@@ -14,9 +14,12 @@ from snaketracker.domains.animals.contracts import (
     AnimalLengthCorrectedV1,
     AnimalLengthRecordedV1,
     AnimalMoltCorrectedV1,
+    AnimalMoltCorrectedV2,
     AnimalMoltRecordedV1,
+    AnimalMoltRecordedV2,
     AnimalPhotoSelectedV1,
     AnimalPremoltObservedV1,
+    AnimalPremoltObservedV2,
     AnimalProfileCorrectedV1,
     AnimalRegisteredV1,
     AnimalRegisteredV2,
@@ -76,11 +79,14 @@ def present_care_event(
         description = f"{state} · {result} · {blue}"
     elif isinstance(payload, AnimalBathRecordedV1):
         description = f"{payload.duration_minutes} minutes · {payload.reason}"
-    elif isinstance(payload, AnimalMoltRecordedV1 | AnimalMoltCorrectedV1):
+    elif isinstance(
+        payload,
+        AnimalMoltRecordedV1 | AnimalMoltRecordedV2 | AnimalMoltCorrectedV1 | AnimalMoltCorrectedV2,
+    ):
         description = _label(payload.result)
         if payload.observation:
             description += f" · {payload.observation}"
-    elif isinstance(payload, AnimalPremoltObservedV1):
+    elif isinstance(payload, AnimalPremoltObservedV1 | AnimalPremoltObservedV2):
         description = "Premolt observed" if payload.observed else "Premolt cleared"
         if payload.observation:
             description += f" · {payload.observation}"
