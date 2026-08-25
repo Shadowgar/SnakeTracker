@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import sqlite3
 from dataclasses import asdict, dataclass
@@ -30,8 +31,12 @@ from snaketracker.infrastructure.projections.sqlite_generations import (
 from snaketracker.operations.demo_household import provision_demo_household
 
 ROOT = Path(__file__).parents[2]
-DEMO_PASSWORD = "m6-demo-local-only-password"
-DEMO_SCENARIO_VERSION = "four-group-owner-review.v1"
+DEMO_PASSWORD = "carekeeper-demo-local-only"
+DEMO_SCENARIO_VERSION = "carekeeper-owner-review.v2"
+DEMO_MANIFEST_VERSION = 2
+DEMO_TIMEZONE = "America/New_York"
+OWNER_REVIEW_ENABLE_KEY = "SNAKETRACKER_OWNER_REVIEW"
+OWNER_REVIEW_ENABLE_VALUE = "enabled"
 DEMO_RUNTIME_SECRET = "m6-owner-review-demo-runtime-secret"
 PHOTO_COLORS = {
     "juniper": (72, 112, 67),
@@ -47,6 +52,13 @@ PHOTO_COLORS = {
     "onyx": (44, 48, 55),
     "cobalt": (47, 79, 126),
     "saffron": (184, 113, 42),
+    "marlow": (118, 76, 54),
+    "vesper": (47, 91, 111),
+    "marigold": (194, 124, 31),
+    "kiko": (65, 118, 91),
+    "echo": (104, 139, 66),
+    "nimbus": (94, 100, 122),
+    "rune": (104, 69, 87),
 }
 DEMO_ANIMAL_NAMES = frozenset(
     {
@@ -63,12 +75,20 @@ DEMO_ANIMAL_NAMES = frozenset(
         "Onyx",
         "Cobalt",
         "Saffron",
+        "Marlow",
+        "Vesper",
+        "Marigold",
+        "Kiko",
+        "Echo",
+        "Nimbus",
+        "Rune",
     }
 )
 
 
 @dataclass(frozen=True, slots=True)
 class DemoSeedResult:
+    manifest_version: int
     scenario_version: str
     database: str
     as_of: str
@@ -81,6 +101,12 @@ class DemoSeedResult:
     scorpion_count: int
     profile_photo_count: int
     event_count: int
+    inventory_active_count: int
+    inventory_archived_count: int
+    expense_count: int
+    reminder_overdue_count: int
+    reminder_today_count: int
+    reminder_upcoming_count: int
     prediction_ready: tuple[str, ...]
     insufficient_history_animals: tuple[str, ...]
     animal_ids: dict[str, str]
@@ -257,6 +283,16 @@ def _event_id(database: Path, animal_id: str, event_type: str) -> str:
     return str(row[0])
 
 
+def _stream_version(database: Path, stream_id: str) -> int:
+    with sqlite3.connect(database) as connection:
+        row = connection.execute(
+            "SELECT current_version FROM event_streams WHERE stream_id=?", (stream_id,)
+        ).fetchone()
+    if row is None:
+        raise RuntimeError(f"Demo stream {stream_id} was not stored.")
+    return int(row[0])
+
+
 def _require_page_text(response_text: str, *, page: str, expected: tuple[str, ...]) -> None:
     missing = tuple(value for value in expected if value not in response_text)
     if missing:
@@ -268,6 +304,15 @@ def _prepare_target(data_dir: Path) -> Path:
     database = resolved / "snaketracker.sqlite3"
     if not database.is_file():
         raise FileNotFoundError(f"The promoted database does not exist: {database}")
+    with sqlite3.connect(database) as connection:
+        households = tuple(
+            str(row[0])
+            for row in connection.execute(
+                "SELECT household_id FROM household_summaries ORDER BY household_id"
+            )
+        )
+    if households and households != (DEMO_HOUSEHOLD_ID,):
+        raise RuntimeError("Owner-review seed refused an unexpected non-demo household database.")
     return database
 
 
@@ -441,11 +486,24 @@ def _login(client: TestClient) -> None:
         raise RuntimeError(f"Demo login failed with {response.status_code}.")
 
 
+def _logout(client: TestClient) -> None:
+    response = client.post(
+        "/logout",
+        data={"csrf_token": _csrf(client)},
+        follow_redirects=False,
+    )
+    if response.status_code != 303:
+        raise RuntimeError(f"Demo logout failed with {response.status_code}.")
+
+
 def _stored_result(manifest_path: Path, database: Path, household_id: str) -> DemoSeedResult | None:
     if not manifest_path.is_file():
         return None
     data = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if data.get("scenario_version") != DEMO_SCENARIO_VERSION:
+    if (
+        data.get("manifest_version") != DEMO_MANIFEST_VERSION
+        or data.get("scenario_version") != DEMO_SCENARIO_VERSION
+    ):
         raise RuntimeError("Existing demo manifest uses a conflicting scenario version.")
     with sqlite3.connect(database) as connection:
         actual = connection.execute(
@@ -454,6 +512,7 @@ def _stored_result(manifest_path: Path, database: Path, household_id: str) -> De
     if actual != data.get("animal_count"):
         raise RuntimeError("Existing demo manifest conflicts with the promoted database.")
     return DemoSeedResult(
+        manifest_version=int(data["manifest_version"]),
         scenario_version=str(data["scenario_version"]),
         database=str(data["database"]),
         as_of=str(data["as_of"]),
@@ -466,6 +525,12 @@ def _stored_result(manifest_path: Path, database: Path, household_id: str) -> De
         scorpion_count=int(data["scorpion_count"]),
         profile_photo_count=int(data["profile_photo_count"]),
         event_count=int(data["event_count"]),
+        inventory_active_count=int(data["inventory_active_count"]),
+        inventory_archived_count=int(data["inventory_archived_count"]),
+        expense_count=int(data["expense_count"]),
+        reminder_overdue_count=int(data["reminder_overdue_count"]),
+        reminder_today_count=int(data["reminder_today_count"]),
+        reminder_upcoming_count=int(data["reminder_upcoming_count"]),
         prediction_ready=tuple(data["prediction_ready"]),
         insufficient_history_animals=tuple(data["insufficient_history_animals"]),
         animal_ids={str(key): str(value) for key, value in data["animal_ids"].items()},
@@ -490,21 +555,71 @@ def _store_result(
                 "SELECT count(*) FROM attachment_versions WHERE household_id=?", (household_id,)
             ).fetchone()[0]
         )
+        inventory_counts = dict(
+            connection.execute(
+                "SELECT status,count(*) FROM inventory_balance WHERE household_id=? "
+                "GROUP BY status",
+                (household_id,),
+            ).fetchall()
+        )
+        expense_count = int(
+            connection.execute(
+                "SELECT count(*) FROM expense_current WHERE household_id=?", (household_id,)
+            ).fetchone()[0]
+        )
+        reminder_counts = connection.execute(
+            "SELECT "
+            "sum(CASE WHEN date(override_due_at)<date(?) THEN 1 ELSE 0 END),"
+            "sum(CASE WHEN date(override_due_at)=date(?) THEN 1 ELSE 0 END),"
+            "sum(CASE WHEN date(override_due_at)>date(?) THEN 1 ELSE 0 END) "
+            "FROM reminder_rule_current WHERE household_id=? AND enabled=1 "
+            "AND override_due_at IS NOT NULL",
+            (
+                qualification_date.isoformat(),
+                qualification_date.isoformat(),
+                qualification_date.isoformat(),
+                household_id,
+            ),
+        ).fetchone()
     result = DemoSeedResult(
+        manifest_version=DEMO_MANIFEST_VERSION,
         scenario_version=DEMO_SCENARIO_VERSION,
         database=str(database),
         as_of=qualification_date.isoformat(),
         household_id=household_id,
-        animal_count=13,
-        enclosure_count=11,
-        snake_count=4,
-        spider_count=3,
-        lizard_count=3,
-        scorpion_count=3,
+        animal_count=20,
+        enclosure_count=16,
+        snake_count=5,
+        spider_count=5,
+        lizard_count=5,
+        scorpion_count=5,
         profile_photo_count=photo_count,
         event_count=event_count,
-        prediction_ready=("Ember", "Juniper", "Nova", "Onyx", "Pearl", "Sol"),
-        insufficient_history_animals=("Bramble", "Cobalt", "Pip"),
+        inventory_active_count=int(inventory_counts.get("active", 0)),
+        inventory_archived_count=int(inventory_counts.get("archived", 0)),
+        expense_count=expense_count,
+        reminder_overdue_count=int(reminder_counts[0] or 0),
+        reminder_today_count=int(reminder_counts[1] or 0),
+        reminder_upcoming_count=int(reminder_counts[2] or 0),
+        prediction_ready=(
+            "Cedar",
+            "Dune",
+            "Echo",
+            "Ember",
+            "Juniper",
+            "Kiko",
+            "Marlow",
+            "Marigold",
+            "Nimbus",
+            "Nova",
+            "Onyx",
+            "Pearl",
+            "Rune",
+            "Saffron",
+            "Sol",
+            "Vesper",
+        ),
+        insufficient_history_animals=("Atlas", "Bramble", "Cobalt", "Pip"),
         animal_ids=animals,
     )
     manifest = asdict(result)
@@ -515,6 +630,7 @@ def _store_result(
                 "as_of": result.as_of,
                 "animals": sorted(animals),
                 "event_count": event_count,
+                "manifest_version": DEMO_MANIFEST_VERSION,
             },
             separators=(",", ":"),
             sort_keys=True,
@@ -543,22 +659,22 @@ def _recover_completed_dataset(
         animal_types = [str(kind) for _name, _animal_id, kind in rows]
         shape = (
             set(animals) == DEMO_ANIMAL_NAMES,
-            animal_types.count("snake") == 4,
-            animal_types.count("spider") == 3,
-            animal_types.count("lizard") == 3,
-            animal_types.count("scorpion") == 3,
+            animal_types.count("snake") == 5,
+            animal_types.count("spider") == 5,
+            animal_types.count("lizard") == 5,
+            animal_types.count("scorpion") == 5,
             connection.execute(
                 "SELECT count(*) FROM enclosure_current WHERE household_id=?", (household_id,)
             ).fetchone()[0]
-            == 11,
+            == 16,
             connection.execute(
                 "SELECT count(*) FROM attachment_versions WHERE household_id=?", (household_id,)
             ).fetchone()[0]
-            == 13,
+            == 20,
             connection.execute(
                 "SELECT count(*) FROM domain_events WHERE household_id=?", (household_id,)
             ).fetchone()[0]
-            >= 175,
+            >= 300,
         )
     if not all(shape):
         raise RuntimeError(
@@ -570,6 +686,7 @@ def _recover_completed_dataset(
         with TestClient(app) as client:
             _login(client)
             _verify_keeper_pages(client, animals, qualification_date)
+            _logout(client)
     finally:
         app.state.database_engine.dispose()
     return _store_result(manifest_path, database, household_id, qualification_date, animals)
@@ -579,14 +696,14 @@ def _verify_keeper_pages(
     client: TestClient, animals: dict[str, str], qualification_date: date
 ) -> None:
     home = client.get("/home")
-    home_expectations = ["13 animals", "11 enclosures"]
+    home_expectations = ["20 animals", "16 enclosures"]
     if qualification_date == datetime.now(UTC).date():
         home_expectations.extend(("Overdue", "Due today", "Upcoming"))
     _require_page_text(home.text, page="Today page", expected=tuple(home_expectations))
     _require_page_text(
         client.get("/reports/care").text,
         page="care report",
-        expected=("Juniper", "Ember", "Sol", "Onyx"),
+        expected=("Juniper", "Ember", "Sol", "Onyx", "Marlow", "Vesper", "Kiko"),
     )
     _require_page_text(
         client.get("/reports/expenses").text,
@@ -600,13 +717,24 @@ def _verify_keeper_pages(
     )
     analytics_expectations = {
         "Juniper": ("Feeding estimate", "Shed estimate"),
+        "Atlas": ("Not enough history yet",),
+        "Marlow": ("Feeding estimate", "Shed estimate"),
         "Ember": ("Feeding estimate", "Molt estimate"),
         "Nova": ("Feeding estimate", "Shed estimate"),
+        "Cedar": ("Feeding estimate",),
         "Pearl": ("Feeding estimate", "Molt estimate"),
+        "Vesper": ("Feeding estimate", "Molt estimate"),
+        "Marigold": ("Feeding estimate", "Molt estimate"),
         "Pip": ("Not enough history yet",),
         "Sol": ("Feeding estimate",),
+        "Dune": ("Feeding estimate",),
+        "Kiko": ("Feeding estimate",),
+        "Echo": ("Feeding estimate",),
         "Bramble": ("Not enough history yet",),
         "Onyx": ("Feeding estimate", "Molt estimate"),
+        "Saffron": ("Feeding estimate",),
+        "Nimbus": ("Feeding estimate", "Molt estimate"),
+        "Rune": ("Feeding estimate", "Molt estimate"),
         "Cobalt": ("Not enough history yet",),
     }
     for name, expected in analytics_expectations.items():
@@ -763,6 +891,62 @@ def seed_demo(
                 species="Hadrurus arizonensis",
                 notes="Fictional desert scorpion with concise care history.",
             ),
+            "Marlow": _register_animal(
+                client,
+                key="marlow",
+                animal_type="snake",
+                name="Marlow",
+                species="Pantherophis guttatus",
+                notes="Fictional corn snake; searches for amber meadow hide.",
+            ),
+            "Vesper": _register_animal(
+                client,
+                key="vesper",
+                animal_type="spider",
+                name="Vesper",
+                species="Caribena versicolor",
+                notes="Fictional arboreal spider; searches for twilight canopy.",
+            ),
+            "Marigold": _register_animal(
+                client,
+                key="marigold",
+                animal_type="spider",
+                name="Marigold",
+                species="Brachypelma hamorii",
+                notes="Fictional terrestrial spider; searches for mesa cork tunnel.",
+            ),
+            "Kiko": _register_animal(
+                client,
+                key="kiko",
+                animal_type="lizard",
+                name="Kiko",
+                species="Tiliqua scincoides",
+                notes="Fictional blue-tongued skink; searches for savanna slate.",
+            ),
+            "Echo": _register_animal(
+                client,
+                key="echo",
+                animal_type="lizard",
+                name="Echo",
+                species="Anolis carolinensis",
+                notes="Fictional green anole; searches for fern canopy perch.",
+            ),
+            "Nimbus": _register_animal(
+                client,
+                key="nimbus",
+                animal_type="scorpion",
+                name="Nimbus",
+                species="Centruroides sculpturatus",
+                notes="Fictional bark scorpion; searches for cloudstone crevice.",
+            ),
+            "Rune": _register_animal(
+                client,
+                key="rune",
+                animal_type="scorpion",
+                name="Rune",
+                species="Euscorpius italicus",
+                notes="Fictional forest scorpion; searches for moss rune shelter.",
+            ),
         }
 
         enclosures: dict[str, str] = {}
@@ -778,6 +962,21 @@ def seed_demo(
             ("dune", "Dune Ridge Habitat", "terrarium", "Fictional arid lizard habitat."),
             ("onyx", "Onyx Deep Burrow", "terrarium", "Searchable scorpion habitat."),
             ("saffron", "Saffron Desert Habitat", "terrarium", "Fictional arid scorpion habitat."),
+            ("meadow", "Amber Meadow Habitat", "terrarium", "Searchable corn snake habitat."),
+            (
+                "twilight",
+                "Twilight Canopy Tower",
+                "terrarium",
+                "Searchable arboreal spider habitat.",
+            ),
+            ("savanna", "Savanna Slate Vivarium", "vivarium", "Searchable skink habitat."),
+            ("cloudstone", "Cloudstone Crevice", "terrarium", "Searchable bark scorpion habitat."),
+            (
+                "observatory",
+                "Quiet Quarantine Observatory",
+                "terrarium",
+                "Currently unoccupied reserve habitat.",
+            ),
         ):
             location = _post(
                 client,
@@ -809,6 +1008,10 @@ def seed_demo(
             ("onyx-current", "Onyx", "onyx", qualification_date - timedelta(days=115)),
             ("cobalt", "Cobalt", "onyx", qualification_date - timedelta(days=25)),
             ("saffron", "Saffron", "saffron", qualification_date - timedelta(days=160)),
+            ("marlow", "Marlow", "meadow", qualification_date - timedelta(days=260)),
+            ("vesper", "Vesper", "twilight", qualification_date - timedelta(days=190)),
+            ("kiko", "Kiko", "savanna", qualification_date - timedelta(days=280)),
+            ("nimbus", "Nimbus", "cloudstone", qualification_date - timedelta(days=150)),
         ):
             _post(
                 client,
@@ -822,9 +1025,15 @@ def seed_demo(
             )
 
         inventory: dict[str, str] = {}
-        for key, name, quantity in (
-            ("mice", "Demo frozen mice", 30),
-            ("crickets", "Demo feeder crickets", 40),
+        for key, name, unit, quantity, threshold in (
+            ("mice", "Frozen mice — small adult", "item", 30, 5),
+            ("crickets", "Live feeder crickets", "item", 40, 8),
+            ("roaches", "Dubia roach colony", "item", 24, 6),
+            ("mealworms", "Mealworm cups", "cup", 6, 2),
+            ("substrate", "Coco fiber substrate", "bag", 5, 2),
+            ("misters", "Reptile-safe misting water", "bottle", 3, 1),
+            ("bulbs", "Basking bulbs 75W", "item", 2, 2),
+            ("waxworms", "Waxworm treat cups", "cup", 4, 1),
         ):
             location = _post(
                 client,
@@ -832,8 +1041,8 @@ def seed_demo(
                 {
                     "idempotency_key": f"demo-inventory-{key}",
                     "name": name,
-                    "unit": "item",
-                    "reorder_threshold": "5",
+                    "unit": unit,
+                    "reorder_threshold": str(threshold),
                 },
             )
             item_id = location.rsplit("/", 1)[-1]
@@ -1021,7 +1230,6 @@ def seed_demo(
             )
 
         bulk_history = {
-            "Atlas": ("mouse", "small adult", 18, 9),
             "Nova": ("mouse", "small adult", 19, 10),
             "Cedar": ("mouse", "small adult", 21, 12),
             "Pearl": ("roach", "medium", 3, 16),
@@ -1040,6 +1248,324 @@ def seed_demo(
                     weight=weight + index % 3,
                     outcome="accepted",
                     notes=f"Fictional {animal_name} historical feeding {index + 1}.",
+                )
+
+        for index, days_ago in enumerate((19, 7)):
+            _record_feeding(
+                client,
+                animals["Atlas"],
+                key=f"atlas-sparse-{index}",
+                occurred=qualification_date - timedelta(days=days_ago),
+                prey="mouse",
+                size="small adult",
+                weight=18,
+                outcome="accepted",
+                notes="Sparse fictional snake history for insufficient prediction messaging.",
+            )
+
+        for index, days_ago in enumerate((330, 292, 251, 211, 168, 128, 91, 55, 24, 5)):
+            _record_feeding(
+                client,
+                animals["Marlow"],
+                key=f"marlow-{index}",
+                occurred=qualification_date - timedelta(days=days_ago),
+                prey="mouse",
+                size="hopper",
+                weight=11 + index % 3,
+                outcome="accepted",
+                notes=f"Fictional amber-meadow feeding {index + 1}.",
+                inventory_id=inventory["mice"] if index == 9 else "",
+                inventory_version=(
+                    str(_stream_version(database, inventory["mice"])) if index == 9 else ""
+                ),
+            )
+        _record_feeding(
+            client,
+            animals["Marlow"],
+            key="marlow-refusal",
+            occurred=qualification_date - timedelta(days=73),
+            prey="mouse",
+            size="hopper",
+            weight=12,
+            outcome="refused",
+            notes="Fictional seasonal refusal before a complete shed.",
+        )
+        for index, days_ago in enumerate((320, 240, 160, 80, 9)):
+            _record_measurement(
+                client,
+                animals["Marlow"],
+                kind="weights",
+                key=f"marlow-{index}",
+                occurred=qualification_date - timedelta(days=days_ago),
+                value=115 + index * 18,
+                notes="Fictional corn snake weight trend.",
+            )
+            _record_measurement(
+                client,
+                animals["Marlow"],
+                kind="lengths",
+                key=f"marlow-{index}",
+                occurred=qualification_date - timedelta(days=days_ago - 2),
+                value=610 + index * 45,
+                notes="Fictional corn snake length trend.",
+            )
+        for index, days_ago in enumerate((300, 220, 143, 68, 12)):
+            _post(
+                client,
+                f"/animals/{animals['Marlow']}/sheds",
+                {
+                    "idempotency_key": f"demo-shed-marlow-{index}",
+                    "occurred_at": _form_time(qualification_date - timedelta(days=days_ago)),
+                    "blue_state": "false",
+                    "completed": "true",
+                    "result": "complete",
+                    "notes": "Fictional complete corn snake shed.",
+                },
+            )
+        for index, days_ago in enumerate((205, 47)):
+            _post(
+                client,
+                f"/animals/{animals['Marlow']}/baths",
+                {
+                    "idempotency_key": f"demo-bath-marlow-{index}",
+                    "occurred_at": _form_time(qualification_date - timedelta(days=days_ago)),
+                    "duration_minutes": "12",
+                    "reason": "Fictional supervised hydration",
+                    "notes": "Calm fictional soak.",
+                },
+            )
+
+        for animal_name, interval_days, prey, size in (
+            ("Vesper", 19, "small roach", "small"),
+            ("Marigold", 24, "dubia roach", "medium"),
+        ):
+            for index in range(8):
+                days_ago = (7 - index) * interval_days + 6
+                _record_feeding(
+                    client,
+                    animals[animal_name],
+                    key=f"{animal_name.casefold()}-{index}",
+                    occurred=qualification_date - timedelta(days=days_ago),
+                    prey=prey,
+                    size=size,
+                    weight=2 + index % 2,
+                    outcome="accepted",
+                    notes=f"Fictional {animal_name} feeding history.",
+                )
+            _record_feeding(
+                client,
+                animals[animal_name],
+                key=f"{animal_name.casefold()}-refusal",
+                occurred=qualification_date - timedelta(days=interval_days + 9),
+                prey=prey,
+                size=size,
+                weight=2,
+                outcome="refused",
+                notes="Fictional premolt appetite pause.",
+            )
+            for index, days_ago in enumerate((210, 145, 80, 11)):
+                _record_measurement(
+                    client,
+                    animals[animal_name],
+                    kind="weights",
+                    key=f"{animal_name.casefold()}-{index}",
+                    occurred=qualification_date - timedelta(days=days_ago),
+                    value=(18 if animal_name == "Vesper" else 32) + index * 3,
+                    notes=f"Fictional {animal_name} optional weight history.",
+                )
+            for index, days_ago in enumerate((310, 245, 181, 118, 57)):
+                _post(
+                    client,
+                    f"/animals/{animals[animal_name]}/molts",
+                    {
+                        "idempotency_key": f"demo-molt-{animal_name.casefold()}-{index}",
+                        "occurred_at": _form_time(qualification_date - timedelta(days=days_ago)),
+                        "result": "complete",
+                        "notes": f"Fictional complete {animal_name} molt.",
+                    },
+                )
+            _post(
+                client,
+                f"/animals/{animals[animal_name]}/premolt-observations",
+                {
+                    "idempotency_key": f"demo-premolt-{animal_name.casefold()}",
+                    "occurred_at": _form_time(qualification_date - timedelta(days=65)),
+                    "observed": "true",
+                    "notes": "Fictional premolt color and appetite observation.",
+                },
+            )
+            if animal_name == "Marigold":
+                continue
+            for index, days_ago in enumerate((31, 14, 5, 1)):
+                _post(
+                    client,
+                    f"/animals/{animals[animal_name]}/mistings",
+                    {
+                        "idempotency_key": f"demo-misting-{animal_name.casefold()}-{index}",
+                        "occurred_at": _form_time(qualification_date - timedelta(days=days_ago)),
+                        "duration_seconds": "18",
+                        "notes": f"Fictional {animal_name} habitat misting.",
+                    },
+                )
+
+        for animal_name, prey, size, interval_days in (
+            ("Kiko", "dubia roach", "large", 11),
+            ("Echo", "cricket", "small", 8),
+        ):
+            for index in range(8):
+                days_ago = (7 - index) * interval_days + 3
+                inventory_key = "roaches" if animal_name == "Kiko" else "waxworms"
+                use_inventory = index == 7
+                _record_feeding(
+                    client,
+                    animals[animal_name],
+                    key=f"{animal_name.casefold()}-{index}",
+                    occurred=qualification_date - timedelta(days=days_ago),
+                    prey=prey,
+                    size=size,
+                    weight=(7 if animal_name == "Kiko" else 1) + index % 2,
+                    outcome="accepted",
+                    notes=f"Fictional {animal_name} feeding history.",
+                    inventory_id=inventory[inventory_key] if use_inventory else "",
+                    inventory_version=(
+                        str(_stream_version(database, inventory[inventory_key]))
+                        if use_inventory
+                        else ""
+                    ),
+                )
+            _record_feeding(
+                client,
+                animals[animal_name],
+                key=f"{animal_name.casefold()}-refusal",
+                occurred=qualification_date - timedelta(days=interval_days + 5),
+                prey=prey,
+                size=size,
+                weight=2,
+                outcome="refused",
+                notes="Fictional skipped feeding retained in effective history.",
+            )
+            for index, days_ago in enumerate((260, 185, 110, 45, 6)):
+                _record_measurement(
+                    client,
+                    animals[animal_name],
+                    kind="weights",
+                    key=f"{animal_name.casefold()}-{index}",
+                    occurred=qualification_date - timedelta(days=days_ago),
+                    value=(390 if animal_name == "Kiko" else 7)
+                    + index * (24 if animal_name == "Kiko" else 2),
+                    notes=f"Fictional {animal_name} weight trend.",
+                )
+                _record_measurement(
+                    client,
+                    animals[animal_name],
+                    kind="lengths",
+                    key=f"{animal_name.casefold()}-{index}",
+                    occurred=qualification_date - timedelta(days=days_ago - 1),
+                    value=(410 if animal_name == "Kiko" else 115)
+                    + index * (14 if animal_name == "Kiko" else 7),
+                    notes=f"Fictional {animal_name} length trend.",
+                )
+            for index, days_ago in enumerate((92, 21)):
+                _post(
+                    client,
+                    f"/animals/{animals[animal_name]}/baths",
+                    {
+                        "idempotency_key": f"demo-bath-{animal_name.casefold()}-{index}",
+                        "occurred_at": _form_time(qualification_date - timedelta(days=days_ago)),
+                        "duration_minutes": "9",
+                        "reason": "Fictional supervised hydration",
+                        "notes": f"Fictional {animal_name} soak.",
+                    },
+                )
+            if animal_name == "Echo":
+                continue
+            for index, days_ago in enumerate((13, 4)):
+                _post(
+                    client,
+                    f"/animals/{animals[animal_name]}/mistings",
+                    {
+                        "idempotency_key": f"demo-misting-{animal_name.casefold()}-{index}",
+                        "occurred_at": _form_time(qualification_date - timedelta(days=days_ago)),
+                        "duration_seconds": "22",
+                        "notes": f"Fictional {animal_name} habitat misting.",
+                    },
+                )
+
+        for animal_name, interval_days in (("Nimbus", 17), ("Rune", 22)):
+            for index in range(8):
+                days_ago = (7 - index) * interval_days + 4
+                use_inventory = animal_name == "Rune" and index == 7
+                _record_feeding(
+                    client,
+                    animals[animal_name],
+                    key=f"{animal_name.casefold()}-{index}",
+                    occurred=qualification_date - timedelta(days=days_ago),
+                    prey="mealworm" if animal_name == "Rune" else "cricket",
+                    size="medium",
+                    weight=2,
+                    outcome="accepted",
+                    notes=f"Fictional {animal_name} feeding history.",
+                    inventory_id=inventory["mealworms"] if use_inventory else "",
+                    inventory_version=(
+                        str(_stream_version(database, inventory["mealworms"]))
+                        if use_inventory
+                        else ""
+                    ),
+                )
+            _record_feeding(
+                client,
+                animals[animal_name],
+                key=f"{animal_name.casefold()}-refusal",
+                occurred=qualification_date - timedelta(days=interval_days + 7),
+                prey="cricket",
+                size="medium",
+                weight=2,
+                outcome="refused",
+                notes="Fictional premolt feeding refusal.",
+            )
+            for index, days_ago in enumerate((205, 136, 72, 8)):
+                _record_measurement(
+                    client,
+                    animals[animal_name],
+                    kind="weights",
+                    key=f"{animal_name.casefold()}-{index}",
+                    occurred=qualification_date - timedelta(days=days_ago),
+                    value=(13 if animal_name == "Nimbus" else 19) + index * 2,
+                    notes=f"Fictional {animal_name} optional weight history.",
+                )
+            for index, days_ago in enumerate((300, 231, 165, 101, 39)):
+                _post(
+                    client,
+                    f"/animals/{animals[animal_name]}/molts",
+                    {
+                        "idempotency_key": f"demo-molt-{animal_name.casefold()}-{index}",
+                        "occurred_at": _form_time(qualification_date - timedelta(days=days_ago)),
+                        "result": "complete",
+                        "notes": f"Fictional complete {animal_name} molt.",
+                    },
+                )
+            _post(
+                client,
+                f"/animals/{animals[animal_name]}/premolt-observations",
+                {
+                    "idempotency_key": f"demo-premolt-{animal_name.casefold()}",
+                    "occurred_at": _form_time(qualification_date - timedelta(days=47)),
+                    "observed": "true",
+                    "notes": "Fictional premolt behavior observation.",
+                },
+            )
+            if animal_name == "Rune":
+                continue
+            for index, days_ago in enumerate((19, 6, 1)):
+                _post(
+                    client,
+                    f"/animals/{animals[animal_name]}/mistings",
+                    {
+                        "idempotency_key": f"demo-misting-{animal_name.casefold()}-{index}",
+                        "occurred_at": _form_time(qualification_date - timedelta(days=days_ago)),
+                        "duration_seconds": "14",
+                        "notes": f"Fictional {animal_name} enclosure misting.",
+                    },
                 )
 
         sol_feedings = _dates_from_intervals(
@@ -1142,7 +1668,7 @@ def seed_demo(
             notes="First fictional length.",
         )
 
-        for index, days_ago in enumerate((31, 20, 10, 2)):
+        for index, days_ago in enumerate((65, 50, 31, 20, 10, 2)):
             _record_feeding(
                 client,
                 animals["Dune"],
@@ -1288,7 +1814,7 @@ def seed_demo(
             notes="First fictional scorpion weight.",
         )
 
-        for index, days_ago in enumerate((46, 31, 17, 3)):
+        for index, days_ago in enumerate((76, 61, 46, 31, 17, 3)):
             _record_feeding(
                 client,
                 animals["Saffron"],
@@ -1360,6 +1886,104 @@ def seed_demo(
                 },
             )
 
+        vesper_target = _event_id(database, animals["Vesper"], "animal.feeding_recorded")
+        _post(
+            client,
+            f"/animals/{animals['Vesper']}/events/{vesper_target}/correct",
+            {
+                "idempotency_key": "demo-vesper-feeding-correction",
+                "occurred_at": _form_time(qualification_date - timedelta(days=139)),
+                "prey_type": "small roach",
+                "prey_size": "small",
+                "prey_weight_grams": "3",
+                "preparation_method": "live",
+                "quantity": "1",
+                "outcome": "accepted",
+                "notes": "Corrected fictional prey weight from the keeper notebook.",
+            },
+        )
+
+        atlas_target = _event_id(database, animals["Atlas"], "animal.feeding_recorded")
+        _post(
+            client,
+            f"/animals/{animals['Atlas']}/events/{atlas_target}/void",
+            {
+                "idempotency_key": "demo-atlas-feeding-void",
+                "reason": "Fictional keeper briefly voided the wrong historical feeding.",
+            },
+        )
+        _post(
+            client,
+            f"/animals/{animals['Atlas']}/events/{atlas_target}/reinstate",
+            {
+                "idempotency_key": "demo-atlas-feeding-reinstate",
+                "reason": "Fictional keeper confirmed the original log was correct.",
+            },
+        )
+
+        mice_version = _stream_version(database, inventory["mice"])
+        _post(
+            client,
+            f"/inventory/{inventory['mice']}/edit",
+            {
+                "idempotency_key": "demo-inventory-mice-edit",
+                "expected_stream_version": str(mice_version),
+                "name": "Frozen mice — small adult (18-24 g)",
+                "unit": "item",
+                "reorder_threshold": "6",
+            },
+        )
+        _post(
+            client,
+            f"/inventory/{inventory['mice']}/adjust",
+            {
+                "idempotency_key": "demo-inventory-mice-adjust",
+                "expected_stream_version": str(mice_version + 1),
+                "quantity_delta": "-3",
+                "reason": "Fictional freezer count reconciliation.",
+            },
+        )
+        bulbs_version = _stream_version(database, inventory["bulbs"])
+        _post(
+            client,
+            f"/inventory/{inventory['bulbs']}/adjust",
+            {
+                "idempotency_key": "demo-inventory-bulbs-low-stock",
+                "expected_stream_version": str(bulbs_version),
+                "quantity_delta": "-1",
+                "reason": "Fictional replacement installed in Kiko's vivarium.",
+            },
+        )
+        waxworm_version = _stream_version(database, inventory["waxworms"])
+        _post(
+            client,
+            f"/inventory/{inventory['waxworms']}/archive",
+            {
+                "idempotency_key": "demo-inventory-waxworms-archive",
+                "expected_stream_version": str(waxworm_version),
+                "reason": "Fictional keeper discontinued this occasional treat.",
+            },
+        )
+        substrate_version = _stream_version(database, inventory["substrate"])
+        _post(
+            client,
+            f"/inventory/{inventory['substrate']}/archive",
+            {
+                "idempotency_key": "demo-inventory-substrate-archive",
+                "expected_stream_version": str(substrate_version),
+                "reason": "Fictional temporary supplier change.",
+            },
+        )
+        _post(
+            client,
+            f"/inventory/{inventory['substrate']}/restore",
+            {
+                "idempotency_key": "demo-inventory-substrate-restore",
+                "expected_stream_version": str(substrate_version + 1),
+                "reason": "Fictional supplier stock became available again.",
+            },
+        )
+
         for key, enclosure_key, route, days_ago in (
             ("forest-clean", "forest", "cleanings", 20),
             ("forest-water", "forest", "water-changes", 2),
@@ -1375,6 +1999,22 @@ def seed_demo(
                     "notes": "Fictional demo habitat maintenance.",
                 },
             )
+        for index, (enclosure_key, enclosure_id) in enumerate(enclosures.items()):
+            for route, days_ago in (
+                ("cleanings", 340 - index * 13),
+                ("water-changes", 27 - index % 9),
+            ):
+                _post(
+                    client,
+                    f"/enclosures/{enclosure_id}/{route}",
+                    {
+                        "idempotency_key": f"demo-annual-{enclosure_key}-{route}",
+                        "occurred_at": _form_time(qualification_date - timedelta(days=days_ago)),
+                        "notes": (
+                            f"Fictional scheduled {route.replace('-', ' ')} for {enclosure_key}."
+                        ),
+                    },
+                )
         _post(
             client,
             f"/animals/{animals['Ember']}/mistings",
@@ -1386,45 +2026,57 @@ def seed_demo(
             },
         )
 
-        _schedule(
-            client,
-            animals["Atlas"],
-            kind="weight",
-            key="overdue",
-            interval=30,
-            override=qualification_date - timedelta(days=1),
+        reminder_scenarios = (
+            ("Atlas", "weight", "atlas-weight-overdue", -6, 30),
+            ("Ember", "misting", "ember-misting-overdue", -4, 7),
+            ("Sol", "feeding", "sol-feeding-overdue", -3, 5),
+            ("Onyx", "misting", "onyx-misting-overdue", -2, 7),
+            ("Kiko", "bath", "kiko-bath-overdue", -2, 30),
+            ("Rune", "feeding", "rune-feeding-overdue", -1, 21),
+            ("Atlas", "length", "atlas-length-today", 0, 30),
+            ("Juniper", "feeding", "juniper-feeding-today", 0, 10),
+            ("Vesper", "misting", "vesper-misting-today", 0, 5),
+            ("Dune", "bath", "dune-bath-today", 0, 30),
+            ("Nimbus", "molt", "nimbus-molt-today", 0, 66),
+            ("Atlas", "bath", "atlas-bath-upcoming", 1, 30),
+            ("Nova", "feeding", "nova-feeding-upcoming", 1, 10),
+            ("Pearl", "molt", "pearl-molt-upcoming", 2, 62),
+            ("Sol", "length", "sol-length-upcoming", 2, 30),
+            ("Dune", "misting", "dune-misting-upcoming", 3, 3),
+            ("Onyx", "feeding", "onyx-feeding-upcoming", 3, 12),
+            ("Saffron", "misting", "saffron-misting-upcoming", 4, 4),
+            ("Marlow", "weight", "marlow-weight-upcoming", 4, 60),
+            ("Marigold", "feeding", "marigold-feeding-upcoming", 5, 24),
+            ("Echo", "length", "echo-length-upcoming", 5, 45),
+            ("Cobalt", "weight", "cobalt-weight-upcoming", 6, 60),
+            ("Bramble", "feeding", "bramble-feeding-upcoming", 6, 10),
         )
-        _schedule(
-            client,
-            animals["Atlas"],
-            kind="length",
-            key="today",
-            interval=30,
-            override=qualification_date,
-        )
-        _schedule(
-            client,
-            animals["Atlas"],
-            kind="bath",
-            key="upcoming",
-            interval=30,
-            override=qualification_date + timedelta(days=1),
-        )
-        _schedule(client, animals["Juniper"], kind="feeding", key="juniper-feed", interval=10)
-        _schedule(client, animals["Ember"], kind="molt", key="ember-molt", interval=60)
-        _schedule(client, animals["Nova"], kind="feeding", key="nova-feed", interval=10)
-        _schedule(client, animals["Pearl"], kind="molt", key="pearl-molt", interval=62)
-        _schedule(client, animals["Sol"], kind="length", key="sol-length", interval=30)
-        _schedule(client, animals["Dune"], kind="misting", key="dune-mist", interval=3)
-        _schedule(client, animals["Onyx"], kind="feeding", key="onyx-feed", interval=12)
-        _schedule(client, animals["Onyx"], kind="molt", key="onyx-molt", interval=72)
-        _schedule(client, animals["Saffron"], kind="misting", key="saffron-mist", interval=4)
+        for animal_name, kind, key, day_offset, interval in reminder_scenarios:
+            _schedule(
+                client,
+                animals[animal_name],
+                kind=kind,
+                key=key,
+                interval=interval,
+                override=qualification_date + timedelta(days=day_offset),
+            )
 
         expense_locations: list[str] = []
-        for index, amount, category, payee, notes in (
-            (1, "46.50", "Feeders", "Fictional Feeder Co.", "Demo prey stock receipt."),
-            (2, "78.25", "Habitat", "Fictional Habitat Shop", "Demo cork and substrate."),
-            (3, "19.00", "Supplies", "Fictional Supply Desk", "Duplicate demo receipt."),
+        for index, amount, category, payee, notes, days_ago in (
+            (1, "46.50", "Feeders", "Fictional Feeder Co.", "Demo prey stock receipt.", 330),
+            (2, "78.25", "Habitat", "Fictional Habitat Shop", "Demo cork and substrate.", 302),
+            (3, "19.00", "Supplies", "Fictional Supply Desk", "Duplicate demo receipt.", 275),
+            (4, "34.75", "Substrate", "Moonrise Substrate Co.", "Coco fiber and sand mix.", 248),
+            (5, "52.10", "Feeders", "Cricket Lantern Farm", "Mixed feeder order.", 219),
+            (6, "24.90", "Equipment", "Warm Stone Electric", "Replacement thermostat probe.", 192),
+            (7, "61.40", "Habitat", "Fictional Habitat Shop", "Cork rounds and hides.", 165),
+            (8, "29.60", "Supplies", "Moss & Mist Supply", "Misting bottles and moss.", 137),
+            (9, "43.20", "Feeders", "Fictional Feeder Co.", "Frozen prey restock.", 109),
+            (10, "88.00", "Equipment", "Savanna Lighting Lab", "UVB and basking bulbs.", 82),
+            (11, "31.25", "Substrate", "Moonrise Substrate Co.", "Vivarium substrate refresh.", 55),
+            (12, "47.80", "Feeders", "Cricket Lantern Farm", "Roaches and crickets.", 33),
+            (13, "18.45", "Supplies", "Moss & Mist Supply", "Water conditioner and cups.", 16),
+            (14, "26.30", "General care", "Keeper's Field Desk", "Labels and care notebooks.", 5),
         ):
             expense_locations.append(
                 _post(
@@ -1438,7 +2090,7 @@ def seed_demo(
                         "payee": payee,
                         "reference": f"DEMO-{index:03d}",
                         "notes": notes,
-                        "occurred_at": _form_time(qualification_date - timedelta(days=20 - index)),
+                        "occurred_at": _form_time(qualification_date - timedelta(days=days_ago)),
                     },
                 )
             )
@@ -1487,6 +2139,7 @@ def seed_demo(
         if reset_existing:
             _rebuild_product_projections(database)
         _verify_keeper_pages(client, animals, qualification_date)
+        _logout(client)
     app.state.database_engine.dispose()
 
     return _store_result(
@@ -1513,6 +2166,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if os.environ.get(OWNER_REVIEW_ENABLE_KEY) != OWNER_REVIEW_ENABLE_VALUE:
+        raise SystemExit(
+            f"{OWNER_REVIEW_ENABLE_KEY}={OWNER_REVIEW_ENABLE_VALUE} is required for local "
+            "owner-review seeding"
+        )
     runtime_secret = DEMO_RUNTIME_SECRET
     if args.runtime_secret_file is not None:
         runtime_secret = args.runtime_secret_file.read_text(encoding="utf-8").strip()

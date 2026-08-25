@@ -9,6 +9,11 @@ cd "$repo_root"
 
 case "${1:-}" in
     seed)
+        if [ "${SNAKETRACKER_OWNER_REVIEW:-}" != "enabled" ]; then
+            printf '%s\n' \
+                'Refusing owner-review seed without SNAKETRACKER_OWNER_REVIEW=enabled.' >&2
+            exit 2
+        fi
         shift
         exec uv run python -m scripts.fixtures.seed_m6_owner_review \
             --data-dir "$promoted_data_dir" \

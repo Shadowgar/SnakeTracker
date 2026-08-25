@@ -74,7 +74,7 @@ def test_demo_provisioning_is_atomic_canonical_and_idempotent(tmp_path: Path) ->
             .mappings()
             .one()
         )
-        assert user == {"email_normalized": "owner@m6-demo.invalid", "status": "active"}
+        assert user == {"email_normalized": "demo@carekeeper.local", "status": "active"}
         events = (
             connection.execute(
                 text(
@@ -150,7 +150,7 @@ def test_demo_provisioning_fails_closed_on_reserved_identity_conflict(tmp_path: 
             text(
                 "INSERT INTO users (user_id,email_normalized,display_name,password_hash,"
                 "password_scheme,status,created_at,updated_at) VALUES "
-                "(:user_id,'owner@m6-demo.invalid','Conflicting user','hash','argon2id','active',"
+                "(:user_id,'demo@carekeeper.local','Conflicting user','hash','argon2id','active',"
                 "'2026-08-16T00:00:00+00:00','2026-08-16T00:00:00+00:00')"
             ),
             {"user_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"},

@@ -14,10 +14,10 @@ from snaketracker.domains.households.contracts import HouseholdCreatedV1, Househ
 from snaketracker.platform.events.envelope import DomainEvent, EventSubject, event_checksum
 
 BOOTSTRAP_NAMESPACE = UUID("ab66c5ca-7d6b-4f8b-bfdd-94437acc3c4a")
-DEMO_IDEMPOTENCY_KEY = "trusted-local-m6-demo-household-v1"
+DEMO_IDEMPOTENCY_KEY = "trusted-local-carekeeper-owner-review-v2"
 DEMO_HOUSEHOLD_ID = str(uuid5(BOOTSTRAP_NAMESPACE, f"household:{DEMO_IDEMPOTENCY_KEY}"))
 DEMO_OWNER_USER_ID = str(uuid5(BOOTSTRAP_NAMESPACE, f"user:{DEMO_IDEMPOTENCY_KEY}"))
-DEMO_EMAIL = "owner@m6-demo.invalid"
+DEMO_EMAIL = "demo@carekeeper.local"
 _DEMO_ALLOWED_ENVIRONMENTS = frozenset({"development", "test", "local-owner-review"})
 
 
@@ -197,7 +197,7 @@ class DemoHouseholdProvisioningService(HouseholdBootstrapService):
                 "Trusted local demo provisioning is not permitted in this environment."
             )
         bootstrap_command = BootstrapCommand(
-            household_name="M6 Fictional Keeper Lab",
+            household_name="Care Keeper Fictional Collection",
             timezone="America/New_York",
             owner_email=DEMO_EMAIL,
             owner_display_name="Demo Keeper",

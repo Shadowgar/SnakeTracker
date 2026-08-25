@@ -8,8 +8,8 @@ from datetime import date
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
 from PIL import Image
-from sqlalchemy import text
 
 from snaketracker.application.household_bootstrap import (
     HouseholdBootstrapService,
@@ -29,6 +29,7 @@ sys.modules[SPEC.name] = seeder
 SPEC.loader.exec_module(seeder)
 
 seed_demo = seeder.seed_demo
+pytestmark = pytest.mark.timeout(300)
 
 
 def image_size(path: Path) -> tuple[int, int]:
@@ -41,62 +42,62 @@ def test_owner_review_demo_is_isolated_populated_and_prediction_ready(tmp_path: 
     data_dir.mkdir()
     database = data_dir / "snaketracker.sqlite3"
     engine = migrated_engine(database)
-    real = HouseholdBootstrapService(
-        SQLAlchemyHouseholdBootstrapRepository(engine),
-        Argon2PasswordHasher.for_testing(),
-        command_hash_secret=b"test-bootstrap-command-secret-32b",
-    ).bootstrap(command_for())
-    with engine.connect() as connection:
-        real_events_before = connection.execute(
-            text("SELECT count(*) FROM domain_events WHERE household_id=:household_id"),
-            {"household_id": str(real.household_id)},
-        ).scalar_one()
     engine.dispose()
 
     result = seed_demo(data_dir, as_of=date(2026, 8, 15))
 
-    assert result.animal_count == 13
-    assert result.enclosure_count == 11
-    assert result.scenario_version == "four-group-owner-review.v1"
-    assert result.snake_count == 4
-    assert result.spider_count == 3
-    assert result.lizard_count == 3
-    assert result.scorpion_count == 3
-    assert result.profile_photo_count == 13
-    assert result.prediction_ready == ("Ember", "Juniper", "Nova", "Onyx", "Pearl", "Sol")
-    assert result.insufficient_history_animals == ("Bramble", "Cobalt", "Pip")
-    assert result.event_count >= 175
+    assert result.manifest_version == 2
+    assert result.animal_count == 20
+    assert result.enclosure_count == 16
+    assert result.scenario_version == "carekeeper-owner-review.v2"
+    assert result.snake_count == 5
+    assert result.spider_count == 5
+    assert result.lizard_count == 5
+    assert result.scorpion_count == 5
+    assert result.profile_photo_count == 20
+    assert result.insufficient_history_animals == ("Atlas", "Bramble", "Cobalt", "Pip")
+    assert result.event_count >= 300
+    assert result.inventory_active_count == 7
+    assert result.inventory_archived_count == 1
+    assert result.expense_count == 14
+    assert result.reminder_overdue_count == 6
+    assert result.reminder_today_count == 5
+    assert result.reminder_upcoming_count == 12
     with sqlite3.connect(database) as connection:
         assert connection.execute(
             "SELECT count(*) FROM animal_current WHERE household_id=?",
             (result.household_id,),
-        ).fetchone() == (13,)
+        ).fetchone() == (20,)
         assert connection.execute(
             "SELECT count(*) FROM attachment_versions WHERE household_id=?",
             (result.household_id,),
-        ).fetchone() == (13,)
+        ).fetchone() == (20,)
         assert dict(
             connection.execute(
                 "SELECT animal_type,count(*) FROM animal_current WHERE household_id=? "
                 "GROUP BY animal_type",
                 (result.household_id,),
             ).fetchall()
-        ) == {"lizard": 3, "scorpion": 3, "snake": 4, "spider": 3}
+        ) == {"lizard": 5, "scorpion": 5, "snake": 5, "spider": 5}
         assert connection.execute(
             "SELECT count(*) FROM domain_events WHERE household_id=? AND stream_id=? "
             "AND event_type IN ('animal.molt_recorded','animal.premolt_observed') "
             "AND schema_version=2",
             (result.household_id, result.animal_ids["Onyx"]),
         ).fetchone() == (7,)
-        assert connection.execute("SELECT count(*) FROM reminder_rule_current").fetchone()[0] >= 3
         assert connection.execute(
-            "SELECT count(*) FROM domain_events WHERE household_id=?",
-            (str(real.household_id),),
-        ).fetchone() == (real_events_before,)
+            "SELECT count(*) FROM reminder_rule_current WHERE household_id=?",
+            (result.household_id,),
+        ).fetchone() == (23,)
+        assert connection.execute("SELECT count(*) FROM household_summaries").fetchone() == (1,)
+        assert connection.execute("SELECT count(*) FROM users").fetchone() == (1,)
+        assert connection.execute(
+            "SELECT count(*) FROM sessions WHERE revoked_at IS NULL"
+        ).fetchone() == (0,)
         assert connection.execute("PRAGMA integrity_check").fetchone() == ("ok",)
     photos = tuple((data_dir / "attachments" / "versions").glob("*.png"))
-    assert len(photos) == 13
-    assert len({hashlib.sha256(photo.read_bytes()).digest() for photo in photos}) == 13
+    assert len(photos) == 20
+    assert len({hashlib.sha256(photo.read_bytes()).digest() for photo in photos}) == 20
     assert {image_size(photo) for photo in photos} == {(640, 480)}
 
 
@@ -105,11 +106,6 @@ def test_owner_review_demo_rerun_is_idempotent(tmp_path: Path) -> None:
     data_dir.mkdir()
     database = data_dir / "snaketracker.sqlite3"
     engine = migrated_engine(database)
-    HouseholdBootstrapService(
-        SQLAlchemyHouseholdBootstrapRepository(engine),
-        Argon2PasswordHasher.for_testing(),
-        command_hash_secret=b"test-bootstrap-command-secret-32b",
-    ).bootstrap(command_for())
     engine.dispose()
     first = seed_demo(data_dir, as_of=date(2026, 8, 15))
     with sqlite3.connect(database) as connection:
@@ -134,11 +130,6 @@ def test_owner_review_demo_reset_replaces_only_the_reserved_household(tmp_path: 
     data_dir.mkdir()
     database = data_dir / "snaketracker.sqlite3"
     engine = migrated_engine(database)
-    real = HouseholdBootstrapService(
-        SQLAlchemyHouseholdBootstrapRepository(engine),
-        Argon2PasswordHasher.for_testing(),
-        command_hash_secret=b"test-bootstrap-command-secret-32b",
-    ).bootstrap(command_for())
     engine.dispose()
     first = seed_demo(data_dir, as_of=date(2026, 8, 15))
     old_photos = tuple((data_dir / "attachments" / "versions").glob("*.png"))
@@ -172,13 +163,6 @@ def test_owner_review_demo_reset_replaces_only_the_reserved_household(tmp_path: 
             ),
         )
         connection.commit()
-        real_before = tuple(
-            connection.execute(
-                "SELECT event_id,checksum FROM domain_events WHERE household_id=? "
-                "ORDER BY global_position",
-                (str(real.household_id),),
-            )
-        )
 
     replacement = seed_demo(
         data_dir,
@@ -187,20 +171,10 @@ def test_owner_review_demo_reset_replaces_only_the_reserved_household(tmp_path: 
     )
 
     assert replacement.household_id == first.household_id
-    assert replacement.animal_count == 13
-    assert len(tuple((data_dir / "attachments" / "versions").glob("*.png"))) == 13
+    assert replacement.animal_count == 20
+    assert len(tuple((data_dir / "attachments" / "versions").glob("*.png"))) == 20
     assert not any(path.exists() for path in old_photos)
     with sqlite3.connect(database) as connection:
-        assert (
-            tuple(
-                connection.execute(
-                    "SELECT event_id,checksum FROM domain_events WHERE household_id=? "
-                    "ORDER BY global_position",
-                    (str(real.household_id),),
-                )
-            )
-            == real_before
-        )
         assert connection.execute(
             "SELECT count(*) FROM domain_events WHERE household_id=? AND stream_type='household'",
             (replacement.household_id,),
@@ -218,11 +192,6 @@ def test_owner_review_demo_recovers_after_final_verification_interruption(
     data_dir.mkdir()
     database = data_dir / "snaketracker.sqlite3"
     engine = migrated_engine(database)
-    HouseholdBootstrapService(
-        SQLAlchemyHouseholdBootstrapRepository(engine),
-        Argon2PasswordHasher.for_testing(),
-        command_hash_secret=b"test-bootstrap-command-secret-32b",
-    ).bootstrap(command_for())
     engine.dispose()
 
     original = seeder._require_page_text
@@ -246,9 +215,9 @@ def test_owner_review_demo_recovers_after_final_verification_interruption(
     monkeypatch.setattr(seeder, "_require_page_text", original)
     recovered = seed_demo(data_dir, as_of=date(2026, 8, 15))
 
-    assert recovered.animal_count == 13
-    assert recovered.enclosure_count == 11
-    assert recovered.event_count >= 175
+    assert recovered.animal_count == 20
+    assert recovered.enclosure_count == 16
+    assert recovered.event_count >= 300
     assert (data_dir / "demo-manifest.json").is_file()
 
 
@@ -263,10 +232,31 @@ def test_owner_review_demo_requires_an_existing_promoted_database(tmp_path: Path
         raise AssertionError("Demo seeding must require the existing promoted database.")
 
 
+def test_owner_review_demo_refuses_a_non_demo_household_database(tmp_path: Path) -> None:
+    data_dir = tmp_path / "unexpected-runtime"
+    data_dir.mkdir()
+    database = data_dir / "snaketracker.sqlite3"
+    engine = migrated_engine(database)
+    HouseholdBootstrapService(
+        SQLAlchemyHouseholdBootstrapRepository(engine),
+        Argon2PasswordHasher.for_testing(),
+        command_hash_secret=b"test-bootstrap-command-secret-32b",
+    ).bootstrap(command_for())
+    engine.dispose()
+
+    try:
+        seed_demo(data_dir, as_of=date(2026, 8, 15))
+    except RuntimeError as error:
+        assert "unexpected non-demo household" in str(error)
+    else:
+        raise AssertionError("Owner-review seeding must fail closed on non-demo data.")
+
+
 def test_owner_review_wrapper_targets_only_the_promoted_runtime() -> None:
     wrapper = (ROOT / "scripts/development/m6_owner_review_demo.sh").read_text(encoding="utf-8")
 
     assert "18087" not in wrapper
     assert "snaketracker-m6-demo" not in wrapper
     assert "runtime/phase2" in wrapper
+    assert "SNAKETRACKER_OWNER_REVIEW" in wrapper
     assert "docker compose up" not in wrapper

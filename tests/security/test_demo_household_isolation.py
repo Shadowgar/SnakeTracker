@@ -5,6 +5,7 @@ import sqlite3
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
@@ -12,8 +13,8 @@ from pydantic import SecretStr
 from sqlalchemy.engine import Engine
 
 from snaketracker.application.household_bootstrap import (
-    BootstrapCommand,
-    HouseholdBootstrapService,
+    AccountRegistrationCommand,
+    AccountRegistrationService,
 )
 from snaketracker.bootstrap.application import build_application
 from snaketracker.bootstrap.configuration import Environment, Settings
@@ -29,6 +30,7 @@ DEMO_EMAIL = seeder.DEMO_EMAIL
 DEMO_PASSWORD = seeder.DEMO_PASSWORD
 seed_demo = seeder.seed_demo
 ROOT = Path(__file__).parents[2]
+pytestmark = pytest.mark.timeout(300)
 
 
 def migrated_engine(database: Path) -> Engine:
@@ -39,12 +41,12 @@ def migrated_engine(database: Path) -> Engine:
     return create_sqlite_engine(database, require_local_storage=False)
 
 
-def command_for() -> BootstrapCommand:
-    return BootstrapCommand(
-        household_name="Rocco's Reptiles",
+def command_for() -> AccountRegistrationCommand:
+    return AccountRegistrationCommand(
+        collection_name="Rocco's Reptiles",
         timezone="America/New_York",
-        owner_email="owner@example.com",
-        owner_display_name="Rocco",
+        email="owner@example.com",
+        display_name="Rocco",
         password="correct horse battery staple",
         idempotency_key="real-isolation-bootstrap",
         correlation_id=uuid4(),
@@ -78,13 +80,15 @@ def test_real_and_demo_households_cannot_read_or_mutate_each_other(tmp_path: Pat
     data_dir.mkdir()
     database = data_dir / "snaketracker.sqlite3"
     engine = migrated_engine(database)
-    real = HouseholdBootstrapService(
+    engine.dispose()
+    demo = seed_demo(data_dir, as_of=None)
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    real = AccountRegistrationService(
         SQLAlchemyHouseholdBootstrapRepository(engine),
         Argon2PasswordHasher.for_testing(),
         command_hash_secret=b"test-bootstrap-command-secret-32b",
-    ).bootstrap(command_for())
+    ).register(command_for())
     engine.dispose()
-    demo = seed_demo(data_dir, as_of=None)
     with sqlite3.connect(database) as connection:
         demo_attachment = connection.execute(
             "SELECT photo_attachment_version_id FROM animal_current "
