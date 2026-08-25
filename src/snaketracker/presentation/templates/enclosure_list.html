@@ -1,22 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Enclosures · Care Keeper{% endblock %}
 {% block content %}
-<section class="dashboard" aria-labelledby="page-title">
-  <div>
-    <p class="page-kicker">Habitats</p>
-    <h1 id="page-title">Enclosures</h1>
-    <p class="lede">Current housing and keeper-maintenance records.</p>
-  </div>
-  <a class="button-link" href="/enclosures/new">Add enclosure</a>
-  <a class="button-link secondary-link" href="/animals">Animals</a>
-  {% if enclosures %}
-  <ul class="record-list" aria-label="Enclosures">
-    {% for enclosure in enclosures %}
-    <li><a href="/enclosures/{{ enclosure.enclosure_id }}"><strong>{{ enclosure.name }}</strong><span>{{ enclosure.enclosure_type|capitalize }} · {{ enclosure.status|capitalize }}</span></a></li>
-    {% endfor %}
-  </ul>
-  {% else %}
-  <div class="empty-state"><h2>No enclosures yet</h2><p>Add an enclosure before assigning an animal.</p></div>
-  {% endif %}
+<section class="enclosure-collection" aria-labelledby="page-title">
+  <header class="section-heading collection-heading"><div><p class="page-kicker">Habitats</p><h1 id="page-title">Enclosures</h1><p class="lede">Occupancy and maintenance at a glance.</p></div><a class="button-link" href="/enclosures/new">Add enclosure</a></header>
+  {% if enclosure_rows %}<ul class="enclosure-grid" aria-label="Enclosures">{% for row in enclosure_rows %}{% set enclosure = row.enclosure %}<li><a class="enclosure-card" href="/enclosures/{{ enclosure.enclosure_id }}">
+    <span class="enclosure-card-heading"><span><strong>{{ enclosure.name }}</strong><small>{{ enclosure.enclosure_type|capitalize }}</small></span><span class="occupancy-count">{{ row.occupants|length }} occupant{% if row.occupants|length != 1 %}s{% endif %}</span></span>
+    {% if row.occupants %}<span class="occupant-strip">{% for animal in row.occupants[:4] %}<span class="occupant"><span class="occupant-photo">{% if animal.photo_attachment_version_id %}<img src="/attachments/{{ animal.photo_attachment_version_id }}" alt="">{% else %}{{ animal.name[0]|upper }}{% endif %}</span><span>{{ animal.name }}</span></span>{% endfor %}</span>{% else %}<span class="unoccupied-state">Unoccupied · ready for assignment</span>{% endif %}
+    <span class="maintenance-row"><span class="maintenance-indicator status-text-{{ row.maintenance_status }}">{{ row.maintenance_label }}</span><span>{{ enclosure.status|capitalize }}</span></span>
+  </a></li>{% endfor %}</ul>
+  {% else %}<div class="empty-state"><h2>No enclosures yet</h2><p>Add an enclosure before assigning an animal.</p><a class="button-link" href="/enclosures/new">Add enclosure</a></div>{% endif %}
 </section>
 {% endblock %}

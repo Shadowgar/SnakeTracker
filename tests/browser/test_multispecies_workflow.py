@@ -218,7 +218,7 @@ def test_four_group_collection_shows_type_photo_and_applicable_actions(
         assert collection.text.count(">Spider<") >= 3
         assert collection.text.count(">Lizard<") >= 1
         assert collection.text.count(">Scorpion<") >= 1
-        assert "Your animals and their care records." in collection.text
+        assert "Photos, locations, and the next care that matters." in collection.text
 
         snake = client.get(profiles["Snake A"])
         assert all(

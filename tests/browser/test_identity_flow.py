@@ -72,7 +72,8 @@ def test_first_run_login_home_logout_and_login_again(tmp_path: Path) -> None:
 
         home = client.get("/home")
         assert home.status_code == 200
-        assert "Welcome back, Rocco" in home.text
+        assert "Rocco" in home.text
+        assert "Good " in home.text
         assert "Rocco&#39;s Reptiles" in home.text
         animals = client.get("/animals")
         assert "Add animal" in animals.text

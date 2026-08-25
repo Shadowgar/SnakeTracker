@@ -28,6 +28,9 @@ See the [final fixture qualification](final-ux-fixture/README.md) for preservati
 dataset shape, analytics states, browser/accessibility results, and the new backup/restore drill.
 See [UX Pass 1](ux-pass1/README.md) for the owner-review design system, responsive shell,
 navigation, Calendar shell, Quick Log, and public-fixture screenshots.
+See [UX Pass 2](ux-pass2/README.md) for the redesigned Today dashboard, real Calendar Agenda and
+Month views, image-rich Animals, polished Quick Log, useful Enclosures, and current qualification
+screenshots.
 The earlier shared real-plus-demo runtime is retained as [historical qualification
 evidence](consolidated-demo/README.md), not as the current active state.
 

@@ -6,9 +6,10 @@ import hashlib
 import hmac
 import json
 import secrets
+from calendar import Calendar
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Protocol
@@ -198,7 +199,7 @@ RECENT_CARE_EVENT_TYPES = frozenset(
         "animal.enclosure_assigned",
         "enclosure.misting_recorded",
         "enclosure.cleaning_recorded",
-        "enclosure.water_changed",
+        "enclosure.water_change_recorded",
     }
 )
 
@@ -1155,10 +1156,15 @@ def create_web_router(
             csrf_token = issued.csrf_token
         animals = animal_service.list_profiles(principal.household_id)
         enclosures = enclosure_service.list_profiles(principal.household_id)
+        now = datetime.now(UTC)
+        household_zone = ZoneInfo(principal.household_timezone)
+        reminder_items = reminder_fact_service.agenda_for(principal.household_id, now=now)
         agenda = _agenda_rows(
-            reminder_fact_service.agenda_for(principal.household_id, now=datetime.now(UTC)),
+            reminder_items,
             animals=animals,
             enclosures=enclosures,
+            timezone=household_zone,
+            now=now,
         )
         try:
             collection_statistics = dashboard_statistics_service.collection(principal.household_id)
@@ -1169,9 +1175,17 @@ def create_web_router(
             "home.html",
             {
                 "principal": principal,
-                "household_zone": ZoneInfo(principal.household_timezone),
+                "household_zone": household_zone,
                 "csrf_token": csrf_token,
                 "animals": animals,
+                "agenda_counts": {key: len(rows) for key, rows in agenda.items()},
+                "greeting": (
+                    "Good morning"
+                    if now.astimezone(household_zone).hour < 12
+                    else "Good afternoon"
+                    if now.astimezone(household_zone).hour < 18
+                    else "Good evening"
+                ),
                 "agenda_groups": (
                     ("overdue", "Overdue", agenda["overdue"]),
                     ("due_today", "Due today", agenda["due_today"]),
@@ -1186,21 +1200,52 @@ def create_web_router(
         return response
 
     @router.get("/animals", response_class=HTMLResponse)
-    async def animal_list(request: Request) -> Response:
+    async def animal_list(request: Request, kind: str = "all") -> Response:
         principal = principal_for(request, audit_denial=True)
         if principal is None:
             return RedirectResponse("/login", status_code=303)
         animals = animal_service.list_profiles(principal.household_id)
         enclosures = enclosure_service.list_profiles(principal.household_id)
+        now = datetime.now(UTC)
+        animal_types = {
+            "snakes": "snake",
+            "spiders": "spider",
+            "lizards": "lizard",
+            "scorpions": "scorpion",
+        }
+        selected_kind = kind if kind in {"all", *animal_types} else "all"
+        visible_animals = (
+            animals
+            if selected_kind == "all"
+            else tuple(
+                animal for animal in animals if animal.animal_type == animal_types[selected_kind]
+            )
+        )
+        reminder_items = reminder_fact_service.agenda_for(principal.household_id, now=now)
         return protected_page(
             request,
             "animal_list.html",
             principal,
             context={
-                "animals": animals,
-                "enclosure_names": {
-                    enclosure.enclosure_id: enclosure.name for enclosure in enclosures
-                },
+                "animal_rows": _animal_collection_rows(
+                    visible_animals,
+                    reminder_items,
+                    enclosures=enclosures,
+                    timezone=ZoneInfo(principal.household_timezone),
+                    now=now,
+                ),
+                "selected_kind": selected_kind,
+                "animal_filters": (
+                    ("all", "All", len(animals)),
+                    *tuple(
+                        (
+                            key,
+                            key.capitalize(),
+                            sum(1 for animal in animals if animal.animal_type == value),
+                        )
+                        for key, value in animal_types.items()
+                    ),
+                ),
             },
         )
 
@@ -1212,11 +1257,54 @@ def create_web_router(
         return protected_page(request, "more.html", principal)
 
     @router.get("/calendar", response_class=HTMLResponse)
-    async def calendar(request: Request) -> Response:
+    async def calendar(
+        request: Request, view: str = "agenda", month: str = "", selected: str = ""
+    ) -> Response:
         principal = principal_for(request, audit_denial=True)
         if principal is None:
             return RedirectResponse("/login", status_code=303)
-        return protected_page(request, "calendar.html", principal)
+        animals = animal_service.list_profiles(principal.household_id)
+        enclosures = enclosure_service.list_profiles(principal.household_id)
+        now = datetime.now(UTC)
+        household_zone = ZoneInfo(principal.household_timezone)
+        reminder_items = reminder_fact_service.agenda_for(principal.household_id, now=now)
+        agenda = _agenda_rows(
+            reminder_items,
+            animals=animals,
+            enclosures=enclosures,
+            timezone=household_zone,
+            now=now,
+        )
+        completed = _completed_care_rows(
+            household_id=principal.household_id,
+            animals=animals,
+            enclosures=enclosures,
+            animal_service=animal_service,
+            enclosure_service=enclosure_service,
+            timezone=household_zone,
+        )
+        active_view = view if view in {"agenda", "month"} else "agenda"
+        return protected_page(
+            request,
+            "calendar.html",
+            principal,
+            context={
+                "active_view": active_view,
+                "calendar": _calendar_view(
+                    month_value=month,
+                    selected_value=selected,
+                    scheduled_rows=tuple(row for rows in agenda.values() for row in rows),
+                    completed=completed,
+                    timezone=household_zone,
+                    now=now,
+                ),
+                "agenda_groups": (
+                    ("overdue", "Overdue", agenda["overdue"]),
+                    ("due_today", "Due today", agenda["due_today"]),
+                    ("upcoming", "Upcoming", agenda["upcoming"]),
+                ),
+            },
+        )
 
     @router.get("/quick-log", response_class=HTMLResponse)
     async def quick_log(request: Request) -> Response:
@@ -1224,14 +1312,24 @@ def create_web_router(
         if principal is None:
             return RedirectResponse("/login", status_code=303)
         animals = animal_service.list_profiles(principal.household_id)
+        type_order = ("snake", "spider", "lizard", "scorpion")
         return protected_page(
             request,
             "quick_log.html",
             principal,
             context={
-                "quick_log_rows": tuple(
-                    {"animal": animal, "actions": _care_action_rows(animal)} for animal in animals
-                )
+                "quick_log_groups": tuple(
+                    (
+                        animal_capability_registry.require(f"{animal_type}.v1").label,
+                        tuple(
+                            {"animal": animal, "actions": _care_action_rows(animal)}
+                            for animal in animals
+                            if animal.animal_type == animal_type
+                        ),
+                    )
+                    for animal_type in type_order
+                    if any(animal.animal_type == animal_type for animal in animals)
+                ),
             },
         )
 
@@ -1416,11 +1514,22 @@ def create_web_router(
         principal = principal_for(request, audit_denial=True)
         if principal is None:
             return RedirectResponse("/login", status_code=303)
+        enclosures = enclosure_service.list_profiles(principal.household_id)
+        animals = animal_service.list_profiles(principal.household_id)
+        now = datetime.now(UTC)
         return protected_page(
             request,
             "enclosure_list.html",
             principal,
-            context={"enclosures": enclosure_service.list_profiles(principal.household_id)},
+            context={
+                "enclosure_rows": _enclosure_collection_rows(
+                    enclosures,
+                    animals,
+                    reminder_fact_service.agenda_for(principal.household_id, now=now),
+                    timezone=ZoneInfo(principal.household_timezone),
+                    now=now,
+                )
+            },
         )
 
     @router.get("/settings/backups", response_class=HTMLResponse)
@@ -1978,6 +2087,8 @@ def create_web_router(
             reminder_fact_service.agenda_for(principal.household_id, now=now),
             animals=animals,
             enclosures=enclosures,
+            timezone=ZoneInfo(principal.household_timezone),
+            now=now,
         )
         return protected_page(
             request,
@@ -3641,8 +3752,50 @@ def _premolt_status(animal: Any, animal_service: AnimalService) -> dict[str, str
     }
 
 
+CARE_ACTION_LABELS = {
+    "feeding": "Feed",
+    "weight": "Weigh",
+    "length": "Measure",
+    "shed": "Record shed",
+    "bath": "Record bath",
+    "molt": "Record molt",
+    "premolt": "Update premolt",
+    "misting": "Mist",
+    "cleaning": "Clean",
+    "water_change": "Change water",
+}
+
+
+def _friendly_due(due_at: datetime, *, now: datetime, timezone: ZoneInfo) -> str:
+    days = (due_at.astimezone(timezone).date() - now.astimezone(timezone).date()).days
+    if days < -1:
+        return f"{-days} days overdue"
+    if days == -1:
+        return "1 day overdue"
+    if days == 0:
+        return "Due today"
+    if days == 1:
+        return "Due tomorrow"
+    if days < 7:
+        return f"Due in {days} days"
+    return f"Due {due_at.astimezone(timezone).strftime('%b %-d')}"
+
+
+def _last_care_context(item: Any, timezone: ZoneInfo) -> str:
+    if item.source_occurred_at is None:
+        return "No qualifying care recorded yet"
+    label = item.source_label.replace("accepted feeding", "feeding")
+    occurred = item.source_occurred_at.astimezone(timezone)
+    return f"Last {label} {occurred.strftime('%b %-d')}"
+
+
 def _agenda_rows(
-    items: tuple[Any, ...], *, animals: tuple[Any, ...], enclosures: tuple[Any, ...]
+    items: tuple[Any, ...],
+    *,
+    animals: tuple[Any, ...],
+    enclosures: tuple[Any, ...],
+    timezone: ZoneInfo,
+    now: datetime,
 ) -> dict[str, tuple[dict[str, Any], ...]]:
     animal_by_id = {animal.animal_id: animal for animal in animals}
     enclosure_by_id = {enclosure.enclosure_id: enclosure for enclosure in enclosures}
@@ -3659,10 +3812,14 @@ def _agenda_rows(
         location_name = None
         action_url = None
         action_label = None
+        photo_attachment_version_id = None
         if item.subject_type == "animal":
             animal = animal_by_id.get(item.subject_id)
             subject_name = animal.name if animal is not None else "Animal"
             subject_url = f"/animals/{item.subject_id}"
+            photo_attachment_version_id = (
+                animal.photo_attachment_version_id if animal is not None else None
+            )
             if (
                 animal is not None
                 and item.reminder_type in animal.care_action_keys
@@ -3670,7 +3827,7 @@ def _agenda_rows(
             ):
                 title, _description, route = CARE_FORM_DETAILS[item.reminder_type]
                 action_url = f"{subject_url}/{route}/new?return_to=today"
-                action_label = title
+                action_label = CARE_ACTION_LABELS.get(item.reminder_type, title)
         else:
             enclosure = enclosure_by_id.get(item.subject_id)
             enclosure_occupants = occupants.get(item.subject_id, [])
@@ -3678,6 +3835,7 @@ def _agenda_rows(
                 animal = enclosure_occupants[0]
                 subject_name = animal.name
                 subject_url = f"/animals/{animal.animal_id}"
+                photo_attachment_version_id = animal.photo_attachment_version_id
                 location_name = enclosure.name if enclosure is not None else "Enclosure"
             else:
                 subject_name = enclosure.name if enclosure is not None else "Enclosure"
@@ -3686,13 +3844,11 @@ def _agenda_rows(
                 animal = enclosure_occupants[0]
                 if "misting" in animal.care_action_keys:
                     action_url = f"/animals/{animal.animal_id}/mistings/new?return_to=today"
-                    action_label = "Record misting"
+                    action_label = CARE_ACTION_LABELS["misting"]
             elif item.reminder_type in {"cleaning", "water_change"}:
                 anchor = "cleaning" if item.reminder_type == "cleaning" else "water-change"
                 action_url = f"/enclosures/{item.subject_id}?return_to=today#{anchor}"
-                action_label = (
-                    "Record cleaning" if item.reminder_type == "cleaning" else "Record water change"
-                )
+                action_label = CARE_ACTION_LABELS[item.reminder_type]
         grouped[item.status].append(
             {
                 "item": item,
@@ -3705,14 +3861,216 @@ def _agenda_rows(
                 "location_name": location_name,
                 "action_url": action_url,
                 "action_label": action_label,
-                "explanation": (
-                    "Custom due date"
-                    if item.explanation == "Owner due-date override"
-                    else item.explanation
-                ),
+                "photo_attachment_version_id": photo_attachment_version_id,
+                "due_label": _friendly_due(item.due_at, now=now, timezone=timezone),
+                "last_context": _last_care_context(item, timezone),
+                "explanation": item.explanation,
             }
         )
     return {key: tuple(value) for key, value in grouped.items()}
+
+
+def _animal_collection_rows(
+    animals: tuple[Any, ...],
+    items: tuple[Any, ...],
+    *,
+    enclosures: tuple[Any, ...],
+    timezone: ZoneInfo,
+    now: datetime,
+) -> tuple[dict[str, Any], ...]:
+    enclosure_names = {item.enclosure_id: item.name for item in enclosures}
+    status_order = {"overdue": 0, "due_today": 1, "upcoming": 2}
+    by_animal: dict[UUID, list[Any]] = {}
+    animals_by_enclosure: dict[UUID, list[Any]] = {}
+    for animal in animals:
+        if animal.current_enclosure_id is not None:
+            animals_by_enclosure.setdefault(animal.current_enclosure_id, []).append(animal)
+    for item in items:
+        if item.subject_type == "animal":
+            by_animal.setdefault(item.subject_id, []).append(item)
+        elif item.subject_type == "enclosure":
+            for animal in animals_by_enclosure.get(item.subject_id, []):
+                by_animal.setdefault(animal.animal_id, []).append(item)
+    rows = []
+    for animal in animals:
+        next_item = min(
+            by_animal.get(animal.animal_id, ()),
+            key=lambda item: (status_order[item.status], item.due_at, item.rule_id),
+            default=None,
+        )
+        rows.append(
+            {
+                "animal": animal,
+                "enclosure_name": enclosure_names.get(animal.current_enclosure_id),
+                "care_label": (
+                    f"{CARE_SCHEDULE_CAPABILITIES[next_item.reminder_type][0]} · "
+                    f"{_friendly_due(next_item.due_at, now=now, timezone=timezone)}"
+                    if next_item is not None
+                    else "No care scheduled"
+                ),
+                "care_status": next_item.status if next_item is not None else "none",
+            }
+        )
+    return tuple(rows)
+
+
+def _enclosure_collection_rows(
+    enclosures: tuple[Any, ...],
+    animals: tuple[Any, ...],
+    items: tuple[Any, ...],
+    *,
+    timezone: ZoneInfo,
+    now: datetime,
+) -> tuple[dict[str, Any], ...]:
+    status_order = {"overdue": 0, "due_today": 1, "upcoming": 2}
+    by_enclosure: dict[UUID, list[Any]] = {}
+    occupants: dict[UUID, list[Any]] = {}
+    for animal in animals:
+        if animal.current_enclosure_id is not None:
+            occupants.setdefault(animal.current_enclosure_id, []).append(animal)
+    for item in items:
+        if item.subject_type == "enclosure":
+            by_enclosure.setdefault(item.subject_id, []).append(item)
+    rows = []
+    for enclosure in enclosures:
+        next_item = min(
+            by_enclosure.get(enclosure.enclosure_id, ()),
+            key=lambda item: (status_order[item.status], item.due_at, item.rule_id),
+            default=None,
+        )
+        rows.append(
+            {
+                "enclosure": enclosure,
+                "occupants": tuple(occupants.get(enclosure.enclosure_id, ())),
+                "maintenance_label": (
+                    f"{CARE_SCHEDULE_CAPABILITIES[next_item.reminder_type][0]} · "
+                    f"{_friendly_due(next_item.due_at, now=now, timezone=timezone)}"
+                    if next_item is not None
+                    else "No maintenance scheduled"
+                ),
+                "maintenance_status": next_item.status if next_item is not None else "none",
+            }
+        )
+    return tuple(rows)
+
+
+def _completed_care_rows(
+    *,
+    household_id: UUID,
+    animals: tuple[Any, ...],
+    enclosures: tuple[Any, ...],
+    animal_service: AnimalService,
+    enclosure_service: EnclosureService,
+    timezone: ZoneInfo,
+) -> tuple[dict[str, Any], ...]:
+    animal_by_id = {animal.animal_id: animal for animal in animals}
+    enclosure_by_id = {enclosure.enclosure_id: enclosure for enclosure in enclosures}
+    events: dict[UUID, DomainEvent] = {}
+    for animal in animals:
+        for event in animal_service.effective_history(household_id, animal.animal_id):
+            if event.event_type in RECENT_CARE_EVENT_TYPES:
+                events[event.event_id] = event
+    for enclosure in enclosures:
+        for event in enclosure_service.effective_history(household_id, enclosure.enclosure_id):
+            if event.event_type in RECENT_CARE_EVENT_TYPES:
+                events[event.event_id] = event
+    presented = present_effective_care_events(
+        tuple(events.values()),
+        enclosure_names={item.enclosure_id: item.name for item in enclosures},
+    )
+    rows = []
+    for view in presented:
+        event = view.event
+        animal = animal_by_id.get(event.stream_id) if event.stream_type == "animal" else None
+        enclosure = (
+            enclosure_by_id.get(event.stream_id) if event.stream_type == "enclosure" else None
+        )
+        occurred = event.occurred_at.astimezone(timezone)
+        rows.append(
+            {
+                "event": event,
+                "title": view.title,
+                "description": view.description,
+                "subject_name": animal.name if animal else enclosure.name if enclosure else "Care",
+                "subject_url": (
+                    f"/animals/{animal.animal_id}"
+                    if animal
+                    else f"/enclosures/{enclosure.enclosure_id}"
+                    if enclosure
+                    else "/home"
+                ),
+                "photo_attachment_version_id": (
+                    animal.photo_attachment_version_id if animal else None
+                ),
+                "local_date": occurred.date(),
+                "occurred_label": occurred.strftime("%b %-d · %-I:%M %p"),
+            }
+        )
+    return tuple(rows)
+
+
+def _month_date(value: str, fallback: date) -> date:
+    try:
+        parsed = date.fromisoformat(f"{value}-01")
+    except ValueError:
+        return fallback.replace(day=1)
+    return parsed
+
+
+def _calendar_view(
+    *,
+    month_value: str,
+    selected_value: str,
+    scheduled_rows: tuple[dict[str, Any], ...],
+    completed: tuple[dict[str, Any], ...],
+    timezone: ZoneInfo,
+    now: datetime,
+) -> dict[str, Any]:
+    today = now.astimezone(timezone).date()
+    month_start = _month_date(month_value, today)
+    try:
+        selected_date = date.fromisoformat(selected_value) if selected_value else today
+    except ValueError:
+        selected_date = today
+    scheduled_by_date: dict[date, list[Any]] = {}
+    for row in scheduled_rows:
+        scheduled_by_date.setdefault(row["item"].due_at.astimezone(timezone).date(), []).append(row)
+    completed_by_date: dict[date, list[dict[str, Any]]] = {}
+    for row in completed:
+        completed_by_date.setdefault(row["local_date"], []).append(row)
+    weeks = []
+    for week in Calendar(firstweekday=0).monthdatescalendar(month_start.year, month_start.month):
+        weeks.append(
+            tuple(
+                {
+                    "date": day,
+                    "in_month": day.month == month_start.month,
+                    "is_today": day == today,
+                    "is_selected": day == selected_date,
+                    "scheduled_count": len(scheduled_by_date.get(day, ())),
+                    "completed_count": len(completed_by_date.get(day, ())),
+                }
+                for day in week
+            )
+        )
+    previous_month = month_start - timedelta(days=1)
+    next_month = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+    return {
+        "today": today,
+        "month_start": month_start,
+        "month_label": month_start.strftime("%B %Y"),
+        "month_value": month_start.strftime("%Y-%m"),
+        "previous_month": previous_month.strftime("%Y-%m"),
+        "next_month": next_month.strftime("%Y-%m"),
+        "weeks": tuple(weeks),
+        "selected_date": selected_date,
+        "selected_scheduled": tuple(scheduled_by_date.get(selected_date, ())),
+        "selected_completed": tuple(completed_by_date.get(selected_date, ())),
+        "scheduled_dates": tuple(
+            (day, tuple(rows)) for day, rows in sorted(scheduled_by_date.items())
+        ),
+        "recent_completed": completed[:12],
+    }
 
 
 def _animal_edit_error(

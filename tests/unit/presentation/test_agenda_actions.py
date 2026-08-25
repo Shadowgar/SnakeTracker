@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 from snaketracker.presentation import web
 
@@ -13,6 +15,7 @@ def test_animal_agenda_row_links_to_registered_care_form_and_today_return() -> N
         name="Nyx",
         current_enclosure_id=None,
         care_action_keys=("feeding", "weight"),
+        photo_attachment_version_id=None,
     )
     item = SimpleNamespace(
         subject_type="animal",
@@ -20,12 +23,22 @@ def test_animal_agenda_row_links_to_registered_care_form_and_today_return() -> N
         status="due_today",
         reminder_type="feeding",
         explanation="Every 10 days",
+        due_at=datetime.now(UTC),
+        source_occurred_at=None,
+        source_label="accepted feeding",
     )
 
-    row = web._agenda_rows((item,), animals=(animal,), enclosures=())["due_today"][0]
+    now = datetime.now(UTC)
+    row = web._agenda_rows(
+        (item,),
+        animals=(animal,),
+        enclosures=(),
+        timezone=ZoneInfo("UTC"),
+        now=now,
+    )["due_today"][0]
 
     assert row["action_url"] == f"/animals/{animal_id}/feedings/new?return_to=today"
-    assert row["action_label"] == "Record feeding"
+    assert row["action_label"] == "Feed"
 
 
 def test_care_return_context_rejects_arbitrary_redirect_values() -> None:

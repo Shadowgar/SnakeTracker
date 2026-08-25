@@ -198,7 +198,15 @@ def test_care_keeper_shell_uses_distinct_mobile_and_desktop_navigation(
         assert "Advanced" in more.text
         calendar = client.get("/calendar")
         assert calendar.status_code == 200
-        assert "Month and agenda views arrive in Pass 2" in calendar.text
+        assert "Scheduled care" in calendar.text
+        assert "Recently completed" in calendar.text
+        assert 'href="/calendar?view=agenda' in calendar.text
+        assert 'href="/calendar?view=month' in calendar.text
+        month = client.get("/calendar?view=month")
+        assert month.status_code == 200
+        assert 'class="month-table"' in month.text
+        assert "Scheduled" in month.text
+        assert "Completed" in month.text
         quick_log = client.get("/quick-log")
         assert quick_log.status_code == 200
         assert "Add care" in quick_log.text
