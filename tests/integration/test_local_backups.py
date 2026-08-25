@@ -250,7 +250,7 @@ def test_worker_creates_encrypted_verified_backup_and_rehearses_restore(tmp_path
 
         verification = pipeline.verify(run)
         assert verification.attachment_count == 1
-        assert verification.database_schema_revision == "0011_product_experience"
+        assert verification.database_schema_revision == "0012_account_reminder_inventory"
         assert verification.event_global_position >= 4
         assert verification.encryption_key_id == "m4-local-test-key"
         assert ("animal.photo_selected", 1) in verification.event_contracts

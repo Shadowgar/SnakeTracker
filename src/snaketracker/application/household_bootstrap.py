@@ -33,6 +33,10 @@ class BootstrapValidationError(ValueError):
     """The submitted bootstrap command failed safe domain validation."""
 
 
+class AccountRegistrationConflictError(RuntimeError):
+    """A production account registration conflicts with existing identity state."""
+
+
 class DemoProvisioningConflictError(RuntimeError):
     """Reserved demo identity state exists without the matching completed operation."""
 
@@ -47,6 +51,17 @@ class BootstrapCommand:
     timezone: str
     owner_email: str
     owner_display_name: str
+    password: str
+    idempotency_key: str
+    correlation_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class AccountRegistrationCommand:
+    collection_name: str
+    timezone: str
+    email: str
+    display_name: str
     password: str
     idempotency_key: str
     correlation_id: UUID
@@ -86,6 +101,8 @@ class HouseholdBootstrapRepository(Protocol):
     def bootstrap(self, write: BootstrapWrite) -> BootstrapResult: ...
 
     def provision_demo(self, write: BootstrapWrite) -> BootstrapResult: ...
+
+    def register_account(self, write: BootstrapWrite) -> BootstrapResult: ...
 
 
 class HouseholdBootstrapService:
@@ -138,6 +155,26 @@ class HouseholdBootstrapService:
     def _command_hash(self, normalized: dict[str, str]) -> str:
         canonical = json.dumps(normalized, sort_keys=True, separators=(",", ":")).encode()
         return hmac.new(self._command_hash_secret, canonical, hashlib.sha256).hexdigest()
+
+
+class AccountRegistrationService(HouseholdBootstrapService):
+    """Create an independent production household and its first owner atomically."""
+
+    def register(self, command: AccountRegistrationCommand) -> BootstrapResult:
+        write = self._prepare_write(
+            BootstrapCommand(
+                household_name=command.collection_name,
+                timezone=command.timezone,
+                owner_email=command.email,
+                owner_display_name=command.display_name,
+                password=command.password,
+                idempotency_key=command.idempotency_key,
+                correlation_id=command.correlation_id,
+            ),
+            operation_scope="account.register",
+            audit_action="account.register",
+        )
+        return self._repository.register_account(write)
 
 
 class DemoHouseholdProvisioningService(HouseholdBootstrapService):

@@ -11,7 +11,10 @@ from snaketracker.domains.expenses.contracts import (
 )
 from snaketracker.domains.inventory.contracts import (
     InventoryConsumptionReversedV1,
+    InventoryItemArchivedV1,
     InventoryItemRegisteredV1,
+    InventoryItemRestoredV1,
+    InventoryItemUpdatedV1,
     InventoryReorderPolicyChangedV1,
     InventoryStockAdjustedV1,
     InventoryStockConsumedV1,
@@ -30,6 +33,9 @@ from snaketracker.platform.events.registry import production_event_registry
 def test_phase_five_contracts_are_registered_with_owned_payload_types() -> None:
     expected = {
         ("inventory.item_registered", 1): InventoryItemRegisteredV1,
+        ("inventory.item_updated", 1): InventoryItemUpdatedV1,
+        ("inventory.item_archived", 1): InventoryItemArchivedV1,
+        ("inventory.item_restored", 1): InventoryItemRestoredV1,
         ("inventory.stock_received", 1): InventoryStockReceivedV1,
         ("inventory.stock_reserved", 1): InventoryStockReservedV1,
         ("inventory.stock_consumed", 1): InventoryStockConsumedV1,
@@ -59,6 +65,17 @@ def test_operational_contracts_deserialize_typed_uuid_fields() -> None:
     )
 
     assert payload == InventoryItemRegisteredV1(item_id, "Medium rats", "item", 4)
+    assert production_event_registry.deserialize(
+        "inventory.item_updated",
+        1,
+        {"name": "Large rats", "unit": "prey", "reorder_threshold": None},
+    ) == InventoryItemUpdatedV1("Large rats", "prey", None)
+    assert production_event_registry.deserialize(
+        "inventory.item_archived", 1, {"reason": "No longer used."}
+    ) == InventoryItemArchivedV1("No longer used.")
+    assert production_event_registry.deserialize(
+        "inventory.item_restored", 1, {"reason": "Used again."}
+    ) == InventoryItemRestoredV1("Used again.")
 
 
 @pytest.mark.parametrize(

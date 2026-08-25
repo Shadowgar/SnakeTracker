@@ -118,6 +118,9 @@ remain shared where the active profile permits them.
 | Event type | Meaning |
 |---|---|
 | `inventory.item_registered` | Creates item and unit definition |
+| `inventory.item_updated` | Changes the item name, unit, or reorder threshold without rewriting stock history |
+| `inventory.item_archived` | Removes an item from active use while preserving its stream and references |
+| `inventory.item_restored` | Returns an archived item to active use |
 | `inventory.stock_received` | Adds stock |
 | `inventory.stock_reserved` | Reserves stock |
 | `inventory.stock_consumed` | Consumes stock |

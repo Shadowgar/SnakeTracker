@@ -294,7 +294,7 @@ def _document(
             f"/enclosures/{event.stream_id}",
             None,
         )
-    if event.event_type == "inventory.item_registered":
+    if event.event_type in {"inventory.item_registered", "inventory.item_updated"}:
         return (
             f"inventory:{event.stream_id}",
             "inventory",

@@ -86,6 +86,19 @@ class IdentityRepository(Protocol):
 
     def clear_login_failures(self, key_hash: str) -> None: ...
 
+    def record_registration_failure(
+        self,
+        key_hash: str,
+        *,
+        limit: int,
+        window: timedelta,
+        block_duration: timedelta,
+        now: datetime,
+        correlation_id: UUID,
+        client_ip: str | None,
+        user_agent: str | None,
+    ) -> None: ...
+
     def create_session(self, write: SessionWrite, *, correlation_id: UUID) -> None: ...
 
     def resolve_session(
@@ -226,6 +239,44 @@ class IdentityService:
             correlation_id=correlation_id,
             now=now or datetime.now(UTC),
         )
+
+    def registration_is_blocked(
+        self,
+        email: str,
+        *,
+        client_ip: str | None,
+        now: datetime | None = None,
+    ) -> bool:
+        current = now or datetime.now(UTC)
+        return self._repository.login_is_blocked(
+            self._registration_rate_key(email, client_ip), current
+        )
+
+    def record_registration_failure(
+        self,
+        email: str,
+        *,
+        client_ip: str | None,
+        user_agent: str | None,
+        correlation_id: UUID,
+        now: datetime | None = None,
+    ) -> None:
+        self._repository.record_registration_failure(
+            self._registration_rate_key(email, client_ip),
+            limit=self._rate_limit,
+            window=self._rate_window,
+            block_duration=self._block_duration,
+            now=now or datetime.now(UTC),
+            correlation_id=correlation_id,
+            client_ip=client_ip,
+            user_agent=user_agent,
+        )
+
+    def clear_registration_failures(self, email: str, *, client_ip: str | None) -> None:
+        self._repository.clear_login_failures(self._registration_rate_key(email, client_ip))
+
+    def _registration_rate_key(self, email: str, client_ip: str | None) -> str:
+        return self._digest(f"registration:{email.strip().casefold()}:{client_ip or '-'}")
 
     def authenticate(self, token: str, *, now: datetime | None = None) -> Principal:
         principal = self._repository.resolve_session(

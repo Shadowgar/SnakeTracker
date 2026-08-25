@@ -12,6 +12,7 @@ from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 
 from snaketracker.application.household_bootstrap import (
+    AccountRegistrationConflictError,
     AlreadyBootstrappedError,
     BootstrapConflictError,
     BootstrapResult,
@@ -86,6 +87,41 @@ class SQLAlchemyHouseholdBootstrapRepository:
                 self._insert_audit(connection, write)
                 connection.commit()
                 return write.result
+            except Exception:
+                connection.rollback()
+                raise
+
+    def register_account(self, write: BootstrapWrite) -> BootstrapResult:
+        """Commit a normal signup without the one-time or demo-only guards."""
+        with self._engine.connect() as connection:
+            connection.exec_driver_sql("BEGIN IMMEDIATE")
+            try:
+                existing = self._existing_operation(connection, write)
+                if existing is not None:
+                    connection.rollback()
+                    if existing["command_hash"] != write.command_hash:
+                        raise BootstrapConflictError(
+                            "Account registration idempotency key conflicts with prior use."
+                        )
+                    data = json.loads(existing["stored_result_json"])
+                    return BootstrapResult(
+                        household_id=write.result.household_id.__class__(data["household_id"]),
+                        user_id=write.result.user_id.__class__(data["user_id"]),
+                    )
+                self._insert_user(connection, write)
+                self._insert_stream(connection, write)
+                positions = [self._insert_event(connection, event) for event in write.events]
+                self._insert_household_summary(connection, write, positions[0])
+                self._insert_membership(connection, write, positions[1])
+                self._insert_operation(connection, write)
+                self._insert_audit(connection, write)
+                connection.commit()
+                return write.result
+            except IntegrityError as error:
+                connection.rollback()
+                raise AccountRegistrationConflictError(
+                    "Account registration could not be completed."
+                ) from error
             except Exception:
                 connection.rollback()
                 raise

@@ -28,6 +28,7 @@ APPROVED_AMENDMENT_PATHS = {
     "docs/adr/0040-trusted-local-demo-household-provisioning.md",
     "docs/adr/0041-four-group-capability-expansion-and-neutral-molt-contracts.md",
     "docs/architecture/domain-catalog.md",
+    "docs/architecture/database-schema.md",
     "docs/architecture/event-catalog.md",
     "docs/architecture/projection-catalog.md",
     "docs/architecture/system-architecture.md",

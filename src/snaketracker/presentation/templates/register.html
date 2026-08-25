@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Create a Care Keeper account{% endblock %}
+{% block content %}
+<section class="auth-layout" aria-labelledby="page-title">
+  <div class="intro-panel">
+    <p class="eyebrow">New account</p>
+    <h1 id="page-title">Create your Care Keeper account</h1>
+    <p>Start a private collection for your own animals and care records.</p>
+  </div>
+  <form class="card form-stack" method="post" action="/register" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="idempotency_key" value="{{ command_id }}">
+    {% if errors %}<div class="alert" role="alert"><strong>Please correct the highlighted fields.</strong>{% if errors.get('form') %} {{ errors.form }}{% endif %}</div>{% endif %}
+    <label>Your name<input name="display_name" maxlength="120" required autocomplete="name" value="{{ values.display_name if values else '' }}"></label>
+    <label>Email<input name="email" type="email" maxlength="320" required autocomplete="username" value="{{ values.email if values else '' }}"></label>
+    <label>Collection name<input name="collection_name" maxlength="120" required autocomplete="organization" value="{{ values.collection_name if values else '' }}"><small>A simple name for your private animal collection.</small></label>
+    <label>Timezone<input name="timezone" maxlength="64" required value="{{ values.timezone if values else 'America/New_York' }}" aria-describedby="registration-timezone-help{% if errors.get('timezone') %} registration-timezone-error{% endif %}"><small id="registration-timezone-help">Use an IANA name such as America/New_York.</small>{% if errors.get('timezone') %}<span id="registration-timezone-error" class="field-error" role="alert">{{ errors.timezone }}</span>{% endif %}</label>
+    <label>Password<input name="password" type="password" minlength="12" maxlength="1024" required autocomplete="new-password" aria-describedby="registration-password-help"><small id="registration-password-help">Use at least 12 characters.</small></label>
+    <label>Confirm password<input name="password_confirmation" type="password" required autocomplete="new-password"{% if errors.get('password_confirmation') %} aria-describedby="registration-password-confirmation-error"{% endif %}>{% if errors.get('password_confirmation') %}<span id="registration-password-confirmation-error" class="field-error" role="alert">{{ errors.password_confirmation }}</span>{% endif %}</label>
+    <button type="submit">Create account</button>
+    <p>Already have an account? <a href="/login">Sign in</a>.</p>
+  </form>
+</section>
+{% endblock %}

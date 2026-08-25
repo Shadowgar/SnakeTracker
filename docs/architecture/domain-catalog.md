@@ -57,10 +57,10 @@ they do not change enclosure ownership or create type-specific enclosure aggrega
 
 - **Aggregate:** Inventory item
 - **Stream:** `inventory-item:{item_uuid}`
-- **Owns:** item definition, units, acquisitions, reservations, consumption, adjustments, expiry, reorder policy
+- **Owns:** item definition, units, active/archived lifecycle, acquisitions, reservations, consumption, adjustments, expiry, reorder policy
 - **Invariant:** an operation cannot produce an invalid balance unless an explicitly authorized adjustment policy permits it
 
-A feeding that consumes stock uses one atomic multi-stream operation across the animal and inventory-item streams.
+A feeding that consumes stock uses one atomic multi-stream operation across the animal and inventory-item streams. Archived items remain replayable and visible in historical reads but cannot receive stock changes or new feeding consumption. Restoration is an explicit event. Permanent deletion is intentionally unavailable because registration itself creates immutable item history.
 
 ### Expenses
 
@@ -74,6 +74,12 @@ A feeding that consumes stock uses one atomic multi-stream operation across the 
 - **Stream:** `reminder-rule:{rule_uuid}`
 - **Owns:** schedule policy, subject, activation, channel preferences
 - **Does not own:** derived reminder facts, notification intent, jobs, or attempts
+
+Current reminder state is a deterministic calculation from the owner rule and effective qualifying
+care history. Event-relative schedules recur from the qualifying event. Fixed schedules advance to
+the first cadence occurrence after qualifying care at or after the current occurrence. Corrections,
+voids, and reinstatements therefore change reminder state through effective-history replay rather
+than a mutable completed-task flag.
 
 ### Documents
 

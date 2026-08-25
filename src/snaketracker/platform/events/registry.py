@@ -53,7 +53,10 @@ from snaketracker.domains.expenses.contracts import (
 from snaketracker.domains.households.contracts import HouseholdCreatedV1, HouseholdOwnerAddedV1
 from snaketracker.domains.inventory.contracts import (
     InventoryConsumptionReversedV1,
+    InventoryItemArchivedV1,
     InventoryItemRegisteredV1,
+    InventoryItemRestoredV1,
+    InventoryItemUpdatedV1,
     InventoryReorderPolicyChangedV1,
     InventoryStockAdjustedV1,
     InventoryStockConsumedV1,
@@ -990,6 +993,28 @@ def _deserialize_inventory_item_registered(data: Mapping[str, object]) -> EventP
     )
 
 
+def _deserialize_inventory_item_updated(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryItemUpdatedV1, data)
+    threshold = data["reorder_threshold"]
+    if threshold is not None and type(threshold) is not int:
+        raise ValueError("Stored inventory update payload is invalid.")
+    return InventoryItemUpdatedV1(
+        _required_payload_text(data, "name", "inventory update"),
+        _required_payload_text(data, "unit", "inventory update"),
+        threshold,
+    )
+
+
+def _deserialize_inventory_item_archived(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryItemArchivedV1, data)
+    return InventoryItemArchivedV1(_required_payload_text(data, "reason", "inventory archive"))
+
+
+def _deserialize_inventory_item_restored(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryItemRestoredV1, data)
+    return InventoryItemRestoredV1(_required_payload_text(data, "reason", "inventory restore"))
+
+
 def _deserialize_inventory_stock_received(data: Mapping[str, object]) -> EventPayload:
     _require_exact_fields(InventoryStockReceivedV1, data)
     return InventoryStockReceivedV1(
@@ -1060,6 +1085,30 @@ INVENTORY_CONTRACTS = (
         "inventory",
         InventoryItemRegisteredV1,
         _deserialize_inventory_item_registered,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
+        "inventory.item_updated",
+        1,
+        "inventory",
+        InventoryItemUpdatedV1,
+        _deserialize_inventory_item_updated,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
+        "inventory.item_archived",
+        1,
+        "inventory",
+        InventoryItemArchivedV1,
+        _deserialize_inventory_item_archived,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
+        "inventory.item_restored",
+        1,
+        "inventory",
+        InventoryItemRestoredV1,
+        _deserialize_inventory_item_restored,
         (SubjectRequirement("inventory_item", "primary"),),
     ),
     EventContractRegistration(

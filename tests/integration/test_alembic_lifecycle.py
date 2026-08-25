@@ -13,16 +13,22 @@ from snaketracker.application.household_bootstrap import (
     BootstrapCommand,
     HouseholdBootstrapService,
 )
+from snaketracker.application.inventory import (
+    ArchiveInventoryItemCommand,
+    InventoryService,
+    RegisterInventoryItemCommand,
+)
 from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
 from snaketracker.infrastructure.database.engine import create_sqlite_engine
 from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
 from snaketracker.infrastructure.identity.bootstrap_repository import (
     SQLAlchemyHouseholdBootstrapRepository,
 )
+from snaketracker.infrastructure.inventory.projections import SQLAlchemyInventoryBalanceProjection
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 
 ROOT = Path(__file__).parents[2]
-REVISION = "0011_product_experience"
+REVISION = "0012_account_reminder_inventory"
 PHASE_FIVE_TABLES = {
     "aggregate_snapshots",
     "alembic_version",
@@ -154,6 +160,10 @@ def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -
         }
         assert {"source_kind", "freshness_threshold_seconds"} <= definition_columns
         assert "source_manifest_checksum" in generation_columns
+        inventory_columns = {
+            column["name"] for column in inspector.get_columns("inventory_balance")
+        }
+        assert "status" in inventory_columns
     finally:
         engine.dispose()
 
@@ -161,6 +171,60 @@ def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -
     assert current_revision(database) is None
 
     command.upgrade(config, "head")
+    assert current_revision(database) == REVISION
+
+
+def test_inventory_lifecycle_migration_blocks_lossy_downgrade(tmp_path: Path) -> None:
+    database = tmp_path / "inventory-lifecycle-downgrade.sqlite3"
+    config = alembic_config(database)
+    command.upgrade(config, "head")
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    try:
+        bootstrap = HouseholdBootstrapService(
+            SQLAlchemyHouseholdBootstrapRepository(engine),
+            Argon2PasswordHasher.for_testing(),
+            command_hash_secret=b"inventory-migration-guard-secret-32b",
+        ).bootstrap(
+            BootstrapCommand(
+                household_name="Inventory Guard",
+                timezone="UTC",
+                owner_email="owner@example.com",
+                owner_display_name="Owner",
+                password="correct horse battery staple",
+                idempotency_key="inventory-migration-bootstrap",
+                correlation_id=uuid4(),
+            )
+        )
+        inventory = InventoryService(
+            SQLAlchemyEventStore(engine), SQLAlchemyInventoryBalanceProjection(engine)
+        )
+        item = inventory.register(
+            RegisterInventoryItemCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                uuid4(),
+                "inventory-migration-item",
+                "Guarded item",
+                "item",
+                None,
+            )
+        )
+        inventory.archive_item(
+            ArchiveInventoryItemCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                item.item_id,
+                uuid4(),
+                "inventory-migration-archive",
+                1,
+                "Retired.",
+            )
+        )
+    finally:
+        engine.dispose()
+
+    with pytest.raises(RuntimeError, match="lifecycle downgrade blocked"):
+        command.downgrade(config, "0011_product_experience")
     assert current_revision(database) == REVISION
 
 
@@ -284,7 +348,7 @@ def test_product_experience_migration_blocks_downgrade_with_active_m6_definition
 
     with pytest.raises(RuntimeError, match="M6 downgrade blocked"):
         command.downgrade(config, "0010_multispecies_foundation")
-    assert current_revision(database) == REVISION
+    assert current_revision(database) == "0011_product_experience"
 
 
 def test_identity_schema_has_required_uniqueness_and_foreign_keys(tmp_path: Path) -> None:

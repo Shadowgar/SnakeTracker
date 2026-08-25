@@ -72,6 +72,58 @@ class SQLAlchemyIdentityRepository:
         client_ip: str | None,
         user_agent: str | None,
     ) -> None:
+        self._record_rate_limit_failure(
+            key_hash,
+            limit=limit,
+            window=window,
+            block_duration=block_duration,
+            now=now,
+            correlation_id=correlation_id,
+            client_ip=client_ip,
+            user_agent=user_agent,
+            action="login",
+            reason="invalid_credentials",
+        )
+
+    def record_registration_failure(
+        self,
+        key_hash: str,
+        *,
+        limit: int,
+        window: timedelta,
+        block_duration: timedelta,
+        now: datetime,
+        correlation_id: UUID,
+        client_ip: str | None,
+        user_agent: str | None,
+    ) -> None:
+        self._record_rate_limit_failure(
+            key_hash,
+            limit=limit,
+            window=window,
+            block_duration=block_duration,
+            now=now,
+            correlation_id=correlation_id,
+            client_ip=client_ip,
+            user_agent=user_agent,
+            action="account.register",
+            reason="registration_rejected",
+        )
+
+    def _record_rate_limit_failure(
+        self,
+        key_hash: str,
+        *,
+        limit: int,
+        window: timedelta,
+        block_duration: timedelta,
+        now: datetime,
+        correlation_id: UUID,
+        client_ip: str | None,
+        user_agent: str | None,
+        action: str,
+        reason: str,
+    ) -> None:
         with self._engine.begin() as connection:
             row = (
                 connection.execute(
@@ -111,12 +163,12 @@ class SQLAlchemyIdentityRepository:
             self._audit(
                 connection,
                 now=now,
-                action="login",
+                action=action,
                 outcome="failure",
                 correlation_id=correlation_id,
                 client_ip=client_ip,
                 user_agent=user_agent,
-                details={"reason": "invalid_credentials"},
+                details={"reason": reason},
             )
 
     def clear_login_failures(self, key_hash: str) -> None:

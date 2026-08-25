@@ -703,12 +703,20 @@ class ReminderFactService:
         if rule.schedule_kind == "fixed_interval":
             if rule.anchor_at is None:
                 raise ReminderValidationError("Fixed-interval reminder is missing its anchor.")
+            due_at = _add_household_days(
+                rule.anchor_at,
+                rule.interval_days,
+                self._projection.household_timezone(rule.household_id),
+            )
+            if source is not None and source.occurred_at >= due_at:
+                timezone = ZoneInfo(self._projection.household_timezone(rule.household_id))
+                due_local = due_at.astimezone(timezone)
+                source_local = source.occurred_at.astimezone(timezone)
+                elapsed_days = (source_local.date() - due_local.date()).days
+                steps = elapsed_days // rule.interval_days + 1
+                due_at = (due_local + timedelta(days=steps * rule.interval_days)).astimezone(UTC)
             return (
-                _add_household_days(
-                    rule.anchor_at,
-                    rule.interval_days,
-                    self._projection.household_timezone(rule.household_id),
-                ),
+                due_at,
                 f"{_days_label(rule.interval_days)} after the fixed schedule anchor",
                 source,
             )

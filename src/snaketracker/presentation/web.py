@@ -83,6 +83,9 @@ from snaketracker.application.expenses import (
     VoidExpenseCommand,
 )
 from snaketracker.application.household_bootstrap import (
+    AccountRegistrationCommand,
+    AccountRegistrationConflictError,
+    AccountRegistrationService,
     AlreadyBootstrappedError,
     BootstrapCommand,
     BootstrapConflictError,
@@ -96,10 +99,14 @@ from snaketracker.application.identity import (
     Principal,
 )
 from snaketracker.application.inventory import (
+    AdjustStockCommand,
+    ArchiveInventoryItemCommand,
     InventoryService,
     InventoryValidationError,
     ReceiveStockCommand,
     RegisterInventoryItemCommand,
+    RestoreInventoryItemCommand,
+    UpdateInventoryItemCommand,
 )
 from snaketracker.application.reminders import (
     CreateReminderRuleCommand,
@@ -512,7 +519,13 @@ def _new_form_response(
     response = templates.TemplateResponse(
         request,
         template,
-        {"csrf_token": csrf_token, "errors": {}, "values": {}, **(context or {})},
+        {
+            "csrf_token": csrf_token,
+            "command_id": str(uuid4()),
+            "errors": {},
+            "values": {},
+            **(context or {}),
+        },
         status_code=status_code,
     )
     _set_cookie(response, CSRF_COOKIE, csrf_token, secure_cookie)
@@ -557,6 +570,7 @@ def _form_request_valid(request: Request, expected_origin: str | None) -> bool:
 def create_web_router(
     *,
     bootstrap_service: HouseholdBootstrapService,
+    account_registration_service: AccountRegistrationService,
     identity_service: IdentityService,
     animal_service: AnimalService,
     attachment_service: AttachmentService,
@@ -801,6 +815,144 @@ def create_web_router(
         if principal_for(request):
             return RedirectResponse("/home", status_code=303)
         return _new_form_response(request, "login.html", secure_cookie=secure_cookie)
+
+    @router.get("/register", response_class=HTMLResponse)
+    async def registration_page(request: Request) -> Response:
+        if not is_bootstrapped():
+            return RedirectResponse("/setup", status_code=303)
+        if principal_for(request):
+            return RedirectResponse("/home", status_code=303)
+        return _new_form_response(request, "register.html", secure_cookie=secure_cookie)
+
+    @router.post("/register", response_class=HTMLResponse)
+    async def registration_submit(request: Request) -> Response:
+        if not is_bootstrapped():
+            return RedirectResponse("/setup", status_code=303)
+        if not _form_request_valid(request, expected_origin):
+            return templates.TemplateResponse(
+                request,
+                "error.html",
+                {
+                    "title": "Request could not be verified",
+                    "message": "Refresh the registration page and try again.",
+                },
+                status_code=403,
+            )
+        form = await request.form()
+        submitted_csrf = str(form.get("csrf_token", ""))
+        if not _preauth_csrf_valid(request, submitted_csrf):
+            return templates.TemplateResponse(
+                request,
+                "error.html",
+                {
+                    "title": "Request could not be verified",
+                    "message": "Refresh the registration page and try again.",
+                },
+                status_code=403,
+            )
+        values = {
+            name: str(form.get(name, "")).strip()
+            for name in ("collection_name", "timezone", "display_name", "email")
+        }
+        command_id = str(form.get("idempotency_key", "")).strip()
+        password = str(form.get("password", ""))
+        confirmation = str(form.get("password_confirmation", ""))
+        client_ip, user_agent = _client_context(request)
+        correlation_id = uuid4()
+        if identity_service.registration_is_blocked(values["email"], client_ip=client_ip):
+            return _new_form_response(
+                request,
+                "register.html",
+                secure_cookie=secure_cookie,
+                status_code=429,
+                context={
+                    "errors": {"form": "Too many attempts. Please wait and try again."},
+                    "values": values,
+                    "command_id": command_id or str(uuid4()),
+                },
+            )
+        errors: dict[str, str] = {}
+        if password != confirmation:
+            errors["password_confirmation"] = "Passwords do not match."
+        try:
+            ZoneInfo(values["timezone"])
+        except ZoneInfoNotFoundError:
+            errors["timezone"] = "Enter a valid IANA timezone."
+        if errors:
+            identity_service.record_registration_failure(
+                values["email"],
+                client_ip=client_ip,
+                user_agent=user_agent,
+                correlation_id=correlation_id,
+            )
+            return _new_form_response(
+                request,
+                "register.html",
+                secure_cookie=secure_cookie,
+                status_code=422,
+                context={"errors": errors, "values": values, "command_id": command_id},
+            )
+        try:
+            result = account_registration_service.register(
+                AccountRegistrationCommand(
+                    collection_name=values["collection_name"],
+                    timezone=values["timezone"],
+                    email=values["email"],
+                    display_name=values["display_name"],
+                    password=password,
+                    idempotency_key=command_id,
+                    correlation_id=correlation_id,
+                )
+            )
+        except BootstrapValidationError as error:
+            identity_service.record_registration_failure(
+                values["email"],
+                client_ip=client_ip,
+                user_agent=user_agent,
+                correlation_id=correlation_id,
+            )
+            return _new_form_response(
+                request,
+                "register.html",
+                secure_cookie=secure_cookie,
+                status_code=422,
+                context={
+                    "errors": {"form": str(error)},
+                    "values": values,
+                    "command_id": command_id,
+                },
+            )
+        except (AccountRegistrationConflictError, BootstrapConflictError):
+            identity_service.record_registration_failure(
+                values["email"],
+                client_ip=client_ip,
+                user_agent=user_agent,
+                correlation_id=correlation_id,
+            )
+            return _new_form_response(
+                request,
+                "register.html",
+                secure_cookie=secure_cookie,
+                status_code=422,
+                context={
+                    "errors": {
+                        "form": "Account could not be created. Review your details or sign in."
+                    },
+                    "values": values,
+                    "command_id": command_id,
+                },
+            )
+        identity_service.clear_registration_failures(values["email"], client_ip=client_ip)
+        issued = identity_service.create_session_for_user(
+            result.user_id,
+            client_ip=client_ip,
+            user_agent=user_agent,
+            correlation_id=uuid4(),
+        )
+        response = RedirectResponse("/home", status_code=303)
+        _set_cookie(response, SESSION_COOKIE, issued.token, secure_cookie)
+        _set_cookie(response, CSRF_COOKIE, issued.csrf_token, secure_cookie)
+        return response
 
     @router.post("/login", response_class=HTMLResponse)
     async def login_submit(request: Request) -> Response:
@@ -1232,11 +1384,15 @@ def create_web_router(
             return RedirectResponse("/login", status_code=303)
         if "inventory.view" not in principal.capabilities:
             return _access_denied(request, "Inventory access denied")
+        status = "archived" if request.query_params.get("status") == "archived" else "active"
         return protected_page(
             request,
             "inventory_list.html",
             principal,
-            context={"items": inventory_service.list_balances(principal.household_id)},
+            context={
+                "items": inventory_service.list_balances(principal.household_id, status=status),
+                "status": status,
+            },
         )
 
     @router.get("/inventory/new", response_class=HTMLResponse)
@@ -1337,6 +1493,171 @@ def create_web_router(
                 principal,
                 status_code=422,
                 context={"title": "Inventory could not be updated", "message": str(error)},
+            )
+        return RedirectResponse(f"/inventory/{item_id}", status_code=303)
+
+    @router.get("/inventory/{item_id}/edit", response_class=HTMLResponse)
+    async def inventory_edit(request: Request, item_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if "inventory.manage" not in principal.capabilities:
+            return _access_denied(request, "Inventory access denied")
+        try:
+            item = inventory_service.balance_for(principal.household_id, UUID(item_id))
+        except ValueError:
+            item = None
+        if item is None:
+            return _not_found(request, "Inventory item not found")
+        if item.status != "active":
+            return _access_denied(request, "Archived inventory cannot be edited")
+        return protected_page(
+            request,
+            "inventory_edit.html",
+            principal,
+            context={"item": item, "errors": {}, "values": {}},
+        )
+
+    @router.post("/inventory/{item_id}/edit", response_class=HTMLResponse)
+    async def inventory_update(request: Request, item_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "inventory.manage" not in principal.capabilities:
+            return _access_denied(request, "Inventory access denied")
+        try:
+            inventory_service.update_item(
+                UpdateInventoryItemCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    UUID(item_id),
+                    uuid4(),
+                    _form_idempotency_key(form),
+                    _required_int(form.get("expected_stream_version", ""), "stream version"),
+                    str(form.get("name", "")),
+                    str(form.get("unit", "")),
+                    _optional_int(form.get("reorder_threshold", ""), "reorder threshold"),
+                )
+            )
+        except (
+            InventoryValidationError,
+            ExpectedVersionConflictError,
+            FormValidationError,
+            ValueError,
+        ) as error:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=422,
+                context={"title": "Inventory could not be updated", "message": str(error)},
+            )
+        return RedirectResponse(f"/inventory/{item_id}", status_code=303)
+
+    @router.post("/inventory/{item_id}/adjust", response_class=HTMLResponse)
+    async def inventory_adjust(request: Request, item_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "inventory.manage" not in principal.capabilities:
+            return _access_denied(request, "Inventory access denied")
+        try:
+            inventory_service.adjust(
+                AdjustStockCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    UUID(item_id),
+                    uuid4(),
+                    _form_idempotency_key(form),
+                    _required_int(form.get("expected_stream_version", ""), "stream version"),
+                    _required_int(form.get("quantity_delta", ""), "quantity adjustment"),
+                    str(form.get("reason", "")),
+                )
+            )
+        except (
+            InventoryValidationError,
+            ExpectedVersionConflictError,
+            FormValidationError,
+            ValueError,
+        ) as error:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=422,
+                context={"title": "Inventory could not be adjusted", "message": str(error)},
+            )
+        return RedirectResponse(f"/inventory/{item_id}", status_code=303)
+
+    @router.post("/inventory/{item_id}/archive", response_class=HTMLResponse)
+    async def inventory_archive(request: Request, item_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "inventory.manage" not in principal.capabilities:
+            return _access_denied(request, "Inventory access denied")
+        try:
+            inventory_service.archive_item(
+                ArchiveInventoryItemCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    UUID(item_id),
+                    uuid4(),
+                    _form_idempotency_key(form),
+                    _required_int(form.get("expected_stream_version", ""), "stream version"),
+                    str(form.get("reason", "")),
+                )
+            )
+        except (
+            InventoryValidationError,
+            ExpectedVersionConflictError,
+            FormValidationError,
+            ValueError,
+        ) as error:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=422,
+                context={"title": "Inventory could not be archived", "message": str(error)},
+            )
+        return RedirectResponse("/inventory?status=archived", status_code=303)
+
+    @router.post("/inventory/{item_id}/restore", response_class=HTMLResponse)
+    async def inventory_restore(request: Request, item_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "inventory.manage" not in principal.capabilities:
+            return _access_denied(request, "Inventory access denied")
+        try:
+            inventory_service.restore_item(
+                RestoreInventoryItemCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    UUID(item_id),
+                    uuid4(),
+                    _form_idempotency_key(form),
+                    _required_int(form.get("expected_stream_version", ""), "stream version"),
+                    str(form.get("reason", "")),
+                )
+            )
+        except (
+            InventoryValidationError,
+            ExpectedVersionConflictError,
+            FormValidationError,
+            ValueError,
+        ) as error:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=422,
+                context={"title": "Inventory could not be restored", "message": str(error)},
             )
         return RedirectResponse(f"/inventory/{item_id}", status_code=303)
 
@@ -1851,7 +2172,10 @@ def create_web_router(
             return _enclosure_form_error(
                 request, principal, enclosure_id, str(error), enclosure_service
             )
-        return RedirectResponse(f"/enclosures/{enclosure_id}", status_code=303)
+        return RedirectResponse(
+            "/home" if str(form.get("return_to", "")) == "today" else f"/enclosures/{enclosure_id}",
+            status_code=303,
+        )
 
     @router.post("/enclosures/{enclosure_id}/water-changes", response_class=HTMLResponse)
     async def enclosure_water_change_create(request: Request, enclosure_id: str) -> Response:
@@ -1881,7 +2205,10 @@ def create_web_router(
             return _enclosure_form_error(
                 request, principal, enclosure_id, str(error), enclosure_service
             )
-        return RedirectResponse(f"/enclosures/{enclosure_id}", status_code=303)
+        return RedirectResponse(
+            "/home" if str(form.get("return_to", "")) == "today" else f"/enclosures/{enclosure_id}",
+            status_code=303,
+        )
 
     @router.post("/animals", response_class=HTMLResponse)
     async def animal_create(request: Request) -> Response:
@@ -3212,7 +3539,7 @@ def _agenda_rows(
                     action_label = "Record misting"
             elif item.reminder_type in {"cleaning", "water_change"}:
                 anchor = "cleaning" if item.reminder_type == "cleaning" else "water-change"
-                action_url = f"/enclosures/{item.subject_id}#{anchor}"
+                action_url = f"/enclosures/{item.subject_id}?return_to=today#{anchor}"
                 action_label = (
                     "Record cleaning" if item.reminder_type == "cleaning" else "Record water change"
                 )

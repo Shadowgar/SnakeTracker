@@ -3,7 +3,7 @@
 {% block content %}
 <section class="dashboard" aria-labelledby="page-title">
   <header><p class="eyebrow">Operations</p><h1 id="page-title">Inventory</h1><p class="lede">Track physical care supplies without losing the immutable stock history.</p></header>
-  {% if 'inventory.manage' in principal.capabilities %}<div class="dashboard-actions"><a class="button-link" href="/inventory/new">Add inventory item</a></div>{% endif %}
-  {% if items %}<ul class="record-list">{% for item in items %}<li><a href="/inventory/{{ item.item_id }}"><strong>{{ item.name }}</strong><span>{{ item.on_hand_quantity }} {{ item.unit }} on hand · {{ item.reserved_quantity }} reserved</span></a></li>{% endfor %}</ul>{% else %}<div class="empty-state"><h2>No inventory yet</h2><p>Add an item when you are ready to track stock.</p></div>{% endif %}
+  <div class="dashboard-actions">{% if 'inventory.manage' in principal.capabilities and status == 'active' %}<a class="button-link" href="/inventory/new">Add inventory item</a>{% endif %}{% if status == 'active' %}<a href="/inventory?status=archived">View archived</a>{% else %}<a href="/inventory">View active</a>{% endif %}</div>
+  {% if items %}<ul class="record-list">{% for item in items %}<li><a href="/inventory/{{ item.item_id }}"><strong>{{ item.name }}</strong><span>{{ item.on_hand_quantity }} {{ item.unit }} on hand · {{ item.reserved_quantity }} reserved{% if item.status == 'archived' %} · archived{% endif %}</span></a></li>{% endfor %}</ul>{% else %}<div class="empty-state"><h2>No {{ status }} inventory</h2><p>{% if status == 'active' %}Add an item when you are ready to track stock.{% else %}Archived items will remain available here with their history intact.{% endif %}</p></div>{% endif %}
 </section>
 {% endblock %}

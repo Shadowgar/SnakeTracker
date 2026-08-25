@@ -23,6 +23,7 @@
     <form id="cleaning" class="card form-stack" method="post" action="/enclosures/{{ enclosure.enclosure_id }}/cleanings">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="idempotency_key" value="{{ command_id }}-cleaning">
+      <input type="hidden" name="return_to" value="{{ request.query_params.get('return_to', '') }}">
       <h2>Record cleaning</h2>
       <label>When ({{ principal.household_timezone }})<input name="occurred_at" type="datetime-local" required></label>
       <label>Notes<textarea name="notes" rows="3" placeholder="Optional"></textarea></label>
@@ -31,6 +32,7 @@
     <form id="water-change" class="card form-stack" method="post" action="/enclosures/{{ enclosure.enclosure_id }}/water-changes">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="idempotency_key" value="{{ command_id }}-water">
+      <input type="hidden" name="return_to" value="{{ request.query_params.get('return_to', '') }}">
       <h2>Record water change</h2>
       <label>When ({{ principal.household_timezone }})<input name="occurred_at" type="datetime-local" required></label>
       <label>Notes<textarea name="notes" rows="3" placeholder="Optional"></textarea></label>

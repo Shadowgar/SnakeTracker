@@ -63,6 +63,8 @@ def test_first_run_login_home_logout_and_login_again(tmp_path: Path) -> None:
         first = client.get("/", follow_redirects=False)
         assert first.status_code == 303
         assert first.headers["location"] == "/setup"
+        assert client.get("/register", follow_redirects=False).headers["location"] == "/setup"
+        assert client.post("/register", follow_redirects=False).headers["location"] == "/setup"
 
         setup = client.get("/setup")
         assert "Create your Care Keeper home" in setup.text
@@ -229,6 +231,7 @@ def test_completed_setup_and_authenticated_login_pages_redirect_safely(tmp_path:
         assert client.get("/", follow_redirects=False).headers["location"] == "/home"
         assert client.get("/setup", follow_redirects=False).headers["location"] == "/home"
         assert client.get("/login", follow_redirects=False).headers["location"] == "/home"
+        assert client.get("/register", follow_redirects=False).headers["location"] == "/home"
 
 
 def test_setup_domain_validation_and_logout_csrf_failure_are_rendered(tmp_path: Path) -> None:

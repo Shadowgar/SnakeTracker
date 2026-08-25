@@ -51,6 +51,11 @@ UUID, user, unique token hash, created/last-seen/idle-expiry/absolute-expiry/rev
 
 Synchronous projection keyed by household/user with role, status, source stream version/global position, and updated time. Protected requests use this table and current ownership joins.
 
+Normal self-service registration is a dedicated production application operation. It creates the
+server-selected user and household identities, canonical household events, household summary, owner
+membership, idempotency result, and security audit in one immediate transaction. Initial empty-install
+bootstrap remains one-time, while ADR-0040 demo provisioning remains separately environment-gated.
+
 ### `security_audit`
 
 Append-oriented integer/UUID identity, UTC time, category, outcome, actor/household/target, correlation, resolved IP, safe agent classification, and redacted details. Index time, actor, household/category, target, and correlation.
@@ -76,6 +81,13 @@ Intent is unique by rule occurrence, recipient, and channel. Attempts are unique
 ### `backup_operations`
 
 Operation ID, requestor, schedule/reason, state, global lease owner/token/times, captured position, manifest/key versions, bytes/duration, verification state, safe error, and timestamps. Only one active lease is permitted.
+
+### `inventory_balance`
+
+Household/item identity, current name and unit, on-hand/reserved/consumed/expired quantities, reorder
+threshold, active-or-archived status, source stream version/event, and updated time. This synchronous
+projection is rebuildable from the immutable inventory-item stream; archive never deletes historical
+consumption links or allocations.
 
 ## Attachments
 

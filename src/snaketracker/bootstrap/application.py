@@ -20,7 +20,10 @@ from snaketracker.application.backups import BackupService
 from snaketracker.application.dashboard import DashboardStatisticsService
 from snaketracker.application.enclosures import EnclosureService
 from snaketracker.application.expenses import ExpenseService
-from snaketracker.application.household_bootstrap import HouseholdBootstrapService
+from snaketracker.application.household_bootstrap import (
+    AccountRegistrationService,
+    HouseholdBootstrapService,
+)
 from snaketracker.application.identity import IdentityService
 from snaketracker.application.inventory import InventoryService
 from snaketracker.application.ports.readiness import ReadinessPort
@@ -209,6 +212,11 @@ def build_application(settings: Settings) -> FastAPI:
         app.include_router(
             create_web_router(
                 bootstrap_service=HouseholdBootstrapService(
+                    bootstrap_repository,
+                    password_hasher,
+                    command_hash_secret=secret,
+                ),
+                account_registration_service=AccountRegistrationService(
                     bootstrap_repository,
                     password_hasher,
                     command_hash_secret=secret,
