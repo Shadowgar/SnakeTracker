@@ -1211,6 +1211,30 @@ def create_web_router(
             return RedirectResponse("/login", status_code=303)
         return protected_page(request, "more.html", principal)
 
+    @router.get("/calendar", response_class=HTMLResponse)
+    async def calendar(request: Request) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        return protected_page(request, "calendar.html", principal)
+
+    @router.get("/quick-log", response_class=HTMLResponse)
+    async def quick_log(request: Request) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        animals = animal_service.list_profiles(principal.household_id)
+        return protected_page(
+            request,
+            "quick_log.html",
+            principal,
+            context={
+                "quick_log_rows": tuple(
+                    {"animal": animal, "actions": _care_action_rows(animal)} for animal in animals
+                )
+            },
+        )
+
     @router.get("/search", response_class=HTMLResponse)
     async def search(request: Request, q: str = "") -> Response:
         principal = principal_for(request, audit_denial=True)

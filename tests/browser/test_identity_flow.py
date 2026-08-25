@@ -72,7 +72,7 @@ def test_first_run_login_home_logout_and_login_again(tmp_path: Path) -> None:
 
         home = client.get("/home")
         assert home.status_code == 200
-        assert "Welcome home, Rocco" in home.text
+        assert "Welcome back, Rocco" in home.text
         assert "Rocco&#39;s Reptiles" in home.text
         animals = client.get("/animals")
         assert "Add animal" in animals.text
@@ -113,7 +113,7 @@ def test_search_page_is_authenticated_and_has_a_safe_rebuilding_state(tmp_path: 
         response = client.get("/search?q=Nyx")
 
         assert response.status_code == 200
-        assert "Search your household" in response.text
+        assert '<h1 id="page-title">Search</h1>' in response.text
         assert 'name="q"' in response.text
         assert "Search is catching up" in response.text
 

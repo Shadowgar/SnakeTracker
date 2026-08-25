@@ -56,7 +56,7 @@ def test_existing_installation_supports_registration_session_and_normal_login(
 
         _register(client)
         home = client.get("/home")
-        assert "Welcome home, New Keeper" in home.text
+        assert "Welcome back, New Keeper" in home.text
         assert "New Keeper Collection" in home.text
         assert "Rocco" not in home.text
         assert "No animals yet" in client.get("/animals").text

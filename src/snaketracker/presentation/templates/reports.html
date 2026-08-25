@@ -2,7 +2,7 @@
 {% block title %}Reports · Care Keeper{% endblock %}
 {% block content %}
 <section class="dashboard" aria-labelledby="page-title">
-  <header><p class="eyebrow">{{ principal.household_name }}</p><h1 id="page-title">Reports</h1><p class="lede">Accessible, reconciled views of effective household records.</p></header>
+  <header><p class="page-kicker">Collection records</p><h1 id="page-title">Reports</h1><p class="lede">Accessible, reconciled views of effective household records.</p></header>
   {% if report_kinds %}
   <ul class="record-list" aria-label="Available reports">
     {% for key, label in report_kinds %}<li><a href="/reports/{{ key }}"><strong>{{ label }}</strong><span>View report</span></a></li>{% endfor %}

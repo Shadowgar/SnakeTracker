@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Calendar · Care Keeper{% endblock %}
+{% block content %}
+<section class="calendar-page" aria-labelledby="page-title">
+  <header class="page-heading"><div><p class="page-kicker">Care planning</p><h1 id="page-title">Calendar</h1><p class="lede">A dedicated home for scheduled and completed care.</p></div></header>
+  <section class="card calendar-preview" aria-labelledby="calendar-preview-title"><div class="calendar-preview-content">
+    <span class="status-badge status-upcoming">Calendar shell</span><h2 id="calendar-preview-title">Month and agenda views arrive in Pass 2</h2>
+    <p>Your existing reminders and Today agenda remain authoritative. This destination establishes the approved navigation and layout without inventing calendar records.</p>
+    <div class="calendar-scope" aria-label="Planned calendar views"><span>Month view</span><span>Agenda view</span><span>Care history</span></div>
+    <div class="action-row"><a class="button-link" href="/home">View Today</a>{% if 'reminder.view' in principal.capabilities %}<a class="button-link secondary-link" href="/reminders">Manage reminders</a>{% endif %}</div>
+  </div></section>
+</section>
+{% endblock %}

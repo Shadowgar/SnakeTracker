@@ -2,11 +2,11 @@
 {% block title %}Search · Care Keeper{% endblock %}
 {% block content %}
 <section class="dashboard" aria-labelledby="page-title">
-  <header>
-    <p class="eyebrow">{{ principal.household_name }}</p>
-    <h1 id="page-title">Search your household</h1>
+  <header class="page-heading"><div>
+    <p class="page-kicker">Find anything</p>
+    <h1 id="page-title">Search</h1>
     <p class="lede">Find animals, enclosures, care history, inventory, and records you can access.</p>
-  </header>
+  </div></header>
   <form class="card search-page-form" action="/search" method="get" role="search">
     <label for="search-query">Search terms</label>
     <div class="search-row">

@@ -26,7 +26,10 @@ without appending events on an identical rerun.
 
 See the [final fixture qualification](final-ux-fixture/README.md) for preservation IDs, exact
 dataset shape, analytics states, browser/accessibility results, and the new backup/restore drill.
+See [UX Pass 1](ux-pass1/README.md) for the owner-review design system, responsive shell,
+navigation, Calendar shell, Quick Log, and public-fixture screenshots.
 The earlier shared real-plus-demo runtime is retained as [historical qualification
 evidence](consolidated-demo/README.md), not as the current active state.
 
-This environment does not approve M6, begin the UX overhaul or Calendar, merge PR #8, or begin M7.
+This environment does not approve M6, implement the full Calendar experience, merge PR #8, or
+begin M7.

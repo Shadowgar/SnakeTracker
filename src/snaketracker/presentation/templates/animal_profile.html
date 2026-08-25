@@ -10,7 +10,7 @@
       <span class="profile-photo profile-photo-placeholder" aria-hidden="true">{{ animal.name[0]|upper }}</span>
       {% endif %}
       <div>
-      <p class="eyebrow">{{ principal.household_name }}</p>
+      <p class="page-kicker">{{ animal.type_label }} profile</p>
       <h1 id="page-title">{{ animal.name }}</h1>
       <p class="lede">{{ animal.type_label }} · {{ animal.species }}{% if animal.morph %} · {{ animal.morph }}{% endif %} · {{ animal.status|capitalize }}</p>
       </div>

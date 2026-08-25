@@ -156,7 +156,7 @@ def test_analytics_explains_estimates_and_passed_windows_in_plain_language(tmp_p
         assert "Owner reminder schedules remain authoritative." in analytics.text
 
 
-def test_care_keeper_navigation_uses_one_mobile_first_information_architecture(
+def test_care_keeper_shell_uses_distinct_mobile_and_desktop_navigation(
     tmp_path: Path,
 ) -> None:
     with client_for(tmp_path) as client:
@@ -165,23 +165,49 @@ def test_care_keeper_navigation_uses_one_mobile_first_information_architecture(
         home = client.get("/home")
         assert "Care Keeper" in home.text
         assert 'aria-label="Care Keeper home"' in home.text
-        assert 'class="primary-nav"' in home.text
+        assert 'class="desktop-sidebar"' in home.text
+        assert 'class="mobile-nav primary-nav"' in home.text
         for label, path in (
             ("Today", "/home"),
             ("Animals", "/animals"),
+            ("Calendar", "/calendar"),
             ("Enclosures", "/enclosures"),
-            ("Inventory", "/inventory"),
             ("More", "/more"),
         ):
             assert f'href="{path}"' in home.text
-            assert f">{label}<" in home.text
+            assert f"<span>{label}</span>" in home.text
+        mobile_navigation = home.text.split('class="mobile-nav primary-nav"', maxsplit=1)[1].split(
+            "</nav>", maxsplit=1
+        )[0]
+        assert 'href="/inventory"' not in mobile_navigation
+        assert 'href="/inventory"' in home.text
+        assert "search-trigger" in home.text
+        assert 'class="icon-button header-quick-log" href="/quick-log"' in home.text
         more = client.get("/more")
         assert more.status_code == 200
-        for label in ("Reports", "Expenses", "Reminders", "Backups", "Operations", "Log out"):
+        for label in (
+            "Inventory",
+            "Reports",
+            "Expenses",
+            "Reminders",
+            "Backups",
+            "System operations",
+            "Log out",
+        ):
             assert label in more.text
+        assert "Advanced" in more.text
+        calendar = client.get("/calendar")
+        assert calendar.status_code == 200
+        assert "Month and agenda views arrive in Pass 2" in calendar.text
+        quick_log = client.get("/quick-log")
+        assert quick_log.status_code == 200
+        assert "Add care" in quick_log.text
+        assert "No animals available" in quick_log.text
         stylesheet = client.get("/static/app.css").text
         assert "env(safe-area-inset-bottom)" in stylesheet
         assert "min-height: 2.75rem" in stylesheet
+        assert "--color-primary: #a78bfa" in stylesheet
+        assert "@media (min-width: 64rem)" in stylesheet
 
 
 def test_today_and_animals_are_separate_keeper_workspaces(tmp_path: Path) -> None:

@@ -2,17 +2,17 @@
 {% block title %}Today · Care Keeper{% endblock %}
 {% block content %}
 <section class="dashboard" aria-labelledby="page-title">
-  <header>
-    <p class="eyebrow">{{ principal.household_name }}</p>
+  <header class="page-heading">
+    <div><p class="page-kicker">Your care agenda</p>
     <h1 id="page-title">Today</h1>
-    <p class="lede">Welcome home, {{ principal.display_name }}. See what is due, then keep the day-to-day record close at hand.</p>
+    <p class="lede">Welcome back, {{ principal.display_name }}. See what needs attention across your collection.</p></div>
   </header>
   {% set agenda = namespace(has_items=false) %}
   {% for key, label, rows in agenda_groups %}
   {% if rows %}
   {% set agenda.has_items = true %}
   <section class="agenda-section" aria-labelledby="home-{{ key }}">
-    <h2 id="home-{{ key }}">{{ label }}</h2>
+    <h2 id="home-{{ key }}"><span class="status-badge status-{% if key == 'due_today' %}today{% else %}{{ key }}{% endif %}">{{ label }}</span></h2>
     <ul class="agenda-list">
       {% for row in rows %}<li class="card agenda-card"><div class="agenda-card-heading"><div><p class="eyebrow">{{ row.title }}</p><h3><a href="{{ row.subject_url }}">{{ row.subject_name }}</a></h3>{% if row.location_name %}<span class="muted">{{ row.location_name }}</span>{% endif %}</div><time datetime="{{ row.item.due_at.isoformat() }}">{% if row.item.status == 'overdue' %}Overdue{% elif row.item.status == 'due_today' %}Due today{% else %}Due {{ row.item.due_at.astimezone(household_zone).strftime('%b %d') }}{% endif %}</time></div><p>{{ row.explanation }}</p>{% if row.action_url %}<a class="button-link agenda-action" href="{{ row.action_url }}">{{ row.action_label }}</a>{% endif %}</li>{% endfor %}
     </ul>

@@ -1,42 +1,81 @@
 <!doctype html>
 <html lang="en">
+  {% from "icons.html" import icon %}
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Care Keeper{% endblock %}</title>
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/static/app.css">
+    <link rel="stylesheet" href="/static/app.css?v=m6-ux-pass1">
     <link rel="manifest" href="/static/manifest.webmanifest">
-    <meta name="theme-color" content="#18251f">
+    <meta name="theme-color" content="#100d18">
     <script defer src="/static/vendor/chart.js/chart.umd.min.js"></script>
     <script defer src="/static/charts.js"></script>
     <script defer src="/static/pwa.js"></script>
   </head>
-  <body>
+  <body class="{% if principal is defined %}app-body{% else %}auth-body{% endif %}">
     <a class="skip-link" href="#main-content">Skip to main content</a>
-    <header class="site-header">
-      <a class="brand" href="/" aria-label="Care Keeper home">
-        <span class="brand-mark" aria-hidden="true">C</span>
-        <span>Care Keeper</span>
-      </a>
-      {% if principal is defined %}
-      <nav class="primary-nav" aria-label="Primary navigation">
-        <a href="/home"{% if request.url.path == '/home' %} aria-current="page"{% endif %}>Today</a>
-        <a href="/animals"{% if request.url.path.startswith('/animals') %} aria-current="page"{% endif %}>Animals</a>
-        <a href="/enclosures"{% if request.url.path.startswith('/enclosures') %} aria-current="page"{% endif %}>Enclosures</a>
-        {% if 'inventory.view' in principal.capabilities %}<a href="/inventory"{% if request.url.path.startswith('/inventory') %} aria-current="page"{% endif %}>Inventory</a>{% endif %}
-        <a href="/more"{% if request.url.path == '/more' %} aria-current="page"{% endif %}>More</a>
-      </nav>
-      <form class="site-search" action="/search" method="get" role="search">
-        <label class="visually-hidden" for="global-search">Search your household</label>
-        <input id="global-search" name="q" type="search" maxlength="100" placeholder="Search" value="{{ query|default('') }}">
-        <button type="submit">Search</button>
-      </form>
-      {% endif %}
+    {% if principal is defined %}
+    {% set current_path = request.url.path %}
+    {% set more_active = current_path == '/more' or current_path.startswith('/inventory') or current_path.startswith('/reports') or current_path.startswith('/expenses') or current_path.startswith('/reminders') or current_path.startswith('/settings') or current_path.startswith('/operations') %}
+    <div class="app-layout">
+      <aside class="desktop-sidebar" aria-label="Care Keeper navigation">
+        <a class="brand brand-desktop" href="/home" aria-label="Care Keeper home">
+          <span class="brand-mark" aria-hidden="true">C</span><span>Care Keeper</span>
+        </a>
+        <nav class="sidebar-nav primary-nav" aria-label="Primary navigation">
+          <p class="nav-section-label">Care</p>
+          <a href="/home"{% if current_path == '/home' %} aria-current="page"{% endif %}>{{ icon('today', 'nav-icon') }}<span>Today</span></a>
+          <a href="/animals"{% if current_path.startswith('/animals') %} aria-current="page"{% endif %}>{{ icon('animals', 'nav-icon') }}<span>Animals</span></a>
+          <a href="/calendar"{% if current_path == '/calendar' %} aria-current="page"{% endif %}>{{ icon('calendar', 'nav-icon') }}<span>Calendar</span></a>
+          <a href="/enclosures"{% if current_path.startswith('/enclosures') %} aria-current="page"{% endif %}>{{ icon('enclosures', 'nav-icon') }}<span>Enclosures</span></a>
+          <a class="quick-log-button" href="/quick-log">{{ icon('add', 'nav-icon') }}<span>Add care</span></a>
+          <p class="nav-section-label">Manage</p>
+          {% if 'inventory.view' in principal.capabilities %}<a href="/inventory"{% if current_path.startswith('/inventory') %} aria-current="page"{% endif %}>{{ icon('inventory', 'nav-icon') }}<span>Inventory</span></a>{% endif %}
+          <a href="/reports"{% if current_path.startswith('/reports') %} aria-current="page"{% endif %}>{{ icon('reports', 'nav-icon') }}<span>Reports</span></a>
+          {% if 'expense.view' in principal.capabilities %}<a href="/expenses"{% if current_path.startswith('/expenses') %} aria-current="page"{% endif %}>{{ icon('expenses', 'nav-icon') }}<span>Expenses</span></a>{% endif %}
+          <a href="/more"{% if more_active %} aria-current="page"{% endif %}>{{ icon('more', 'nav-icon') }}<span>More</span></a>
+        </nav>
+        <a class="sidebar-account" href="/more#account">
+          <span class="account-avatar" aria-hidden="true">{{ principal.display_name[0]|upper }}</span>
+          <span><strong>{{ principal.display_name }}</strong><small>{{ principal.household_name }}</small></span>
+          {{ icon('chevron', 'sidebar-chevron') }}
+        </a>
+      </aside>
+      <div class="app-main">
+        <header class="app-header">
+          <a class="brand brand-mobile" href="/home" aria-label="Care Keeper home">
+            <span class="brand-mark" aria-hidden="true">C</span><span>Care Keeper</span>
+          </a>
+          <div class="header-context" aria-label="Current household">
+            <span>Care workspace</span><strong>{{ principal.household_name }}</strong>
+          </div>
+          <nav class="header-actions" aria-label="Global actions">
+            <a class="icon-button header-quick-log" href="/quick-log" aria-label="Add care">{{ icon('add') }}<span>Add care</span></a>
+            <a class="icon-button search-trigger" href="/search" aria-label="Search Care Keeper">{{ icon('search') }}<span>Search</span></a>
+            <a class="icon-button account-trigger" href="/more#account" aria-label="Open account and more">{{ icon('account') }}<span>Account</span></a>
+          </nav>
+        </header>
+        <main id="main-content" class="page-shell" tabindex="-1">
+    {% else %}
+    <header class="auth-header">
+      <a class="brand" href="/" aria-label="Care Keeper home"><span class="brand-mark" aria-hidden="true">C</span><span>Care Keeper</span></a>
     </header>
-    <main id="main-content" class="page-shell" tabindex="-1">
+    <main id="main-content" class="page-shell auth-page-shell" tabindex="-1">
+    {% endif %}
       {% block content %}{% endblock %}
     </main>
+    {% if principal is defined %}
+      </div>
+      <nav class="mobile-nav primary-nav" aria-label="Mobile primary navigation">
+        <a href="/home"{% if current_path == '/home' %} aria-current="page"{% endif %}>{{ icon('today', 'nav-icon') }}<span>Today</span></a>
+        <a href="/animals"{% if current_path.startswith('/animals') %} aria-current="page"{% endif %}>{{ icon('animals', 'nav-icon') }}<span>Animals</span></a>
+        <a href="/calendar"{% if current_path == '/calendar' %} aria-current="page"{% endif %}>{{ icon('calendar', 'nav-icon') }}<span>Calendar</span></a>
+        <a href="/enclosures"{% if current_path.startswith('/enclosures') %} aria-current="page"{% endif %}>{{ icon('enclosures', 'nav-icon') }}<span>Enclosures</span></a>
+        <a href="/more"{% if more_active %} aria-current="page"{% endif %}>{{ icon('more', 'nav-icon') }}<span>More</span></a>
+      </nav>
+    </div>
+    {% endif %}
     {% block scripts %}{% endblock %}
   </body>
 </html>

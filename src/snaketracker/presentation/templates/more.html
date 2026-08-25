@@ -1,25 +1,24 @@
 {% extends "base.html" %}
+{% from "icons.html" import icon %}
 {% block title %}More · Care Keeper{% endblock %}
 {% block content %}
 <section class="more-page" aria-labelledby="page-title">
-  <header>
-    <p class="eyebrow">{{ principal.household_name }}</p>
-    <h1 id="page-title">More</h1>
-    <p class="lede">Reports, planning, account, and household operations.</p>
-  </header>
-  <nav class="more-grid" aria-label="Additional Care Keeper destinations">
-    <a class="care-action" href="/reports"><strong>Reports</strong><span>Review and export household records</span></a>
-    {% if 'expense.view' in principal.capabilities %}<a class="care-action" href="/expenses"><strong>Expenses</strong><span>Track household care costs</span></a>{% endif %}
-    {% if 'reminder.view' in principal.capabilities %}<a class="care-action" href="/reminders"><strong>Reminders</strong><span>Manage your care schedule</span></a>{% endif %}
-    {% if 'household.manage' in principal.capabilities %}<a class="care-action" href="/settings/backups"><strong>Backups</strong><span>Protect household records and attachments</span></a>{% endif %}
-    {% if 'operations.view' in principal.capabilities %}<a class="care-action" href="/operations/jobs"><strong>Operations</strong><span>Review background delivery work</span></a>{% endif %}
-  </nav>
-  <section class="card account-card" aria-labelledby="account-heading">
-    <div><h2 id="account-heading">Account</h2><p>{{ principal.display_name }} · {{ principal.role|capitalize }}</p></div>
-    <form method="post" action="/logout">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <button class="secondary" type="submit">Log out</button>
-    </form>
-  </section>
+  <header class="page-heading"><div><p class="page-kicker">Tools and settings</p><h1 id="page-title">More</h1><p class="lede">Planning, supplies, records, and account controls—organized away from daily care.</p></div></header>
+  <div class="more-groups">
+    <section class="more-group" aria-labelledby="planning-heading">
+      <h2 id="planning-heading">Plan and review</h2>
+      <nav class="more-grid" aria-label="Planning and reporting">
+        {% if 'reminder.view' in principal.capabilities %}<a class="more-destination" href="/reminders">{{ icon('reminders') }}<span class="more-destination-copy"><strong>Reminders</strong><span>Manage care schedules</span></span>{{ icon('chevron', 'destination-arrow icon') }}</a>{% endif %}
+        <a class="more-destination" href="/reports">{{ icon('reports') }}<span class="more-destination-copy"><strong>Reports</strong><span>Review and export records</span></span>{{ icon('chevron', 'destination-arrow icon') }}</a>
+        {% if 'expense.view' in principal.capabilities %}<a class="more-destination" href="/expenses">{{ icon('expenses') }}<span class="more-destination-copy"><strong>Expenses</strong><span>Track collection costs</span></span>{{ icon('chevron', 'destination-arrow icon') }}</a>{% endif %}
+      </nav>
+    </section>
+    {% if 'inventory.view' in principal.capabilities %}<section class="more-group" aria-labelledby="supplies-heading"><h2 id="supplies-heading">Supplies</h2><nav class="more-grid" aria-label="Supply management"><a class="more-destination" href="/inventory">{{ icon('inventory') }}<span class="more-destination-copy"><strong>Inventory</strong><span>Food, equipment, and stock</span></span>{{ icon('chevron', 'destination-arrow icon') }}</a></nav></section>{% endif %}
+    {% if 'household.manage' in principal.capabilities or 'operations.view' in principal.capabilities %}<section class="more-group" aria-labelledby="advanced-heading"><h2 id="advanced-heading">Advanced</h2><nav class="more-grid" aria-label="Advanced and system tools">
+      {% if 'household.manage' in principal.capabilities %}<a class="more-destination" href="/settings/backups">{{ icon('backup') }}<span class="more-destination-copy"><strong>Backups</strong><span>Protect household records</span></span>{{ icon('chevron', 'destination-arrow icon') }}</a>{% endif %}
+      {% if 'operations.view' in principal.capabilities %}<a class="more-destination" href="/operations/jobs">{{ icon('advanced') }}<span class="more-destination-copy"><strong>System operations</strong><span>Delivery jobs and technical state</span></span>{{ icon('chevron', 'destination-arrow icon') }}</a>{% endif %}
+    </nav></section>{% endif %}
+  </div>
+  <section id="account" class="card account-card" aria-labelledby="account-heading"><div><p class="page-kicker">{{ principal.household_name }}</p><h2 id="account-heading">{{ principal.display_name }}</h2><p>{{ principal.role|capitalize }} account</p></div><form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="secondary" type="submit">Log out</button></form></section>
 </section>
 {% endblock %}
