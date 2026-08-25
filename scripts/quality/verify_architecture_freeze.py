@@ -36,6 +36,7 @@ APPROVED_AMENDMENT_PATHS = {
     "docs/quality/representative-dataset.md",
     "docs/requirements/traceability-matrix.md",
     "docs/roadmap/milestones.md",
+    "docs/security/security-architecture.md",
     "docs/ux/information-architecture.md",
 }
 PROTECTED_PREFIXES = (

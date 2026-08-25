@@ -95,7 +95,9 @@ from snaketracker.application.household_bootstrap import (
 from snaketracker.application.identity import (
     AuthenticationError,
     IdentityService,
+    InvalidPasswordResetError,
     LoginBlockedError,
+    PasswordResetValidationError,
     Principal,
 )
 from snaketracker.application.inventory import (
@@ -814,7 +816,131 @@ def create_web_router(
             return RedirectResponse("/setup", status_code=303)
         if principal_for(request):
             return RedirectResponse("/home", status_code=303)
-        return _new_form_response(request, "login.html", secure_cookie=secure_cookie)
+        return _new_form_response(
+            request,
+            "login.html",
+            secure_cookie=secure_cookie,
+            context={"password_reset_complete": request.query_params.get("reset") == "complete"},
+        )
+
+    @router.get("/forgot-password", response_class=HTMLResponse)
+    async def forgot_password_page(request: Request) -> Response:
+        if not is_bootstrapped():
+            return RedirectResponse("/setup", status_code=303)
+        response = _new_form_response(request, "forgot_password.html", secure_cookie=secure_cookie)
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    @router.post("/forgot-password", response_class=HTMLResponse)
+    async def forgot_password_submit(request: Request) -> Response:
+        if not is_bootstrapped():
+            return RedirectResponse("/setup", status_code=303)
+        if not _form_request_valid(request, expected_origin):
+            return templates.TemplateResponse(
+                request,
+                "error.html",
+                {
+                    "title": "Request could not be verified",
+                    "message": "Refresh the password recovery page and try again.",
+                },
+                status_code=403,
+            )
+        form = await request.form()
+        if not _preauth_csrf_valid(request, str(form.get("csrf_token", ""))):
+            return templates.TemplateResponse(
+                request,
+                "error.html",
+                {
+                    "title": "Request could not be verified",
+                    "message": "Refresh the password recovery page and try again.",
+                },
+                status_code=403,
+            )
+        client_ip, user_agent = _client_context(request)
+        identity_service.request_password_reset(
+            str(form.get("email", "")),
+            client_ip=client_ip,
+            user_agent=user_agent,
+            correlation_id=uuid4(),
+        )
+        response = RedirectResponse("/forgot-password/sent", status_code=303)
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    @router.get("/forgot-password/sent", response_class=HTMLResponse)
+    async def forgot_password_sent(request: Request) -> Response:
+        response = templates.TemplateResponse(request, "password_reset_sent.html", {})
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    @router.get("/reset-password", response_class=HTMLResponse)
+    async def reset_password_page(request: Request) -> Response:
+        if not is_bootstrapped():
+            return RedirectResponse("/setup", status_code=303)
+        response = _new_form_response(
+            request,
+            "reset_password.html",
+            secure_cookie=secure_cookie,
+            context={"reset_token": ""},
+        )
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    @router.post("/reset-password", response_class=HTMLResponse)
+    async def reset_password_submit(request: Request) -> Response:
+        if not _form_request_valid(request, expected_origin):
+            return templates.TemplateResponse(
+                request,
+                "error.html",
+                {
+                    "title": "Request could not be verified",
+                    "message": "Open the reset link again and try once more.",
+                },
+                status_code=403,
+            )
+        form = await request.form()
+        if not _preauth_csrf_valid(request, str(form.get("csrf_token", ""))):
+            return templates.TemplateResponse(
+                request,
+                "error.html",
+                {
+                    "title": "Request could not be verified",
+                    "message": "Open the reset link again and try once more.",
+                },
+                status_code=403,
+            )
+        token = str(form.get("reset_token", ""))
+        client_ip, user_agent = _client_context(request)
+        try:
+            identity_service.complete_password_reset(
+                token,
+                str(form.get("password", "")),
+                str(form.get("password_confirmation", "")),
+                client_ip=client_ip,
+                user_agent=user_agent,
+                correlation_id=uuid4(),
+            )
+        except PasswordResetValidationError as error:
+            response = _new_form_response(
+                request,
+                "reset_password.html",
+                secure_cookie=secure_cookie,
+                status_code=422,
+                context={"error": str(error), "reset_token": token},
+            )
+            response.headers["Cache-Control"] = "no-store"
+            return response
+        except InvalidPasswordResetError:
+            response = templates.TemplateResponse(
+                request, "password_reset_invalid.html", {}, status_code=400
+            )
+            response.headers["Cache-Control"] = "no-store"
+            return response
+        redirect = RedirectResponse("/login?reset=complete", status_code=303)
+        redirect.delete_cookie(SESSION_COOKIE, path="/")
+        redirect.delete_cookie(CSRF_COOKIE, path="/")
+        redirect.headers["Cache-Control"] = "no-store"
+        return redirect
 
     @router.get("/register", response_class=HTMLResponse)
     async def registration_page(request: Request) -> Response:

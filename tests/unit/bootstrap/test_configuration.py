@@ -5,7 +5,11 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from snaketracker.bootstrap.configuration import Environment, load_settings
+from snaketracker.bootstrap.configuration import (
+    Environment,
+    PasswordResetDeliveryMode,
+    load_settings,
+)
 
 
 def test_development_settings_have_safe_local_defaults(tmp_path: Path) -> None:
@@ -20,6 +24,7 @@ def test_development_settings_have_safe_local_defaults(tmp_path: Path) -> None:
     assert settings.database_path == tmp_path / "snaketracker.sqlite3"
     assert settings.external_origin is None
     assert settings.session_cookie_secure is True
+    assert settings.password_reset_delivery is PasswordResetDeliveryMode.DISABLED
 
 
 def test_local_docker_can_explicitly_disable_secure_cookie() -> None:
@@ -31,6 +36,41 @@ def test_local_docker_can_explicitly_disable_secure_cookie() -> None:
     )
 
     assert settings.session_cookie_secure is False
+
+
+def test_local_password_reset_delivery_is_explicit_and_nonproduction(tmp_path: Path) -> None:
+    settings = load_settings(
+        {
+            "SNAKETRACKER_ENVIRONMENT": "test",
+            "SNAKETRACKER_PASSWORD_RESET_DELIVERY": "local_file",
+            "SNAKETRACKER_PASSWORD_RESET_DELIVERY_PATH": str(tmp_path / "messages"),
+        }
+    )
+
+    assert settings.password_reset_delivery is PasswordResetDeliveryMode.LOCAL_FILE
+    assert settings.password_reset_delivery_path == tmp_path / "messages"
+
+    with pytest.raises(ValidationError, match="forbidden in production"):
+        load_settings(
+            {
+                "SNAKETRACKER_ENVIRONMENT": "production",
+                "SNAKETRACKER_DATABASE_PATH": "/srv/snaketracker/snaketracker.sqlite3",
+                "SNAKETRACKER_EXTERNAL_ORIGIN": "https://tracker.example",
+                "SNAKETRACKER_RUNTIME_SECRET": "a" * 32,
+                "SNAKETRACKER_PASSWORD_RESET_DELIVERY": "local_file",
+                "SNAKETRACKER_PASSWORD_RESET_DELIVERY_PATH": "/srv/messages",
+            }
+        )
+
+
+def test_local_password_reset_delivery_requires_a_capture_path() -> None:
+    with pytest.raises(ValidationError, match="requires an explicit path"):
+        load_settings(
+            {
+                "SNAKETRACKER_ENVIRONMENT": "development",
+                "SNAKETRACKER_PASSWORD_RESET_DELIVERY": "local_file",
+            }
+        )
 
 
 def test_production_requires_https_origin_and_runtime_secret(tmp_path: Path) -> None:

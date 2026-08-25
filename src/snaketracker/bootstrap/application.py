@@ -32,7 +32,12 @@ from snaketracker.application.reminders import ReminderFactService, ReminderRule
 from snaketracker.application.reports import ReportService
 from snaketracker.application.search import SearchService
 from snaketracker.bootstrap.compatibility import inspect_startup_compatibility
-from snaketracker.bootstrap.configuration import Environment, Settings, load_settings
+from snaketracker.bootstrap.configuration import (
+    Environment,
+    PasswordResetDeliveryMode,
+    Settings,
+    load_settings,
+)
 from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
 from snaketracker.infrastructure.attachments.repository import SQLAlchemyAttachmentRepository
 from snaketracker.infrastructure.attachments.storage import LocalAttachmentStorage
@@ -46,6 +51,9 @@ from snaketracker.infrastructure.identity.bootstrap_repository import (
     SQLAlchemyHouseholdBootstrapRepository,
 )
 from snaketracker.infrastructure.identity.identity_repository import SQLAlchemyIdentityRepository
+from snaketracker.infrastructure.identity.password_reset_delivery import (
+    LocalFilePasswordResetDelivery,
+)
 from snaketracker.infrastructure.inventory.projections import SQLAlchemyInventoryBalanceProjection
 from snaketracker.infrastructure.jobs.repository import SQLAlchemyJobRepository
 from snaketracker.infrastructure.notifications.repository import (
@@ -209,6 +217,20 @@ def build_application(settings: Settings) -> FastAPI:
             product_projection_registry,
             "dashboard_statistics",
         )
+        external_origin = (
+            str(settings.external_origin).rstrip("/")
+            if settings.external_origin is not None
+            else None
+        )
+        password_reset_delivery = (
+            LocalFilePasswordResetDelivery(
+                settings.password_reset_delivery_path,
+                environment=settings.environment.value,
+            )
+            if settings.password_reset_delivery is PasswordResetDeliveryMode.LOCAL_FILE
+            and settings.password_reset_delivery_path is not None
+            else None
+        )
         app.include_router(
             create_web_router(
                 bootstrap_service=HouseholdBootstrapService(
@@ -230,6 +252,8 @@ def build_application(settings: Settings) -> FastAPI:
                     rate_limit=5,
                     rate_window=timedelta(minutes=15),
                     block_duration=timedelta(minutes=15),
+                    password_reset_delivery=password_reset_delivery,
+                    external_origin=external_origin,
                 ),
                 animal_service=animal_service,
                 attachment_service=attachment_service,
@@ -257,11 +281,7 @@ def build_application(settings: Settings) -> FastAPI:
                 projection_catch_up=projection_catch_up,
                 is_bootstrapped=identity_repository.has_users,
                 secure_cookie=settings.session_cookie_secure,
-                expected_origin=(
-                    str(settings.external_origin).rstrip("/")
-                    if settings.external_origin is not None
-                    else None
-                ),
+                expected_origin=external_origin,
             )
         )
     elif settings.runtime_secret is None:

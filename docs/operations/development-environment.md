@@ -23,6 +23,14 @@ Secrets support a Docker-compatible `_FILE` form. Set either the direct variable
 and must not be logged, placed in Compose files, or committed. Phase 1 does not use the
 generic runtime secret for identity or sessions.
 
+Password-reset delivery is disabled by default. Development and test may explicitly set
+`SNAKETRACKER_PASSWORD_RESET_DELIVERY=local_file` and
+`SNAKETRACKER_PASSWORD_RESET_DELIVERY_PATH` to a trusted local directory. That adapter is rejected in
+production, creates a mode-0700 directory and mode-0600 message artifacts, and has no browser listing
+route. Each artifact intentionally contains the one-time URL for local qualification; treat it as a
+credential and remove it after use. A production deployment requires a separately configured email
+adapter implementing the identity-message delivery port.
+
 ## Quality gate
 
 Run `make check` or `./scripts/quality/check.sh`. The script is authoritative locally and

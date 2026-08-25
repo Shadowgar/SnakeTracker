@@ -47,6 +47,15 @@ UUID, normalized unique email, password hash/version, account status, audit time
 
 UUID, user, unique token hash, created/last-seen/idle-expiry/absolute-expiry/revoked times, safe client metadata. Index token hash and expiry. Session rows are excluded or invalidated on restore.
 
+### `password_reset_credentials`
+
+UUID, user, unique keyed token digest, requested/expiry/consumed/invalidated times, and initiation
+source (`self_service` or `operator`). The table is conventional mutable identity/security state,
+not an event stream. Only one credential per user remains usable: new requests invalidate older rows,
+and successful reset consumes the presented row while invalidating every other row and revoking all
+user sessions in the same transaction. Raw reset tokens and URLs never enter this table. Reset rows
+are removed from backup copies with sessions and other temporary credentials.
+
 ### `authorization_memberships`
 
 Synchronous projection keyed by household/user with role, status, source stream version/global position, and updated time. Protected requests use this table and current ownership joins.

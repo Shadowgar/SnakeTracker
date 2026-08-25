@@ -28,7 +28,7 @@ from snaketracker.infrastructure.inventory.projections import SQLAlchemyInventor
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 
 ROOT = Path(__file__).parents[2]
-REVISION = "0012_account_reminder_inventory"
+REVISION = "0013_password_recovery"
 PHASE_FIVE_TABLES = {
     "aggregate_snapshots",
     "alembic_version",
@@ -56,6 +56,7 @@ PHASE_FIVE_TABLES = {
     "local_notification_operations",
     "notification_intents",
     "outbox_items",
+    "password_reset_credentials",
     "projection_checkpoints",
     "projection_definitions",
     "projection_generations",
@@ -164,6 +165,18 @@ def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -
             column["name"] for column in inspector.get_columns("inventory_balance")
         }
         assert "status" in inventory_columns
+        reset_columns = {
+            column["name"] for column in inspector.get_columns("password_reset_credentials")
+        }
+        assert {
+            "reset_id",
+            "user_id",
+            "token_hash",
+            "expires_at",
+            "consumed_at",
+            "invalidated_at",
+            "source",
+        } <= reset_columns
     finally:
         engine.dispose()
 
@@ -225,7 +238,7 @@ def test_inventory_lifecycle_migration_blocks_lossy_downgrade(tmp_path: Path) ->
 
     with pytest.raises(RuntimeError, match="lifecycle downgrade blocked"):
         command.downgrade(config, "0011_product_experience")
-    assert current_revision(database) == REVISION
+    assert current_revision(database) == "0012_account_reminder_inventory"
 
 
 def test_phase_five_downgrade_normalizes_new_outbox_states(tmp_path: Path) -> None:

@@ -167,6 +167,7 @@ the Animal aggregate or infer that every care fact applies to every type.
 - [x] RB Production self-service registration creates an isolated owner household atomically and remains distinct from one-time bootstrap and ADR-0040 trusted demo provisioning. Evidence: [correctness/account lifecycle tranche](../evidence/m6-product-experience/correctness-account-lifecycle/README.md).
 - [x] RB Today/reminder state advances from effective qualifying care for fixed and event-relative schedules across the four trusted profiles, with correction/void/reinstate and one-time override coverage. Evidence: [correctness/account lifecycle tranche](../evidence/m6-product-experience/correctness-account-lifecycle/README.md).
 - [x] RB Inventory items edit, adjust, archive, leave active feeding choices, retain history, and restore; event-sourced item identity is never hard-deleted. Evidence: [correctness/account lifecycle tranche](../evidence/m6-product-experience/correctness-account-lifecycle/README.md).
+- [x] RB Password recovery uses generic throttled requests, short-lived single-use credentials, canonical-origin identity delivery, atomic password change/session revocation, and trusted-local operator recovery. Evidence: [password recovery](../evidence/m6-product-experience/password-recovery/README.md).
 
 Owner acceptance is not yet recorded. M7 and M8 remain unstarted.
 

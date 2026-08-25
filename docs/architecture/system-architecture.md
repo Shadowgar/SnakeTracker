@@ -88,7 +88,14 @@ All persisted instants are timezone-aware UTC with microsecond precision. Househ
 
 ## Security and privacy
 
-Authentication uses Argon2id password hashes and opaque server-side sessions with hashed tokens. Browser writes require CSRF protection. Capability-based household authorization is checked for every protected request against the current projection. Strict CSP, safe proxy handling, upload isolation, rate limiting, secure headers, redacted logs, dependency pinning, and append-oriented security auditing are mandatory before remote deployment.
+Authentication uses Argon2id password hashes and opaque server-side sessions with hashed tokens.
+Password recovery uses short-lived, single-use, keyed-digest credentials in relational identity state;
+completion atomically changes the password and revokes every session for exactly that user. Reset
+delivery is an identity-message port, separate from husbandry notification intents and domain events.
+Browser writes require CSRF protection. Capability-based household authorization is checked for every
+protected request against the current projection. Strict CSP, safe proxy handling, upload isolation,
+rate limiting, secure headers, redacted logs, dependency pinning, and append-oriented security auditing
+are mandatory before remote deployment.
 
 See the [threat model](../security/threat-model.md), [security architecture](../security/security-architecture.md), and ADRs 0015–0017, 0023, and 0029–0033.
 

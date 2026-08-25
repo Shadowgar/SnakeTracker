@@ -28,6 +28,23 @@ Workers claim jobs atomically with lease owner, opaque token, acquisition, heart
 
 External execution is at least once. Each adapter documents provider idempotency, durable operation-ID reconciliation, read-before-write reconciliation, or bounded duplicate tolerance. Operators reconcile uncertain outcomes before forcing retries.
 
+Password-reset delivery does not use the husbandry notification pipeline. It crosses a separate
+identity-message port and is disabled until an adapter is explicitly configured. The local-file
+adapter is development/test-only; production startup rejects it. A future production email adapter
+must accept the already-constructed canonical-origin message without changing identity semantics and
+must prevent reset URLs from entering provider analytics or ordinary application logs.
+
+For emergency self-hosted recovery, a trusted local operator may run:
+
+```text
+docker compose exec web python -m snaketracker.operations.account_recovery owner@example.com
+```
+
+The command accepts an email address only, creates the same 45-minute one-time credential, audits the
+operator initiation, and prints the URL to the attached terminal. It has no browser admin route and
+never accepts a plaintext password argument. Do not redirect or persist its output; complete the reset
+in the browser and require a fresh sign-in.
+
 ## Storage pressure
 
 Warn below 20% free space. Below 10%, block nonessential uploads and pause projection rebuilds and vacuum. Before maintenance, require the greater of 20% free space or twice the largest rebuild group plus peak WAL plus 1 GiB. These are qualification targets tied to the current representative dataset.

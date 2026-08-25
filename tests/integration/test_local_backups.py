@@ -12,6 +12,7 @@ from uuid import uuid4
 import pytest
 from alembic import command
 from alembic.config import Config
+from sqlalchemy import text
 
 from snaketracker.application.animals import AnimalService, RegisterAnimalCommand
 from snaketracker.application.attachments import (
@@ -211,8 +212,25 @@ def test_worker_creates_encrypted_verified_backup_and_rehearses_restore(tmp_path
                 idempotency_key="backup-select-photo",
             )
         )
-        with engine.connect() as connection:
+        with engine.begin() as connection:
             assert connection.exec_driver_sql("SELECT count(*) FROM sessions").scalar_one() == 1
+            now = datetime.now(UTC).isoformat(timespec="microseconds")
+            connection.execute(
+                text(
+                    "INSERT INTO password_reset_credentials "
+                    "(reset_id,user_id,token_hash,requested_at,expires_at,source) "
+                    "VALUES (:reset_id,:user_id,:token_hash,:now,:expires,'self_service')"
+                ),
+                {
+                    "reset_id": str(uuid4()),
+                    "user_id": str(bootstrap.user_id),
+                    "token_hash": "f" * 64,
+                    "now": now,
+                    "expires": (datetime.now(UTC) + timedelta(minutes=45)).isoformat(
+                        timespec="microseconds"
+                    ),
+                },
+            )
 
         repository = SQLAlchemyBackupRepository(engine)
         service = BackupService(repository)
@@ -250,7 +268,7 @@ def test_worker_creates_encrypted_verified_backup_and_rehearses_restore(tmp_path
 
         verification = pipeline.verify(run)
         assert verification.attachment_count == 1
-        assert verification.database_schema_revision == "0012_account_reminder_inventory"
+        assert verification.database_schema_revision == "0013_password_recovery"
         assert verification.event_global_position >= 4
         assert verification.encryption_key_id == "m4-local-test-key"
         assert ("animal.photo_selected", 1) in verification.event_contracts
@@ -259,6 +277,9 @@ def test_worker_creates_encrypted_verified_backup_and_rehearses_restore(tmp_path
         with closing(sqlite3.connect(restored.database_path)) as restored_database:
             assert restored_database.execute("PRAGMA integrity_check").fetchone() == ("ok",)
             assert restored_database.execute("SELECT count(*) FROM sessions").fetchone() == (0,)
+            assert restored_database.execute(
+                "SELECT count(*) FROM password_reset_credentials"
+            ).fetchone() == (0,)
             assert restored_database.execute(
                 "SELECT animal_type,count(*) FROM animal_current GROUP BY animal_type "
                 "ORDER BY animal_type"

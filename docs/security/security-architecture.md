@@ -4,7 +4,21 @@
 
 Passwords use Argon2id with versioned parameters benchmarked on the Pi. Successful authentication may transparently upgrade weaker stored hashes. Sessions use opaque high-entropy tokens with only token hashes stored server-side. Cookies are Secure, HttpOnly, SameSite, narrowly scoped, and rotated after authentication and privilege changes. Idle and absolute limits apply. Logout, role loss, password reset, restoration, and administrator action can revoke sessions.
 
-Password-reset and invitation secrets are single-use, short-lived, and stored hashed. OAuth and MFA are deferred capabilities but must attach to the same identity and household-capability model.
+Password-reset credentials contain 384 bits of cryptographic randomness, expire after 45 minutes,
+are scoped to one user, and are stored only as runtime-secret-keyed SHA-256 digests in mutable
+identity/security storage. A new request supersedes older credentials. Successful reset atomically
+updates the Argon2id password, consumes the credential, invalidates every other reset credential for
+the user, and revokes every authenticated session; normal sign-in is then required. Reset credentials
+are operational security state, never domain events. Invitation secrets follow the same
+single-use/short-lived rule when that deferred capability is implemented. OAuth and MFA are deferred
+but must attach to the same identity and household-capability model.
+
+Unauthenticated reset requests always use the same response, status, and redirect for known, unknown,
+and throttled addresses. Reset URLs use only the configured canonical external origin. Their raw token
+is carried in a URL fragment so it is not sent in HTTP request targets or ordinary access logs; a
+same-origin static script transfers it to the reset form and removes the fragment. Passwords, password
+hashes, raw reset tokens, and reset URLs are excluded from application logs, audit details, analytics,
+and events.
 
 ## Authorization
 
@@ -26,7 +40,10 @@ Staged uploads are isolated and non-executable. Validation covers file signature
 
 ## Security audit
 
-An append-oriented relational audit records authentication, session, permission, denied-access, export, backup, restore, plugin, redaction, and security-setting activity. Audit data contains safe context but no credentials, tokens, or protected payload bodies. Users cannot edit it. Access and export are capability controlled.
+An append-oriented relational audit records authentication, password-reset initiation/completion,
+session revocation, permission, denied-access, export, backup, restore, plugin, redaction, and
+security-setting activity. Audit data contains safe context but no credentials, tokens, reset URLs,
+or protected payload bodies. Users cannot edit it. Access and export are capability controlled.
 
 ## Secrets and backups
 
