@@ -463,7 +463,7 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
   .care-avatar { width: 2.65rem; height: 2.65rem; }
   .today-care-copy h3 { font-size: .94rem; }
   .care-context { font-size: .65rem; }
-  .care-context span:last-child { display: none; }
+  .care-location-inline { display: none; }
   .compact-action { padding-inline: .58rem; font-size: .72rem; }
   .collection-summary-link { display: none; }
   .calendar-heading .lede, .more-heading .lede { display: none; }

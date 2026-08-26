@@ -47,7 +47,10 @@ The ten required final screenshots each passed axe WCAG 2.2 A/AA with zero viola
 CSS-only enclosure/filter refinement and asset cache-key update, the four affected Animals and
 Enclosures views were rerun and again produced zero axe violations, zero application console or
 page errors, zero same-origin request failures, and fully reachable filters. See
-[`qualification.json`](qualification.json) and [`affected-rerun.json`](affected-rerun.json).
+[`qualification.json`](qualification.json) and [`affected-rerun.json`](affected-rerun.json). A
+final Today-only selector correction was then verified at desktop/mobile with five visible mobile
+tasks, prior-care context present, zero visible schedule-provenance disclosures, and zero axe or
+application runtime findings; see [`today-rerun.json`](today-rerun.json).
 
 Care Keeper's origin response contains zero inline scripts and zero Cloudflare references. The
 public edge response adds an inline `__CF`/`cdn-cgi` loader, and Chromium also reports the injected
@@ -75,7 +78,7 @@ CSP violations involving Care Keeper-owned resources. No Cloudflare host, `unsaf
   versions. The isolated owner household remains 1 animal, 1 enclosure, 5 domain events, and zero
   attachment versions. No reset, reseed, or cross-household write occurred.
 - The promoted native ARM64 image is
-  `sha256:bc394f234a3a91f1dc04123891d36aeb3189449ec1179be85f0c9b797c0eeee8`.
+  `sha256:daca057c6c062294d636db2343316bf8644f6c54342a67298f90900277e4d42d`.
   Web and worker are healthy as UID/GID `1001:1001`, nginx is healthy, and exactly one
   `snaketracker` Compose project with three active services remains deployed.
 
