@@ -3,9 +3,8 @@
 {% block content %}
 <section class="dashboard today-page" aria-labelledby="page-title">
   <header class="page-heading today-heading">
-    <div><p class="page-kicker">{{ greeting }}, {{ principal.display_name }}</p>
-    <h1 id="page-title">Today</h1>
-    <p class="lede">Here’s what needs attention across your collection.</p></div>
+    <div><h1 id="page-title">Today</h1>
+    <p class="lede today-date">{{ today_label }} · care across your collection</p></div>
     <a class="button-link today-add-care" href="/quick-log">Add care</a>
   </header>
   <div class="today-summary" aria-label="Care summary">
@@ -21,16 +20,9 @@
       {% if rows %}{% set agenda.has_items = true %}
       <ul class="today-list">
         {% for row in rows[:6] %}<li class="today-care-card status-edge-{{ key }}">
-          <div class="today-care-main">
-            {% if row.photo_attachment_version_id %}<img class="care-avatar" src="/attachments/{{ row.photo_attachment_version_id }}" alt="">{% else %}<span class="care-avatar care-avatar-placeholder" aria-hidden="true">{{ row.subject_name[0]|upper }}</span>{% endif %}
-            <div><p class="eyebrow">{{ row.title }}</p><h3><a href="{{ row.subject_url }}">{{ row.subject_name }}</a></h3>{% if row.location_name %}<p class="care-location">{{ row.location_name }}</p>{% endif %}</div>
-          </div>
-          <p class="due-language">{{ row.due_label }}</p>
-          <p class="last-care-context">{{ row.last_context }}</p>
-          <div class="today-care-footer">
-            {% if row.action_url %}<a class="compact-action" href="{{ row.action_url }}">{{ row.action_label }}</a>{% endif %}
-            <details class="care-provenance"><summary>Why this date?</summary><p>{{ row.explanation }}</p></details>
-          </div>
+          {% if row.photo_attachment_version_id %}<img class="care-avatar" src="/attachments/{{ row.photo_attachment_version_id }}" alt="">{% else %}<span class="care-avatar care-avatar-placeholder fallback-{{ row.photo_fallback_key }}" aria-hidden="true">{{ row.subject_name[0]|upper }}</span>{% endif %}
+          <div class="today-care-copy"><p class="eyebrow">{{ row.title }}</p><h3><a href="{{ row.subject_url }}">{{ row.subject_name }}</a></h3><p class="care-context"><span class="due-language">{{ row.due_label }}</span><span>{{ row.last_context }}</span>{% if row.location_name %}<span>{{ row.location_name }}</span>{% endif %}</p></div>
+          {% if row.action_url %}<a class="compact-action" href="{{ row.action_url }}">{{ row.action_label }}</a>{% endif %}
         </li>{% endfor %}
       </ul>
       {% if rows|length > 6 %}<a class="column-more" href="/calendar?view=agenda">View all {{ rows|length }}</a>{% endif %}

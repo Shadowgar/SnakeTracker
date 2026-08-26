@@ -1179,13 +1179,7 @@ def create_web_router(
                 "csrf_token": csrf_token,
                 "animals": animals,
                 "agenda_counts": {key: len(rows) for key, rows in agenda.items()},
-                "greeting": (
-                    "Good morning"
-                    if now.astimezone(household_zone).hour < 12
-                    else "Good afternoon"
-                    if now.astimezone(household_zone).hour < 18
-                    else "Good evening"
-                ),
+                "today_label": now.astimezone(household_zone).strftime("%A, %B %-d"),
                 "agenda_groups": (
                     ("overdue", "Overdue", agenda["overdue"]),
                     ("due_today", "Due today", agenda["due_today"]),
@@ -3813,12 +3807,16 @@ def _agenda_rows(
         action_url = None
         action_label = None
         photo_attachment_version_id = None
+        photo_fallback_key = "enclosure"
         if item.subject_type == "animal":
             animal = animal_by_id.get(item.subject_id)
             subject_name = animal.name if animal is not None else "Animal"
             subject_url = f"/animals/{item.subject_id}"
             photo_attachment_version_id = (
                 animal.photo_attachment_version_id if animal is not None else None
+            )
+            photo_fallback_key = (
+                getattr(animal, "animal_type", "animal") if animal is not None else "animal"
             )
             if (
                 animal is not None
@@ -3836,6 +3834,7 @@ def _agenda_rows(
                 subject_name = animal.name
                 subject_url = f"/animals/{animal.animal_id}"
                 photo_attachment_version_id = animal.photo_attachment_version_id
+                photo_fallback_key = getattr(animal, "animal_type", "animal")
                 location_name = enclosure.name if enclosure is not None else "Enclosure"
             else:
                 subject_name = enclosure.name if enclosure is not None else "Enclosure"
@@ -3862,6 +3861,7 @@ def _agenda_rows(
                 "action_url": action_url,
                 "action_label": action_label,
                 "photo_attachment_version_id": photo_attachment_version_id,
+                "photo_fallback_key": photo_fallback_key,
                 "due_label": _friendly_due(item.due_at, now=now, timezone=timezone),
                 "last_context": _last_care_context(item, timezone),
                 "explanation": item.explanation,
@@ -3946,7 +3946,7 @@ def _enclosure_collection_rows(
                     f"{CARE_SCHEDULE_CAPABILITIES[next_item.reminder_type][0]} · "
                     f"{_friendly_due(next_item.due_at, now=now, timezone=timezone)}"
                     if next_item is not None
-                    else "No maintenance scheduled"
+                    else "No care due"
                 ),
                 "maintenance_status": next_item.status if next_item is not None else "none",
             }
@@ -4048,6 +4048,21 @@ def _calendar_view(
                     "is_today": day == today,
                     "is_selected": day == selected_date,
                     "scheduled_count": len(scheduled_by_date.get(day, ())),
+                    "overdue_count": sum(
+                        1
+                        for row in scheduled_by_date.get(day, ())
+                        if row["item"].status == "overdue"
+                    ),
+                    "due_count": sum(
+                        1
+                        for row in scheduled_by_date.get(day, ())
+                        if row["item"].status == "due_today"
+                    ),
+                    "upcoming_count": sum(
+                        1
+                        for row in scheduled_by_date.get(day, ())
+                        if row["item"].status == "upcoming"
+                    ),
                     "completed_count": len(completed_by_date.get(day, ())),
                 }
                 for day in week

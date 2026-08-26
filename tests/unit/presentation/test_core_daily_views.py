@@ -94,7 +94,7 @@ def test_enclosure_rows_present_occupancy_and_maintenance_states() -> None:
     assert rows[0]["occupants"] == (keeper,)
     assert rows[0]["maintenance_status"] == "due_today"
     assert rows[1]["occupants"] == ()
-    assert rows[1]["maintenance_label"] == "No maintenance scheduled"
+    assert rows[1]["maintenance_label"] == "No care due"
 
 
 def test_agenda_enclosure_actions_cover_single_shared_and_empty_habitats() -> None:
@@ -142,6 +142,12 @@ def test_calendar_projection_handles_month_navigation_and_invalid_input() -> Non
     assert result["next_month"] == "2026-09"
     assert result["selected_scheduled"] == (scheduled_row,)
     assert result["selected_completed"] == (completed_row,)
+    selected_day = next(
+        day for week in result["weeks"] for day in week if day["date"] == NOW.date()
+    )
+    assert selected_day["due_count"] == 1
+    assert selected_day["overdue_count"] == 0
+    assert selected_day["upcoming_count"] == 0
     assert web._month_date("not-a-month", NOW.date()).day == 1
 
 
