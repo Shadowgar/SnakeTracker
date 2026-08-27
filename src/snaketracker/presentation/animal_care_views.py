@@ -43,6 +43,51 @@ class CareEventView:
     description: str
     technical_facts: tuple[tuple[str, str], ...] = ()
 
+    @property
+    def keeper_title(self) -> str:
+        """Return concise timeline language without changing immutable event titles."""
+        payload = self.event.payload
+        corrected = isinstance(
+            payload,
+            AnimalFeedingCorrectedV1
+            | AnimalWeightCorrectedV1
+            | AnimalLengthCorrectedV1
+            | AnimalShedCorrectedV1
+            | AnimalMoltCorrectedV1
+            | AnimalMoltCorrectedV2,
+        )
+        if isinstance(payload, AnimalFeedingRecordedV1 | AnimalFeedingCorrectedV1):
+            title = (
+                "Fed"
+                if payload.outcome == "accepted"
+                else "Feeding refused"
+                if payload.outcome == "refused"
+                else "Feeding regurgitated"
+            )
+        elif isinstance(payload, AnimalWeightRecordedV1 | AnimalWeightCorrectedV1):
+            title = "Weight"
+        elif isinstance(payload, AnimalLengthRecordedV1 | AnimalLengthCorrectedV1):
+            title = "Length"
+        elif isinstance(payload, AnimalShedRecordedV1 | AnimalShedCorrectedV1):
+            title = "Shed completed" if payload.completed else "Shed update"
+        elif isinstance(payload, AnimalBathRecordedV1):
+            title = "Bath"
+        elif isinstance(
+            payload,
+            AnimalMoltRecordedV1
+            | AnimalMoltRecordedV2
+            | AnimalMoltCorrectedV1
+            | AnimalMoltCorrectedV2,
+        ):
+            title = "Molt"
+        elif isinstance(payload, AnimalPremoltObservedV1 | AnimalPremoltObservedV2):
+            title = "Premolt observed" if payload.observed else "Premolt cleared"
+        elif isinstance(payload, EnclosureMistingRecordedV1):
+            title = "Misting"
+        else:
+            return self.title
+        return f"{title} · corrected" if corrected else title
+
 
 def present_care_event(
     event: DomainEvent,

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{{ animal.name }} care · Care Keeper{% endblock %}
+{% block content %}
+<section class="animal-experience animal-care-page" aria-labelledby="page-title">
+  {% include "animal_profile_header.html" %}
+  <header class="animal-section-heading"><div><p class="eyebrow">Daily care</p><h2>Care</h2><p class="lede">Record an action or set the recurring intervals you use for {{ animal.name }}.</p></div><a href="/calendar?view=agenda">Care agenda</a></header>
+  <section class="quick-care-rail" aria-labelledby="care-actions-title"><div><p class="eyebrow">Quick entry</p><h2 id="care-actions-title">Record care</h2></div><div class="quick-care-actions">{% for action in care_actions %}<a href="{{ action.href }}?return_to=care"><strong>{{ action.title }}</strong><span>{{ action.description }}</span></a>{% endfor %}</div></section>
+  <section aria-labelledby="schedule-title" class="care-schedule-section">
+    <div class="section-heading"><div><p class="eyebrow">Routine</p><h2 id="schedule-title">Care schedules</h2></div></div>
+    <div class="care-schedule-list">
+      {% for schedule in care_schedules %}<article class="schedule-row{% if not schedule.enabled %} schedule-row-disabled{% endif %}">
+        <div><h3>{{ schedule.title }}</h3><p>{% if schedule.enabled %}Every {{ schedule.interval_days }} day{% if schedule.interval_days != 1 %}s{% endif %} after {{ schedule.source_label }}{% else %}Not scheduled{% endif %}</p>{% if schedule.enclosure_name %}<small>Uses care recorded for {{ schedule.enclosure_name }}</small>{% endif %}</div>
+        <div class="schedule-state"><strong>{{ schedule.due_label }}</strong>{% if schedule.due_date_label %}<span>{{ schedule.due_date_label }}</span>{% endif %}</div>
+        {% if schedule.available and 'reminder.manage' in principal.capabilities %}<a class="button-link secondary-link" href="/animals/{{ animal.animal_id }}/care-schedule/{{ schedule.reminder_type }}/edit">{% if schedule.enabled %}Edit schedule{% else %}Set schedule{% endif %}</a>{% elif not schedule.available %}<span class="muted">Assign an enclosure first</span>{% endif %}
+      </article>{% endfor %}
+    </div>
+  </section>
+</section>
+{% endblock %}

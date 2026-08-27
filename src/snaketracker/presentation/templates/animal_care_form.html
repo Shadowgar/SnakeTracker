@@ -2,10 +2,9 @@
 {% block title %}{{ page_title }} · {{ animal.name }} · Care Keeper{% endblock %}
 {% block content %}
 <section class="form-page care-form-page" aria-labelledby="page-title">
-  <header>
-    <p class="eyebrow">{{ animal.name }}</p>
-    <h1 id="page-title">{{ page_title }}</h1>
-    <p class="lede">{{ page_description }}</p>
+  <header class="care-form-header">
+    <a href="/animals/{{ animal.animal_id }}" class="care-form-animal">{% if animal.photo_attachment_version_id %}<img src="/attachments/{{ animal.photo_attachment_version_id }}" alt="">{% else %}<span class="fallback-{{ animal.animal_type }}" aria-hidden="true">{{ animal.name[0]|upper }}</span>{% endif %}<span><small>{{ animal.type_label }}</small><strong>{{ animal.name }}</strong></span></a>
+    <div><p class="eyebrow">Quick care</p><h1 id="page-title">{{ page_title }}</h1><p class="lede">{{ page_description }}</p></div>
   </header>
   {% if errors and errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
   <form class="card form-stack" method="post" action="{{ action }}" novalidate>
@@ -59,10 +58,10 @@
     <label>Duration (seconds, optional)<input name="duration_seconds" type="number" min="1" max="3600" value="{{ values.get('duration_seconds', '') }}"></label>
     {% endif %}
 
-    <label>Notes<textarea name="notes" rows="3" placeholder="Optional">{{ values.get('notes', '') }}</textarea></label>
+    <details class="form-advanced"{% if values.get('notes') %} open{% endif %}><summary>Notes and context</summary><label>Notes<textarea name="notes" rows="3" placeholder="Optional">{{ values.get('notes', '') }}</textarea></label></details>
     <div class="form-actions">
       <a href="{{ return_url }}">Cancel</a>
-      <button type="submit">Save {{ care_kind }}</button>
+      <button type="submit">Record {{ care_kind }}</button>
     </div>
   </form>
 </section>

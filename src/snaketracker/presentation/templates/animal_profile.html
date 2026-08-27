@@ -1,125 +1,47 @@
 {% extends "base.html" %}
 {% block title %}{{ animal.name }} · Care Keeper{% endblock %}
 {% block content %}
-<section class="animal-profile" aria-labelledby="page-title">
-  <header class="profile-header">
-    <div class="profile-identity">
-      {% if animal.photo_attachment_version_id %}
-      <img class="profile-photo" src="/attachments/{{ animal.photo_attachment_version_id }}" alt="Profile photo of {{ animal.name }}">
-      {% else %}
-      <span class="profile-photo profile-photo-placeholder" aria-hidden="true">{{ animal.name[0]|upper }}</span>
-      {% endif %}
-      <div>
-      <p class="page-kicker">{{ animal.type_label }} profile</p>
-      <h1 id="page-title">{{ animal.name }}</h1>
-      <p class="lede">{{ animal.type_label }} · {{ animal.species }}{% if animal.morph %} · {{ animal.morph }}{% endif %} · {{ animal.status|capitalize }}</p>
-      </div>
-    </div>
-    <div class="profile-actions">
-      <a class="button-link secondary-link" href="/animals/{{ animal.animal_id }}/analytics">Trends</a>
-      <a class="button-link secondary-link" href="/animals">All animals</a>
-    </div>
-  </header>
+<section class="animal-experience" aria-labelledby="page-title">
+  {% include "animal_profile_header.html" %}
   {% if errors and errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
-
-  <section aria-labelledby="care-actions-title">
-    <div class="section-heading"><div><p class="eyebrow">Quick entry</p><h2 id="care-actions-title">Care actions</h2></div><a href="/animals/{{ animal.animal_id }}/timeline">View full timeline</a></div>
-    <div class="care-actions-grid">
-      {% for action in care_actions %}
-      <a class="care-action" href="{{ action.href }}"><strong>{{ action.title }}</strong><span>{{ action.description }}</span></a>
-      {% endfor %}
-    </div>
+  <section class="quick-care-rail" aria-labelledby="quick-care-title">
+    <div><p class="eyebrow">Quick care</p><h2 id="quick-care-title">Care actions</h2></div>
+    <div class="quick-care-actions">{% for action in care_actions %}<a href="{{ action.href }}"><strong>{{ action.title }}</strong><span>{{ action.description }}</span></a>{% endfor %}</div>
   </section>
-
-  <section class="overview-grid" aria-label="Animal overview">
-    <div class="card overview-card">
-      <h2>Profile</h2>
+  <div class="animal-overview-layout">
+    <section class="card overview-identity" aria-labelledby="profile-facts-title">
+      <div class="section-heading"><h2 id="profile-facts-title">Profile</h2><a href="/animals/{{ animal.animal_id }}/edit">Edit</a></div>
       <dl class="fact-list">
         <div><dt>Species</dt><dd>{{ animal.species }}</dd></div>
-        <div><dt>Animal type</dt><dd>{{ animal.type_label }}</dd></div>
-        <div><dt>Morph</dt><dd>{{ animal.morph or 'Not recorded' }}</dd></div>
         <div><dt>Sex</dt><dd>{{ animal.sex|capitalize if animal.sex else 'Not recorded' }}</dd></div>
-        <div><dt>Status</dt><dd>{{ animal.status|capitalize }}</dd></div>
-        {% if premolt_status %}<div><dt>Premolt state</dt><dd>{{ premolt_status.label }}{% if premolt_status.observation %} · {{ premolt_status.observation }}{% endif %}</dd></div>{% endif %}
+        <div><dt>Birth / hatch</dt><dd>{{ animal.birth_hatch_date or 'Not recorded' }}</dd></div>
+        <div><dt>Acquired</dt><dd>{{ animal.acquisition_date or 'Not recorded' }}</dd></div>
         <div><dt>Enclosure</dt><dd>{% if current_enclosure %}<a href="/enclosures/{{ current_enclosure.enclosure_id }}">{{ current_enclosure.name }}</a>{% else %}Not assigned{% endif %}</dd></div>
+        {% if premolt_status %}<div><dt>Premolt state</dt><dd>{{ premolt_status.label }}{% if premolt_status.observation %} · {{ premolt_status.observation }}{% endif %}</dd></div>{% endif %}
       </dl>
       {% if animal.notes %}<p class="keeper-note">{{ animal.notes }}</p>{% endif %}
-      <a href="/animals/{{ animal.animal_id }}/edit">Edit profile details</a>
-    </div>
-    <div class="card overview-card">
-      <div class="section-heading"><h2>Recent care</h2><a href="/animals/{{ animal.animal_id }}/timeline">All history</a></div>
-      {% if recent_events %}
-      <ol class="recent-care-list">
-        {% for item in recent_events %}
-        <li><div><strong>{{ item.title }}</strong><p>{{ item.description }}</p></div><time datetime="{{ item.event.occurred_at.isoformat() }}">{{ item.event.occurred_at.astimezone(household_zone).strftime('%b %d') }}</time></li>
-        {% endfor %}
-      </ol>
-      {% else %}<p class="muted">No care history yet.</p>{% endif %}
-      <div class="history-links"><a href="/animals/{{ animal.animal_id }}/feedings">Feeding history</a><a href="/animals/{{ animal.animal_id }}/measurements">Measurements</a></div>
-    </div>
-  </section>
-
-  <details id="care-schedule" class="card profile-settings" {% if errors and errors.form %}open{% endif %}>
-    <summary><span class="eyebrow">Routine care</span> Care schedule</summary>
-    <div class="section-heading schedule-heading">
-      <p class="muted">Set the intervals you use for this animal. Care Keeper calculates what is due from the latest accepted care record.</p>
-      <a href="/reminders">View care agenda</a>
-    </div>
-    <div class="schedule-grid">
-      {% for schedule in care_schedules %}
-      <article class="schedule-card">
-        <div>
-          <h3>{{ schedule.title }}</h3>
-          {% if schedule.enabled %}<p>Every {{ schedule.interval_days }} day{% if schedule.interval_days != 1 %}s{% endif %} after {{ schedule.source_label }}</p>{% else %}<p>Not enabled</p>{% endif %}
-          {% if schedule.enclosure_name %}<p class="muted">Uses care recorded for {{ schedule.enclosure_name }}.</p>{% endif %}
-        </div>
-        {% if schedule.available and 'reminder.manage' in principal.capabilities %}
-        <form class="schedule-form" method="post" action="/animals/{{ animal.animal_id }}/care-schedule/{{ schedule.reminder_type }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <input type="hidden" name="idempotency_key" value="{{ command_id }}-care-{{ schedule.reminder_type }}">
-          <input type="hidden" name="expected_stream_version" value="{{ schedule.expected_stream_version }}">
-          <label class="checkbox-label"><input name="enabled" type="checkbox" value="true" {% if schedule.enabled %}checked{% endif %}> Enabled</label>
-          <label>{{ schedule.interval_label }}<span class="input-with-unit"><input name="interval_days" type="number" min="1" max="3650" value="{{ schedule.interval_days }}" required><span>days</span></span></label>
-          <label>Custom due date (optional)<input name="override_due_at" type="datetime-local" value="{{ schedule.override_due_at }}"><small>{{ principal.household_timezone }}</small></label>
-          <button type="submit">Save {{ schedule.title|lower }}</button>
-        </form>
-        {% elif not schedule.available %}
-        <p class="muted">Assign an enclosure before configuring this schedule.</p>
-        {% endif %}
-      </article>
-      {% endfor %}
-    </div>
-  </details>
-
-  <details class="card profile-settings" {% if errors and errors.form %}open{% endif %}>
-    <summary>Profile photo, enclosure, and status</summary>
-    <div class="settings-grid">
-      <section aria-labelledby="photo-title">
-        <h2 id="photo-title">Profile photo</h2>
-        <form class="form-stack" method="post" action="/animals/{{ animal.animal_id }}/photo" enctype="multipart/form-data">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}-photo">
-          <label>JPEG or PNG image<input name="photo" type="file" accept="image/jpeg,image/png" required></label><button type="submit">Upload profile photo</button>
-        </form>
-      </section>
-      <section aria-labelledby="enclosure-title">
-        <h2 id="enclosure-title">Enclosure</h2>
-        <form class="form-stack" method="post" action="/animals/{{ animal.animal_id }}/enclosure">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}-enclosure">
-          <label>Enclosure<select name="enclosure_id" required><option value="">Choose an enclosure</option>{% for enclosure in enclosures %}<option value="{{ enclosure.enclosure_id }}" {% if enclosure.enclosure_id == animal.current_enclosure_id %}selected{% endif %}>{{ enclosure.name }} · {{ enclosure.enclosure_type }}</option>{% endfor %}</select></label>
-          <label>When ({{ principal.household_timezone }})<input name="occurred_at" type="datetime-local" required></label>
-          <label>Notes<textarea name="notes" rows="2" placeholder="Optional"></textarea></label>
-          <div class="form-actions"><a href="/enclosures/new">Add enclosure</a><button type="submit">Assign</button></div>
-        </form>
-      </section>
-      <section aria-labelledby="status-title">
-        <h2 id="status-title">Status</h2>
-        <form class="form-stack" method="post" action="/animals/{{ animal.animal_id }}/status">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}-status">
-          <label>Status<select name="status">{% for status in animal_statuses %}<option value="{{ status }}" {% if status == animal.status %}selected{% endif %}>{{ status|capitalize }}</option>{% endfor %}</select></label>
-          <label>Notes<textarea name="notes" rows="2" placeholder="Optional"></textarea></label><button type="submit">Update status</button>
-        </form>
-      </section>
-    </div>
-  </details>
+    </section>
+    <section class="card overview-care" aria-labelledby="current-care-title">
+      <div class="section-heading"><h2 id="current-care-title">Current care</h2><a href="/animals/{{ animal.animal_id }}/analytics">Trends</a></div>
+      <dl class="care-fact-grid">
+        {% for fact in overview_care_facts %}<div><dt>{{ fact.label }}</dt>{% if fact.event %}<dd><strong>{{ fact.event.description }}</strong><span>{{ fact.event.event.occurred_at.astimezone(household_zone).strftime('%b %-d, %Y') }}</span></dd>{% else %}<dd><span>Not recorded yet</span></dd>{% endif %}</div>{% endfor %}
+      </dl>
+    </section>
+    <section class="card overview-recent" aria-labelledby="recent-care-title">
+      <div class="section-heading"><h2 id="recent-care-title">Recent care</h2><a href="/animals/{{ animal.animal_id }}/timeline">View all</a></div>
+      {% if recent_events %}<ol class="recent-care-list">{% for item in recent_events %}<li><div><strong>{{ item.keeper_title }}</strong><p>{{ item.description }}</p></div><time datetime="{{ item.event.occurred_at.isoformat() }}">{{ item.event.occurred_at.astimezone(household_zone).strftime('%b %-d') }}</time></li>{% endfor %}</ol>{% else %}<p class="muted">No care history yet.</p>{% endif %}
+    </section>
+    <section class="card overview-manage" aria-labelledby="manage-profile-title">
+      <h2 id="manage-profile-title">Manage profile</h2>
+      <div class="manage-links">
+        <a href="/animals/{{ animal.animal_id }}/photo"><strong>Profile photo</strong><span>Upload or replace</span></a>
+        <a href="/animals/{{ animal.animal_id }}/enclosure"><strong>Enclosure</strong><span>Move with a dated record · When ({{ principal.household_timezone }})</span></a>
+        <a href="/animals/{{ animal.animal_id }}/status"><strong>Status</strong><span>Update current care status</span></a>
+        <a id="care-schedule" href="/animals/{{ animal.animal_id }}/care"><strong>Care schedules</strong><span>Feeding interval · {% for schedule in care_schedules %}{{ schedule.title }}{% if not loop.last %} · {% endif %}{% endfor %}</span></a>
+        <a href="/animals/{{ animal.animal_id }}/edit"><strong>Profile details</strong><span>Identity and background</span></a>
+      </div>
+      {% for schedule in care_schedules %}{% if schedule.enabled %}<p class="enabled-schedule">{{ schedule.title }} · Every {{ schedule.interval_days }} day{% if schedule.interval_days != 1 %}s{% endif %} after {{ schedule.source_label }}</p>{% endif %}{% endfor %}
+    </section>
+  </div>
 </section>
 {% endblock %}

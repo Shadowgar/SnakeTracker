@@ -2,7 +2,7 @@
 {% block title %}Animals · Care Keeper{% endblock %}
 {% block content %}
 <section class="animal-collection" aria-labelledby="page-title">
-  <header class="section-heading collection-heading"><div><p class="page-kicker">Collection</p><h1 id="page-title">Animals</h1><p class="lede">Photos, locations, and the next care that matters.</p></div><a class="button-link collection-add" href="/animals/new"><span aria-hidden="true">+</span> Add</a></header>
+  <header class="section-heading collection-heading"><div><p class="page-kicker">Collection</p><h1 id="page-title">Animals</h1><p class="lede">Photos, locations, and the next care that matters.</p></div><a class="button-link collection-add" href="/animals/new"><span aria-hidden="true">+</span> Add animal</a></header>
   <div class="filter-rail"><nav class="filter-chips" aria-label="Filter animals">{% for key, label, count in animal_filters %}<a href="/animals?kind={{ key }}"{% if selected_kind == key %} aria-current="page"{% endif %}>{{ label }} <span>{{ count }}</span></a>{% endfor %}</nav></div>
   {% if animal_rows %}<ul class="animal-list" aria-label="Animals">{% for row in animal_rows %}{% set animal = row.animal %}<li>
     <a class="animal-card animal-collection-card" href="/animals/{{ animal.animal_id }}">

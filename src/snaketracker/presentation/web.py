@@ -236,17 +236,19 @@ class AnalyticsInsightView:
 def _analytics_insights(analytics: AnimalAnalytics) -> tuple[AnalyticsInsightView, ...]:
     estimates = {item.kind: item for item in analytics.suggestions}
     accepted_feedings = sum(1 for item in analytics.feedings if item.outcome == "accepted")
-    insights = [
-        AnalyticsInsightView(
-            kind="feeding",
-            label="Feeding",
-            progress_label="accepted feedings",
-            observed_count=accepted_feedings,
-            required_count=6,
-            estimate=estimates.get("feeding"),
-        )
-    ]
     care_actions = frozenset(analytics.animal.care_action_keys)
+    insights = []
+    if "feeding" in care_actions:
+        insights.append(
+            AnalyticsInsightView(
+                kind="feeding",
+                label="Feeding",
+                progress_label="accepted feedings",
+                observed_count=accepted_feedings,
+                required_count=6,
+                estimate=estimates.get("feeding"),
+            )
+        )
     for kind, label, plural in (
         ("shed", "Shed", "completed sheds"),
         ("molt", "Molt", "completed molts"),
@@ -327,11 +329,16 @@ def _form_values(form: Any) -> dict[str, str]:
 
 
 def _care_return_context(value: object) -> str:
-    return "today" if str(value) == "today" else "animal"
+    return str(value) if str(value) in {"today", "care"} else "animal"
 
 
 def _care_return_location(animal_id: str, value: object) -> str:
-    return "/home" if _care_return_context(value) == "today" else f"/animals/{animal_id}"
+    context = _care_return_context(value)
+    if context == "today":
+        return "/home"
+    if context == "care":
+        return f"/animals/{animal_id}/care"
+    return f"/animals/{animal_id}"
 
 
 def _timeline_action_ids(events: tuple[DomainEvent, ...]) -> dict[str, frozenset[UUID]]:
@@ -717,6 +724,146 @@ def create_web_router(
                 ),
             )
         return principal, form, None
+
+    def animal_experience_context(principal: Principal, animal: Any) -> dict[str, Any]:
+        """Compose the shared, capability-driven animal experience view model."""
+        now = datetime.now(UTC)
+        enclosures = enclosure_service.list_profiles(principal.household_id)
+        animals = animal_service.list_profiles(principal.household_id)
+        current_enclosure = next(
+            (
+                enclosure
+                for enclosure in enclosures
+                if enclosure.enclosure_id == animal.current_enclosure_id
+            ),
+            None,
+        )
+        enclosure_names = {enclosure.enclosure_id: enclosure.name for enclosure in enclosures}
+        recent_events = _recent_care_views(
+            animal_service.effective_history(principal.household_id, animal.animal_id),
+            enclosure_names=enclosure_names,
+        )
+        related_subjects = {("animal", animal.animal_id)}
+        if current_enclosure is not None:
+            related_subjects.add(("enclosure", current_enclosure.enclosure_id))
+        related_facts = tuple(
+            fact
+            for fact in reminder_projection.facts_for(principal.household_id)
+            if (fact.subject_type, fact.subject_id) in related_subjects
+            and fact.reminder_type in animal.reminder_kinds
+        )
+        agenda = _agenda_rows(
+            tuple(sorted(related_facts, key=lambda fact: fact.due_at)),
+            animals=animals,
+            enclosures=enclosures,
+            timezone=ZoneInfo(principal.household_timezone),
+            now=now,
+            return_context="animal",
+        )
+        next_care = next(
+            (row for status in ("overdue", "due_today", "upcoming") for row in agenda[status]),
+            None,
+        )
+
+        def latest(event_types: frozenset[str]) -> CareEventView | None:
+            return next(
+                (item for item in recent_events if item.event.event_type in event_types), None
+            )
+
+        overview_care_facts = tuple(
+            item
+            for item in (
+                {
+                    "label": "Latest weight",
+                    "event": latest(
+                        frozenset({"animal.weight_recorded", "animal.weight_corrected"})
+                    ),
+                },
+                {
+                    "label": "Latest length",
+                    "event": latest(
+                        frozenset({"animal.length_recorded", "animal.length_corrected"})
+                    ),
+                },
+                {
+                    "label": "Latest feeding",
+                    "event": latest(
+                        frozenset({"animal.feeding_recorded", "animal.feeding_corrected"})
+                    ),
+                }
+                if "feeding" in animal.care_action_keys
+                else None,
+                {
+                    "label": "Latest shed",
+                    "event": latest(frozenset({"animal.shed_recorded", "animal.shed_corrected"})),
+                }
+                if "shed" in animal.care_action_keys
+                else None,
+                {
+                    "label": "Latest molt",
+                    "event": latest(frozenset({"animal.molt_recorded", "animal.molt_corrected"})),
+                }
+                if "molt" in animal.care_action_keys
+                else None,
+            )
+            if item is not None
+        )
+        return {
+            "animal": animal,
+            "enclosures": enclosures,
+            "current_enclosure": current_enclosure,
+            "recent_events": recent_events[:6],
+            "care_actions": _care_action_rows(animal),
+            "premolt_status": _premolt_status(animal, animal_service),
+            "animal_statuses": tuple(sorted(ANIMAL_STATUSES)),
+            "care_schedules": _care_schedule_rows(
+                principal.household_id,
+                animal,
+                current_enclosure,
+                reminder_projection,
+                principal.household_timezone,
+                related_facts,
+                now,
+            ),
+            "next_care": next_care,
+            "overview_care_facts": overview_care_facts,
+        }
+
+    def animal_management_response(
+        request: Request,
+        principal: Principal,
+        animal_id: str,
+        manage_kind: str,
+        *,
+        status_code: int = 200,
+        error: str | None = None,
+    ) -> Response:
+        try:
+            animal = animal_service.profile_for(principal.household_id, UUID(animal_id))
+        except ValueError:
+            animal = None
+        if animal is None:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=404,
+                context={
+                    "title": "Animal not found",
+                    "message": "Return to your animal list and try again.",
+                },
+            )
+        return protected_page(
+            request,
+            "animal_manage.html",
+            principal,
+            status_code=status_code,
+            context={
+                **animal_experience_context(principal, animal),
+                "manage_kind": manage_kind,
+                "errors": {"form": error} if error else {},
+            },
+        )
 
     @router.get("/")
     async def index(request: Request) -> RedirectResponse:
@@ -1463,6 +1610,8 @@ def create_web_router(
             context={
                 "analytics": analytics,
                 "insights": _analytics_insights(analytics),
+                **animal_experience_context(principal, analytics.animal),
+                "active_section": "trends",
             },
         )
 
@@ -2530,39 +2679,91 @@ def create_web_router(
                 },
                 status_code=404,
             )
-        enclosures = enclosure_service.list_profiles(principal.household_id)
-        current_enclosure = next(
-            (
-                enclosure
-                for enclosure in enclosures
-                if enclosure.enclosure_id == profile.current_enclosure_id
-            ),
-            None,
-        )
-        recent_events = _recent_care_views(
-            animal_service.effective_history(principal.household_id, profile.animal_id),
-            enclosure_names={enclosure.enclosure_id: enclosure.name for enclosure in enclosures},
-        )
         return protected_page(
             request,
             "animal_profile.html",
             principal,
             context={
-                "animal": profile,
-                "enclosures": enclosures,
-                "current_enclosure": current_enclosure,
-                "recent_events": recent_events[:5],
-                "care_actions": _care_action_rows(profile),
-                "premolt_status": _premolt_status(profile, animal_service),
-                "animal_statuses": tuple(sorted(ANIMAL_STATUSES)),
-                "care_schedules": _care_schedule_rows(
-                    principal.household_id,
-                    profile,
-                    current_enclosure,
-                    reminder_projection,
-                    principal.household_timezone,
-                ),
+                **animal_experience_context(principal, profile),
+                "active_section": "overview",
             },
+        )
+
+    @router.get("/animals/{animal_id}/care", response_class=HTMLResponse)
+    async def animal_care(request: Request, animal_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            profile = animal_service.profile_for(principal.household_id, UUID(animal_id))
+        except ValueError:
+            profile = None
+        if profile is None:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=404,
+                context={
+                    "title": "Animal not found",
+                    "message": "Return to your animal list and try again.",
+                },
+            )
+        return protected_page(
+            request,
+            "animal_care.html",
+            principal,
+            context={
+                **animal_experience_context(principal, profile),
+                "active_section": "care",
+            },
+        )
+
+    @router.get(
+        "/animals/{animal_id}/care-schedule/{reminder_type}/edit",
+        response_class=HTMLResponse,
+    )
+    async def animal_care_schedule_edit(
+        request: Request, animal_id: str, reminder_type: str
+    ) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if "reminder.manage" not in principal.capabilities:
+            return _access_denied(request, "Care schedule access denied")
+        try:
+            animal = animal_service.profile_for(principal.household_id, UUID(animal_id))
+        except ValueError:
+            animal = None
+        if animal is None:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=404,
+                context={"title": "Animal not found", "message": "Return to Animals."},
+            )
+        context = animal_experience_context(principal, animal)
+        schedule = next(
+            (row for row in context["care_schedules"] if row["reminder_type"] == reminder_type),
+            None,
+        )
+        if schedule is None:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=404,
+                context={
+                    "title": "Schedule not available",
+                    "message": "This care schedule is not supported for this profile.",
+                },
+            )
+        return protected_page(
+            request,
+            "animal_schedule_edit.html",
+            principal,
+            context={**context, "schedule": schedule, "active_section": "care", "errors": {}},
         )
 
     @router.post(
@@ -2634,16 +2835,49 @@ def create_web_router(
                 )
             )
         except (ReminderValidationError, FormValidationError, ValueError) as error:
-            return _animal_form_error(
-                request,
-                principal,
-                animal_id,
-                str(error),
-                animal_service,
-                enclosure_service,
-                reminder_projection,
+            try:
+                animal = animal_service.profile_for(principal.household_id, UUID(animal_id))
+            except ValueError:
+                animal = None
+            if animal is None:
+                return protected_page(
+                    request,
+                    "error.html",
+                    principal,
+                    status_code=404,
+                    context={"title": "Animal not found", "message": "Return to Animals."},
+                )
+            context = animal_experience_context(principal, animal)
+            schedule = next(
+                (row for row in context["care_schedules"] if row["reminder_type"] == reminder_type),
+                None,
             )
-        return RedirectResponse(f"/animals/{animal_id}#care-schedule", status_code=303)
+            if schedule is None:
+                return protected_page(
+                    request,
+                    "error.html",
+                    principal,
+                    status_code=422,
+                    context={"title": "Schedule not available", "message": str(error)},
+                )
+            return protected_page(
+                request,
+                "animal_schedule_edit.html",
+                principal,
+                status_code=422,
+                context={
+                    **context,
+                    "schedule": schedule,
+                    "active_section": "care",
+                    "errors": {"form": str(error)},
+                },
+            )
+        destination = (
+            f"/animals/{animal_id}/care"
+            if str(form.get("return_to", "")) == "care"
+            else f"/animals/{animal_id}#care-schedule"
+        )
+        return RedirectResponse(destination, status_code=303)
 
     def care_form_response(
         request: Request,
@@ -2703,6 +2937,27 @@ def create_web_router(
     async def animal_misting_new(request: Request, animal_id: str) -> Response:
         return care_form_response(request, animal_id, "misting")
 
+    @router.get("/animals/{animal_id}/photo", response_class=HTMLResponse)
+    async def animal_photo(request: Request, animal_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        return animal_management_response(request, principal, animal_id, "photo")
+
+    @router.get("/animals/{animal_id}/enclosure", response_class=HTMLResponse)
+    async def animal_enclosure(request: Request, animal_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        return animal_management_response(request, principal, animal_id, "enclosure")
+
+    @router.get("/animals/{animal_id}/status", response_class=HTMLResponse)
+    async def animal_status(request: Request, animal_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        return animal_management_response(request, principal, animal_id, "status")
+
     @router.post("/animals/{animal_id}/photo", response_class=HTMLResponse)
     async def animal_photo_upload(request: Request, animal_id: str) -> Response:
         principal, form, rejection = await protected_form(
@@ -2750,14 +3005,8 @@ def create_web_router(
                 )
             )
         except (AttachmentValidationError, FormValidationError, ValueError) as error:
-            return _animal_form_error(
-                request,
-                principal,
-                animal_id,
-                str(error),
-                animal_service,
-                enclosure_service,
-                reminder_projection,
+            return animal_management_response(
+                request, principal, animal_id, "photo", status_code=422, error=str(error)
             )
         finally:
             if isinstance(upload, UploadFile):
@@ -2873,14 +3122,8 @@ def create_web_router(
                 )
             )
         except (AnimalValidationError, FormValidationError, ValueError) as error:
-            return _animal_form_error(
-                request,
-                principal,
-                animal_id,
-                str(error),
-                animal_service,
-                enclosure_service,
-                reminder_projection,
+            return animal_management_response(
+                request, principal, animal_id, "status", status_code=422, error=str(error)
             )
         return RedirectResponse(
             _care_return_location(animal_id, form.get("return_to", "animal")), status_code=303
@@ -2915,14 +3158,8 @@ def create_web_router(
                 )
             )
         except (AnimalValidationError, FormValidationError, ValueError) as error:
-            return _animal_form_error(
-                request,
-                principal,
-                animal_id,
-                str(error),
-                animal_service,
-                enclosure_service,
-                reminder_projection,
+            return animal_management_response(
+                request, principal, animal_id, "enclosure", status_code=422, error=str(error)
             )
         return RedirectResponse(
             _care_return_location(animal_id, form.get("return_to", "animal")), status_code=303
@@ -3446,7 +3683,8 @@ def create_web_router(
             "animal_timeline.html",
             principal,
             context={
-                "animal": profile,
+                **animal_experience_context(principal, profile),
+                "active_section": "history",
                 **_timeline_context(
                     animal_service,
                     enclosure_service,
@@ -3618,6 +3856,8 @@ def _care_schedule_rows(
     current_enclosure: Any,
     projection: ReminderProjection,
     timezone_name: str,
+    facts: tuple[Any, ...] = (),
+    now: datetime | None = None,
 ) -> tuple[dict[str, Any], ...]:
     timezone = ZoneInfo(timezone_name)
     rows: list[dict[str, Any]] = []
@@ -3641,6 +3881,16 @@ def _care_schedule_rows(
             if subject_id is not None
             else None
         )
+        fact = next(
+            (
+                item
+                for item in facts
+                if item.subject_type == subject_type
+                and item.subject_id == subject_id
+                and item.reminder_type == reminder_type
+            ),
+            None,
+        )
         rows.append(
             {
                 "reminder_type": reminder_type,
@@ -3660,6 +3910,20 @@ def _care_schedule_rows(
                     rule.override_due_at.astimezone(timezone).strftime("%Y-%m-%dT%H:%M")
                     if rule is not None and rule.override_due_at is not None
                     else ""
+                ),
+                "due_label": (
+                    _friendly_due(
+                        fact.due_at,
+                        now=now or datetime.now(UTC),
+                        timezone=timezone,
+                    )
+                    if fact is not None
+                    else "Next care follows recorded history"
+                    if rule is not None and rule.enabled
+                    else "Not scheduled"
+                ),
+                "due_date_label": (
+                    fact.due_at.astimezone(timezone).strftime("%b %-d") if fact is not None else ""
                 ),
             }
         )
@@ -3778,7 +4042,12 @@ def _friendly_due(due_at: datetime, *, now: datetime, timezone: ZoneInfo) -> str
 def _last_care_context(item: Any, timezone: ZoneInfo) -> str:
     if item.source_occurred_at is None:
         return "No qualifying care recorded yet"
-    label = item.source_label.replace("accepted feeding", "feeding")
+    source_label = getattr(
+        item,
+        "source_label",
+        CARE_SCHEDULE_CAPABILITIES.get(item.reminder_type, ("", "", item.reminder_type))[2],
+    )
+    label = source_label.replace("accepted feeding", "feeding").replace("last ", "")
     occurred = item.source_occurred_at.astimezone(timezone)
     return f"Last {label} {occurred.strftime('%b %-d')}"
 
@@ -3790,6 +4059,7 @@ def _agenda_rows(
     enclosures: tuple[Any, ...],
     timezone: ZoneInfo,
     now: datetime,
+    return_context: str = "today",
 ) -> dict[str, tuple[dict[str, Any], ...]]:
     animal_by_id = {animal.animal_id: animal for animal in animals}
     enclosure_by_id = {enclosure.enclosure_id: enclosure for enclosure in enclosures}
@@ -3824,7 +4094,7 @@ def _agenda_rows(
                 and item.reminder_type in CARE_FORM_DETAILS
             ):
                 title, _description, route = CARE_FORM_DETAILS[item.reminder_type]
-                action_url = f"{subject_url}/{route}/new?return_to=today"
+                action_url = f"{subject_url}/{route}/new?return_to={return_context}"
                 action_label = CARE_ACTION_LABELS.get(item.reminder_type, title)
         else:
             enclosure = enclosure_by_id.get(item.subject_id)
@@ -3842,7 +4112,9 @@ def _agenda_rows(
             if item.reminder_type == "misting" and len(enclosure_occupants) == 1:
                 animal = enclosure_occupants[0]
                 if "misting" in animal.care_action_keys:
-                    action_url = f"/animals/{animal.animal_id}/mistings/new?return_to=today"
+                    action_url = (
+                        f"/animals/{animal.animal_id}/mistings/new?return_to={return_context}"
+                    )
                     action_label = CARE_ACTION_LABELS["misting"]
             elif item.reminder_type in {"cleaning", "water_change"}:
                 anchor = "cleaning" if item.reminder_type == "cleaning" else "water-change"

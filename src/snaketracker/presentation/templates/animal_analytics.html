@@ -1,29 +1,28 @@
 {% extends "base.html" %}
-{% block title %}{{ analytics.animal.name }} analytics · Care Keeper{% endblock %}
+{% block title %}{{ animal.name }} trends · Care Keeper{% endblock %}
 {% block content %}
-<section class="dashboard" aria-labelledby="page-title">
-  <header><p class="eyebrow">Care patterns</p><h1 id="page-title">{{ analytics.animal.name }} trends</h1><p class="lede">These estimates come from effective care history. Owner reminder schedules remain authoritative.</p></header>
-  {% for insight in insights %}
-    {% if insight.estimate %}
-    {% set suggestion = insight.estimate %}
-    <article class="card insight-card">
-      <p class="eyebrow">{{ insight.label }} estimate</p>
-      <h2>{{ suggestion.window_start.strftime('%b %d') }} – {{ suggestion.window_end.strftime('%b %d, %Y') }}</h2>
-      <p>This is an estimate, not a reminder schedule.</p>
-      {% if suggestion.window_has_passed %}<p class="passed-window"><strong>Estimate window has passed.</strong> Record new care when it happens; the next effective-history rebuild will update this estimate.</p>{% endif %}
-      <details class="insight-reason"><summary>Why?</summary><p>{{ suggestion.rationale }}</p><dl class="insight-facts"><div><dt>Effective intervals</dt><dd>{{ suggestion.sample_count }}</dd></div><div><dt>Included range</dt><dd>{{ suggestion.included_interval_range_days[0] }}–{{ suggestion.included_interval_range_days[1] }} days</dd></div><div><dt>Median</dt><dd>{{ suggestion.median_days }} days</dd></div><div><dt>MAD</dt><dd>{{ suggestion.mad_days }} days</dd></div><div><dt>Excluded</dt><dd>{{ suggestion.excluded_interval_count }}</dd></div><div><dt>History through</dt><dd>{{ suggestion.source_cutoff }}</dd></div></dl></details>
+<section class="animal-experience animal-trends" aria-labelledby="page-title">
+  {% include "animal_profile_header.html" %}
+  <header class="animal-section-heading"><div><p class="eyebrow">Care patterns</p><h2>Trends</h2><p class="lede">Deterministic summaries from effective care history. Your saved care schedules remain authoritative.</p></div></header>
+  {% if insights %}<div class="insight-grid">{% for insight in insights %}
+    {% if insight.estimate %}{% set suggestion = insight.estimate %}
+    <article class="card insight-card sufficient-insight">
+      <p class="eyebrow">{{ insight.label }} estimate</p><h2>{{ suggestion.window_start.strftime('%b %-d') }} – {{ suggestion.window_end.strftime('%b %-d') }}</h2><p class="muted">This is an estimate, not a reminder schedule. Owner reminder schedules remain authoritative.</p>
+      {% if suggestion.window_has_passed %}<p class="passed-window"><strong>Estimate window has passed.</strong> Recording new care will update it.</p>{% endif %}
+      <details class="insight-reason"><summary>Why?</summary><p>{{ suggestion.rationale }}</p><dl class="insight-facts"><div><dt>Intervals used</dt><dd>{{ suggestion.sample_count }} effective intervals</dd></div><div><dt>Included range</dt><dd>{{ suggestion.included_interval_range_days[0] }}–{{ suggestion.included_interval_range_days[1] }} days</dd></div><div><dt>Median</dt><dd>{{ suggestion.median_days }} days</dd></div><div><dt>Outliers excluded</dt><dd>{{ suggestion.excluded_interval_count }}</dd></div></dl></details>
     </article>
     {% else %}
-    <article class="card insight-card">
-      <p class="eyebrow">{{ insight.label }} estimate unavailable</p>
-      <h2>Not enough history yet</h2>
-      <p><strong>{{ insight.observed_count }} of {{ insight.required_count }} {{ insight.progress_label }} recorded.</strong></p>
-      <p>Keep recording care normally. An estimate appears when the minimum effective history is available.</p>
+    <article class="card insight-card insufficient-insight">
+      <p class="eyebrow">{{ insight.label }} estimate unavailable</p><h2>Not enough history yet</h2><p><strong>{{ insight.observed_count }} of {{ insight.required_count }} {{ insight.progress_label }} recorded</strong></p>
+      <progress class="trend-progress" aria-label="{{ insight.label }} history progress" max="{{ insight.required_count }}" value="{{ insight.observed_count }}">{{ insight.observed_count }} of {{ insight.required_count }}</progress>
+      <p class="muted">Keep recording care normally. Care Keeper will show an estimate when enough effective history exists.</p>
     </article>
     {% endif %}
-  {% endfor %}
-  <section class="card"><h2>Measurements</h2><canvas data-chart-endpoint="/api/v1/animals/{{ analytics.animal.animal_id }}/analytics/measurements" aria-hidden="true"></canvas><div class="table-scroll" tabindex="0"><table><thead><tr><th scope="col">Date</th><th scope="col">Kind</th><th scope="col">Value</th></tr></thead><tbody>{% for point in analytics.measurements %}<tr><td>{{ point.occurred_at.astimezone(household_zone).strftime('%b %d, %Y') }}</td><td>{{ point.kind|title }}</td><td>{{ point.value }} {{ point.unit }}</td></tr>{% else %}<tr><td colspan="3">No measurements recorded yet.</td></tr>{% endfor %}</tbody></table></div></section>
-  <section class="card"><h2>Feedings</h2><p>Accepted intervals: {% if analytics.accepted_feeding_intervals_days %}{{ analytics.accepted_feeding_intervals_days|join(', ') }} days{% else %}Not enough accepted feedings yet.{% endif %}</p><div class="table-scroll" tabindex="0"><table><thead><tr><th scope="col">Date</th><th scope="col">Prey</th><th scope="col">Outcome</th></tr></thead><tbody>{% for point in analytics.feedings %}<tr><td>{{ point.occurred_at.astimezone(household_zone).strftime('%b %d, %Y') }}</td><td>{{ point.quantity }} × {{ point.prey_type }}</td><td>{{ point.outcome|title }}</td></tr>{% else %}<tr><td colspan="3">No feedings recorded yet.</td></tr>{% endfor %}</tbody></table></div></section>
-  {% if analytics.husbandry %}<section class="card"><h2>Husbandry intervals</h2><ul>{% for point in analytics.husbandry %}<li>{{ point.kind|title }} · {{ point.result }} · {{ point.occurred_at.astimezone(household_zone).strftime('%b %d, %Y') }}</li>{% endfor %}</ul></section>{% endif %}
+  {% endfor %}</div>{% endif %}
+  <section class="card chart-card" aria-labelledby="measurement-trend-title">
+    <div class="section-heading"><div><p class="eyebrow">Growth record</p><h2 id="measurement-trend-title">Measurements</h2></div><span class="muted">{{ analytics.measurements|length }} records</span></div>
+    {% if analytics.measurements %}<p class="chart-summary">The table below is the accessible text equivalent of the measurement chart and contains every plotted value.</p><div class="chart-frame"><canvas data-chart-endpoint="/api/v1/animals/{{ animal.animal_id }}/analytics/measurements" aria-hidden="true"></canvas></div><div class="table-scroll" tabindex="0"><table><caption class="visually-hidden">Measurement trend values for {{ animal.name }}</caption><thead><tr><th scope="col">Date</th><th scope="col">Kind</th><th scope="col">Value</th></tr></thead><tbody>{% for point in analytics.measurements %}<tr><td>{{ point.occurred_at.astimezone(household_zone).strftime('%b %-d, %Y') }}</td><td>{{ point.kind|title }}</td><td>{{ point.value }} {{ point.unit }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty-state calm-state"><h3>No measurement trend yet</h3><p>No measurements recorded yet. Record a weight or length to begin a clear growth history.</p></div>{% endif %}
+  </section>
+  {% if 'feeding' in animal.care_action_keys %}<section class="card compact-trend" aria-labelledby="feeding-pattern-title"><div class="section-heading"><h2 id="feeding-pattern-title">Feeding history</h2><a href="/animals/{{ animal.animal_id }}/feedings">Full history</a></div><p>{% if analytics.accepted_feeding_intervals_days %}Recent accepted intervals: <strong>{{ analytics.accepted_feeding_intervals_days|join(', ') }} days</strong>{% else %}No feedings recorded yet. Not enough accepted feedings to compare intervals.{% endif %}</p></section>{% endif %}
 </section>
 {% endblock %}

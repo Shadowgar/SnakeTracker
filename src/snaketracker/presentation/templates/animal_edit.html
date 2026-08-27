@@ -10,6 +10,7 @@
   <form class="card form-stack" method="post" action="/animals/{{ animal.animal_id }}/edit" novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="idempotency_key" value="{{ command_id }}">
+    <input type="hidden" name="return_to" value="animal">
     {% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
     <label>Name<input name="name" value="{{ animal.name }}" required></label>
     <label>Species<input name="species" value="{{ animal.species }}" required></label>
@@ -21,12 +22,14 @@
         {% endfor %}
       </select>
     </label>
-    <label>Morph<input name="morph" value="{{ animal.morph or '' }}"></label>
-    <label>Genetics<input name="genetics" value="{{ animal.genetics or '' }}"></label>
-    <label>Birth or hatch date<input name="birth_hatch_date" type="date" value="{{ animal.birth_hatch_date or '' }}"></label>
-    <label>Acquisition date<input name="acquisition_date" type="date" value="{{ animal.acquisition_date or '' }}"></label>
-    <label>Breeder or source<input name="breeder_source" value="{{ animal.breeder_source or '' }}"></label>
-    <label>Notes<textarea name="notes" rows="4">{{ animal.notes or '' }}</textarea></label>
+    <details class="form-advanced"><summary>Background and advanced details</summary><div class="form-stack">
+      <label>Morph<input name="morph" value="{{ animal.morph or '' }}"></label>
+      <label>Genetics<input name="genetics" value="{{ animal.genetics or '' }}"></label>
+      <label>Birth or hatch date<input name="birth_hatch_date" type="date" value="{{ animal.birth_hatch_date or '' }}"></label>
+      <label>Acquisition date<input name="acquisition_date" type="date" value="{{ animal.acquisition_date or '' }}"></label>
+      <label>Breeder or source<input name="breeder_source" value="{{ animal.breeder_source or '' }}"></label>
+      <label>Notes<textarea name="notes" rows="4">{{ animal.notes or '' }}</textarea></label>
+    </div></details>
     <div class="form-actions"><a href="/animals/{{ animal.animal_id }}">Cancel</a><button type="submit">Save profile</button></div>
   </form>
 </section>

@@ -49,3 +49,35 @@ def test_care_return_context_rejects_arbitrary_redirect_values() -> None:
         f"/animals/{animal_id}"
     )
     assert web._care_return_location(animal_id, "//attacker.invalid") == f"/animals/{animal_id}"
+
+
+def test_agenda_row_derives_source_copy_from_a_persisted_reminder_fact() -> None:
+    animal_id = uuid4()
+    animal = SimpleNamespace(
+        animal_id=animal_id,
+        name="Nyx",
+        current_enclosure_id=None,
+        care_action_keys=("feeding",),
+        photo_attachment_version_id=None,
+    )
+    item = SimpleNamespace(
+        subject_type="animal",
+        subject_id=animal_id,
+        status="upcoming",
+        reminder_type="feeding",
+        explanation="Every 10 days",
+        due_at=datetime(2026, 8, 31, tzinfo=UTC),
+        source_occurred_at=datetime(2026, 8, 21, tzinfo=UTC),
+    )
+
+    row = web._agenda_rows(
+        (item,),
+        animals=(animal,),
+        enclosures=(),
+        timezone=ZoneInfo("UTC"),
+        now=datetime(2026, 8, 27, tzinfo=UTC),
+        return_context="animal",
+    )["upcoming"][0]
+
+    assert row["last_context"] == "Last feeding Aug 21"
+    assert row["action_url"] == f"/animals/{animal_id}/feedings/new?return_to=animal"

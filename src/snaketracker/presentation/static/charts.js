@@ -10,11 +10,11 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!groups.has(point.kind)) groups.set(point.kind, []);
       groups.get(point.kind).push({x: point.occurred_at, y: point.value});
     });
-    const colors = ["#b8e65c", "#79b8ff"];
+    const colors = ["#a78bfa", "#75b9ff"];
     new window.Chart(canvas, {
       type: "line",
       data: {datasets: Array.from(groups, ([label, data], index) => ({label, data, borderColor: colors[index % colors.length], backgroundColor: colors[index % colors.length]}))},
-      options: {responsive: true, parsing: false, scales: {x: {type: "category"}}, plugins: {legend: {labels: {color: "#f4f7f2"}}}}
+      options: {responsive: true, maintainAspectRatio: false, parsing: false, scales: {x: {type: "category", ticks: {color: "#92899f"}, grid: {color: "#292335"}}, y: {ticks: {color: "#92899f"}, grid: {color: "#292335"}}}, plugins: {legend: {labels: {color: "#f6f3fb"}}}}
     });
   });
 });
