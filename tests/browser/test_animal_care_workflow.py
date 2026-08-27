@@ -70,7 +70,10 @@ def test_authenticated_keeper_can_track_animal_care_and_enclosure_workflow(
         setup_and_sign_in(client)
 
         animals_page = client.get("/animals")
-        assert "Add animal" in animals_page.text
+        assert (
+            '<a class="button-link collection-add" href="/animals/new">'
+            '<span aria-hidden="true">+</span> Add</a>' in animals_page.text
+        )
         assert 'href="/settings/backups"' in client.get("/more").text
         assert "No animals yet" in animals_page.text
 

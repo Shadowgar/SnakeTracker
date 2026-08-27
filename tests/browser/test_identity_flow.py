@@ -73,10 +73,15 @@ def test_first_run_login_home_logout_and_login_again(tmp_path: Path) -> None:
         home = client.get("/home")
         assert home.status_code == 200
         assert "Rocco" in home.text
-        assert "Good " in home.text
+        assert "Good day" not in home.text
+        assert "Good evening" not in home.text
+        assert "Welcome back" not in home.text
         assert "Rocco&#39;s Reptiles" in home.text
         animals = client.get("/animals")
-        assert "Add animal" in animals.text
+        assert (
+            '<a class="button-link collection-add" href="/animals/new">'
+            '<span aria-hidden="true">+</span> Add</a>' in animals.text
+        )
         assert "No animals yet" in animals.text
         assert "arrive in Phase 3" not in home.text
         assert "viewport" in home.text

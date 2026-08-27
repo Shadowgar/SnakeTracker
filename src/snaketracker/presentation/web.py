@@ -4042,11 +4042,11 @@ def _friendly_due(due_at: datetime, *, now: datetime, timezone: ZoneInfo) -> str
 def _last_care_context(item: Any, timezone: ZoneInfo) -> str:
     if item.source_occurred_at is None:
         return "No qualifying care recorded yet"
-    source_label = getattr(
-        item,
-        "source_label",
-        CARE_SCHEDULE_CAPABILITIES.get(item.reminder_type, ("", "", item.reminder_type))[2],
-    )
+    source_label = getattr(item, "source_label", None)
+    if not isinstance(source_label, str) or not source_label:
+        source_label = CARE_SCHEDULE_CAPABILITIES.get(
+            item.reminder_type, ("", "", item.reminder_type)
+        )[2]
     label = source_label.replace("accepted feeding", "feeding").replace("last ", "")
     occurred = item.source_occurred_at.astimezone(timezone)
     return f"Last {label} {occurred.strftime('%b %-d')}"
