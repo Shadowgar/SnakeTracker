@@ -95,7 +95,7 @@ The frozen project environment completed `uv sync --frozen`, followed by the unc
 `./scripts/quality/check.sh` authoritative gate (with the established 120-second per-test timeout).
 Formatting, Ruff, the architecture freeze, documentation links, strict mypy, all 460 tests,
 coverage artifacts, dependency audit, Compose validation, and repository diff checks passed.
-Pytest completed in 562.04 seconds with 94.81% line and 85.14% branch coverage; the dependency audit
+Pytest completed in 499.27 seconds with 94.81% line and 85.14% branch coverage; the dependency audit
 reported no known vulnerabilities.
 
 The promoted native ARM64 application image is

@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from datetime import datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from fastapi.testclient import TestClient
 
@@ -141,7 +142,9 @@ def test_secondary_and_onboarding_routes_preserve_household_isolation(tmp_path: 
                 "category": "Owner Isolation Cost",
                 "payee": "Private Vendor",
                 "reference": "",
-                "occurred_at": (datetime.now() - timedelta(minutes=5)).strftime("%Y-%m-%dT%H:%M"),
+                "occurred_at": (
+                    datetime.now(ZoneInfo("America/New_York")) - timedelta(minutes=5)
+                ).strftime("%Y-%m-%dT%H:%M"),
                 "notes": "owner-only-expense-marker",
             },
             follow_redirects=False,
