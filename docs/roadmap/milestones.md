@@ -8,6 +8,14 @@
 - **DC:** Deferred capability.
 - **DDQ:** Deferred deployment qualification; mandatory before the named target deployment.
 
+## Planned sequence from M6 forward
+
+M6 UX implementation Passes 1–4 are complete, but M6 is not finally qualified or accepted. The
+authoritative remaining sequence is M6.1 corrections, final M6 qualification and explicit owner
+acceptance, M6.5 inventory intelligence, M7 deployment/recovery qualification, M8 release
+qualification, and M9 public profiles/media sharing. Early Raspberry Pi owner-review use is not a
+substitute for M7 qualification.
+
 ## Phase 0 / M0 — Architecture approved
 
 Status: M0 architecture approved
@@ -144,7 +152,8 @@ or M7 work.
 
 ## Phase 6 / M6 — Product experience complete
 
-Status: M6 implementation-qualified; owner acceptance pending
+Status: M6 UX Passes 1–4 implementation and visual review complete; M6.1, final qualification, and
+owner acceptance pending
 
 M6 begins only after M5.5 acceptance. Its search, reports, dashboards, analytics, reference profiles,
 and explainable suggestions must consume the registered animal type/capability identity, effective
@@ -168,10 +177,84 @@ the Animal aggregate or infer that every care fact applies to every type.
 - [x] RB Today/reminder state advances from effective qualifying care for fixed and event-relative schedules across the four trusted profiles, with correction/void/reinstate and one-time override coverage. Evidence: [correctness/account lifecycle tranche](../evidence/m6-product-experience/correctness-account-lifecycle/README.md).
 - [x] RB Inventory items edit, adjust, archive, leave active feeding choices, retain history, and restore; event-sourced item identity is never hard-deleted. Evidence: [correctness/account lifecycle tranche](../evidence/m6-product-experience/correctness-account-lifecycle/README.md).
 - [x] RB Password recovery uses generic throttled requests, short-lived single-use credentials, canonical-origin identity delivery, atomic password change/session revocation, and trusted-local operator recovery. Evidence: [password recovery](../evidence/m6-product-experience/password-recovery/README.md).
+- [x] RB The four staged UX implementation passes cover the global shell, daily experience, animal experience, secondary destinations, authentication, and onboarding without recording final M6 acceptance. Evidence: [Pass 4 owner-review index](../evidence/m6-product-experience/owner-review/ux-pass4/README.md).
 
-Owner acceptance is not yet recorded. M7 and M8 remain unstarted.
+Pass 4 completion does not finish M6. Owner acceptance is not recorded, PR #8 must not be merged,
+and final M6 qualification must not begin until the bounded M6.1 tranche below is implemented and
+owner-reviewed.
 
-## Phase 7 / M7 — Recovery and compatibility proven
+## Phase 6.1 / M6.1 — Final usability and correctness corrections
+
+Status: Planned — not implemented
+
+M6.1 is the bounded correction tranche discovered during owner review. It precedes final M6
+qualification and must not expand into M6.5, M7, M8, or M9 work.
+
+- [ ] RB Sign out is easy to discover from the mobile More/account area and an appropriate desktop account menu without becoming a primary care-navigation item. Mobile and desktop owner review must confirm discoverability. (`R-065`, `AT-M61-01`)
+- [ ] RB A still-valid authenticated session survives normal mobile-browser background/minimize and resume behavior and brief application switching. Normal expiry remains authoritative; explicit sign out terminates the session, and successful password reset still revokes all sessions. Qualification must reproduce real mobile-browser lifecycle behavior without extending sessions indefinitely or weakening security. (`R-066`, `AT-M61-02`)
+- [ ] RB Every selected-day Calendar care item links to the relevant existing animal/profile, care action or schedule, or completed-history context where supported; no new scheduling domain is introduced. (`R-067`, `AT-M61-03`)
+- [ ] RB Calendar date cells communicate due, overdue, upcoming, and completed meaning compactly without relying on color alone, and an understandable legend appears before or adjacent to the calendar on mobile and desktop rather than below it. (`R-068`, `AT-M61-04`)
+- [ ] RB The global desktop and mobile shells render `© <current year> Paul Rocco` with suitable `mailto:rocco.paul@gmail.com` and `https://github.com/Shadowgar/SnakeTracker` links without obstructing mobile bottom navigation or safe-area behavior. (`R-069`, `AT-M61-05`)
+- [ ] RB The bounded M6.1 browser, mobile lifecycle, accessibility, security, responsive, console/CSP, regression, and household-isolation suites pass and retain evidence under `m6.1-usability-corrections`. (`R-065`–`R-069`)
+
+## Final M6 qualification and owner acceptance gate
+
+Status: Blocked on M6.1 implementation and owner review
+
+- [ ] RB M6.1 is implemented within its bounded scope.
+- [ ] RB The owner visually reviews M6.1 and accepts its corrections for final qualification.
+- [ ] RB Complete final M6 functional, security, accessibility, data-integrity, backup/recovery, browser, responsive, and runtime qualification passes against the candidate head.
+- [ ] RB GitHub's authoritative `Quality / quality` check is green for the candidate head.
+- [ ] RB PR #8 is current, review-ready, and retains the required evidence; this criterion alone does not authorize merge.
+- [ ] RB The owner explicitly accepts M6. Only then may M6 be marked accepted and PR #8 merge be separately authorized.
+
+## Phase 6.5 / M6.5 — Inventory intelligence and cost tracking
+
+Status: Planned — not implemented
+
+M6.5 is a substantial product milestone after final M6 acceptance and before M7. It turns Inventory
+from a list of owned objects into an explainable decision-support system. It must have its own
+implementation, qualification, owner-review, and explicit acceptance gates.
+
+The keeper experience must answer: What do I have? How much remains? What am I consuming, and how
+fast? What needs reordered? What may be overstocked? When was stock last physically verified, and
+how trustworthy is the recorded quantity? What did inventory cost? What value was consumed, what
+stock value remains, and what future spending may be required?
+
+### Inventory levels and reorder intelligence
+
+- [ ] RB Items support decision-useful quantity on hand, unit, owner-controlled reorder minimum, optional target/maximum where appropriate, active/archive state, usage history, recent consumption rate, estimated remaining duration where supportable, last purchase/restock, and last physical verification. (`R-070`, `AT-INVINT-01`)
+- [ ] RB Keeper-facing views identify items approaching the owner's reorder level, stable stock, and potential excess/unused stock using honest labels and deterministic evidence. Care Keeper must not invent husbandry thresholds or present estimates as guarantees. (`R-070`, `AT-INVINT-01`)
+
+### Physical recount and cycle count
+
+- [ ] RB A physical-count workflow compares expected and actual stock and records any variance through immutable inventory adjustment semantics with an explicit reason such as physical count, lost/damaged, purchase/receipt, correction, consumption, or other. (`R-071`, `AT-INVINT-02`)
+- [ ] RB Last-verified and recount-due information supports full, category, and rolling/cycle-count workflows. The exact recurrence policy remains an implementation/design decision and is not selected by this roadmap update. (`R-071`, `AT-INVINT-02`)
+
+A representative count is `Expected: 25; actual physical count: 23`; the difference becomes an
+explainable immutable adjustment rather than an in-place overwrite.
+
+### Usage intelligence
+
+- [ ] RB Deterministic, explainable calculations report average consumption by useful period, estimated stock remaining, high-consumption items, items no longer being used, and potential excess stock without introducing opaque predictive algorithms. (`R-072`, `AT-INVINT-03`)
+
+### Inventory, purchases, expenses, and costing
+
+- [ ] RB The product represents the conceptual flow `Purchase → Inventory received → Inventory consumed → Cost of consumption` while keeping cash spending, inventory value, and consumption cost as distinct metrics. (`R-073`, `AT-INVINT-04`)
+- [ ] RB Purchase/receipt history retains purchase date, supplier/vendor, quantity, amount paid, unit cost, and resulting inventory receipt. Changing prices are represented by history/cost lots rather than one mutable item-price field. (`R-074`, `AT-INVINT-05`)
+- [ ] RB Before consumption value is implemented, architecture/domain review explicitly selects and documents a deterministic costing policy such as weighted average, FIFO, or another justified method. An ADR is required if the decision changes or extends accepted architecture; this roadmap does not select the policy. (`R-075`, `AR-INVINT-01`)
+
+For example, a $65 purchase of 50 frozen mice has a $1.30 purchase unit cost. If 18 are consumed,
+the $65 cash outflow and $23.40 consumption value are different measures; remaining stock value is
+derived only under the costing policy accepted during M6.5 design.
+
+### Inventory and expense reporting
+
+- [ ] RB Per-item reports reconcile purchased quantity/value, consumed quantity/value, current quantity, estimated stock value, consumption rate, and projected reorder need. (`R-076`, `AT-INVINT-06`)
+- [ ] RB Collection reports distinguish purchases during a period, inventory value consumed, current stock value, category spending, consumption trends, and deterministically supportable near-term supply-spending estimates. Projections are labelled estimates, never guarantees. (`R-076`, `AT-INVINT-06`)
+- [ ] RB M6.5 compatibility, migration, immutable-event, correction/compensation, authorization, reporting reconciliation, accessibility, performance, backup/restore, and owner-review evidence passes before explicit M6.5 acceptance.
+
+## Phase 7 / M7 — Formal Raspberry Pi deployment and recovery qualification
 
 - [ ] RB Backup lease prevents overlap and manifest derives from completed DB copy.
 - [ ] RD Encrypted off-device backup and independent key recovery are proven.
@@ -185,7 +268,7 @@ Owner acceptance is not yet recorded. M7 and M8 remain unstarted.
 - [ ] DDQ/RB SQLite durability/persistence and backup/restoration behavior pass natively before Pi deployment.
 - [ ] DDQ/RB Status is recorded explicitly as `Raspberry Pi deployment qualified` before Pi deployment.
 
-## Phase 8 / M8 — Production release accepted
+## Phase 8 / M8 — Release qualification
 
 - [ ] RB Fresh install and every supported upgrade path pass.
 - [ ] RB Release compatibility matrix is complete.
@@ -194,6 +277,34 @@ Owner acceptance is not yet recorded. M7 and M8 remain unstarted.
 - [ ] RB Operator completes restore and incident exercises.
 - [ ] RB Product owner approves security, accessibility, performance, recovery, and data integrity.
 - [ ] RB A Raspberry Pi production launch is prohibited unless `Raspberry Pi deployment qualified` is current for the release candidate.
+
+## Phase 9 / M9 — Public profiles, albums, and media sharing
+
+Status: Planned — not implemented
+
+M9 follows the private application and release foundation. It introduces an explicit public-sharing
+and media security boundary; authenticated household-private data remains private by default.
+
+### Profile identity and media albums
+
+- [ ] RB Each animal may retain one primary Care Keeper profile photo and a distinct album/media library containing multiple photos and supported videos. The album must not overload the existing primary attachment reference. (`R-077`, `AT-PUB-01`)
+
+### Public animal and collection experiences
+
+- [ ] RB An optional public animal page presents only deliberately published profile and album content through explicit public identifiers or slugs rather than raw user, household, animal, event, or attachment identifiers. Exact URL architecture is deferred to M9 design. (`R-078`, `AT-PUB-02`)
+- [ ] RB An optional public collection gallery lists only explicitly public animals, their public profile images, and links to their public albums. (`R-078`, `AT-PUB-02`)
+
+### Explicit opt-in privacy
+
+- [ ] RD Public sharing is disabled by default and requires explicit household enablement plus per-animal public/private state and per-media visibility where appropriate. Owners can unpublish, and archive/deletion behavior fails private. (`R-079`, `AT-PUB-03`)
+- [ ] RD Care history, expenses, schedules, inventory, household records, private notes, backups, operations, and other private data never become public implicitly. (`R-079`, `R-081`, `AT-PUB-03`, `AT-PUB-05`)
+
+### Media security, delivery, and architecture review
+
+- [ ] RD M9 defines and qualifies file-type validation, upload-size limits, photo processing, video limits/processing, safe serving, EXIF/geolocation metadata handling, deletion/retention, authorization, public caching, and abuse/rate limiting. (`R-080`, `AT-PUB-04`)
+- [ ] RB M9 architecture review decides public identity/routing, media processing/delivery, storage, retention, and capacity boundaries before implementation. Cloudflare R2 or another object/media store may be evaluated, but no provider is selected here; large public video delivery must not overload the Raspberry Pi without explicit capacity evidence. New or changed architecture requires an ADR under ADR-0028. (`R-080`, `AR-PUB-01`)
+- [ ] RD Anonymous/public authorization tests prove that private animals, albums, household data, care history unless separately approved, inventory, expenses, schedules, backups, operations, and internal attachment routes or identifiers cannot leak. M9 requires an independent security review before acceptance. (`R-081`, `AT-PUB-05`)
+- [ ] RB M9 implementation, media/security qualification, public/private browser journeys, accessibility, capacity testing, owner review, and explicit acceptance are complete before public sharing is enabled.
 
 ## Deferred capabilities
 

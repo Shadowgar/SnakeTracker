@@ -37,6 +37,7 @@ introducing capability-neutral v2 contracts.
 - [Representative dataset](quality/representative-dataset.md)
 - [UX information architecture](ux/information-architecture.md)
 - [Roadmap and milestone checklist](roadmap/milestones.md)
+- [Raw owner problem log and roadmap triage](problems/README.md)
 - [Evidence policy](evidence/README.md)
 - [ADR index](adr/README.md)
 
