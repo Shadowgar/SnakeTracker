@@ -2,12 +2,14 @@
 {% block title %}Create a Care Keeper account{% endblock %}
 {% block content %}
 <section class="auth-layout" aria-labelledby="page-title">
-  <div class="intro-panel">
-    <p class="eyebrow">New account</p>
-    <h1 id="page-title">Create your Care Keeper account</h1>
-    <p>Start a private collection for your own animals and care records.</p>
+  <div class="intro-panel auth-intro">
+    <p class="eyebrow">Private by design</p>
+    <h1 id="page-title">Start your Care Keeper collection.</h1>
+    <p>Your account creates an isolated household for your animals, habitats, and care history.</p>
+    <div class="auth-orbit" aria-hidden="true"><span>One household</span><span>Your schedules</span><span>Your history</span></div>
   </div>
-  <form class="card form-stack" method="post" action="/register" novalidate>
+  <form class="card form-stack auth-form" method="post" action="/register" novalidate>
+    <div><p class="page-kicker">New account</p><h2>Create account</h2></div>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="idempotency_key" value="{{ command_id }}">
     {% if errors %}<div class="alert" role="alert"><strong>Please correct the highlighted fields.</strong>{% if errors.get('form') %} {{ errors.form }}{% endif %}</div>{% endif %}

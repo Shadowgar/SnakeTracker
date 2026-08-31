@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Collection setup · Care Keeper{% endblock %}
+{% block content %}
+<section class="onboarding-page" aria-labelledby="page-title">
+  <header><p class="page-kicker">Collection setup</p><h1 id="page-title">Build your care workspace</h1><p class="lede">A few real records make Today useful. Complete these in any order, or come back later.</p></header>
+  <div class="onboarding-layout">
+    <ol class="card onboarding-steps">
+      {% for step in onboarding_steps %}<li class="{% if step.complete %}step-complete{% endif %}"><span class="step-marker" aria-hidden="true">{% if step.complete %}✓{% else %}{{ loop.index }}{% endif %}</span><div><strong>{{ step.label }}</strong><p>{{ step.description }}</p></div><span class="step-state">{% if step.complete %}Complete{% else %}Next up{% endif %}</span></li>{% endfor %}
+    </ol>
+    <aside class="card onboarding-next"><p class="page-kicker">Recommended next step</p><h2>{{ onboarding_next_label }}</h2>{% if not onboarding_complete %}<p>No defaults are applied—your animals, housing, and schedules remain your choices.</p>{% else %}<p>Your collection has the basics Care Keeper needs to organize Today.</p>{% endif %}<a class="button-link" href="{{ onboarding_next_url }}">{{ onboarding_next_label }}</a><a href="/home">Skip for now and go to Today</a></aside>
+  </div>
+</section>
+{% endblock %}

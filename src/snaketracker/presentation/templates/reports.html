@@ -1,23 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Reports · Care Keeper{% endblock %}
+{% block title %}{% if report %}{{ report.title }} · {% endif %}Reports · Care Keeper{% endblock %}
 {% block content %}
-<section class="dashboard" aria-labelledby="page-title">
-  <header><p class="page-kicker">Collection records</p><h1 id="page-title">Reports</h1><p class="lede">Accessible, reconciled views of effective household records.</p></header>
-  {% if report_kinds %}
-  <ul class="record-list" aria-label="Available reports">
-    {% for key, label in report_kinds %}<li><a href="/reports/{{ key }}"><strong>{{ label }}</strong><span>View report</span></a></li>{% endfor %}
-  </ul>
-  {% endif %}
-  {% if report %}
-  <div class="section-heading"><h2>{{ report.title }}</h2><a class="button-link secondary-link" href="{{ request.url.path }}.csv">Download CSV</a></div>
-  {% if report.rows %}
-  <div class="table-scroll" tabindex="0" aria-label="{{ report.title }} table">
-    <table><thead><tr>{% for column in report.columns %}<th scope="col">{{ column }}</th>{% endfor %}</tr></thead>
-    <tbody>{% for row in report.rows %}<tr>{% for value in row.values %}<td>{{ value }}</td>{% endfor %}</tr>{% endfor %}</tbody></table>
+<section class="dashboard reports-page" aria-labelledby="page-title">
+  {% if not report %}
+  <header><p class="page-kicker">Review and export</p><h1 id="page-title">Reports</h1><p class="lede">Collection, care, and cost records in keeper-readable views.</p></header>
+  <div class="report-dashboard">
+    <a class="card report-overview report-collection" href="/reports/collection"><span class="report-accent" aria-hidden="true">C</span><div><p class="page-kicker">Collection snapshot</p><h2>{{ report_summary.animals }} animals</h2><p>{{ report_summary.enclosures }} enclosures{% if report_summary.groups %} · {% for label, count in report_summary.groups %}{{ count }} {{ label }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</p></div><strong>View report →</strong></a>
+    <a class="card report-overview report-care" href="/reports/care"><span class="report-accent" aria-hidden="true">✓</span><div><p class="page-kicker">Care activity</p><h2>{{ report_summary.care_records }} records</h2><p>Effective care history across the collection.</p></div><strong>Review care →</strong></a>
+    {% if 'expense.view' in principal.capabilities %}<a class="card report-overview report-expenses" href="/reports/expenses"><span class="report-accent" aria-hidden="true">$</span><div><p class="page-kicker">Expense summary</p><h2>{{ report_summary.expense_total }}</h2><p>{{ report_summary.expense_count }} effective expense records.</p></div><strong>Review costs →</strong></a>{% endif %}
   </div>
   {% else %}
-  <div class="empty-state"><h2>No report records yet.</h2><p>Records will appear here after you add the related household activity.</p></div>
-  {% endif %}
+  <header class="page-heading"><div><p class="page-kicker">Reports</p><h1 id="page-title">{{ report.title }}</h1><p class="lede">Generated {{ report.generated_at.astimezone(household_zone).strftime('%b %-d, %Y · %-I:%M %p') }}</p></div><a class="button-link secondary-link" href="{{ request.url.path }}.csv">Download CSV</a></header>
+  <nav class="report-tabs" aria-label="Reports"><a href="/reports">Overview</a><a href="/reports/collection"{% if report_kind == 'collection' %} aria-current="page"{% endif %}>Collection</a><a href="/reports/care"{% if report_kind == 'care' %} aria-current="page"{% endif %}>Care</a>{% if 'expense.view' in principal.capabilities %}<a href="/reports/expenses"{% if report_kind == 'expenses' %} aria-current="page"{% endif %}>Expenses</a>{% endif %}</nav>
+  {% if report_rows %}<div class="responsive-report" role="region" aria-label="{{ report.title }} data" tabindex="0"><table><thead><tr>{% for column in report.columns %}<th scope="col">{{ column }}</th>{% endfor %}</tr></thead><tbody>{% for row in report_rows %}<tr>{% for cell in row %}<td data-label="{{ cell.label }}">{{ cell.value }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div>
+  {% else %}<div class="empty-state"><h2>No report records yet.</h2><p>Records will appear here after you add the related household activity.</p>{% if report_kind == 'collection' %}<a class="button-link" href="/animals/new">Add your first animal</a>{% endif %}</div>{% endif %}
   {% endif %}
 </section>
 {% endblock %}

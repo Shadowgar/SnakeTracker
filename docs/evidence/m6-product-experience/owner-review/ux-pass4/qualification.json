@@ -1,0 +1,475 @@
+{
+  "status": "passed",
+  "browser": "Chrome/151.0.7922.173",
+  "origin": "https://tracker.theroccos.us",
+  "viewports": [
+    "1440x900",
+    "390x844",
+    "360x800",
+    "1023x800",
+    "1024x800"
+  ],
+  "screenshots": [
+    {
+      "label": "mobile-inventory",
+      "path": "/inventory",
+      "viewport": "390x844",
+      "mode": "mobile"
+    },
+    {
+      "label": "mobile-inventory-adjust",
+      "path": "/inventory/a47d726d-2c3b-4592-a23c-c08937629316/adjust",
+      "viewport": "390x844",
+      "mode": "mobile"
+    },
+    {
+      "label": "mobile-expenses",
+      "path": "/expenses",
+      "viewport": "390x844",
+      "mode": "mobile"
+    },
+    {
+      "label": "mobile-reports",
+      "path": "/reports",
+      "viewport": "390x844",
+      "mode": "mobile"
+    },
+    {
+      "label": "mobile-report-collection",
+      "path": "/reports/collection",
+      "viewport": "390x844",
+      "mode": "mobile"
+    },
+    {
+      "label": "mobile-report-care",
+      "path": "/reports/care",
+      "viewport": "390x844",
+      "mode": "mobile"
+    },
+    {
+      "label": "mobile-search",
+      "path": "/search?q=Juniper",
+      "viewport": "390x844",
+      "mode": "mobile"
+    },
+    {
+      "label": "mobile-more-advanced",
+      "path": "/more",
+      "viewport": "390x844",
+      "mode": "mobile"
+    },
+    {
+      "label": "desktop-inventory",
+      "path": "/inventory",
+      "viewport": "1440x900",
+      "mode": "desktop"
+    },
+    {
+      "label": "desktop-expenses",
+      "path": "/expenses",
+      "viewport": "1440x900",
+      "mode": "desktop"
+    },
+    {
+      "label": "desktop-reports",
+      "path": "/reports",
+      "viewport": "1440x900",
+      "mode": "desktop"
+    },
+    {
+      "label": "desktop-report-collection",
+      "path": "/reports/collection",
+      "viewport": "1440x900",
+      "mode": "desktop"
+    },
+    {
+      "label": "desktop-search",
+      "path": "/search?q=Juniper",
+      "viewport": "1440x900",
+      "mode": "desktop"
+    },
+    {
+      "label": "desktop-system",
+      "path": "/operations/jobs",
+      "viewport": "1440x900",
+      "mode": "desktop"
+    },
+    {
+      "label": "mobile-sign-in",
+      "path": "/login",
+      "viewport": "390x844",
+      "mode": "auth"
+    },
+    {
+      "label": "mobile-register",
+      "path": "/register",
+      "viewport": "390x844",
+      "mode": "auth"
+    },
+    {
+      "label": "mobile-forgot-password",
+      "path": "/forgot-password",
+      "viewport": "390x844",
+      "mode": "auth"
+    },
+    {
+      "label": "desktop-sign-in",
+      "path": "/login",
+      "viewport": "1440x900",
+      "mode": "auth"
+    },
+    {
+      "label": "mobile-onboarding",
+      "path": "/onboarding",
+      "viewport": "390x844",
+      "mode": "mobile"
+    },
+    {
+      "label": "desktop-onboarding",
+      "path": "/onboarding",
+      "viewport": "1440x900",
+      "mode": "desktop"
+    }
+  ],
+  "accessibility": [
+    {
+      "label": "mobile-inventory",
+      "violations": []
+    },
+    {
+      "label": "mobile-inventory-adjust",
+      "violations": []
+    },
+    {
+      "label": "mobile-expenses",
+      "violations": []
+    },
+    {
+      "label": "mobile-reports",
+      "violations": []
+    },
+    {
+      "label": "mobile-report-collection",
+      "violations": []
+    },
+    {
+      "label": "mobile-report-care",
+      "violations": []
+    },
+    {
+      "label": "mobile-search",
+      "violations": []
+    },
+    {
+      "label": "mobile-more-advanced",
+      "violations": []
+    },
+    {
+      "label": "desktop-inventory",
+      "violations": []
+    },
+    {
+      "label": "desktop-expenses",
+      "violations": []
+    },
+    {
+      "label": "desktop-reports",
+      "violations": []
+    },
+    {
+      "label": "desktop-report-collection",
+      "violations": []
+    },
+    {
+      "label": "desktop-search",
+      "violations": []
+    },
+    {
+      "label": "desktop-system",
+      "violations": []
+    },
+    {
+      "label": "mobile-sign-in",
+      "violations": []
+    },
+    {
+      "label": "mobile-register",
+      "violations": []
+    },
+    {
+      "label": "mobile-forgot-password",
+      "violations": []
+    },
+    {
+      "label": "desktop-sign-in",
+      "violations": []
+    },
+    {
+      "label": "mobile-onboarding",
+      "violations": []
+    },
+    {
+      "label": "desktop-onboarding",
+      "violations": []
+    }
+  ],
+  "layouts": [
+    {
+      "label": "mobile-inventory",
+      "mode": "mobile",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "sidebarVisible": false,
+      "mobileNavVisible": true
+    },
+    {
+      "label": "mobile-inventory-adjust",
+      "mode": "mobile",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "sidebarVisible": false,
+      "mobileNavVisible": true
+    },
+    {
+      "label": "mobile-expenses",
+      "mode": "mobile",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "sidebarVisible": false,
+      "mobileNavVisible": true
+    },
+    {
+      "label": "mobile-reports",
+      "mode": "mobile",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "sidebarVisible": false,
+      "mobileNavVisible": true
+    },
+    {
+      "label": "mobile-report-collection",
+      "mode": "mobile",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "sidebarVisible": false,
+      "mobileNavVisible": true
+    },
+    {
+      "label": "mobile-report-care",
+      "mode": "mobile",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "sidebarVisible": false,
+      "mobileNavVisible": true
+    },
+    {
+      "label": "mobile-search",
+      "mode": "mobile",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "sidebarVisible": false,
+      "mobileNavVisible": true
+    },
+    {
+      "label": "mobile-more-advanced",
+      "mode": "mobile",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "sidebarVisible": false,
+      "mobileNavVisible": true
+    },
+    {
+      "label": "desktop-inventory",
+      "mode": "desktop",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "sidebarVisible": true,
+      "mobileNavVisible": false
+    },
+    {
+      "label": "desktop-expenses",
+      "mode": "desktop",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "sidebarVisible": true,
+      "mobileNavVisible": false
+    },
+    {
+      "label": "desktop-reports",
+      "mode": "desktop",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "sidebarVisible": true,
+      "mobileNavVisible": false
+    },
+    {
+      "label": "desktop-report-collection",
+      "mode": "desktop",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "sidebarVisible": true,
+      "mobileNavVisible": false
+    },
+    {
+      "label": "desktop-search",
+      "mode": "desktop",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "sidebarVisible": true,
+      "mobileNavVisible": false
+    },
+    {
+      "label": "desktop-system",
+      "mode": "desktop",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "sidebarVisible": true,
+      "mobileNavVisible": false
+    },
+    {
+      "label": "small-mobile-inventory",
+      "mode": "mobile",
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "sidebarVisible": false,
+      "mobileNavVisible": true
+    },
+    {
+      "label": "small-mobile-expenses",
+      "mode": "mobile",
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "sidebarVisible": false,
+      "mobileNavVisible": true
+    },
+    {
+      "label": "small-mobile-reports-collection",
+      "mode": "mobile",
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "sidebarVisible": false,
+      "mobileNavVisible": true
+    },
+    {
+      "label": "below-64rem-transition",
+      "mode": "mobile",
+      "scrollWidth": 1023,
+      "clientWidth": 1023,
+      "sidebarVisible": false,
+      "mobileNavVisible": true
+    },
+    {
+      "label": "at-64rem-transition",
+      "mode": "desktop",
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "sidebarVisible": true,
+      "mobileNavVisible": false
+    },
+    {
+      "label": "mobile-sign-in",
+      "mode": "auth",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "sidebarVisible": false,
+      "mobileNavVisible": false
+    },
+    {
+      "label": "mobile-register",
+      "mode": "auth",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "sidebarVisible": false,
+      "mobileNavVisible": false
+    },
+    {
+      "label": "mobile-forgot-password",
+      "mode": "auth",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "sidebarVisible": false,
+      "mobileNavVisible": false
+    },
+    {
+      "label": "desktop-sign-in",
+      "mode": "auth",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "sidebarVisible": false,
+      "mobileNavVisible": false
+    },
+    {
+      "label": "mobile-onboarding",
+      "mode": "mobile",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "sidebarVisible": false,
+      "mobileNavVisible": true
+    },
+    {
+      "label": "desktop-onboarding",
+      "mode": "desktop",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "sidebarVisible": true,
+      "mobileNavVisible": false
+    }
+  ],
+  "console": {
+    "application_findings": [],
+    "cloudflare_diagnostics": [
+      {
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-hYrd4oRor88DJTcIL6H0sP7ZMDwMwjpN1EnN5uU16AM='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "instrumentation": false,
+        "cloudflare": true
+      },
+      {
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v3d52b47920f24c319d37e2661827c42b1787588026925' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "instrumentation": false,
+        "cloudflare": true
+      },
+      {
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-kagzEwbAOIVkakDfLXIzaNv+tRwzqrO6AcYYRNM/Zl0='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "instrumentation": false,
+        "cloudflare": true
+      },
+      {
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v3d52b47920f24c319d37e2661827c42b1787588026925' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "instrumentation": false,
+        "cloudflare": true
+      },
+      {
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v3d52b47920f24c319d37e2661827c42b1787588026925' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "instrumentation": false,
+        "cloudflare": true
+      },
+      {
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-SEeUtu9cJ6h2wIkMgSu4Pt9EaEt4Wz4n9M4mwsjU60I='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "instrumentation": false,
+        "cloudflare": true
+      },
+      {
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v3d52b47920f24c319d37e2661827c42b1787588026925' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "instrumentation": false,
+        "cloudflare": true
+      },
+      {
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-eXPc9H477GlK8+TebdfD7EpnazNngawMlGUAL7NQq+g='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "instrumentation": false,
+        "cloudflare": true
+      }
+    ],
+    "instrumentation_diagnostics": []
+  },
+  "page_errors": [],
+  "same_origin_response_errors": [],
+  "empty_household": "Pass Four Empty Collection (temporary qualification account)"
+}

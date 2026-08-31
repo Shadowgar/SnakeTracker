@@ -7,6 +7,7 @@
     <p class="lede today-date">{{ today_label }} · care across your collection</p></div>
     <a class="button-link today-add-care" href="/quick-log">Add care</a>
   </header>
+  {% if not onboarding.onboarding_complete %}<aside class="onboarding-nudge" aria-label="Collection setup"><div><strong>Finish setting up your collection</strong><span>{{ onboarding.onboarding_next_label }}</span></div><a href="/onboarding">Continue setup</a></aside>{% endif %}
   <div class="today-summary" aria-label="Care summary">
     <a href="#home-overdue"><strong>{{ agenda_counts.overdue }}</strong><span>Overdue</span></a>
     <a href="#home-due_today"><strong>{{ agenda_counts.due_today }}</strong><span>Due today</span></a>

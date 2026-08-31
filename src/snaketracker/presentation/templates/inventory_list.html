@@ -1,9 +1,28 @@
 {% extends "base.html" %}
 {% block title %}Inventory · Care Keeper{% endblock %}
 {% block content %}
-<section class="dashboard" aria-labelledby="page-title">
-  <header><p class="eyebrow">Operations</p><h1 id="page-title">Inventory</h1><p class="lede">Track physical care supplies without losing the immutable stock history.</p></header>
-  <div class="dashboard-actions">{% if 'inventory.manage' in principal.capabilities and status == 'active' %}<a class="button-link" href="/inventory/new">Add inventory item</a>{% endif %}{% if status == 'active' %}<a href="/inventory?status=archived">View archived</a>{% else %}<a href="/inventory">View active</a>{% endif %}</div>
-  {% if items %}<ul class="record-list">{% for item in items %}<li><a href="/inventory/{{ item.item_id }}"><strong>{{ item.name }}</strong><span>{{ item.on_hand_quantity }} {{ item.unit }} on hand · {{ item.reserved_quantity }} reserved{% if item.status == 'archived' %} · archived{% endif %}</span></a></li>{% endfor %}</ul>{% else %}<div class="empty-state"><h2>No {{ status }} inventory</h2><p>{% if status == 'active' %}Add an item when you are ready to track stock.{% else %}Archived items will remain available here with their history intact.{% endif %}</p></div>{% endif %}
+<section class="dashboard inventory-page" aria-labelledby="page-title">
+  <header class="page-heading">
+    <div><p class="page-kicker">Supplies</p><h1 id="page-title">Inventory</h1><p class="lede">Stock on hand for feeding, habitats, and everyday care.</p></div>
+    {% if 'inventory.manage' in principal.capabilities and status == 'active' %}<a class="button-link" href="/inventory/new">Add item</a>{% endif %}
+  </header>
+  <dl class="summary-strip inventory-summary" aria-label="Inventory summary">
+    <div><dt>Active</dt><dd>{{ inventory_summary.active }}</dd></div>
+    <div><dt>Needs attention</dt><dd>{{ inventory_summary.attention }}</dd></div>
+    <div><dt>Tracked</dt><dd>{{ inventory_summary.tracked }}</dd></div>
+    <div><dt>Archived</dt><dd>{{ inventory_summary.archived }}</dd></div>
+  </dl>
+  <nav class="view-switcher inventory-switcher" aria-label="Inventory status">
+    <a href="/inventory"{% if status == 'active' %} aria-current="page"{% endif %}>Active</a>
+    <a href="/inventory?status=archived"{% if status == 'archived' %} aria-current="page"{% endif %}>Archived</a>
+  </nav>
+  {% if items %}<ul class="supply-grid" aria-label="{{ status|title }} inventory">
+    {% for item in items %}<li class="card supply-card{% if item.reorder_threshold is not none and item.on_hand_quantity <= item.reorder_threshold and item.status == 'active' %} supply-attention{% endif %}">
+      <div class="supply-heading"><div><p class="page-kicker">{{ item.unit }}</p><h2><a href="/inventory/{{ item.item_id }}">{{ item.name }}</a></h2></div><span class="status-badge {% if item.status == 'active' %}status-completed{% else %}status-disabled{% endif %}">{{ item.status|title }}</span></div>
+      <p class="supply-balance"><strong>{{ item.on_hand_quantity }}</strong><span>{{ item.unit }} remaining</span></p>
+      <dl class="supply-facts"><div><dt>Reserved</dt><dd>{{ item.reserved_quantity }}</dd></div><div><dt>Used</dt><dd>{{ item.consumed_quantity }}</dd></div>{% if item.reorder_threshold is not none %}<div><dt>Reorder at</dt><dd>{{ item.reorder_threshold }}</dd></div>{% endif %}</dl>
+      <div class="supply-actions"><a href="/inventory/{{ item.item_id }}">View</a>{% if 'inventory.manage' in principal.capabilities and item.status == 'active' %}<a href="/inventory/{{ item.item_id }}/adjust">Adjust stock</a>{% elif 'inventory.manage' in principal.capabilities %}<a href="/inventory/{{ item.item_id }}/restore">Restore</a>{% endif %}</div>
+    </li>{% endfor %}
+  </ul>{% else %}<div class="empty-state"><h2>No {{ status }} inventory</h2><p>{% if status == 'active' %}Add your first supply when you are ready to track stock.{% else %}Archived items remain here with their historical identity intact.{% endif %}</p>{% if status == 'active' and 'inventory.manage' in principal.capabilities %}<a class="button-link" href="/inventory/new">Add your first item</a>{% endif %}</div>{% endif %}
 </section>
 {% endblock %}

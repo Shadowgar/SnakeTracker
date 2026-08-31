@@ -14,6 +14,7 @@ a strict-CSP read-only PWA shell. No production husbandry guidance is enabled.
 - [Containers and ARM64](containers/README.md)
 - [Real-browser evidence](browser/README.md)
 - [Owner-review demo and login recovery](owner-review/README.md)
+- [UX Overhaul Pass 4 owner-review evidence](owner-review/ux-pass4/README.md)
 - [Accessibility](accessibility/critical-journeys/README.md)
 - [Reference-content gate](references/provenance/README.md)
 - [Review status](reviews/README.md)
@@ -30,4 +31,5 @@ remains pending.
 The later [ADR-0041 four-group extension](four-group-expansion/README.md) is
 implementation-qualified on the promoted Raspberry Pi 5 and tracked separately so
 the accepted M5.5 and earlier M6 evidence continues to describe its original Snake/Spider scope.
-Major M6 UX redesign remains paused, and M6 owner acceptance is still pending.
+The four staged UX implementation passes are deployed for owner review; M6 owner acceptance is
+still pending.

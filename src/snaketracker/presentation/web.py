@@ -8,6 +8,7 @@ import json
 import secrets
 from calendar import Calendar
 from collections.abc import Callable, Mapping
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
@@ -123,6 +124,7 @@ from snaketracker.application.reminders import (
 )
 from snaketracker.application.reports import KeeperReport, ReportService
 from snaketracker.application.search import (
+    SearchResult,
     SearchService,
     SearchUnavailableError,
     SearchValidationError,
@@ -298,6 +300,46 @@ def _money_minor(value: object) -> int:
     if minor < 1:
         raise FormValidationError("Expense amount must be positive.")
     return minor
+
+
+def _friendly_money(amount_minor: int, currency: str) -> str:
+    amount = amount_minor / 100
+    return f"${amount:,.2f}" if currency.upper() == "USD" else f"{currency.upper()} {amount:,.2f}"
+
+
+def _friendly_expense_total(expenses: tuple[Any, ...]) -> str:
+    totals: dict[str, int] = {}
+    for expense in expenses:
+        totals[expense.currency] = totals.get(expense.currency, 0) + expense.amount_minor
+    if not totals:
+        return "$0.00"
+    return " + ".join(
+        _friendly_money(total, currency) for currency, total in sorted(totals.items())
+    )
+
+
+def _friendly_report_value(column: str, value: str) -> str:
+    if column == "Occurred":
+        try:
+            return datetime.fromisoformat(value).strftime("%b %-d, %Y · %-I:%M %p")
+        except ValueError:
+            return value
+    return value.replace("_", " ").title() if column in {"Type", "Status", "Record"} else value
+
+
+def _report_display_rows(report: KeeperReport) -> tuple[tuple[dict[str, str], ...], ...]:
+    currency_index = report.columns.index("Currency") if "Currency" in report.columns else None
+    display_rows = []
+    for row in report.rows:
+        currency = row.values[currency_index] if currency_index is not None else ""
+        cells = []
+        for column, value in zip(report.columns, row.values, strict=True):
+            if column == "Amount" and currency:
+                with suppress(InvalidOperation, ValueError):
+                    value = _friendly_money(int(Decimal(value) * 100), currency)
+            cells.append({"label": column, "value": _friendly_report_value(column, value)})
+        display_rows.append(tuple(cells))
+    return tuple(display_rows)
 
 
 def _inventory_reference(form: Any) -> tuple[UUID | None, int | None]:
@@ -865,6 +907,59 @@ def create_web_router(
             },
         )
 
+    def onboarding_context(principal: Principal) -> dict[str, Any]:
+        animals = animal_service.list_profiles(principal.household_id)
+        enclosures = enclosure_service.list_profiles(principal.household_id)
+        rules = reminder_projection.rules_for(principal.household_id)
+        first_animal = animals[0] if animals else None
+        has_assigned_enclosure = any(animal.current_enclosure_id is not None for animal in animals)
+        has_schedule = any(rule.enabled for rule in rules)
+        steps = (
+            {
+                "label": "Collection created",
+                "description": principal.household_name,
+                "complete": True,
+            },
+            {
+                "label": "Add your first animal",
+                "description": "Create the profile you will care for.",
+                "complete": bool(animals),
+            },
+            {
+                "label": "Add an enclosure",
+                "description": "Record the habitat before assigning it.",
+                "complete": bool(enclosures),
+            },
+            {
+                "label": "Assign an enclosure",
+                "description": "Connect an animal to its current habitat.",
+                "complete": has_assigned_enclosure,
+            },
+            {
+                "label": "Set a care schedule",
+                "description": "Choose an interval that fits your own care plan.",
+                "complete": has_schedule,
+            },
+        )
+        if not animals:
+            next_url, next_label = "/animals/new", "Add your first animal"
+        elif not enclosures:
+            next_url, next_label = "/enclosures/new", "Add an enclosure"
+        elif not has_assigned_enclosure and first_animal is not None:
+            next_url = f"/animals/{first_animal.animal_id}/enclosure"
+            next_label = f"Assign {first_animal.name} an enclosure"
+        elif not has_schedule and first_animal is not None:
+            next_url = f"/animals/{first_animal.animal_id}/care"
+            next_label = f"Set {first_animal.name}'s care schedule"
+        else:
+            next_url, next_label = "/home", "Go to Today"
+        return {
+            "onboarding_steps": steps,
+            "onboarding_complete": all(step["complete"] for step in steps),
+            "onboarding_next_url": next_url,
+            "onboarding_next_label": next_label,
+        }
+
     @router.get("/")
     async def index(request: Request) -> RedirectResponse:
         if not is_bootstrapped():
@@ -1223,7 +1318,7 @@ def create_web_router(
             user_agent=user_agent,
             correlation_id=uuid4(),
         )
-        response = RedirectResponse("/home", status_code=303)
+        response = RedirectResponse("/onboarding", status_code=303)
         _set_cookie(response, SESSION_COOKIE, issued.token, secure_cookie)
         _set_cookie(response, CSRF_COOKIE, issued.csrf_token, secure_cookie)
         return response
@@ -1333,12 +1428,25 @@ def create_web_router(
                     ("upcoming", "Upcoming", agenda["upcoming"]),
                 ),
                 "collection_statistics": collection_statistics,
+                "onboarding": onboarding_context(principal),
             },
         )
         if issued is not None:
             _set_cookie(response, SESSION_COOKIE, issued.token, secure_cookie)
             _set_cookie(response, CSRF_COOKIE, issued.csrf_token, secure_cookie)
         return response
+
+    @router.get("/onboarding", response_class=HTMLResponse)
+    async def onboarding(request: Request) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        return protected_page(
+            request,
+            "onboarding.html",
+            principal,
+            context=onboarding_context(principal),
+        )
 
     @router.get("/animals", response_class=HTMLResponse)
     async def animal_list(request: Request, kind: str = "all") -> Response:
@@ -1479,7 +1587,7 @@ def create_web_router(
         principal = principal_for(request, audit_denial=True)
         if principal is None:
             return RedirectResponse("/login", status_code=303)
-        results: tuple[object, ...] = ()
+        results: tuple[SearchResult, ...] = ()
         error: str | None = None
         unavailable = False
         try:
@@ -1488,6 +1596,22 @@ def create_web_router(
             error = str(caught)
         except SearchUnavailableError:
             unavailable = True
+        animals = animal_service.list_profiles(principal.household_id)
+        animal_by_route = {f"/animals/{animal.animal_id}": animal for animal in animals}
+        result_rows = tuple(
+            {
+                "result": result,
+                "animal": next(
+                    (
+                        animal
+                        for route, animal in animal_by_route.items()
+                        if result.route == route or result.route.startswith(f"{route}/")
+                    ),
+                    None,
+                ),
+            }
+            for result in results
+        )
         return protected_page(
             request,
             "search.html",
@@ -1495,7 +1619,7 @@ def create_web_router(
             status_code=422 if error is not None else 200,
             context={
                 "query": q,
-                "results": results,
+                "results": result_rows,
                 "error": error,
                 "search_unavailable": unavailable,
             },
@@ -1521,8 +1645,43 @@ def create_web_router(
         kinds = [("collection", "Collection"), ("care", "Care history")]
         if "expense.view" in principal.capabilities:
             kinds.append(("expenses", "Expenses"))
+        animals = animal_service.list_profiles(principal.household_id)
+        enclosures = enclosure_service.list_profiles(principal.household_id)
+        expenses = tuple(
+            item
+            for item in expense_service.list_expenses(principal.household_id)
+            if item.status == "active"
+        )
+        group_counts: dict[str, int] = {}
+        for animal in animals:
+            group_counts[animal.type_label] = group_counts.get(animal.type_label, 0) + 1
         return protected_page(
-            request, "reports.html", principal, context={"report": None, "report_kinds": kinds}
+            request,
+            "reports.html",
+            principal,
+            context={
+                "report": None,
+                "report_kinds": kinds,
+                "report_summary": {
+                    "animals": len(animals),
+                    "enclosures": len(enclosures),
+                    "groups": tuple(sorted(group_counts.items())),
+                    "care_records": sum(
+                        max(
+                            0,
+                            len(
+                                animal_service.effective_history(
+                                    principal.household_id, animal.animal_id
+                                )
+                            )
+                            - 1,
+                        )
+                        for animal in animals
+                    ),
+                    "expense_total": _friendly_expense_total(expenses),
+                    "expense_count": len(expenses),
+                },
+            },
         )
 
     @router.get("/reports/{kind}.csv", response_class=PlainTextResponse)
@@ -1570,7 +1729,12 @@ def create_web_router(
             request,
             "reports.html",
             principal,
-            context={"report": report, "report_kinds": ()},
+            context={
+                "report": report,
+                "report_kinds": (),
+                "report_kind": kind,
+                "report_rows": _report_display_rows(report),
+            },
         )
 
     @router.get("/animals/{animal_id}/analytics", response_class=HTMLResponse)
@@ -1787,13 +1951,27 @@ def create_web_router(
         if "inventory.view" not in principal.capabilities:
             return _access_denied(request, "Inventory access denied")
         status = "archived" if request.query_params.get("status") == "archived" else "active"
+        active_items = inventory_service.list_balances(principal.household_id, status="active")
+        archived_items = inventory_service.list_balances(principal.household_id, status="archived")
+        items = archived_items if status == "archived" else active_items
         return protected_page(
             request,
             "inventory_list.html",
             principal,
             context={
-                "items": inventory_service.list_balances(principal.household_id, status=status),
+                "items": items,
                 "status": status,
+                "inventory_summary": {
+                    "active": len(active_items),
+                    "archived": len(archived_items),
+                    "tracked": len(active_items) + len(archived_items),
+                    "attention": sum(
+                        1
+                        for item in active_items
+                        if item.reorder_threshold is not None
+                        and item.on_hand_quantity <= item.reorder_threshold
+                    ),
+                },
             },
         )
 
@@ -2063,6 +2241,33 @@ def create_web_router(
             )
         return RedirectResponse(f"/inventory/{item_id}", status_code=303)
 
+    @router.get("/inventory/{item_id}/{action}", response_class=HTMLResponse)
+    async def inventory_action(request: Request, item_id: str, action: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if "inventory.manage" not in principal.capabilities:
+            return _access_denied(request, "Inventory access denied")
+        if action not in {"receive", "adjust", "archive", "restore"}:
+            return _not_found(request, "Inventory action not found")
+        try:
+            item = inventory_service.balance_for(principal.household_id, UUID(item_id))
+        except ValueError:
+            item = None
+        if item is None:
+            return _not_found(request, "Inventory item not found")
+        action_allowed = (item.status == "active" and action != "restore") or (
+            item.status == "archived" and action == "restore"
+        )
+        if not action_allowed:
+            return _access_denied(request, "Inventory action unavailable")
+        return protected_page(
+            request,
+            "inventory_action.html",
+            principal,
+            context={"item": item, "action": action},
+        )
+
     @router.get("/expenses", response_class=HTMLResponse)
     async def expense_list(request: Request) -> Response:
         principal = principal_for(request, audit_denial=True)
@@ -2070,11 +2275,49 @@ def create_web_router(
             return RedirectResponse("/login", status_code=303)
         if "expense.view" not in principal.capabilities:
             return _access_denied(request, "Expense access denied")
+        expenses = expense_service.list_expenses(principal.household_id)
+        active = tuple(expense for expense in expenses if expense.status == "active")
+        zone = ZoneInfo(principal.household_timezone)
+        now = datetime.now(UTC).astimezone(zone)
+        current_month = tuple(
+            expense
+            for expense in active
+            if expense.occurred_at.astimezone(zone).year == now.year
+            and expense.occurred_at.astimezone(zone).month == now.month
+        )
+        recent = tuple(
+            expense for expense in active if expense.occurred_at >= now - timedelta(days=30)
+        )
+        category_totals: dict[str, dict[str, int]] = {}
+        for expense in active:
+            totals = category_totals.setdefault(expense.category, {})
+            totals[expense.currency] = totals.get(expense.currency, 0) + expense.amount_minor
         return protected_page(
             request,
             "expense_list.html",
             principal,
-            context={"expenses": expense_service.list_expenses(principal.household_id)},
+            context={
+                "expenses": expenses,
+                "expense_summary": {
+                    "month": _friendly_expense_total(current_month),
+                    "recent": _friendly_expense_total(recent),
+                    "total": _friendly_expense_total(active),
+                    "categories": tuple(
+                        (
+                            category,
+                            " + ".join(
+                                _friendly_money(total, currency)
+                                for currency, total in sorted(totals.items())
+                            ),
+                        )
+                        for category, totals in sorted(
+                            category_totals.items(),
+                            key=lambda item: sum(item[1].values()),
+                            reverse=True,
+                        )
+                    ),
+                },
+            },
         )
 
     @router.get("/expenses/new", response_class=HTMLResponse)
@@ -4076,12 +4319,14 @@ def _agenda_rows(
         location_name = None
         action_url = None
         action_label = None
+        schedule_url = None
         photo_attachment_version_id = None
         photo_fallback_key = "enclosure"
         if item.subject_type == "animal":
             animal = animal_by_id.get(item.subject_id)
             subject_name = animal.name if animal is not None else "Animal"
             subject_url = f"/animals/{item.subject_id}"
+            schedule_url = f"{subject_url}/care"
             photo_attachment_version_id = (
                 animal.photo_attachment_version_id if animal is not None else None
             )
@@ -4103,6 +4348,7 @@ def _agenda_rows(
                 animal = enclosure_occupants[0]
                 subject_name = animal.name
                 subject_url = f"/animals/{animal.animal_id}"
+                schedule_url = f"{subject_url}/care"
                 photo_attachment_version_id = animal.photo_attachment_version_id
                 photo_fallback_key = getattr(animal, "animal_type", "animal")
                 location_name = enclosure.name if enclosure is not None else "Enclosure"
@@ -4132,6 +4378,7 @@ def _agenda_rows(
                 "location_name": location_name,
                 "action_url": action_url,
                 "action_label": action_label,
+                "schedule_url": schedule_url,
                 "photo_attachment_version_id": photo_attachment_version_id,
                 "photo_fallback_key": photo_fallback_key,
                 "due_label": _friendly_due(item.due_at, now=now, timezone=timezone),

@@ -42,7 +42,7 @@ def _register(client: TestClient, *, email: str = "new@example.com") -> None:
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"] == "/home"
+    assert response.headers["location"] == "/onboarding"
 
 
 def test_existing_installation_supports_registration_session_and_normal_login(
