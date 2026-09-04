@@ -11,8 +11,13 @@ from alembic.config import Config
 from sqlalchemy import text
 
 from snaketracker.application.household_bootstrap import (
+    AccountRegistrationCommand,
+    AccountRegistrationConflictError,
+    AccountRegistrationService,
     BootstrapCommand,
     BootstrapConflictError,
+    DemoHouseholdProvisioningCommand,
+    DemoHouseholdProvisioningService,
     HouseholdBootstrapService,
 )
 from snaketracker.bootstrap.compatibility import CompatibilityMode, inspect_startup_compatibility
@@ -159,6 +164,107 @@ def test_bootstrap_rolls_back_every_record_on_projection_failure(
             "idempotency_operations",
         ):
             assert connection.execute(text(f"SELECT count(*) FROM {table}")).scalar_one() == 0
+    engine.dispose()
+
+
+def test_production_registration_adds_an_independent_atomic_owner_household(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    engine = migrated_engine(tmp_path / "registration.sqlite3")
+    repository = SQLAlchemyHouseholdBootstrapRepository(engine)
+    hasher = Argon2PasswordHasher.for_testing()
+    bootstrap = HouseholdBootstrapService(
+        repository,
+        hasher,
+        command_hash_secret=b"test-bootstrap-command-secret-32b",
+    ).bootstrap(command_for())
+    demo = DemoHouseholdProvisioningService(
+        repository,
+        hasher,
+        command_hash_secret=b"test-bootstrap-command-secret-32b",
+        environment="test",
+    ).provision(DemoHouseholdProvisioningCommand("demo correct horse battery staple"))
+    service = AccountRegistrationService(
+        repository,
+        hasher,
+        command_hash_secret=b"test-bootstrap-command-secret-32b",
+    )
+    command = AccountRegistrationCommand(
+        collection_name="New Keeper Collection",
+        timezone="UTC",
+        email="NEW@Example.com",
+        display_name="New Keeper",
+        password="another correct horse battery staple",
+        idempotency_key="production-registration-key-1",
+        correlation_id=uuid4(),
+    )
+
+    registered = service.register(command)
+    assert registered.household_id != bootstrap.household_id
+    assert registered.household_id != demo.household_id
+    assert registered.user_id != bootstrap.user_id
+    assert registered.user_id != demo.user_id
+    assert service.register(command) == registered
+    with pytest.raises(AccountRegistrationConflictError):
+        service.register(
+            replace(
+                command,
+                email="owner@example.com",
+                idempotency_key="duplicate-registration-key",
+            )
+        )
+
+    with engine.connect() as connection:
+        assert connection.execute(text("SELECT count(*) FROM users")).scalar_one() == 3
+        assert (
+            connection.execute(text("SELECT count(*) FROM household_summaries")).scalar_one() == 3
+        )
+        assert connection.execute(text("SELECT count(*) FROM domain_events")).scalar_one() == 6
+        assert connection.execute(
+            text(
+                "SELECT household_id,count(*) FROM domain_events "
+                "GROUP BY household_id ORDER BY household_id"
+            )
+        ).all() == sorted(
+            [
+                (str(bootstrap.household_id), 2),
+                (str(demo.household_id), 2),
+                (str(registered.household_id), 2),
+            ]
+        )
+        owner = connection.execute(
+            text(
+                "SELECT role,status FROM authorization_memberships "
+                "WHERE household_id=:household_id AND user_id=:user_id"
+            ),
+            {
+                "household_id": str(registered.household_id),
+                "user_id": str(registered.user_id),
+            },
+        ).one()
+        assert owner == ("owner", "active")
+        assert (
+            connection.execute(
+                text("SELECT email_normalized FROM users WHERE user_id=:user_id"),
+                {"user_id": str(registered.user_id)},
+            ).scalar_one()
+            == "new@example.com"
+        )
+
+    failing = replace(
+        command,
+        email="third@example.com",
+        idempotency_key="production-registration-key-2",
+    )
+    monkeypatch.setattr(repository, "_insert_membership", lambda *_args, **_kwargs: 1 / 0)
+    with pytest.raises(ZeroDivisionError):
+        service.register(failing)
+    with engine.connect() as connection:
+        assert connection.execute(text("SELECT count(*) FROM users")).scalar_one() == 3
+        assert (
+            connection.execute(text("SELECT count(*) FROM household_summaries")).scalar_one() == 3
+        )
+        assert connection.execute(text("SELECT count(*) FROM domain_events")).scalar_one() == 6
     engine.dispose()
 
 

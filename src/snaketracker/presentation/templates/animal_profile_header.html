@@ -1,0 +1,39 @@
+<header class="animal-hero">
+  <div class="animal-hero-main">
+    <a class="animal-hero-photo-link" href="/animals/{{ animal.animal_id }}/photo" aria-label="Change {{ animal.name }}'s profile photo">
+      {% if animal.photo_attachment_version_id %}
+      <img class="animal-hero-photo" src="/attachments/{{ animal.photo_attachment_version_id }}" alt="Profile photo of {{ animal.name }}">
+      {% else %}
+      <span class="animal-hero-photo animal-hero-placeholder fallback-{{ animal.animal_type }}" aria-hidden="true">{{ animal.name[0]|upper }}</span>
+      {% endif %}
+    </a>
+    <div class="animal-hero-copy">
+      <p class="page-kicker">{{ animal.type_label }} profile</p>
+      <h1 id="page-title">{{ animal.name }}</h1>
+      <p>{{ animal.species }}{% if animal.morph %} · {{ animal.morph }}{% endif %}</p>
+      <div class="animal-hero-meta">
+        <a href="/animals/{{ animal.animal_id }}/status" class="status-badge status-completed">{{ animal.status|capitalize }}</a>
+        <a href="/animals/{{ animal.animal_id }}/enclosure">{% if current_enclosure %}{{ current_enclosure.name }}{% else %}No enclosure{% endif %}</a>
+      </div>
+    </div>
+  </div>
+  <div class="animal-next-care{% if next_care %} next-care-{{ next_care.item.status }}{% endif %}">
+    <span>Next care</span>
+    {% if next_care %}
+    <strong>{{ next_care.title }}</strong>
+    <small>{{ next_care.due_label }} · {{ next_care.last_context }}</small>
+    {% if next_care.action_url %}<a href="{{ next_care.action_url }}">{{ next_care.action_label }}</a>{% endif %}
+    {% else %}
+    <strong>Nothing scheduled</strong>
+    <small>Set intervals in Care when you are ready.</small>
+    <a href="/animals/{{ animal.animal_id }}/care">Set care schedule</a>
+    {% endif %}
+  </div>
+</header>
+<nav class="animal-section-nav" aria-label="{{ animal.name }} profile sections">
+  <a href="/animals/{{ animal.animal_id }}"{% if active_section == 'overview' %} aria-current="page"{% endif %}>Overview</a>
+  <a href="/animals/{{ animal.animal_id }}/timeline"{% if active_section == 'history' %} aria-current="page"{% endif %}>History</a>
+  <a href="/animals/{{ animal.animal_id }}/analytics"{% if active_section == 'trends' %} aria-current="page"{% endif %}>Trends</a>
+  <a href="/animals/{{ animal.animal_id }}/care"{% if active_section == 'care' %} aria-current="page"{% endif %}>Care</a>
+</nav>
+<form hidden aria-hidden="true"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"></form>

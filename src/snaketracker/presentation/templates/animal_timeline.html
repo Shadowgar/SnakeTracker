@@ -1,14 +1,11 @@
 {% extends "base.html" %}
-{% block title %}{{ page_title|default('Care timeline') }} · {{ animal.name }} · SnakeTracker{% endblock %}
+{% block title %}{{ page_title|default('Care timeline') }} · {{ animal.name }} · Care Keeper{% endblock %}
 {% block content %}
-<section class="timeline-page" aria-labelledby="page-title">
-  <header class="profile-header">
-    <div>
-      <p class="eyebrow">{{ animal.name }}</p>
-      <h1 id="page-title">{{ page_title|default('Care timeline') }}</h1>
-      <p class="lede">{{ page_description|default('Effective history, including accepted corrections.') }}</p>
-    </div>
-    <a class="button-link secondary-link" href="/animals/{{ animal.animal_id }}">Back to profile</a>
+<section class="animal-experience timeline-page" aria-labelledby="page-title">
+  {% set active_section = 'history' %}{% include "animal_profile_header.html" %}
+  <header class="animal-section-heading">
+    <div><p class="eyebrow">Care record</p><h2>{{ page_title|default('History') }}</h2><p class="lede">{{ page_description|default('A clear timeline of effective care, with accepted corrections already applied.') }}</p></div>
+    <div class="history-links"><a href="/animals/{{ animal.animal_id }}/feedings">Feedings</a><a href="/animals/{{ animal.animal_id }}/measurements">Measurements</a></div>
   </header>
   {% if errors and errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
   <section id="effective-history" aria-labelledby="effective-history-title">
@@ -17,17 +14,17 @@
   <ol class="timeline-list">
     {% for item in events %}
     <li>
-      <time datetime="{{ item.event.occurred_at.isoformat() }}">{{ item.event.occurred_at.astimezone(household_zone).strftime('%Y-%m-%d %H:%M') }} {{ principal.household_timezone }}</time>
-      <div><strong>{{ item.title }}</strong><p>{{ item.description }}</p>{% if item.event.notes %}<p class="keeper-note">{{ item.event.notes }}</p>{% endif %}</div>
+      <time datetime="{{ item.event.occurred_at.isoformat() }}"><strong>{{ item.event.occurred_at.astimezone(household_zone).strftime('%b %-d, %Y') }}</strong><span>{{ item.event.occurred_at.astimezone(household_zone).strftime('%-I:%M %p') }}</span><span class="visually-hidden">{{ item.event.occurred_at.astimezone(household_zone).strftime('%Y-%m-%d %H:%M') }} {{ principal.household_timezone }}</span></time>
+      <div><strong>{{ item.keeper_title }}</strong><p>{{ item.description }}</p>{% if item.event.notes %}<p class="keeper-note">{{ item.event.notes }}</p>{% endif %}</div>
     </li>
     {% endfor %}
   </ol>
   {% else %}<p class="muted">{{ empty_message|default('No care records yet.') }}</p>{% endif %}
   </section>
   <details class="technical-audit">
-    <summary>Technical audit</summary>
+    <summary>Corrections and Technical audit</summary>
     <section class="audit-section" aria-labelledby="audit-title">
-    <div><h2 id="audit-title">Immutable event audit</h2><p class="muted">Technical identifiers and correction controls are retained here for troubleshooting and review.</p></div>
+    <div><h2 id="audit-title">Correction history</h2><p class="muted">Correcting a record adds a replacement, voiding removes it from the timeline, and reinstating restores it. The original immutable events and technical identifiers remain below.</p></div>
     <ol class="audit-list">
       {% for item in audit_events %}
       <li id="event-{{ item.event.event_id }}">

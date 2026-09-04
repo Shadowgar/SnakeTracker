@@ -1,0 +1,847 @@
+{
+  "animals": [
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0001",
+      "name": "Snake 0001",
+      "notes": "M6 deterministic search note 0",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0002",
+      "name": "Snake 0002",
+      "notes": "M6 deterministic search note 1",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0003",
+      "name": "Snake 0003",
+      "notes": "M6 deterministic search note 2",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0004",
+      "name": "Spider 0004",
+      "notes": "M6 deterministic search note 3",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0005",
+      "name": "Spider 0005",
+      "notes": "M6 deterministic search note 4",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0006",
+      "name": "Snake 0006",
+      "notes": "M6 deterministic search note 5",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0007",
+      "name": "Snake 0007",
+      "notes": "M6 deterministic search note 6",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0008",
+      "name": "Snake 0008",
+      "notes": "M6 deterministic search note 7",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0009",
+      "name": "Spider 0009",
+      "notes": "M6 deterministic search note 8",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0010",
+      "name": "Spider 0010",
+      "notes": "M6 deterministic search note 9",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0011",
+      "name": "Snake 0011",
+      "notes": "M6 deterministic search note 0",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0012",
+      "name": "Snake 0012",
+      "notes": "M6 deterministic search note 1",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0013",
+      "name": "Snake 0013",
+      "notes": "M6 deterministic search note 2",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0014",
+      "name": "Spider 0014",
+      "notes": "M6 deterministic search note 3",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0015",
+      "name": "Spider 0015",
+      "notes": "M6 deterministic search note 4",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0016",
+      "name": "Snake 0016",
+      "notes": "M6 deterministic search note 5",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0017",
+      "name": "Snake 0017",
+      "notes": "M6 deterministic search note 6",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0018",
+      "name": "Snake 0018",
+      "notes": "M6 deterministic search note 7",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0019",
+      "name": "Spider 0019",
+      "notes": "M6 deterministic search note 8",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0020",
+      "name": "Spider 0020",
+      "notes": "M6 deterministic search note 9",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0021",
+      "name": "Snake 0021",
+      "notes": "M6 deterministic search note 0",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0022",
+      "name": "Snake 0022",
+      "notes": "M6 deterministic search note 1",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0023",
+      "name": "Snake 0023",
+      "notes": "M6 deterministic search note 2",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0024",
+      "name": "Spider 0024",
+      "notes": "M6 deterministic search note 3",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0025",
+      "name": "Spider 0025",
+      "notes": "M6 deterministic search note 4",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0026",
+      "name": "Snake 0026",
+      "notes": "M6 deterministic search note 5",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0027",
+      "name": "Snake 0027",
+      "notes": "M6 deterministic search note 6",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0028",
+      "name": "Snake 0028",
+      "notes": "M6 deterministic search note 7",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0029",
+      "name": "Spider 0029",
+      "notes": "M6 deterministic search note 8",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0030",
+      "name": "Spider 0030",
+      "notes": "M6 deterministic search note 9",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0031",
+      "name": "Snake 0031",
+      "notes": "M6 deterministic search note 0",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0032",
+      "name": "Snake 0032",
+      "notes": "M6 deterministic search note 1",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0033",
+      "name": "Snake 0033",
+      "notes": "M6 deterministic search note 2",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0034",
+      "name": "Spider 0034",
+      "notes": "M6 deterministic search note 3",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0035",
+      "name": "Spider 0035",
+      "notes": "M6 deterministic search note 4",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0036",
+      "name": "Snake 0036",
+      "notes": "M6 deterministic search note 5",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0037",
+      "name": "Snake 0037",
+      "notes": "M6 deterministic search note 6",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0038",
+      "name": "Snake 0038",
+      "notes": "M6 deterministic search note 7",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0039",
+      "name": "Spider 0039",
+      "notes": "M6 deterministic search note 8",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0040",
+      "name": "Spider 0040",
+      "notes": "M6 deterministic search note 9",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0041",
+      "name": "Snake 0041",
+      "notes": "M6 deterministic search note 0",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0042",
+      "name": "Snake 0042",
+      "notes": "M6 deterministic search note 1",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0043",
+      "name": "Snake 0043",
+      "notes": "M6 deterministic search note 2",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0044",
+      "name": "Spider 0044",
+      "notes": "M6 deterministic search note 3",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0045",
+      "name": "Spider 0045",
+      "notes": "M6 deterministic search note 4",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0046",
+      "name": "Snake 0046",
+      "notes": "M6 deterministic search note 5",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0047",
+      "name": "Snake 0047",
+      "notes": "M6 deterministic search note 6",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0048",
+      "name": "Snake 0048",
+      "notes": "M6 deterministic search note 7",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0049",
+      "name": "Spider 0049",
+      "notes": "M6 deterministic search note 8",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0050",
+      "name": "Spider 0050",
+      "notes": "M6 deterministic search note 9",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0051",
+      "name": "Snake 0051",
+      "notes": "M6 deterministic search note 0",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0052",
+      "name": "Snake 0052",
+      "notes": "M6 deterministic search note 1",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0053",
+      "name": "Snake 0053",
+      "notes": "M6 deterministic search note 2",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0054",
+      "name": "Spider 0054",
+      "notes": "M6 deterministic search note 3",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0055",
+      "name": "Spider 0055",
+      "notes": "M6 deterministic search note 4",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0056",
+      "name": "Snake 0056",
+      "notes": "M6 deterministic search note 5",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0057",
+      "name": "Snake 0057",
+      "notes": "M6 deterministic search note 6",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0058",
+      "name": "Snake 0058",
+      "notes": "M6 deterministic search note 7",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0059",
+      "name": "Spider 0059",
+      "notes": "M6 deterministic search note 8",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0060",
+      "name": "Spider 0060",
+      "notes": "M6 deterministic search note 9",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0061",
+      "name": "Snake 0061",
+      "notes": "M6 deterministic search note 0",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0062",
+      "name": "Snake 0062",
+      "notes": "M6 deterministic search note 1",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0063",
+      "name": "Snake 0063",
+      "notes": "M6 deterministic search note 2",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0064",
+      "name": "Spider 0064",
+      "notes": "M6 deterministic search note 3",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0065",
+      "name": "Spider 0065",
+      "notes": "M6 deterministic search note 4",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0066",
+      "name": "Snake 0066",
+      "notes": "M6 deterministic search note 5",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0067",
+      "name": "Snake 0067",
+      "notes": "M6 deterministic search note 6",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0068",
+      "name": "Snake 0068",
+      "notes": "M6 deterministic search note 7",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0069",
+      "name": "Spider 0069",
+      "notes": "M6 deterministic search note 8",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0070",
+      "name": "Spider 0070",
+      "notes": "M6 deterministic search note 9",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0071",
+      "name": "Snake 0071",
+      "notes": "M6 deterministic search note 0",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0072",
+      "name": "Snake 0072",
+      "notes": "M6 deterministic search note 1",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0073",
+      "name": "Snake 0073",
+      "notes": "M6 deterministic search note 2",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0074",
+      "name": "Spider 0074",
+      "notes": "M6 deterministic search note 3",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0075",
+      "name": "Spider 0075",
+      "notes": "M6 deterministic search note 4",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0076",
+      "name": "Snake 0076",
+      "notes": "M6 deterministic search note 5",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0077",
+      "name": "Snake 0077",
+      "notes": "M6 deterministic search note 6",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0078",
+      "name": "Snake 0078",
+      "notes": "M6 deterministic search note 7",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0079",
+      "name": "Spider 0079",
+      "notes": "M6 deterministic search note 8",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0080",
+      "name": "Spider 0080",
+      "notes": "M6 deterministic search note 9",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0081",
+      "name": "Snake 0081",
+      "notes": "M6 deterministic search note 0",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0082",
+      "name": "Snake 0082",
+      "notes": "M6 deterministic search note 1",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0083",
+      "name": "Snake 0083",
+      "notes": "M6 deterministic search note 2",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0084",
+      "name": "Spider 0084",
+      "notes": "M6 deterministic search note 3",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0085",
+      "name": "Spider 0085",
+      "notes": "M6 deterministic search note 4",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0086",
+      "name": "Snake 0086",
+      "notes": "M6 deterministic search note 5",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0087",
+      "name": "Snake 0087",
+      "notes": "M6 deterministic search note 6",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0088",
+      "name": "Snake 0088",
+      "notes": "M6 deterministic search note 7",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0089",
+      "name": "Spider 0089",
+      "notes": "M6 deterministic search note 8",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0090",
+      "name": "Spider 0090",
+      "notes": "M6 deterministic search note 9",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0091",
+      "name": "Snake 0091",
+      "notes": "M6 deterministic search note 0",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0092",
+      "name": "Snake 0092",
+      "notes": "M6 deterministic search note 1",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0093",
+      "name": "Snake 0093",
+      "notes": "M6 deterministic search note 2",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0094",
+      "name": "Spider 0094",
+      "notes": "M6 deterministic search note 3",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0095",
+      "name": "Spider 0095",
+      "notes": "M6 deterministic search note 4",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0096",
+      "name": "Snake 0096",
+      "notes": "M6 deterministic search note 5",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0097",
+      "name": "Snake 0097",
+      "notes": "M6 deterministic search note 6",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "snake",
+      "capability_profile": "snake.v1",
+      "fixture_id": "animal-0098",
+      "name": "Snake 0098",
+      "notes": "M6 deterministic search note 7",
+      "species": "Python regius"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0099",
+      "name": "Spider 0099",
+      "notes": "M6 deterministic search note 8",
+      "species": "Tliltocatl albopilosus"
+    },
+    {
+      "animal_type": "spider",
+      "capability_profile": "spider.v1",
+      "fixture_id": "animal-0100",
+      "name": "Spider 0100",
+      "notes": "M6 deterministic search note 9",
+      "species": "Tliltocatl albopilosus"
+    }
+  ],
+  "cache_states": [
+    "cold",
+    "warm"
+  ],
+  "concurrency_mix": {
+    "projection_workers": 1,
+    "readers": 10
+  },
+  "dataset_id": "snaketracker-reference-v1-m6-product-experience",
+  "financial_capability_fixtures": 2,
+  "history_policy": {
+    "accepted_feeding_intervals_days": [
+      10,
+      11,
+      9,
+      10,
+      10,
+      12,
+      10,
+      9
+    ],
+    "correction_void_reinstatement_cases": 3,
+    "snake_shed_intervals_days": [
+      45,
+      48,
+      46,
+      47,
+      45,
+      46
+    ],
+    "spider_molt_intervals_days": [
+      60,
+      60,
+      60,
+      60,
+      60,
+      60
+    ]
+  },
+  "household_isolation_fixtures": 2,
+  "production_husbandry_guidance": "unavailable-pending-owner-source-approval",
+  "schema_version": 1,
+  "timezone": "America/New_York"
+}

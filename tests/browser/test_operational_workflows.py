@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
@@ -243,6 +244,210 @@ def test_keeper_can_use_inventory_expense_and_reminder_workflows(tmp_path: Path)
         assert protected.headers["location"] == "/login"
 
 
+def test_inventory_browser_lifecycle_excludes_archived_items_from_new_feedings(
+    tmp_path: Path,
+) -> None:
+    with _client(tmp_path) as client:
+        _setup(client)
+        new_item = client.get("/inventory/new")
+        created = client.post(
+            "/inventory",
+            data={
+                "csrf_token": _csrf(new_item.text),
+                "name": "Old prey stock",
+                "unit": "item",
+                "reorder_threshold": "2",
+            },
+            follow_redirects=False,
+        )
+        item_url = created.headers["location"]
+        detail = client.get(item_url)
+        received = client.post(
+            f"{item_url}/receive",
+            data={
+                "csrf_token": _csrf(detail.text),
+                "expected_stream_version": "1",
+                "quantity": "6",
+                "reference": "Lifecycle order",
+            },
+            follow_redirects=False,
+        )
+        assert received.status_code == 303
+
+        edit = client.get(f"{item_url}/edit")
+        edited = client.post(
+            f"{item_url}/edit",
+            data={
+                "csrf_token": _csrf(edit.text),
+                "expected_stream_version": "2",
+                "name": "Archived prey stock",
+                "unit": "prey",
+                "reorder_threshold": "3",
+            },
+            follow_redirects=False,
+        )
+        assert edited.status_code == 303
+        detail = client.get(item_url)
+        adjusted = client.post(
+            f"{item_url}/adjust",
+            data={
+                "csrf_token": _csrf(detail.text),
+                "expected_stream_version": "3",
+                "quantity_delta": "-1",
+                "reason": "Physical count.",
+            },
+            follow_redirects=False,
+        )
+        assert adjusted.status_code == 303
+        assert "5 prey" in client.get(item_url).text
+
+        animal_form = client.get("/animals/new")
+        animal = client.post(
+            "/animals",
+            data={
+                "csrf_token": _csrf(animal_form.text),
+                "animal_type": "snake",
+                "name": "Archive Test",
+                "species": "Python regius",
+                "sex": "",
+                "morph": "",
+                "genetics": "",
+                "birth_hatch_date": "",
+                "acquisition_date": "",
+                "breeder_source": "",
+                "notes": "",
+            },
+            follow_redirects=False,
+        )
+        animal_url = animal.headers["location"]
+        assert "Archived prey stock" in client.get(f"{animal_url}/feedings/new").text
+
+        detail = client.get(item_url)
+        archived = client.post(
+            f"{item_url}/archive",
+            data={
+                "csrf_token": _csrf(detail.text),
+                "expected_stream_version": "4",
+                "reason": "No longer purchased.",
+            },
+            follow_redirects=False,
+        )
+        assert archived.status_code == 303
+        assert archived.headers["location"] == "/inventory?status=archived"
+        archived_list = client.get("/inventory?status=archived")
+        assert "Archived prey stock" in archived_list.text
+        assert "Archived prey stock" not in client.get("/inventory").text
+        assert "Archived prey stock" not in client.get(f"{animal_url}/feedings/new").text
+        archived_detail = client.get(item_url)
+        assert "Archived" in archived_detail.text
+        assert "5 prey" in archived_detail.text
+        assert client.get(f"{item_url}/edit").status_code == 403
+
+        restored = client.post(
+            f"{item_url}/restore",
+            data={
+                "csrf_token": _csrf(archived_detail.text),
+                "expected_stream_version": "5",
+                "reason": "Stock is used again.",
+            },
+            follow_redirects=False,
+        )
+        assert restored.status_code == 303
+        assert "Archived prey stock" in client.get(f"{animal_url}/feedings/new").text
+
+
+@pytest.mark.parametrize(
+    ("animal_type", "species"),
+    [
+        ("snake", "Python regius"),
+        ("spider", "Grammostola pulchra"),
+        ("lizard", "Pogona vitticeps"),
+        ("scorpion", "Pandinus imperator"),
+    ],
+)
+def test_today_feeding_action_reconciles_overdue_to_next_occurrence_for_each_profile(
+    tmp_path: Path,
+    animal_type: str,
+    species: str,
+) -> None:
+    with _client(tmp_path) as client:
+        _setup(client)
+        animal_form = client.get("/animals/new")
+        animal = client.post(
+            "/animals",
+            data={
+                "csrf_token": _csrf(animal_form.text),
+                "animal_type": animal_type,
+                "name": f"{animal_type.title()} Task",
+                "species": species,
+                "sex": "",
+                "morph": "",
+                "genetics": "",
+                "birth_hatch_date": "",
+                "acquisition_date": "",
+                "breeder_source": "",
+                "notes": "",
+            },
+            follow_redirects=False,
+        )
+        animal_url = animal.headers["location"]
+        profile = client.get(animal_url)
+        overdue_at = (datetime.now(UTC) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M")
+        schedule = client.post(
+            f"{animal_url}/care-schedule/feeding",
+            data={
+                "csrf_token": _csrf(profile.text),
+                "idempotency_key": f"{animal_type}-overdue-feeding-schedule",
+                "expected_stream_version": "0",
+                "enabled": "true",
+                "interval_days": "5",
+                "override_due_at": overdue_at,
+            },
+            follow_redirects=False,
+        )
+        assert schedule.status_code == 303
+
+        today = client.get("/home")
+        overdue = re.search(r'id="home-overdue".*?</section>', today.text, flags=re.DOTALL)
+        assert overdue is not None
+        assert f"{animal_type.title()} Task" in overdue.group(0)
+        action_url = f"{animal_url}/feedings/new?return_to=today"
+        assert f'href="{action_url}"' in overdue.group(0)
+
+        care_form = client.get(action_url)
+        saved = client.post(
+            f"{animal_url}/feedings",
+            data={
+                "csrf_token": _csrf(care_form.text),
+                "return_to": "today",
+                "occurred_at": (datetime.now(UTC) - timedelta(minutes=1)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "prey_type": "mouse",
+                "prey_size": "small",
+                "prey_weight_grams": "",
+                "preparation_method": "frozen_thawed",
+                "quantity": "1",
+                "outcome": "accepted",
+                "notes": "",
+                "inventory_item_id": "",
+                "inventory_expected_stream_version": "",
+                "inventory_quantity": "",
+            },
+            follow_redirects=False,
+        )
+        assert saved.status_code == 303
+        assert saved.headers["location"] == "/home"
+        reconciled = client.get("/home")
+        overdue_after = re.search(
+            r'id="home-overdue".*?</section>', reconciled.text, flags=re.DOTALL
+        )
+        assert overdue_after is None or f"{animal_type.title()} Task" not in overdue_after.group(0)
+        upcoming = re.search(r'id="home-upcoming".*?</section>', reconciled.text, flags=re.DOTALL)
+        assert upcoming is not None
+        assert f"{animal_type.title()} Task" in upcoming.group(0)
+
+
 def test_operational_routes_fail_closed_for_invalid_and_unauthorized_requests(
     tmp_path: Path,
 ) -> None:
@@ -257,6 +462,7 @@ def test_operational_routes_fail_closed_for_invalid_and_unauthorized_requests(
         assert invalid_inventory.status_code == 422
         assert "Inventory name is required" in invalid_inventory.text
         assert client.get("/inventory/not-a-uuid").status_code == 404
+        assert client.get("/inventory/not-a-uuid/edit").status_code == 404
         invalid_receipt = client.post(
             "/inventory/not-a-uuid/receive",
             data={
@@ -266,6 +472,19 @@ def test_operational_routes_fail_closed_for_invalid_and_unauthorized_requests(
             },
         )
         assert invalid_receipt.status_code == 422
+        for action in ("edit", "adjust", "archive", "restore"):
+            invalid_lifecycle = client.post(
+                f"/inventory/not-a-uuid/{action}",
+                data={
+                    "csrf_token": token,
+                    "expected_stream_version": "1",
+                    "name": "Item",
+                    "unit": "item",
+                    "quantity_delta": "1",
+                    "reason": "Invalid identifier.",
+                },
+            )
+            assert invalid_lifecycle.status_code == 422
 
         expense_form = client.get("/expenses/new")
         token = _csrf(expense_form.text)
@@ -293,7 +512,7 @@ def test_operational_routes_fail_closed_for_invalid_and_unauthorized_requests(
         assert invalid_void.status_code == 422
 
         reminder_form = client.get("/reminders/new")
-        token = _csrf(reminder_form.text)
+        assert "No reminder subjects yet" in reminder_form.text
         invalid_reminder = client.post(
             "/reminders",
             data={
@@ -315,6 +534,10 @@ def test_operational_routes_fail_closed_for_invalid_and_unauthorized_requests(
 
         for path in (
             f"/inventory/{uuid4()}/receive",
+            f"/inventory/{uuid4()}/edit",
+            f"/inventory/{uuid4()}/adjust",
+            f"/inventory/{uuid4()}/archive",
+            f"/inventory/{uuid4()}/restore",
             "/expenses",
             f"/expenses/{uuid4()}/correct",
             f"/expenses/{uuid4()}/void",
@@ -330,6 +553,7 @@ def test_operational_routes_fail_closed_for_invalid_and_unauthorized_requests(
             connection.commit()
         assert client.get("/inventory").status_code == 200
         assert client.get("/inventory/new").status_code == 403
+        assert client.get(f"/inventory/{uuid4()}/edit").status_code == 403
         assert client.get("/expenses").status_code == 403
         assert client.get("/expenses/new").status_code == 403
         assert client.get("/reminders").status_code == 200
@@ -338,6 +562,10 @@ def test_operational_routes_fail_closed_for_invalid_and_unauthorized_requests(
         for path in (
             "/inventory",
             f"/inventory/{uuid4()}/receive",
+            f"/inventory/{uuid4()}/edit",
+            f"/inventory/{uuid4()}/adjust",
+            f"/inventory/{uuid4()}/archive",
+            f"/inventory/{uuid4()}/restore",
             "/expenses",
             f"/expenses/{uuid4()}/correct",
             f"/expenses/{uuid4()}/void",
@@ -352,6 +580,7 @@ def test_operational_routes_fail_closed_for_invalid_and_unauthorized_requests(
             "/inventory",
             "/inventory/new",
             f"/inventory/{uuid4()}",
+            f"/inventory/{uuid4()}/edit",
             "/expenses",
             "/expenses/new",
             f"/expenses/{uuid4()}",

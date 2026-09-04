@@ -24,7 +24,11 @@ from snaketracker.infrastructure.attachments.storage import LocalAttachmentStora
 _ARCHIVE_FORMAT_VERSION = 1
 _ARTIFACT_MAGIC = b"STBK1"
 _NONCE_LENGTH = 12
-_EXTENSION_BY_MEDIA_TYPE = {"image/jpeg": ".jpg", "image/png": ".png"}
+_EXTENSION_BY_MEDIA_TYPE = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
 
 
 class BackupVerificationError(RuntimeError):
@@ -101,7 +105,7 @@ class LocalBackupPipeline:
         copied_database = temporary_archive / "source-copy.sqlite3"
         try:
             self._copy_database(copied_database)
-            self._remove_sessions(copied_database)
+            self._remove_temporary_identity_credentials(copied_database)
             capture = self._capture_database(copied_database)
             attachments = self._selected_attachments(copied_database)
             artifacts: list[dict[str, object]] = []
@@ -206,10 +210,11 @@ class LocalBackupPipeline:
             source.backup(copied)
 
     @staticmethod
-    def _remove_sessions(copied_database: Path) -> None:
+    def _remove_temporary_identity_credentials(copied_database: Path) -> None:
         copied = sqlite3.connect(copied_database)
         try:
             copied.execute("DELETE FROM sessions")
+            copied.execute("DELETE FROM password_reset_credentials")
             copied.commit()
         finally:
             copied.close()
@@ -405,7 +410,10 @@ class LocalBackupPipeline:
         with closing(sqlite3.connect(database_path)) as restored:
             integrity = restored.execute("PRAGMA integrity_check").fetchone()
             session_count = restored.execute("SELECT count(*) FROM sessions").fetchone()
-        if integrity != ("ok",) or session_count != (0,):
+            reset_count = restored.execute(
+                "SELECT count(*) FROM password_reset_credentials"
+            ).fetchone()
+        if integrity != ("ok",) or session_count != (0,) or reset_count != (0,):
             raise BackupVerificationError("Restored database did not pass local verification.")
 
 

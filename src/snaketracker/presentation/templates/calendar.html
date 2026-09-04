@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Calendar · Care Keeper{% endblock %}
+{% block content %}
+<section class="calendar-page" aria-labelledby="page-title">
+  <header class="page-heading calendar-heading"><div><p class="page-kicker">Care planning</p><h1 id="page-title">Calendar</h1><p class="lede">Scheduled care and completed records, together.</p></div></header>
+  <nav class="view-switcher" aria-label="Calendar view">
+    <a href="/calendar?view=agenda&amp;month={{ calendar.month_value }}"{% if active_view == 'agenda' %} aria-current="page"{% endif %}>Agenda</a>
+    <a href="/calendar?view=month&amp;month={{ calendar.month_value }}"{% if active_view == 'month' %} aria-current="page"{% endif %}>Month</a>
+  </nav>
+  {% if active_view == 'agenda' %}
+  <div class="calendar-agenda-layout">
+    <section class="calendar-scheduled" aria-labelledby="scheduled-title">
+      <div class="section-heading"><div><p class="eyebrow">Next up</p><h2 id="scheduled-title">Scheduled care</h2></div></div>
+      {% set scheduled = namespace(has_items=false) %}
+      {% for key, label, rows in agenda_groups %}{% if rows %}{% set scheduled.has_items = true %}
+      <section class="agenda-date-group" aria-labelledby="calendar-{{ key }}"><h3 id="calendar-{{ key }}"><span class="status-badge status-{% if key == 'due_today' %}today{% else %}{{ key }}{% endif %}">{{ label }}</span><span>{{ rows|length }}</span></h3>
+        <ul class="calendar-agenda-list">{% for row in rows %}<li>
+          {% if row.photo_attachment_version_id %}<img class="agenda-avatar" src="/attachments/{{ row.photo_attachment_version_id }}" alt="">{% else %}<span class="agenda-avatar agenda-avatar-placeholder fallback-{{ row.photo_fallback_key }}" aria-hidden="true">{{ row.subject_name[0]|upper }}</span>{% endif %}
+          <div class="agenda-row-copy"><strong><a href="{{ row.subject_url }}">{{ row.subject_name }}</a></strong><span>{{ row.title }}{% if row.location_name %} · {{ row.location_name }}{% endif %}</span></div>
+          <div class="agenda-row-end"><span>{{ row.due_label }}</span>{% if row.action_url %}<a href="{{ row.action_url }}">{{ row.action_label }}</a>{% endif %}</div>
+        </li>{% endfor %}</ul>
+      </section>{% endif %}{% endfor %}
+      {% if not scheduled.has_items %}<div class="empty-state"><h3>No scheduled care</h3><p>Add a care schedule from an animal profile.</p></div>{% endif %}
+    </section>
+    <section class="calendar-completed" aria-labelledby="completed-title">
+      <div class="section-heading"><div><p class="eyebrow">History</p><h2 id="completed-title">Recently completed</h2></div></div>
+      {% if calendar.recent_completed %}<ol class="completed-care-list">{% for row in calendar.recent_completed %}<li>
+        <span class="completed-marker" aria-hidden="true">✓</span><div><strong>{{ row.title }}</strong><a href="{{ row.subject_url }}">{{ row.subject_name }}</a><p>{{ row.description }}</p><time datetime="{{ row.event.occurred_at.isoformat() }}">{{ row.occurred_label }}</time></div>
+      </li>{% endfor %}</ol>{% else %}<p class="column-empty">Completed care will appear here.</p>{% endif %}
+    </section>
+  </div>
+  {% else %}
+  <section class="calendar-legend" aria-labelledby="calendar-legend-title">
+    <h2 id="calendar-legend-title" class="visually-hidden">Calendar marker key</h2>
+    <span aria-label="Completed care"><i class="month-marker completed-marker" aria-hidden="true">✓</i> Completed</span>
+    <span aria-label="Overdue care"><i class="month-marker overdue-marker" aria-hidden="true">!</i> Overdue</span>
+    <span aria-label="Care due today"><i class="month-marker due-marker" aria-hidden="true">D</i> Due</span>
+    <span aria-label="Upcoming care"><i class="month-marker upcoming-marker" aria-hidden="true">↑</i> Upcoming</span>
+  </section>
+  <div class="month-toolbar"><a href="/calendar?view=month&amp;month={{ calendar.previous_month }}" aria-label="Previous month">←</a><h2>{{ calendar.month_label }}</h2><a href="/calendar?view=month&amp;month={{ calendar.next_month }}" aria-label="Next month">→</a></div>
+  <div class="calendar-month-layout">
+    <div class="month-table-wrap"><table class="month-table">
+      <thead><tr>{% for weekday in ('Mon','Tue','Wed','Thu','Fri','Sat','Sun') %}<th scope="col">{{ weekday }}</th>{% endfor %}</tr></thead>
+      <tbody>{% for week in calendar.weeks %}<tr>{% for day in week %}<td class="{% if not day.in_month %}outside-month {% endif %}{% if day.is_today %}today-cell {% endif %}{% if day.is_selected %}selected-cell{% endif %}">
+        <a href="/calendar?view=month&amp;month={{ calendar.month_value }}&amp;selected={{ day.date.isoformat() }}" aria-label="{{ day.date.strftime('%B %-d, %Y') }}{% if day.overdue_count %}, {{ day.overdue_count }} overdue care item{% if day.overdue_count != 1 %}s{% endif %}{% endif %}{% if day.due_count %}, {{ day.due_count }} due care item{% if day.due_count != 1 %}s{% endif %}{% endif %}{% if day.upcoming_count %}, {{ day.upcoming_count }} upcoming care item{% if day.upcoming_count != 1 %}s{% endif %}{% endif %}{% if day.completed_count %}, {{ day.completed_count }} completed care item{% if day.completed_count != 1 %}s{% endif %}{% endif %}{% if day.is_selected %}, selected{% endif %}"><span>{{ day.date.day }}</span><span class="month-markers" aria-hidden="true">{% if day.overdue_count %}<i class="month-marker overdue-marker">!{% if day.overdue_count > 1 %}<small>{{ day.overdue_count }}</small>{% endif %}</i>{% endif %}{% if day.due_count %}<i class="month-marker due-marker">D{% if day.due_count > 1 %}<small>{{ day.due_count }}</small>{% endif %}</i>{% endif %}{% if day.upcoming_count %}<i class="month-marker upcoming-marker">↑{% if day.upcoming_count > 1 %}<small>{{ day.upcoming_count }}</small>{% endif %}</i>{% endif %}{% if day.completed_count %}<i class="month-marker completed-marker">✓{% if day.completed_count > 1 %}<small>{{ day.completed_count }}</small>{% endif %}</i>{% endif %}</span></a>
+      </td>{% endfor %}</tr>{% endfor %}</tbody>
+    </table></div>
+    <aside class="selected-day card" aria-labelledby="selected-day-title"><p class="eyebrow">Selected day</p><h2 id="selected-day-title">{{ calendar.selected_date.strftime('%A, %B %-d') }}</h2>
+      {% if calendar.selected_scheduled %}<h3>Scheduled</h3><ul>{% for row in calendar.selected_scheduled %}<li><a class="selected-care-link" href="{{ row.calendar_url }}" aria-label="Open {{ row.subject_name }} care schedule"><strong>{{ row.subject_name }}</strong><span>{{ row.title }}</span><span aria-hidden="true">→</span></a></li>{% endfor %}</ul>{% endif %}
+      {% if calendar.selected_completed %}<h3>Completed</h3><ul>{% for row in calendar.selected_completed %}<li><a class="selected-care-link" href="{{ row.calendar_url }}" aria-label="Open history for {{ row.subject_name }}"><strong>{{ row.subject_name }}</strong><span>{{ row.title }}</span><span aria-hidden="true">→</span></a></li>{% endfor %}</ul>{% endif %}
+      {% if not calendar.selected_scheduled and not calendar.selected_completed %}<p class="muted">No scheduled or completed care on this day.</p>{% endif %}
+    </aside>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

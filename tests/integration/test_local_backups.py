@@ -12,6 +12,7 @@ from uuid import uuid4
 import pytest
 from alembic import command
 from alembic.config import Config
+from sqlalchemy import text
 
 from snaketracker.application.animals import AnimalService, RegisterAnimalCommand
 from snaketracker.application.attachments import (
@@ -58,6 +59,23 @@ BACKUP_KEY = bytes(range(32))
 ONE_PIXEL_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
 )
+
+
+@pytest.mark.parametrize("relative_target", ("restore", "attachments/rehearsal"))
+def test_operator_restore_rejects_active_runtime_targets(
+    tmp_path: Path, relative_target: str
+) -> None:
+    runtime_root = tmp_path / "active-runtime"
+    settings = Settings(
+        environment=Environment.DEVELOPMENT,
+        database_path=runtime_root / "snaketracker.sqlite3",
+        attachment_storage_path=runtime_root / "attachments",
+        backup_storage_path=runtime_root / "backups",
+        backup_encryption_key=BACKUP_KEY.hex(),
+    )
+
+    with pytest.raises(ValueError, match="active runtime"):
+        run_restore_rehearsal(settings, uuid4(), runtime_root / relative_target)
 
 
 def test_worker_creates_encrypted_verified_backup_and_rehearses_restore(tmp_path: Path) -> None:
@@ -139,6 +157,44 @@ def test_worker_creates_encrypted_verified_backup_and_rehearses_restore(tmp_path
             )
         )
         assert spider.profile.capability_profile_identity == "spider.v1"
+        lizard = animals.register(
+            RegisterAnimalCommand(
+                household_id=bootstrap.household_id,
+                actor_user_id=bootstrap.user_id,
+                correlation_id=uuid4(),
+                idempotency_key="backup-register-lizard",
+                name="Sol",
+                species="Fictional ridge lizard",
+                morph=None,
+                genetics=None,
+                sex=None,
+                birth_hatch_date=None,
+                acquisition_date=None,
+                breeder_source=None,
+                notes="Mixed backup fixture.",
+                animal_type="lizard",
+            )
+        )
+        scorpion = animals.register(
+            RegisterAnimalCommand(
+                household_id=bootstrap.household_id,
+                actor_user_id=bootstrap.user_id,
+                correlation_id=uuid4(),
+                idempotency_key="backup-register-scorpion",
+                name="Onyx",
+                species="Fictional forest scorpion",
+                morph=None,
+                genetics=None,
+                sex=None,
+                birth_hatch_date=None,
+                acquisition_date=None,
+                breeder_source=None,
+                notes="Mixed backup fixture.",
+                animal_type="scorpion",
+            )
+        )
+        assert lizard.profile.capability_profile_identity == "lizard.v1"
+        assert scorpion.profile.capability_profile_identity == "scorpion.v1"
         attachment_storage = LocalAttachmentStorage(tmp_path / "attachments")
         attachments = AttachmentService(
             animals=animals,
@@ -173,8 +229,25 @@ def test_worker_creates_encrypted_verified_backup_and_rehearses_restore(tmp_path
                 idempotency_key="backup-select-photo",
             )
         )
-        with engine.connect() as connection:
+        with engine.begin() as connection:
             assert connection.exec_driver_sql("SELECT count(*) FROM sessions").scalar_one() == 1
+            now = datetime.now(UTC).isoformat(timespec="microseconds")
+            connection.execute(
+                text(
+                    "INSERT INTO password_reset_credentials "
+                    "(reset_id,user_id,token_hash,requested_at,expires_at,source) "
+                    "VALUES (:reset_id,:user_id,:token_hash,:now,:expires,'self_service')"
+                ),
+                {
+                    "reset_id": str(uuid4()),
+                    "user_id": str(bootstrap.user_id),
+                    "token_hash": "f" * 64,
+                    "now": now,
+                    "expires": (datetime.now(UTC) + timedelta(minutes=45)).isoformat(
+                        timespec="microseconds"
+                    ),
+                },
+            )
 
         repository = SQLAlchemyBackupRepository(engine)
         service = BackupService(repository)
@@ -212,7 +285,7 @@ def test_worker_creates_encrypted_verified_backup_and_rehearses_restore(tmp_path
 
         verification = pipeline.verify(run)
         assert verification.attachment_count == 1
-        assert verification.database_schema_revision == "0010_multispecies_foundation"
+        assert verification.database_schema_revision == "0013_password_recovery"
         assert verification.event_global_position >= 4
         assert verification.encryption_key_id == "m4-local-test-key"
         assert ("animal.photo_selected", 1) in verification.event_contracts
@@ -222,9 +295,17 @@ def test_worker_creates_encrypted_verified_backup_and_rehearses_restore(tmp_path
             assert restored_database.execute("PRAGMA integrity_check").fetchone() == ("ok",)
             assert restored_database.execute("SELECT count(*) FROM sessions").fetchone() == (0,)
             assert restored_database.execute(
+                "SELECT count(*) FROM password_reset_credentials"
+            ).fetchone() == (0,)
+            assert restored_database.execute(
                 "SELECT animal_type,count(*) FROM animal_current GROUP BY animal_type "
                 "ORDER BY animal_type"
-            ).fetchall() == [("snake", 1), ("spider", 1)]
+            ).fetchall() == [
+                ("lizard", 1),
+                ("scorpion", 1),
+                ("snake", 1),
+                ("spider", 1),
+            ]
         assert restored.attachment_storage.finalized_exists(finalized.storage_key, "image/png")
 
         operator_restore = run_restore_rehearsal(

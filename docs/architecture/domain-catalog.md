@@ -27,17 +27,20 @@ Authentication credentials and sessions are platform records. Membership transit
 Husbandry and health are not peer bounded contexts. They issue commands through animal-owned application ports and cannot import one another. Common types live in `animals.domain.common`. Reports, reminders, and search consume public event contracts.
 
 Animal type is modeled by a trusted, versioned care-capability profile within this aggregate, not by
-creating a new aggregate per species. The initial profiles are `snake.v1` and `spider.v1`. Profiles
-declare applicable typed commands, measurements, husbandry contracts, reminder kinds, and
-presentation actions. Application services and domain handlers both reject inapplicable actions.
-They do not embed universal husbandry intervals or permit arbitrary user-defined code.
+creating a new aggregate per species. The registered profiles are `snake.v1`, `spider.v1`,
+`lizard.v1`, and `scorpion.v1`. Profiles declare applicable typed commands, measurements,
+husbandry contracts, reminder kinds, analytics, and presentation actions. Application services and
+domain handlers both reject inapplicable actions. They do not embed universal husbandry intervals
+or permit arbitrary user-defined code.
 
 Legacy `animal.registered` version 1 streams deterministically resolve to `snake.v1`; they are not
 rewritten. Version 2 registration records the profile identity for new animals. Common identity,
 photos, feeding, enclosure assignment, inventory and expense associations, reminders, attachments,
-timeline, backup, and authorization remain shared. Snake length, shed, and bath facts remain
-snake-capability features. Spider molt and premolt facts are additive Animal contracts. Enclosure
-care remains in the neutral Enclosure aggregate.
+timeline, backup, and authorization remain shared. Snake shed remains snake-specific because its
+contract includes snake semantics. Lizard enables shared length, bath, and misting capabilities but
+does not reuse snake shed. Historical molt/premolt schema v1 remains Spider-only; neutral schema v2
+is shared by molt-capable Spider and Scorpion profiles. Scorpion does not expose length, shed, or
+bath. Enclosure care remains in the neutral Enclosure aggregate.
 
 ### Enclosures
 
@@ -54,10 +57,10 @@ they do not change enclosure ownership or create type-specific enclosure aggrega
 
 - **Aggregate:** Inventory item
 - **Stream:** `inventory-item:{item_uuid}`
-- **Owns:** item definition, units, acquisitions, reservations, consumption, adjustments, expiry, reorder policy
+- **Owns:** item definition, units, active/archived lifecycle, acquisitions, reservations, consumption, adjustments, expiry, reorder policy
 - **Invariant:** an operation cannot produce an invalid balance unless an explicitly authorized adjustment policy permits it
 
-A feeding that consumes stock uses one atomic multi-stream operation across the animal and inventory-item streams.
+A feeding that consumes stock uses one atomic multi-stream operation across the animal and inventory-item streams. Archived items remain replayable and visible in historical reads but cannot receive stock changes or new feeding consumption. Restoration is an explicit event. Permanent deletion is intentionally unavailable because registration itself creates immutable item history.
 
 ### Expenses
 
@@ -71,6 +74,12 @@ A feeding that consumes stock uses one atomic multi-stream operation across the 
 - **Stream:** `reminder-rule:{rule_uuid}`
 - **Owns:** schedule policy, subject, activation, channel preferences
 - **Does not own:** derived reminder facts, notification intent, jobs, or attempts
+
+Current reminder state is a deterministic calculation from the owner rule and effective qualifying
+care history. Event-relative schedules recur from the qualifying event. Fixed schedules advance to
+the first cadence occurrence after qualifying care at or after the current occurrence. Corrections,
+voids, and reinstatements therefore change reminder state through effective-history replay rather
+than a mutable completed-task flag.
 
 ### Documents
 

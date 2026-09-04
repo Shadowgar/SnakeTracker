@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Reminders · SnakeTracker{% endblock %}
+{% block title %}Reminders · Care Keeper{% endblock %}
 {% block content %}
 <section class="agenda-page" aria-labelledby="page-title">
   <header>
@@ -17,24 +17,18 @@
         <h2 id="agenda-{{ status }}">{{ heading }}</h2>
         <ol class="agenda-list">
           {% for row in rows %}
-          <li class="card agenda-card">
+          <li class="card schedule-destination-row">
             <div class="agenda-card-heading">
-              <div>
+              {% if row.photo_attachment_version_id %}<img class="care-avatar" src="/attachments/{{ row.photo_attachment_version_id }}" alt="">{% else %}<span class="care-avatar care-avatar-placeholder fallback-{{ row.photo_fallback_key }}" aria-hidden="true">{{ row.subject_name[0]|upper }}</span>{% endif %}
+              <div class="schedule-destination-copy">
                 <a class="agenda-animal" href="{{ row.subject_url }}">{{ row.subject_name }}</a>
                 {% if row.location_name %}<span class="muted"> · {{ row.location_name }}</span>{% endif %}
                 <h3>{{ row.title }}</h3>
+                <p>Every {{ row.item.interval_days }} day{% if row.item.interval_days != 1 %}s{% endif %} · {% if row.item.status == 'overdue' %}Overdue · due {{ row.item.due_at.astimezone(household_zone).strftime('%b %-d') }}{% else %}{{ row.due_label }}{% endif %}</p>
+                {% if row.item.source_occurred_at %}<small>Last {{ row.item.source_label }} · {{ row.item.source_occurred_at.astimezone(household_zone).strftime('%b %-d') }}</small>{% endif %}
               </div>
-              <time datetime="{{ row.item.due_at.isoformat() }}">
-                {% if row.item.status == 'overdue' %}Overdue · due {{ row.item.due_at.astimezone(household_zone).strftime('%b %d') }}
-                {% elif row.item.status == 'due_today' %}Due today
-                {% else %}Due {{ row.item.due_at.astimezone(household_zone).strftime('%b %d') }}{% endif %}
-              </time>
+              {% if row.schedule_url %}<a class="button-link secondary-link schedule-edit-link" href="{{ row.schedule_url }}">Edit schedule</a>{% endif %}
             </div>
-            <dl class="agenda-details">
-              {% if row.item.source_occurred_at %}<div><dt>Last {{ row.item.source_label }}</dt><dd>{{ row.item.source_occurred_at.astimezone(household_zone).strftime('%b %d') }}</dd></div>{% endif %}
-              <div><dt>Schedule</dt><dd>Every {{ row.item.interval_days }} day{% if row.item.interval_days != 1 %}s{% endif %}</dd></div>
-              {% if row.item.explanation == 'Owner due-date override' %}<div><dt>Due date</dt><dd>Owner override</dd></div>{% endif %}
-            </dl>
           </li>
           {% endfor %}
         </ol>

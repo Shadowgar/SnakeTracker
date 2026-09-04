@@ -1,0 +1,438 @@
+{
+  "status": "passed",
+  "browser": "Chrome/151.0.7922.173",
+  "viewports": [
+    "1440x900",
+    "390x844",
+    "360x800"
+  ],
+  "screenshots": [
+    "desktop-animals.png",
+    "desktop-calendar-shell.png",
+    "desktop-today.png",
+    "mobile-animals.png",
+    "mobile-calendar-shell.png",
+    "mobile-enclosures.png",
+    "mobile-more.png",
+    "mobile-quick-log.png",
+    "mobile-search.png",
+    "mobile-today.png"
+  ],
+  "accessibility": [
+    {
+      "label": "desktop-today",
+      "violations": []
+    },
+    {
+      "label": "desktop-animals",
+      "violations": []
+    },
+    {
+      "label": "desktop-calendar-shell",
+      "violations": []
+    },
+    {
+      "label": "mobile-today",
+      "violations": []
+    },
+    {
+      "label": "mobile-animals",
+      "violations": []
+    },
+    {
+      "label": "mobile-enclosures",
+      "violations": []
+    },
+    {
+      "label": "mobile-more",
+      "violations": []
+    },
+    {
+      "label": "mobile-calendar-shell",
+      "violations": []
+    },
+    {
+      "label": "mobile-quick-log",
+      "violations": []
+    }
+  ],
+  "layouts": [
+    {
+      "label": "desktop-today",
+      "expectedMode": "desktop",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "sidebarVisible": true,
+      "mobileNavVisible": false,
+      "quickLogVisible": false,
+      "current": "Today",
+      "navLabels": [
+        "Today",
+        "Animals",
+        "Calendar",
+        "Enclosures",
+        "More"
+      ],
+      "mainPaddingBottom": 48,
+      "navHeight": 0
+    },
+    {
+      "label": "desktop-animals",
+      "expectedMode": "desktop",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "sidebarVisible": true,
+      "mobileNavVisible": false,
+      "quickLogVisible": false,
+      "current": "Animals",
+      "navLabels": [
+        "Today",
+        "Animals",
+        "Calendar",
+        "Enclosures",
+        "More"
+      ],
+      "mainPaddingBottom": 48,
+      "navHeight": 0
+    },
+    {
+      "label": "desktop-calendar-shell",
+      "expectedMode": "desktop",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "sidebarVisible": true,
+      "mobileNavVisible": false,
+      "quickLogVisible": false,
+      "current": "Calendar",
+      "navLabels": [
+        "Today",
+        "Animals",
+        "Calendar",
+        "Enclosures",
+        "More"
+      ],
+      "mainPaddingBottom": 48,
+      "navHeight": 0
+    },
+    {
+      "label": "mobile-today",
+      "expectedMode": "mobile",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "sidebarVisible": false,
+      "mobileNavVisible": true,
+      "quickLogVisible": true,
+      "current": "Today",
+      "navLabels": [
+        "Today",
+        "Animals",
+        "Calendar",
+        "Enclosures",
+        "More"
+      ],
+      "mainPaddingBottom": 103.2,
+      "navHeight": 71.375
+    },
+    {
+      "label": "mobile-animals-transition",
+      "expectedMode": "mobile",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "sidebarVisible": false,
+      "mobileNavVisible": true,
+      "quickLogVisible": true,
+      "current": "Animals",
+      "navLabels": [
+        "Today",
+        "Animals",
+        "Calendar",
+        "Enclosures",
+        "More"
+      ],
+      "mainPaddingBottom": 103.2,
+      "navHeight": 71.375
+    },
+    {
+      "label": "mobile-enclosures",
+      "expectedMode": "mobile",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "sidebarVisible": false,
+      "mobileNavVisible": true,
+      "quickLogVisible": true,
+      "current": "Enclosures",
+      "navLabels": [
+        "Today",
+        "Animals",
+        "Calendar",
+        "Enclosures",
+        "More"
+      ],
+      "mainPaddingBottom": 103.2,
+      "navHeight": 71.375
+    },
+    {
+      "label": "mobile-more",
+      "expectedMode": "mobile",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "sidebarVisible": false,
+      "mobileNavVisible": true,
+      "quickLogVisible": true,
+      "current": "More",
+      "navLabels": [
+        "Today",
+        "Animals",
+        "Calendar",
+        "Enclosures",
+        "More"
+      ],
+      "mainPaddingBottom": 103.2,
+      "navHeight": 71.375
+    },
+    {
+      "label": "mobile-calendar-shell",
+      "expectedMode": "mobile",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "sidebarVisible": false,
+      "mobileNavVisible": true,
+      "quickLogVisible": true,
+      "current": "Calendar",
+      "navLabels": [
+        "Today",
+        "Animals",
+        "Calendar",
+        "Enclosures",
+        "More"
+      ],
+      "mainPaddingBottom": 103.2,
+      "navHeight": 71.375
+    },
+    {
+      "label": "mobile-search",
+      "expectedMode": "mobile",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "sidebarVisible": false,
+      "mobileNavVisible": true,
+      "quickLogVisible": true,
+      "current": null,
+      "navLabels": [
+        "Today",
+        "Animals",
+        "Calendar",
+        "Enclosures",
+        "More"
+      ],
+      "mainPaddingBottom": 103.2,
+      "navHeight": 71.375
+    },
+    {
+      "label": "mobile-quick-log",
+      "expectedMode": "mobile",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "sidebarVisible": false,
+      "mobileNavVisible": true,
+      "quickLogVisible": true,
+      "current": null,
+      "navLabels": [
+        "Today",
+        "Animals",
+        "Calendar",
+        "Enclosures",
+        "More"
+      ],
+      "mainPaddingBottom": 103.2,
+      "navHeight": 71.375
+    },
+    {
+      "label": "small-mobile-today",
+      "expectedMode": "mobile",
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "sidebarVisible": false,
+      "mobileNavVisible": true,
+      "quickLogVisible": true,
+      "current": "Today",
+      "navLabels": [
+        "Today",
+        "Animals",
+        "Calendar",
+        "Enclosures",
+        "More"
+      ],
+      "mainPaddingBottom": 103.2,
+      "navHeight": 71.375
+    }
+  ],
+  "console": {
+    "application_findings": [],
+    "cloudflare_diagnostics": [
+      {
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Yqp8Ec/lTfXjTGNdpSqvBrE0smC1130feMtWfT9twtc='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-FPmjZNn/3DkuMY/wb3CYdOtiv9749lbQAR0e4lS62fc='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-K4Q1YleJxJQXvdzHQRXNUbHQHdfps//1dY3BcPuOWtw='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-+kdT91j+BK8JktUHHCalEWNOPlE3KDiudVqtaU3WAow='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-TNtgMFLkUOR6c9SAScNClvmJNdvBFnCOuW7KZURSWz8='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-uDOEEh9iYtMRLUd5HHjxJZLdw4i7dsvKcJ1s0yOiDgg='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-vFhTXNkMHRTlSUqnGUBY3TQo6lOKA7Xhjh/UKxbOQhY='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-V629NpZKjcMNsDDgM0yYa+b6/sK4kEaMftELtWP9BTo='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Gh30BuuiqooLy1rkBTlZUFWHjfIz7nJrxuYX62RgJIU='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-xsWuGHC9zMBOPNNypK/1SnpsVihFY51bDhWDAjK1Yjw='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-1tmeTVD6OZhOdWrRYbM1/ypDd1MttigMUn1TKTIDgIA='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-M5xFsQF+7CZjy+088v3HNHYUjaItFO4wuH+LHUek2dg='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-fHYIIIoO8kBYUk2SMbYUXvL3KNH2Rn/iISHh0hpf1p4='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-QFZqWhaNii1h2tZ0y724p+F+ojqwGt6D1jB3fs7G4PU='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-1inT8P/u/tJNcnZThfKWYZvmOe+isMB3inGM3+z4Aq0='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-D3+69zzu/DSqg69qno4mdqjBcYRtCxdPjUKnELJWV60='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "instrumentation": false
+      },
+      {
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "instrumentation": false
+      }
+    ],
+    "instrumentation_diagnostics": []
+  },
+  "page_errors": [],
+  "care_keeper_request_failures": []
+}

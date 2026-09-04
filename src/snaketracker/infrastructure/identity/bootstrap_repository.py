@@ -12,10 +12,12 @@ from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 
 from snaketracker.application.household_bootstrap import (
+    AccountRegistrationConflictError,
     AlreadyBootstrappedError,
     BootstrapConflictError,
     BootstrapResult,
     BootstrapWrite,
+    DemoProvisioningConflictError,
 )
 from snaketracker.domains.households.contracts import HouseholdCreatedV1
 from snaketracker.platform.events.envelope import DomainEvent, canonical_event_data
@@ -56,6 +58,107 @@ class SQLAlchemyHouseholdBootstrapRepository:
                 connection.rollback()
                 raise
 
+    def provision_demo(self, write: BootstrapWrite) -> BootstrapResult:
+        with self._engine.connect() as connection:
+            connection.exec_driver_sql("BEGIN IMMEDIATE")
+            try:
+                existing = self._existing_operation(connection, write)
+                if existing is not None:
+                    connection.rollback()
+                    if existing["command_hash"] != write.command_hash:
+                        raise BootstrapConflictError(
+                            "Demo provisioning idempotency key conflicts with prior use."
+                        )
+                    data = json.loads(existing["stored_result_json"])
+                    return BootstrapResult(
+                        household_id=write.result.household_id.__class__(data["household_id"]),
+                        user_id=write.result.user_id.__class__(data["user_id"]),
+                    )
+                if self._demo_identity_conflicts(connection, write):
+                    raise DemoProvisioningConflictError(
+                        "Reserved demo identity or household conflict; no changes were made."
+                    )
+                self._insert_user(connection, write)
+                self._insert_stream(connection, write)
+                positions = [self._insert_event(connection, event) for event in write.events]
+                self._insert_household_summary(connection, write, positions[0])
+                self._insert_membership(connection, write, positions[1])
+                self._insert_operation(connection, write)
+                self._insert_audit(connection, write)
+                connection.commit()
+                return write.result
+            except Exception:
+                connection.rollback()
+                raise
+
+    def register_account(self, write: BootstrapWrite) -> BootstrapResult:
+        """Commit a normal signup without the one-time or demo-only guards."""
+        with self._engine.connect() as connection:
+            connection.exec_driver_sql("BEGIN IMMEDIATE")
+            try:
+                existing = self._existing_operation(connection, write)
+                if existing is not None:
+                    connection.rollback()
+                    if existing["command_hash"] != write.command_hash:
+                        raise BootstrapConflictError(
+                            "Account registration idempotency key conflicts with prior use."
+                        )
+                    data = json.loads(existing["stored_result_json"])
+                    return BootstrapResult(
+                        household_id=write.result.household_id.__class__(data["household_id"]),
+                        user_id=write.result.user_id.__class__(data["user_id"]),
+                    )
+                self._insert_user(connection, write)
+                self._insert_stream(connection, write)
+                positions = [self._insert_event(connection, event) for event in write.events]
+                self._insert_household_summary(connection, write, positions[0])
+                self._insert_membership(connection, write, positions[1])
+                self._insert_operation(connection, write)
+                self._insert_audit(connection, write)
+                connection.commit()
+                return write.result
+            except IntegrityError as error:
+                connection.rollback()
+                raise AccountRegistrationConflictError(
+                    "Account registration could not be completed."
+                ) from error
+            except Exception:
+                connection.rollback()
+                raise
+
+    @staticmethod
+    def _demo_identity_conflicts(connection: Connection, write: BootstrapWrite) -> bool:
+        checks = (
+            (
+                "SELECT 1 FROM users WHERE user_id=:user_id OR email_normalized=:email LIMIT 1",
+                {
+                    "user_id": str(write.result.user_id),
+                    "email": write.email_normalized,
+                },
+            ),
+            (
+                "SELECT 1 FROM household_summaries WHERE household_id=:household_id LIMIT 1",
+                {"household_id": str(write.result.household_id)},
+            ),
+            (
+                "SELECT 1 FROM event_streams WHERE household_id=:household_id "
+                "OR stream_id=:household_id LIMIT 1",
+                {"household_id": str(write.result.household_id)},
+            ),
+            (
+                "SELECT 1 FROM authorization_memberships WHERE household_id=:household_id "
+                "OR user_id=:user_id LIMIT 1",
+                {
+                    "household_id": str(write.result.household_id),
+                    "user_id": str(write.result.user_id),
+                },
+            ),
+        )
+        return any(
+            connection.execute(text(query), parameters).first() is not None
+            for query, parameters in checks
+        )
+
     @staticmethod
     def _existing_operation(connection: Connection, write: BootstrapWrite) -> Any:
         return (
@@ -63,11 +166,12 @@ class SQLAlchemyHouseholdBootstrapRepository:
                 text(
                     "SELECT command_hash, stored_result_json FROM idempotency_operations "
                     "WHERE household_id=:household_id AND actor_user_id=:actor_user_id "
-                    "AND operation_scope='household.bootstrap' AND idempotency_key=:key"
+                    "AND operation_scope=:operation_scope AND idempotency_key=:key"
                 ),
                 {
                     "household_id": str(write.result.household_id),
                     "actor_user_id": str(write.result.user_id),
+                    "operation_scope": write.operation_scope,
                     "key": write.idempotency_key,
                 },
             )
@@ -215,7 +319,7 @@ class SQLAlchemyHouseholdBootstrapRepository:
                 "(operation_id,household_id,actor_user_id,operation_scope,idempotency_key,"
                 "command_hash,status,result_events_json,stored_result_json,"
                 "stored_result_schema_version,correlation_id,created_at,completed_at,expires_at) "
-                "VALUES (:operation_id,:household_id,:actor_user_id,'household.bootstrap',:key,"
+                "VALUES (:operation_id,:household_id,:actor_user_id,:operation_scope,:key,"
                 ":command_hash,'completed',:events,:result,1,:correlation_id,:now,:now,:expires)"
             ),
             {
@@ -223,6 +327,7 @@ class SQLAlchemyHouseholdBootstrapRepository:
                 "household_id": str(write.result.household_id),
                 "actor_user_id": str(write.result.user_id),
                 "key": write.idempotency_key,
+                "operation_scope": write.operation_scope,
                 "command_hash": write.command_hash,
                 "events": event_results,
                 "result": result_json,
@@ -239,7 +344,7 @@ class SQLAlchemyHouseholdBootstrapRepository:
                 "INSERT INTO security_audit "
                 "(audit_id,recorded_at,category,action,outcome,actor_user_id,household_id,"
                 "target_type,target_id,correlation_id,details_json) "
-                "VALUES (:audit_id,:now,'identity','household.bootstrap','success',:user_id,"
+                "VALUES (:audit_id,:now,'identity',:action,'success',:user_id,"
                 ":household_id,'household',:household_id,:correlation_id,'{}')"
             ),
             {
@@ -248,5 +353,6 @@ class SQLAlchemyHouseholdBootstrapRepository:
                 "user_id": str(write.result.user_id),
                 "household_id": str(write.result.household_id),
                 "correlation_id": str(write.correlation_id),
+                "action": write.audit_action,
             },
         )

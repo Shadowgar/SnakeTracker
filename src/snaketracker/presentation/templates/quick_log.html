@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Add care · Care Keeper{% endblock %}
+{% block content %}
+<section class="quick-log-page" aria-labelledby="page-title">
+  <header class="page-heading"><div><p class="page-kicker">Quick log</p><h1 id="page-title">Add care</h1><p class="lede">Pick an animal, then choose the care you completed.</p></div></header>
+  {% if quick_log_groups %}<div class="quick-log-groups">
+    {% for group_label, rows in quick_log_groups %}<section aria-labelledby="quick-log-{{ group_label|lower }}"><div class="quick-log-group-heading"><h2 id="quick-log-{{ group_label|lower }}">{{ group_label }}s</h2><span>{{ rows|length }}</span></div>
+      <ul class="quick-log-list">{% for row in rows %}<li class="quick-log-card">
+        {% if row.animal.photo_attachment_version_id %}<img class="quick-log-photo" src="/attachments/{{ row.animal.photo_attachment_version_id }}" alt="Profile photo of {{ row.animal.name }}">{% else %}<span class="quick-log-placeholder" aria-hidden="true">{{ row.animal.name[0]|upper }}</span>{% endif %}
+        <div class="quick-log-identity"><strong>{{ row.animal.name }}</strong><span>{{ row.animal.species }}</span></div>
+        <div class="quick-log-actions" aria-label="Care actions for {{ row.animal.name }}">{% for action in row.actions %}<a href="{{ action.href }}">{{ action.title|replace('Record ', '') }}</a>{% endfor %}</div>
+      </li>{% endfor %}</ul>
+    </section>{% endfor %}
+  </div>{% else %}<div class="empty-state"><h2>No animals available</h2><p>Add an animal before recording care.</p><a class="button-link" href="/animals/new">Add animal</a></div>{% endif %}
+</section>
+{% endblock %}

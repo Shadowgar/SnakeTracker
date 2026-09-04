@@ -8,6 +8,7 @@ from snaketracker.bootstrap.compatibility import (
     evaluate_compatibility,
     evaluate_runtime_compatibility,
     inspect_database_compatibility,
+    inspect_projection_compatibility,
     inspect_startup_compatibility,
 )
 
@@ -16,7 +17,7 @@ from snaketracker.bootstrap.compatibility import (
     ("metadata", "database_is_empty", "expected_mode"),
     [
         (
-            {"manifest_version": 1, "relational_schema_version": 10},
+            {"manifest_version": 1, "relational_schema_version": 13},
             False,
             CompatibilityMode.NORMAL,
         ),
@@ -28,12 +29,12 @@ from snaketracker.bootstrap.compatibility import (
         (None, True, CompatibilityMode.BOOTSTRAP_ALLOWED),
         (None, False, CompatibilityMode.RECOVERY_REQUIRED),
         (
-            {"manifest_version": 2, "relational_schema_version": 10},
+            {"manifest_version": 2, "relational_schema_version": 12},
             False,
             CompatibilityMode.RECOVERY_REQUIRED,
         ),
         (
-            {"manifest_version": 1, "relational_schema_version": 11},
+            {"manifest_version": 1, "relational_schema_version": 14},
             False,
             CompatibilityMode.RECOVERY_REQUIRED,
         ),
@@ -74,7 +75,7 @@ def test_known_alembic_revision_is_compatible(tmp_path) -> None:
         with engine.begin() as connection:
             connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
             connection.execute(
-                text("INSERT INTO alembic_version VALUES ('0010_multispecies_foundation')")
+                text("INSERT INTO alembic_version VALUES ('0013_password_recovery')")
             )
 
         assert inspect_database_compatibility(engine).mode is CompatibilityMode.NORMAL
@@ -169,13 +170,20 @@ def test_startup_compatibility_accepts_supported_runtime_and_schema(tmp_path) ->
         with engine.begin() as connection:
             connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
             connection.execute(
-                text("INSERT INTO alembic_version VALUES ('0010_multispecies_foundation')")
+                text("INSERT INTO alembic_version VALUES ('0013_password_recovery')")
             )
             connection.execute(
                 text(
                     "CREATE TABLE domain_events ("
                     "stream_type VARCHAR(64) NOT NULL, event_type VARCHAR(128) NOT NULL, "
                     "schema_version INTEGER NOT NULL)"
+                )
+            )
+            connection.execute(
+                text(
+                    "CREATE TABLE projection_definitions ("
+                    "projection_name TEXT,projection_schema_version INTEGER,"
+                    "handler_version INTEGER)"
                 )
             )
 
@@ -191,7 +199,7 @@ def test_unknown_non_household_contract_requires_restricted_recovery(tmp_path) -
         with engine.begin() as connection:
             connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
             connection.execute(
-                text("INSERT INTO alembic_version VALUES ('0010_multispecies_foundation')")
+                text("INSERT INTO alembic_version VALUES ('0013_password_recovery')")
             )
             connection.execute(
                 text(
@@ -207,5 +215,28 @@ def test_unknown_non_household_contract_requires_restricted_recovery(tmp_path) -
         report = inspect_startup_compatibility(engine)
         assert report.mode is CompatibilityMode.RECOVERY_REQUIRED
         assert report.reason_code == "event_contract_unknown"
+    finally:
+        engine.dispose()
+
+
+def test_unknown_persisted_projection_requires_recovery(tmp_path) -> None:
+    database = tmp_path / "unknown-projection.sqlite3"
+    engine = create_engine(f"sqlite+pysqlite:///{database}")
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "CREATE TABLE projection_definitions ("
+                    "projection_name TEXT,projection_schema_version INTEGER,"
+                    "handler_version INTEGER)"
+                )
+            )
+            connection.execute(
+                text("INSERT INTO projection_definitions VALUES ('future_projection',99,99)")
+            )
+
+        report = inspect_projection_compatibility(engine)
+        assert report.mode is CompatibilityMode.RECOVERY_REQUIRED
+        assert report.reason_code == "projection_definition_unknown"
     finally:
         engine.dispose()

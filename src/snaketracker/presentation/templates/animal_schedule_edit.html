@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ schedule.title if schedule else 'Care schedule' }} · {{ animal.name }} · Care Keeper{% endblock %}
+{% block content %}
+<section class="animal-experience" aria-labelledby="page-title">
+  {% include "animal_profile_header.html" %}
+  <section class="form-page focused-animal-form" aria-labelledby="schedule-editor-title">
+    <header><p class="eyebrow">Care schedule</p><h2 id="schedule-editor-title">{{ schedule.title }}</h2><p class="lede">Set one recurring interval. Care Keeper calculates due dates from the latest qualifying care record.</p></header>
+    {% if errors and errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+    <form class="card form-stack" method="post" action="/animals/{{ animal.animal_id }}/care-schedule/{{ schedule.reminder_type }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}-schedule-{{ schedule.reminder_type }}"><input type="hidden" name="expected_stream_version" value="{{ schedule.expected_stream_version }}"><input type="hidden" name="return_to" value="care">
+      <label class="checkbox-label"><input name="enabled" type="checkbox" value="true" {% if schedule.enabled %}checked{% endif %}> Schedule {{ schedule.title|lower }}</label>
+      <label>{{ schedule.interval_label }}<span class="input-with-unit"><input name="interval_days" type="number" inputmode="numeric" min="1" max="3650" value="{{ schedule.interval_days or 1 }}" required><span>days</span></span></label>
+      <label>Override next due date <span class="muted">Optional one-time adjustment; the recurring interval stays unchanged.</span><input name="override_due_at" type="datetime-local" value="{{ schedule.override_due_at }}"><small>{{ principal.household_timezone }}</small></label>
+      <div class="form-actions"><a href="/animals/{{ animal.animal_id }}/care">Cancel</a><button type="submit">Save schedule</button></div>
+    </form>
+  </section>
+</section>
+{% endblock %}

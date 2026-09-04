@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Literal, Protocol
 from uuid import UUID
 
@@ -14,6 +15,7 @@ TEST_PROJECTION_PREFIX = "__snaketracker_" + "test__."
 
 @dataclass(frozen=True, slots=True)
 class ProjectionEvent:
+    event_id: UUID
     global_position: int
     household_id: UUID
     stream_type: str
@@ -21,6 +23,10 @@ class ProjectionEvent:
     event_type: str
     schema_version: int
     payload: Mapping[str, object]
+    occurred_at: datetime
+    title: str
+    description: str | None
+    notes: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,6 +60,9 @@ class ProjectionDefinition:
     components: tuple[str, ...]
     supported_contracts: tuple[tuple[str, int], ...]
     strategy: ProjectionGenerationStrategy
+    source_kind: Literal["event_stream", "reference_bundle"] = "event_stream"
+    freshness_threshold_seconds: int | None = None
+    source_manifest_checksum: str | None = None
 
 
 class ProjectionRegistry:
@@ -84,6 +93,11 @@ class ProjectionRegistry:
                 or not definition.supported_contracts
             ):
                 raise ValueError("Projection definition is incomplete.")
+            if definition.source_kind not in {"event_stream", "reference_bundle"} or (
+                definition.freshness_threshold_seconds is not None
+                and definition.freshness_threshold_seconds < 1
+            ):
+                raise ValueError("Projection source metadata is invalid.")
             by_name[definition.name] = definition
             physical.add(definition.physical_identifier)
         self._definitions = by_name
@@ -108,6 +122,10 @@ class ProjectionRegistry:
         if not definitions:
             raise KeyError("Projection rebuild group is not registered.")
         return definitions
+
+    @property
+    def group_names(self) -> tuple[str, ...]:
+        return tuple(sorted({item.rebuild_group for item in self._definitions.values()}))
 
 
 production_projection_registry = ProjectionRegistry(())

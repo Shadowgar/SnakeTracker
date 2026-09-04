@@ -15,6 +15,23 @@ class InventoryItemRegisteredV1:
 
 
 @dataclass(frozen=True, slots=True)
+class InventoryItemUpdatedV1:
+    name: str
+    unit: str
+    reorder_threshold: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class InventoryItemArchivedV1:
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class InventoryItemRestoredV1:
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
 class InventoryStockReceivedV1:
     quantity: int
     reference: str | None

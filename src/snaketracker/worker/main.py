@@ -32,11 +32,16 @@ from snaketracker.infrastructure.notifications.repository import (
     SQLAlchemyNotificationIntentRepository,
 )
 from snaketracker.infrastructure.observability.logging import configure_logging
+from snaketracker.infrastructure.product_experience.projections import (
+    ensure_product_projection_generations,
+    product_projection_registry,
+)
 from snaketracker.infrastructure.reminders.projections import SQLAlchemyReminderProjection
 from snaketracker.platform.jobs.handoff import OutboxJobHandoff
 from snaketracker.platform.notifications.service import NotificationIntentService
 from snaketracker.worker.backups import LocalBackupWorker
 from snaketracker.worker.jobs import NotificationJobWorker
+from snaketracker.worker.projections import ProjectionWorker
 from snaketracker.worker.reminders import ReminderScheduler
 
 EXIT_RECOVERY_REQUIRED = 2
@@ -71,10 +76,14 @@ def run_worker(settings: Settings, stop: threading.Event, poll_interval: float =
     try:
         readiness = PlatformReadiness(
             database=SQLAlchemyDatabaseHealth(engine),
-            compatibility=inspect_startup_compatibility(engine),
+            compatibility=inspect_startup_compatibility(engine, product_projection_registry),
         )
         if not readiness.check().is_ready:
             return EXIT_RECOVERY_REQUIRED
+        projection_manager = ensure_product_projection_generations(engine)
+        projection_worker = ProjectionWorker(
+            engine, projection_manager, product_projection_registry
+        )
         backup_worker = _backup_worker(settings, engine)
         job_repository = SQLAlchemyJobRepository(engine)
         notification_repository = SQLAlchemyNotificationIntentRepository(engine)
@@ -96,6 +105,7 @@ def run_worker(settings: Settings, stop: threading.Event, poll_interval: float =
         next_reminder_sweep_at: datetime | None = None
         while not stop.wait(poll_interval):
             now = datetime.now(UTC)
+            _run_duty("Product projection advancement", projection_worker.run_once)
             if next_reminder_sweep_at is None or now >= next_reminder_sweep_at:
                 _run_duty(
                     "Reminder sweep",

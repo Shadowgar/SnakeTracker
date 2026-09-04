@@ -1,13 +1,14 @@
 # Versioned Representative Dataset Specification
 
-Dataset ID: `snaketracker-reference-v1`
+Dataset ID: `care-keeper-reference-v2-four-group-capabilities`
 Seed: fixed and recorded by the future generator
 Purpose: reproducible performance, capacity, replay, search, backup, and migration qualification
 
 ## Population
 
 - 1 household with 10 users distributed across all roles
-- 500 animals across active, quarantine, archived, deceased, and rehomed states
+- 500 animals across Snake, Spider, Lizard, and Scorpion profiles in a deterministic 4:3:3:3
+  distribution, with active, quarantine, archived, deceased, and rehomed states
 - 1,000 enclosures across active and retired states
 - 1,000,000 domain events
 - 100,000 finalized attachment metadata records
@@ -19,8 +20,9 @@ Purpose: reproducible performance, capacity, replay, search, backup, and migrati
 The dataset specification fixes percentages and distributions rather than using uniform random rows:
 
 - 30% feedings, including refusals and inventory-linked feedings
-- 15% weight and length measurements
-- 8% sheds
+- 15% capability-applicable weight and length measurements
+- 4% snake sheds
+- 4% Spider and Scorpion molts/premolt observations across historical v1 and neutral v2 fixtures
 - 8% enclosure cleaning and water changes
 - 10% health observations, medications, and vet visits
 - 6% behavior, handling, and baths

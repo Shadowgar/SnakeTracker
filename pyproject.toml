@@ -1,7 +1,7 @@
 [project]
 name = "snaketracker"
 version = "0.1.0"
-description = "Lightweight self-hosted reptile husbandry tracking"
+description = "Lightweight self-hosted exotic-animal care tracking"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [

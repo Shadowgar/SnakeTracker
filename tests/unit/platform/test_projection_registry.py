@@ -23,6 +23,9 @@ def definition(
         physical_identifier=physical_identifier,
         components=("data",),
         supported_contracts=(("__snaketracker_test__.counter.changed", 2),),
+        source_kind="event_stream",
+        freshness_threshold_seconds=60,
+        source_manifest_checksum=None,
         strategy=OrdinaryCounterStrategy(),
     )
 
@@ -45,3 +48,15 @@ def test_projection_registry_is_explicit_and_rejects_unsafe_identifiers() -> Non
         ProjectionRegistry((definition(),))
     with pytest.raises(ValueError, match="Duplicate"):
         ProjectionRegistry((definition(), definition()), allow_reserved_test_namespace=True)
+
+
+def test_projection_registry_rejects_invalid_source_and_freshness_metadata() -> None:
+    invalid_source = definition()
+    object.__setattr__(invalid_source, "source_kind", "user-input")
+    with pytest.raises(ValueError, match="source metadata"):
+        ProjectionRegistry((invalid_source,), allow_reserved_test_namespace=True)
+
+    invalid_freshness = definition()
+    object.__setattr__(invalid_freshness, "freshness_threshold_seconds", 0)
+    with pytest.raises(ValueError, match="source metadata"):
+        ProjectionRegistry((invalid_freshness,), allow_reserved_test_namespace=True)

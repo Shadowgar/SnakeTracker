@@ -1,4 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Expenses · SnakeTracker{% endblock %}
-{% block content %}<section class="dashboard" aria-labelledby="page-title"><header><p class="eyebrow">Financial records</p><h1 id="page-title">Expenses</h1><p class="lede">Owner and Administrator financial history.</p></header>{% if 'expense.manage' in principal.capabilities %}<div class="dashboard-actions"><a class="button-link" href="/expenses/new">Record expense</a></div>{% endif %}
-{% if expenses %}<ul class="record-list">{% for expense in expenses %}<li><a href="/expenses/{{ expense.expense_id }}"><strong>{{ expense.category }} · {{ expense.currency }} {{ '%.2f'|format(expense.amount_minor / 100) }}</strong><span>{{ expense.status|capitalize }}{% if expense.payee %} · {{ expense.payee }}{% endif %}</span></a></li>{% endfor %}</ul>{% else %}<div class="empty-state"><h2>No expenses yet</h2></div>{% endif %}</section>{% endblock %}
+{% block title %}Expenses · Care Keeper{% endblock %}
+{% block content %}
+<section class="dashboard expense-page" aria-labelledby="page-title">
+  <header class="page-heading"><div><p class="page-kicker">Collection costs</p><h1 id="page-title">Expenses</h1><p class="lede">A clear view of effective spending across your collection.</p></div>{% if 'expense.manage' in principal.capabilities %}<a class="button-link" href="/expenses/new">Record expense</a>{% endif %}</header>
+  <dl class="summary-strip expense-summary" aria-label="Expense summary"><div><dt>This month</dt><dd>{{ expense_summary.month }}</dd></div><div><dt>Last 30 days</dt><dd>{{ expense_summary.recent }}</dd></div><div><dt>All active records</dt><dd>{{ expense_summary.total }}</dd></div></dl>
+  <div class="expense-layout">
+    <section class="card category-card" aria-labelledby="category-heading"><h2 id="category-heading">By category</h2>{% if expense_summary.categories %}<ul>{% for category, amount in expense_summary.categories %}<li><span>{{ category }}</span><strong>{{ amount }}</strong></li>{% endfor %}</ul>{% else %}<p class="muted">Category totals will appear after the first expense.</p>{% endif %}</section>
+    <section aria-labelledby="recent-expenses"><div class="section-heading"><h2 id="recent-expenses">Recent expenses</h2><a href="/reports/expenses">View report</a></div>
+      {% if expenses %}<ol class="expense-list">{% for expense in expenses %}<li><a class="card expense-row" href="/expenses/{{ expense.expense_id }}"><span class="expense-icon" aria-hidden="true">$</span><span class="expense-copy"><strong>{{ expense.category }}</strong><span>{% if expense.payee %}{{ expense.payee }} · {% endif %}{{ expense.occurred_at.astimezone(household_zone).strftime('%b %-d, %Y') }}{% if expense.notes %} · {{ expense.notes }}{% endif %}</span></span><span class="expense-amount">{% if expense.currency == 'USD' %}${% else %}{{ expense.currency }} {% endif %}{{ '%.2f'|format(expense.amount_minor / 100) }}{% if expense.status != 'active' %}<small>Voided</small>{% endif %}</span></a></li>{% endfor %}</ol>
+      {% else %}<div class="empty-state"><h2>No expenses yet</h2><p>Record a supply, habitat, or care cost when you are ready.</p>{% if 'expense.manage' in principal.capabilities %}<a class="button-link" href="/expenses/new">Record your first expense</a>{% endif %}</div>{% endif %}
+    </section>
+  </div>
+</section>
+{% endblock %}

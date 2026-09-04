@@ -21,6 +21,7 @@ from snaketracker.domains.enclosures.contracts import (
     EnclosureStatusChangedV1,
     EnclosureWaterChangeRecordedV1,
 )
+from snaketracker.platform.events.corrections import evaluate_effective_events
 from snaketracker.platform.events.envelope import (
     DomainEvent,
     EventPayload,
@@ -298,6 +299,12 @@ class EnclosureService:
 
     def list_profiles(self, household_id: UUID) -> tuple[EnclosureProfile, ...]:
         return self._projection.list_for(household_id)
+
+    def effective_history(self, household_id: UUID, enclosure_id: UUID) -> tuple[DomainEvent, ...]:
+        """Return the enclosure stream with void/correction controls applied."""
+        return evaluate_effective_events(
+            self._event_store.load_stream(StreamKey(household_id, "enclosure", enclosure_id))
+        )
 
     def _record_maintenance(
         self,

@@ -11,6 +11,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine
 
+from snaketracker.application.projection_health import ProjectionFreshness
 from snaketracker.platform.projections.definitions import (
     GenerationLayout,
     ProjectionDefinition,
@@ -56,15 +57,17 @@ class SQLiteProjectionGenerationManager:
                         text(
                             "INSERT INTO projection_generations "
                             "(generation_id,projection_name,physical_identifier,status,"
-                            "high_water_position,validation_json,created_at) "
+                            "high_water_position,validation_json,source_manifest_checksum,"
+                            "created_at) "
                             "VALUES (:generation_id,:name,:physical,'building',:high_water,"
-                            "'{}',:now)"
+                            "'{}',:source_manifest_checksum,:now)"
                         ),
                         {
                             "generation_id": str(generation_ids[definition.name]),
                             "name": definition.name,
                             "physical": layout.component(definition.name, definition.components[0]),
                             "high_water": high_water,
+                            "source_manifest_checksum": definition.source_manifest_checksum,
                             "now": now,
                         },
                     )
@@ -147,6 +150,98 @@ class SQLiteProjectionGenerationManager:
                 for definition in definitions
             }
         return self._layout(definitions, generation_ids)
+
+    def advance(self, group_name: str) -> int:
+        """Apply the authoritative event tail once to an active projection group."""
+        definitions = self._registry.rebuild_group(group_name)
+        layout = self.active_layout(group_name)
+        with self._engine.connect() as connection:
+            connection.exec_driver_sql("BEGIN IMMEDIATE")
+            try:
+                checkpoints = (
+                    connection.execute(
+                        text(
+                            "SELECT c.last_global_position FROM projection_checkpoints c "
+                            "JOIN projection_definitions d ON d.projection_name=c.projection_name "
+                            "AND d.active_generation_id=c.generation_id "
+                            "WHERE d.rebuild_group=:group_name ORDER BY c.projection_name"
+                        ),
+                        {"group_name": group_name},
+                    )
+                    .scalars()
+                    .all()
+                )
+                if len(checkpoints) != len(definitions) or len(set(checkpoints)) != 1:
+                    raise RuntimeError("Active projection group checkpoints are inconsistent.")
+                after = int(checkpoints[0])
+                through = int(
+                    connection.execute(
+                        text("SELECT coalesce(max(global_position),0) FROM domain_events")
+                    ).scalar_one()
+                )
+                if through > after:
+                    self._replay(connection, definitions, layout, after, through)
+                    active_ids = {
+                        definition.name: UUID(
+                            str(
+                                connection.execute(
+                                    text(
+                                        "SELECT active_generation_id FROM projection_definitions "
+                                        "WHERE projection_name=:name"
+                                    ),
+                                    {"name": definition.name},
+                                ).scalar_one()
+                            )
+                        )
+                        for definition in definitions
+                    }
+                    self._checkpoint(connection, active_ids, through, _utc_now())
+                connection.commit()
+                return through
+            except Exception:
+                connection.rollback()
+                raise
+
+    def freshness(self, group_name: str, *, now: datetime) -> ProjectionFreshness:
+        definitions = self._registry.rebuild_group(group_name)
+        with self._engine.connect() as connection:
+            rows = connection.execute(
+                text(
+                    "SELECT c.last_global_position,c.updated_at "
+                    "FROM projection_checkpoints c JOIN projection_definitions d "
+                    "ON d.projection_name=c.projection_name "
+                    "AND d.active_generation_id=c.generation_id "
+                    "WHERE d.rebuild_group=:group_name ORDER BY c.projection_name"
+                ),
+                {"group_name": group_name},
+            ).all()
+            latest = int(
+                connection.execute(
+                    text("SELECT coalesce(max(global_position),0) FROM domain_events")
+                ).scalar_one()
+            )
+        if len(rows) != len(definitions) or len({int(row[0]) for row in rows}) != 1:
+            raise RuntimeError("Active projection group checkpoints are inconsistent.")
+        checkpoint = int(rows[0][0])
+        updated = min(datetime.fromisoformat(str(row[1])) for row in rows)
+        threshold = min(
+            (
+                item.freshness_threshold_seconds
+                for item in definitions
+                if item.freshness_threshold_seconds is not None
+            ),
+            default=60,
+        )
+        lag = max(latest - checkpoint, 0)
+        normalized_now = now.astimezone(UTC)
+        return ProjectionFreshness(
+            group_name=group_name,
+            checkpoint_global_position=checkpoint,
+            latest_global_position=latest,
+            checkpoint_updated_at=updated,
+            lag_events=lag,
+            is_stale=lag > 0 and (normalized_now - updated).total_seconds() >= threshold,
+        )
 
     def rollback(self, group_name: str) -> GenerationLayout:
         definitions = self._registry.rebuild_group(group_name)
@@ -344,8 +439,8 @@ class SQLiteProjectionGenerationManager:
     ) -> None:
         rows = connection.execute(
             text(
-                "SELECT global_position,household_id,stream_type,stream_id,event_type,"
-                "schema_version,payload_json "
+                "SELECT event_id,global_position,household_id,stream_type,stream_id,event_type,"
+                "schema_version,payload_json,occurred_at,title,description,notes "
                 "FROM domain_events WHERE global_position>:after AND global_position<=:through "
                 "ORDER BY global_position"
             ),
@@ -353,6 +448,7 @@ class SQLiteProjectionGenerationManager:
         ).mappings()
         for row in rows:
             event = ProjectionEvent(
+                event_id=UUID(str(row["event_id"])),
                 global_position=int(row["global_position"]),
                 household_id=UUID(str(row["household_id"])),
                 stream_type=str(row["stream_type"]),
@@ -360,6 +456,10 @@ class SQLiteProjectionGenerationManager:
                 event_type=str(row["event_type"]),
                 schema_version=int(row["schema_version"]),
                 payload=json.loads(str(row["payload_json"])),
+                occurred_at=datetime.fromisoformat(str(row["occurred_at"])),
+                title=str(row["title"]),
+                description=str(row["description"]) if row["description"] is not None else None,
+                notes=str(row["notes"]) if row["notes"] is not None else None,
             )
             for definition in definitions:
                 if (event.event_type, event.schema_version) in definition.supported_contracts:
@@ -397,13 +497,16 @@ class SQLiteProjectionGenerationManager:
             text(
                 "INSERT INTO projection_definitions "
                 "(projection_name,projection_schema_version,handler_version,consistency_class,"
-                "rebuild_group,physical_identifier,updated_at) "
-                "VALUES (:name,:schema,:handler,:consistency,:rebuild_group,:physical,:now) "
+                "rebuild_group,physical_identifier,source_kind,freshness_threshold_seconds,"
+                "updated_at) VALUES (:name,:schema,:handler,:consistency,:rebuild_group,:physical,"
+                ":source_kind,:freshness,:now) "
                 "ON CONFLICT(projection_name) DO UPDATE SET "
                 "projection_schema_version=excluded.projection_schema_version,"
                 "handler_version=excluded.handler_version,"
                 "consistency_class=excluded.consistency_class,rebuild_group=excluded.rebuild_group,"
-                "physical_identifier=excluded.physical_identifier,updated_at=excluded.updated_at"
+                "physical_identifier=excluded.physical_identifier,source_kind=excluded.source_kind,"
+                "freshness_threshold_seconds=excluded.freshness_threshold_seconds,"
+                "updated_at=excluded.updated_at"
             ),
             {
                 "name": definition.name,
@@ -412,6 +515,8 @@ class SQLiteProjectionGenerationManager:
                 "consistency": definition.consistency_class,
                 "rebuild_group": definition.rebuild_group,
                 "physical": definition.physical_identifier,
+                "source_kind": definition.source_kind,
+                "freshness": definition.freshness_threshold_seconds,
                 "now": now,
             },
         )

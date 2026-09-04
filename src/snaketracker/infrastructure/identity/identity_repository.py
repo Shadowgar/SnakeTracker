@@ -9,7 +9,13 @@ from uuid import UUID, uuid4
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine
 
-from snaketracker.application.identity import Credential, Principal, SessionWrite
+from snaketracker.application.identity import (
+    Credential,
+    PasswordResetRecipient,
+    PasswordResetWrite,
+    Principal,
+    SessionWrite,
+)
 
 
 def _timestamp(value: datetime) -> str:
@@ -72,6 +78,58 @@ class SQLAlchemyIdentityRepository:
         client_ip: str | None,
         user_agent: str | None,
     ) -> None:
+        self._record_rate_limit_failure(
+            key_hash,
+            limit=limit,
+            window=window,
+            block_duration=block_duration,
+            now=now,
+            correlation_id=correlation_id,
+            client_ip=client_ip,
+            user_agent=user_agent,
+            action="login",
+            reason="invalid_credentials",
+        )
+
+    def record_registration_failure(
+        self,
+        key_hash: str,
+        *,
+        limit: int,
+        window: timedelta,
+        block_duration: timedelta,
+        now: datetime,
+        correlation_id: UUID,
+        client_ip: str | None,
+        user_agent: str | None,
+    ) -> None:
+        self._record_rate_limit_failure(
+            key_hash,
+            limit=limit,
+            window=window,
+            block_duration=block_duration,
+            now=now,
+            correlation_id=correlation_id,
+            client_ip=client_ip,
+            user_agent=user_agent,
+            action="account.register",
+            reason="registration_rejected",
+        )
+
+    def _record_rate_limit_failure(
+        self,
+        key_hash: str,
+        *,
+        limit: int,
+        window: timedelta,
+        block_duration: timedelta,
+        now: datetime,
+        correlation_id: UUID,
+        client_ip: str | None,
+        user_agent: str | None,
+        action: str,
+        reason: str,
+    ) -> None:
         with self._engine.begin() as connection:
             row = (
                 connection.execute(
@@ -111,12 +169,12 @@ class SQLAlchemyIdentityRepository:
             self._audit(
                 connection,
                 now=now,
-                action="login",
+                action=action,
                 outcome="failure",
                 correlation_id=correlation_id,
                 client_ip=client_ip,
                 user_agent=user_agent,
-                details={"reason": "invalid_credentials"},
+                details={"reason": reason},
             )
 
     def clear_login_failures(self, key_hash: str) -> None:
@@ -279,6 +337,245 @@ class SQLAlchemyIdentityRepository:
                 correlation_id=correlation_id,
                 details={"reason": reason},
             )
+
+    def request_password_reset(
+        self,
+        email_normalized: str,
+        write: PasswordResetWrite,
+        *,
+        rate_key: str | None,
+        limit: int,
+        window: timedelta,
+        block_duration: timedelta,
+        correlation_id: UUID,
+        client_ip: str | None,
+        user_agent: str | None,
+    ) -> PasswordResetRecipient | None:
+        with self._engine.begin() as connection:
+            user = (
+                connection.execute(
+                    text(
+                        "SELECT user_id,email_normalized,status FROM users "
+                        "WHERE email_normalized=:email"
+                    ),
+                    {"email": email_normalized},
+                )
+                .mappings()
+                .one_or_none()
+            )
+            blocked = False
+            if rate_key is not None:
+                throttle = (
+                    connection.execute(
+                        text(
+                            "SELECT failure_count,window_started_at,blocked_until "
+                            "FROM login_rate_limits WHERE key_hash=:key"
+                        ),
+                        {"key": rate_key},
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                blocked = bool(
+                    throttle is not None
+                    and throttle["blocked_until"] is not None
+                    and str(throttle["blocked_until"]) > _timestamp(write.requested_at)
+                )
+                if not blocked:
+                    reset_window = throttle is None or str(throttle["window_started_at"]) <= (
+                        _timestamp(write.requested_at - window)
+                    )
+                    attempts = (
+                        1
+                        if reset_window or throttle is None
+                        else int(throttle["failure_count"]) + 1
+                    )
+                    started = (
+                        write.requested_at
+                        if reset_window or throttle is None
+                        else datetime.fromisoformat(str(throttle["window_started_at"]))
+                    )
+                    blocked_until = (
+                        write.requested_at + block_duration if attempts >= limit else None
+                    )
+                    connection.execute(
+                        text(
+                            "INSERT INTO login_rate_limits "
+                            "(key_hash,failure_count,window_started_at,blocked_until,updated_at) "
+                            "VALUES (:key,:attempts,:started,:blocked,:now) "
+                            "ON CONFLICT(key_hash) DO UPDATE SET failure_count=:attempts,"
+                            "window_started_at=:started,blocked_until=:blocked,updated_at=:now"
+                        ),
+                        {
+                            "key": rate_key,
+                            "attempts": attempts,
+                            "started": _timestamp(started),
+                            "blocked": _timestamp(blocked_until) if blocked_until else None,
+                            "now": _timestamp(write.requested_at),
+                        },
+                    )
+
+            eligible = user is not None and user["status"] == "active" and not blocked
+            recipient: PasswordResetRecipient | None = None
+            if eligible and user is not None:
+                connection.execute(
+                    text(
+                        "UPDATE password_reset_credentials SET invalidated_at=:now "
+                        "WHERE user_id=:user_id AND consumed_at IS NULL "
+                        "AND invalidated_at IS NULL"
+                    ),
+                    {"now": _timestamp(write.requested_at), "user_id": user["user_id"]},
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO password_reset_credentials "
+                        "(reset_id,user_id,token_hash,requested_at,expires_at,source) "
+                        "VALUES (:reset_id,:user_id,:token_hash,:requested_at,:expires_at,:source)"
+                    ),
+                    {
+                        "reset_id": str(write.reset_id),
+                        "user_id": user["user_id"],
+                        "token_hash": write.token_hash,
+                        "requested_at": _timestamp(write.requested_at),
+                        "expires_at": _timestamp(write.expires_at),
+                        "source": write.source,
+                    },
+                )
+                recipient = PasswordResetRecipient(
+                    write.reset_id,
+                    UUID(user["user_id"]),
+                    str(user["email_normalized"]),
+                )
+            self._audit(
+                connection,
+                now=write.requested_at,
+                action="password_reset.requested",
+                outcome="success",
+                correlation_id=correlation_id,
+                actor_user_id=(UUID(user["user_id"]) if eligible and user is not None else None),
+                client_ip=client_ip,
+                user_agent=user_agent,
+                details={"source": write.source},
+            )
+            return recipient
+
+    def invalidate_password_reset(
+        self,
+        reset_id: UUID,
+        *,
+        now: datetime,
+        correlation_id: UUID,
+        reason: str,
+    ) -> None:
+        with self._engine.begin() as connection:
+            user_id = connection.execute(
+                text("SELECT user_id FROM password_reset_credentials WHERE reset_id=:reset_id"),
+                {"reset_id": str(reset_id)},
+            ).scalar_one_or_none()
+            connection.execute(
+                text(
+                    "UPDATE password_reset_credentials SET invalidated_at=:now "
+                    "WHERE reset_id=:reset_id AND consumed_at IS NULL AND invalidated_at IS NULL"
+                ),
+                {"now": _timestamp(now), "reset_id": str(reset_id)},
+            )
+            self._audit(
+                connection,
+                now=now,
+                action="password_reset.delivery",
+                outcome="failure",
+                correlation_id=correlation_id,
+                actor_user_id=UUID(user_id) if user_id else None,
+                details={"reason": reason},
+            )
+
+    def complete_password_reset(
+        self,
+        token_hash: str,
+        password_hash: str,
+        *,
+        now: datetime,
+        correlation_id: UUID,
+        client_ip: str | None,
+        user_agent: str | None,
+    ) -> bool:
+        with self._engine.begin() as connection:
+            row = (
+                connection.execute(
+                    text(
+                        "SELECT r.reset_id,r.user_id FROM password_reset_credentials r "
+                        "JOIN users u ON u.user_id=r.user_id "
+                        "WHERE r.token_hash=:token_hash AND r.consumed_at IS NULL "
+                        "AND r.invalidated_at IS NULL AND r.expires_at>:now "
+                        "AND u.status='active'"
+                    ),
+                    {"token_hash": token_hash, "now": _timestamp(now)},
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if row is None:
+                self._audit(
+                    connection,
+                    now=now,
+                    action="password_reset.completed",
+                    outcome="failure",
+                    correlation_id=correlation_id,
+                    client_ip=client_ip,
+                    user_agent=user_agent,
+                    details={"reason": "invalid_or_expired"},
+                )
+                return False
+            user_id = UUID(row["user_id"])
+            connection.execute(
+                text(
+                    "UPDATE users SET password_hash=:password_hash,password_scheme='argon2id',"
+                    "updated_at=:now WHERE user_id=:user_id"
+                ),
+                {
+                    "password_hash": password_hash,
+                    "now": _timestamp(now),
+                    "user_id": str(user_id),
+                },
+            )
+            connection.execute(
+                text(
+                    "UPDATE password_reset_credentials SET consumed_at=:now "
+                    "WHERE reset_id=:reset_id"
+                ),
+                {"now": _timestamp(now), "reset_id": row["reset_id"]},
+            )
+            connection.execute(
+                text(
+                    "UPDATE password_reset_credentials SET invalidated_at=:now "
+                    "WHERE user_id=:user_id AND reset_id<>:reset_id "
+                    "AND consumed_at IS NULL AND invalidated_at IS NULL"
+                ),
+                {
+                    "now": _timestamp(now),
+                    "user_id": str(user_id),
+                    "reset_id": row["reset_id"],
+                },
+            )
+            revoked = connection.execute(
+                text(
+                    "UPDATE sessions SET revoked_at=:now,revocation_reason='password_reset' "
+                    "WHERE user_id=:user_id AND revoked_at IS NULL"
+                ),
+                {"now": _timestamp(now), "user_id": str(user_id)},
+            ).rowcount
+            self._audit(
+                connection,
+                now=now,
+                action="password_reset.completed",
+                outcome="success",
+                correlation_id=correlation_id,
+                actor_user_id=user_id,
+                client_ip=client_ip,
+                user_agent=user_agent,
+                details={"sessions_revoked": revoked},
+            )
+            return True
 
     @staticmethod
     def _audit(

@@ -9,7 +9,10 @@ from uuid import UUID, uuid4
 
 from snaketracker.domains.inventory.contracts import (
     InventoryConsumptionReversedV1,
+    InventoryItemArchivedV1,
     InventoryItemRegisteredV1,
+    InventoryItemRestoredV1,
+    InventoryItemUpdatedV1,
     InventoryReorderPolicyChangedV1,
     InventoryStockAdjustedV1,
     InventoryStockConsumedV1,
@@ -49,6 +52,7 @@ class InventoryBalance:
     consumed_quantity: int
     expired_quantity: int
     reorder_threshold: int | None
+    status: str
     stream_version: int
 
 
@@ -65,7 +69,7 @@ class InventoryConsumptionLink:
 class InventoryBalanceProjection(SynchronousProjection, Protocol):
     def balance_for(self, household_id: UUID, item_id: UUID) -> InventoryBalance | None: ...
 
-    def list_for(self, household_id: UUID) -> tuple[InventoryBalance, ...]: ...
+    def list_for(self, household_id: UUID, status: str) -> tuple[InventoryBalance, ...]: ...
 
     def consumption_for_source(
         self, household_id: UUID, source_event_id: UUID
@@ -165,6 +169,41 @@ class ChangeReorderPolicyCommand:
     idempotency_key: str
     expected_stream_version: int
     reorder_threshold: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class UpdateInventoryItemCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    item_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    expected_stream_version: int
+    name: str
+    unit: str
+    reorder_threshold: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class ArchiveInventoryItemCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    item_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    expected_stream_version: int
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class RestoreInventoryItemCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    item_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    expected_stream_version: int
+    reason: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -330,8 +369,49 @@ class InventoryService:
             "Inventory reorder policy changed",
         )
 
-    def list_balances(self, household_id: UUID) -> tuple[InventoryBalance, ...]:
-        return self._projection.list_for(household_id)
+    def update_item(self, command: UpdateInventoryItemCommand) -> InventoryCommandResult:
+        threshold = command.reorder_threshold
+        if threshold is not None and threshold < 0:
+            raise InventoryValidationError("Reorder threshold cannot be negative.")
+        self._require_status(command.household_id, command.item_id, "active")
+        return self._append(
+            command,
+            "inventory.item_updated",
+            InventoryItemUpdatedV1(
+                _required_text(command.name, "Inventory name"),
+                _required_text(command.unit, "Inventory unit"),
+                threshold,
+            ),
+            "inventory.update_item",
+            "Inventory item updated",
+        )
+
+    def archive_item(self, command: ArchiveInventoryItemCommand) -> InventoryCommandResult:
+        self._require_status(command.household_id, command.item_id, "active")
+        return self._append(
+            command,
+            "inventory.item_archived",
+            InventoryItemArchivedV1(_required_text(command.reason, "Archive reason")),
+            "inventory.archive_item",
+            "Inventory item archived",
+        )
+
+    def restore_item(self, command: RestoreInventoryItemCommand) -> InventoryCommandResult:
+        self._require_status(command.household_id, command.item_id, "archived")
+        return self._append(
+            command,
+            "inventory.item_restored",
+            InventoryItemRestoredV1(_required_text(command.reason, "Restore reason")),
+            "inventory.restore_item",
+            "Inventory item restored",
+        )
+
+    def list_balances(
+        self, household_id: UUID, *, status: str = "active"
+    ) -> tuple[InventoryBalance, ...]:
+        if status not in {"active", "archived"}:
+            raise InventoryValidationError("Inventory status filter is invalid.")
+        return self._projection.list_for(household_id, status)
 
     def balance_for(self, household_id: UUID, item_id: UUID) -> InventoryBalance | None:
         return self._projection.balance_for(household_id, item_id)
@@ -344,7 +424,10 @@ class InventoryService:
         | ReverseConsumptionCommand
         | AdjustStockCommand
         | ExpireStockCommand
-        | ChangeReorderPolicyCommand,
+        | ChangeReorderPolicyCommand
+        | UpdateInventoryItemCommand
+        | ArchiveInventoryItemCommand
+        | RestoreInventoryItemCommand,
         event_type: str,
         payload: EventPayload,
         scope: str,
@@ -353,6 +436,11 @@ class InventoryService:
         causation_id: UUID | None = None,
     ) -> InventoryCommandResult:
         self._existing(command.household_id, command.item_id)
+        self._require_status(
+            command.household_id,
+            command.item_id,
+            "archived" if isinstance(command, RestoreInventoryItemCommand) else "active",
+        )
         if command.expected_stream_version < 1:
             raise InventoryValidationError("Expected inventory stream version is invalid.")
         key = StreamKey(command.household_id, "inventory-item", command.item_id)
@@ -403,6 +491,14 @@ class InventoryService:
         if not events:
             raise InventoryValidationError("Inventory item does not exist in this household.")
         return events
+
+    def _require_status(self, household_id: UUID, item_id: UUID, expected: str) -> None:
+        balance = self._projection.balance_for(household_id, item_id)
+        if balance is None:
+            raise InventoryValidationError("Inventory item does not exist in this household.")
+        if balance.status != expected:
+            action = "restored" if expected == "archived" else "changed"
+            raise InventoryValidationError(f"Only {expected} inventory items can be {action}.")
 
 
 def _event(

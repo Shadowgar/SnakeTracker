@@ -14,6 +14,11 @@ from snaketracker.domains.households.contracts import HouseholdCreatedV1, Househ
 from snaketracker.platform.events.envelope import DomainEvent, EventSubject, event_checksum
 
 BOOTSTRAP_NAMESPACE = UUID("ab66c5ca-7d6b-4f8b-bfdd-94437acc3c4a")
+DEMO_IDEMPOTENCY_KEY = "trusted-local-carekeeper-owner-review-v2"
+DEMO_HOUSEHOLD_ID = str(uuid5(BOOTSTRAP_NAMESPACE, f"household:{DEMO_IDEMPOTENCY_KEY}"))
+DEMO_OWNER_USER_ID = str(uuid5(BOOTSTRAP_NAMESPACE, f"user:{DEMO_IDEMPOTENCY_KEY}"))
+DEMO_EMAIL = "demo@carekeeper.local"
+_DEMO_ALLOWED_ENVIRONMENTS = frozenset({"development", "test", "local-owner-review"})
 
 
 class BootstrapConflictError(RuntimeError):
@@ -28,12 +33,35 @@ class BootstrapValidationError(ValueError):
     """The submitted bootstrap command failed safe domain validation."""
 
 
+class AccountRegistrationConflictError(RuntimeError):
+    """A production account registration conflicts with existing identity state."""
+
+
+class DemoProvisioningConflictError(RuntimeError):
+    """Reserved demo identity state exists without the matching completed operation."""
+
+
+class DemoProvisioningEnvironmentError(RuntimeError):
+    """Trusted local demo provisioning was requested outside its explicit allow-list."""
+
+
 @dataclass(frozen=True, slots=True)
 class BootstrapCommand:
     household_name: str
     timezone: str
     owner_email: str
     owner_display_name: str
+    password: str
+    idempotency_key: str
+    correlation_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class AccountRegistrationCommand:
+    collection_name: str
+    timezone: str
+    email: str
+    display_name: str
     password: str
     idempotency_key: str
     correlation_id: UUID
@@ -56,6 +84,13 @@ class BootstrapWrite:
     idempotency_key: str
     events: tuple[DomainEvent, DomainEvent]
     recorded_at: datetime
+    operation_scope: str
+    audit_action: str
+
+
+@dataclass(frozen=True, slots=True)
+class DemoHouseholdProvisioningCommand:
+    password: str
 
 
 class PasswordHashPort(Protocol):
@@ -64,6 +99,10 @@ class PasswordHashPort(Protocol):
 
 class HouseholdBootstrapRepository(Protocol):
     def bootstrap(self, write: BootstrapWrite) -> BootstrapResult: ...
+
+    def provision_demo(self, write: BootstrapWrite) -> BootstrapResult: ...
+
+    def register_account(self, write: BootstrapWrite) -> BootstrapResult: ...
 
 
 class HouseholdBootstrapService:
@@ -81,28 +120,97 @@ class HouseholdBootstrapService:
         self._command_hash_secret = command_hash_secret
 
     def bootstrap(self, command: BootstrapCommand) -> BootstrapResult:
+        write = self._prepare_write(
+            command,
+            operation_scope="household.bootstrap",
+            audit_action="household.bootstrap",
+        )
+        return self._repository.bootstrap(write)
+
+    def _prepare_write(
+        self,
+        command: BootstrapCommand,
+        *,
+        operation_scope: str,
+        audit_action: str,
+    ) -> BootstrapWrite:
         normalized = _validate(command)
         household_id = uuid5(BOOTSTRAP_NAMESPACE, f"household:{command.idempotency_key}")
         user_id = uuid5(BOOTSTRAP_NAMESPACE, f"user:{command.idempotency_key}")
         recorded_at = datetime.now(UTC)
-        command_hash = self._command_hash(normalized)
-        events = _bootstrap_events(command, household_id, user_id, recorded_at)
-        write = BootstrapWrite(
+        return BootstrapWrite(
             result=BootstrapResult(household_id, user_id),
             email_normalized=normalized["owner_email"],
             owner_display_name=normalized["owner_display_name"],
             password_hash=self._password_hasher.hash(command.password),
-            command_hash=command_hash,
+            command_hash=self._command_hash(normalized),
             correlation_id=command.correlation_id,
             idempotency_key=command.idempotency_key,
-            events=events,
+            events=_bootstrap_events(command, household_id, user_id, recorded_at),
             recorded_at=recorded_at,
+            operation_scope=operation_scope,
+            audit_action=audit_action,
         )
-        return self._repository.bootstrap(write)
 
     def _command_hash(self, normalized: dict[str, str]) -> str:
         canonical = json.dumps(normalized, sort_keys=True, separators=(",", ":")).encode()
         return hmac.new(self._command_hash_secret, canonical, hashlib.sha256).hexdigest()
+
+
+class AccountRegistrationService(HouseholdBootstrapService):
+    """Create an independent production household and its first owner atomically."""
+
+    def register(self, command: AccountRegistrationCommand) -> BootstrapResult:
+        write = self._prepare_write(
+            BootstrapCommand(
+                household_name=command.collection_name,
+                timezone=command.timezone,
+                owner_email=command.email,
+                owner_display_name=command.display_name,
+                password=command.password,
+                idempotency_key=command.idempotency_key,
+                correlation_id=command.correlation_id,
+            ),
+            operation_scope="account.register",
+            audit_action="account.register",
+        )
+        return self._repository.register_account(write)
+
+
+class DemoHouseholdProvisioningService(HouseholdBootstrapService):
+    """Provision the one reserved M6 household through a trusted local-only boundary."""
+
+    def __init__(
+        self,
+        repository: HouseholdBootstrapRepository,
+        password_hasher: PasswordHashPort,
+        *,
+        command_hash_secret: bytes,
+        environment: str,
+    ) -> None:
+        super().__init__(repository, password_hasher, command_hash_secret=command_hash_secret)
+        self._environment = environment
+
+    def provision(self, command: DemoHouseholdProvisioningCommand) -> BootstrapResult:
+        if self._environment not in _DEMO_ALLOWED_ENVIRONMENTS:
+            raise DemoProvisioningEnvironmentError(
+                "Trusted local demo provisioning is not permitted in this environment."
+            )
+        bootstrap_command = BootstrapCommand(
+            household_name="Care Keeper Fictional Collection",
+            timezone="America/New_York",
+            owner_email=DEMO_EMAIL,
+            owner_display_name="Demo Keeper",
+            password=command.password,
+            idempotency_key=DEMO_IDEMPOTENCY_KEY,
+            correlation_id=uuid5(BOOTSTRAP_NAMESPACE, "trusted-local-m6-demo-correlation-v1"),
+        )
+        write = self._prepare_write(
+            bootstrap_command,
+            operation_scope="household.demo_provision",
+            audit_action="household.demo_provision",
+        )
+        return self._repository.provision_demo(write)
 
 
 def _validate(command: BootstrapCommand) -> dict[str, str]:

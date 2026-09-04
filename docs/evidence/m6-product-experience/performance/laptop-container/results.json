@@ -1,0 +1,94 @@
+{
+  "classification": "M6 laptop Docker development qualification",
+  "dataset": {
+    "animal_count": 100,
+    "event_count": 102,
+    "id": "snaketracker-reference-v1-m6-product-experience",
+    "production_husbandry_guidance": "unavailable-pending-owner-source-approval",
+    "sha256": "8bb0cae1bcb75e9ca42c04e66233d62a29bb581b9d48b55ce741d991a54bc6e4"
+  },
+  "environment": {
+    "architecture": "x86_64",
+    "cache_states": [
+      "cold",
+      "warm"
+    ],
+    "encryption": "application-backups-enabled; benchmark-database-ephemeral",
+    "filesystem": "development-local",
+    "python": "3.13.14",
+    "revision": "e9b29fe",
+    "sqlite": "3.53.1"
+  },
+  "measurements": {
+    "collection_ms": {
+      "count": 30,
+      "max": 1.303770000959048,
+      "median": 0.7786559999658493,
+      "p95": 1.0466750009072712
+    },
+    "database_bytes": 2695168,
+    "foreign_key_violations": 0,
+    "free_bytes": 798072004608,
+    "generation_count": 12,
+    "integrity_check": "ok",
+    "max_rss_mib": 65.0546875,
+    "peak_observed_wal_bytes": 4148872,
+    "rebuilds": [
+      {
+        "cache_state": "cold",
+        "duration_seconds": 0.029525919999286998,
+        "group": "dashboard",
+        "high_water_position": 102
+      },
+      {
+        "cache_state": "cold",
+        "duration_seconds": 0.07728325099924405,
+        "group": "insights",
+        "high_water_position": 102
+      },
+      {
+        "cache_state": "cold",
+        "duration_seconds": 0.025392731000465574,
+        "group": "search",
+        "high_water_position": 102
+      },
+      {
+        "cache_state": "warm",
+        "duration_seconds": 0.0283561420001206,
+        "group": "dashboard",
+        "high_water_position": 102
+      },
+      {
+        "cache_state": "warm",
+        "duration_seconds": 0.07959041200047068,
+        "group": "insights",
+        "high_water_position": 102
+      },
+      {
+        "cache_state": "warm",
+        "duration_seconds": 0.026115461998415412,
+        "group": "search",
+        "high_water_position": 102
+      }
+    ],
+    "search_ms": {
+      "count": 30,
+      "max": 1.3463180002872832,
+      "median": 0.43378500049584545,
+      "p95": 0.925565000216011
+    },
+    "seed_seconds": 0.24665242199989734,
+    "shadow_headroom_multiple": 296112.1550151976
+  },
+  "schema_version": 1,
+  "targets": {
+    "all_rebuilds_under_30_seconds": true,
+    "collection_p95_at_most_500_ms": true,
+    "dataset_seeded": true,
+    "foreign_keys_ok": true,
+    "integrity_check_ok": true,
+    "memory_at_most_512_mib": true,
+    "search_p95_at_most_500_ms": true,
+    "shadow_headroom_at_least_2x": true
+  }
+}

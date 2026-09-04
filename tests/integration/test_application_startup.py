@@ -145,7 +145,12 @@ def test_worker_runs_reminder_sweep_on_bounded_cadence(
             self.calls += 1
             return self.calls >= 3
 
-    calls = {"reminders": 0, "outbox": 0, "notifications": 0}
+    calls = {"projections": 0, "reminders": 0, "outbox": 0, "notifications": 0}
+    monkeypatch.setattr(
+        worker_main_module.ProjectionWorker,
+        "run_once",
+        lambda *_args, **_kwargs: calls.__setitem__("projections", calls["projections"] + 1),
+    )
     monkeypatch.setattr(
         worker_main_module.ReminderScheduler,
         "run_once",
@@ -168,7 +173,7 @@ def test_worker_runs_reminder_sweep_on_bounded_cadence(
     )
 
     assert run_worker(settings, StopAfterThreeWaits(), poll_interval=0.001) == 0
-    assert calls == {"reminders": 1, "outbox": 2, "notifications": 2}
+    assert calls == {"projections": 2, "reminders": 1, "outbox": 2, "notifications": 2}
 
 
 def test_worker_duties_are_isolated_from_one_another(
@@ -181,13 +186,18 @@ def test_worker_duties_are_isolated_from_one_another(
             self.calls += 1
             return self.calls >= 2
 
-    calls = {"outbox": 0, "notifications": 0}
+    calls = {"projections": 0, "outbox": 0, "notifications": 0}
     diagnostics: list[str] = []
 
     def fail_reminders(*_args: object, **_kwargs: object) -> None:
         raise RuntimeError("synthetic reminder failure")
 
     monkeypatch.setattr(worker_main_module.ReminderScheduler, "run_once", fail_reminders)
+    monkeypatch.setattr(
+        worker_main_module.ProjectionWorker,
+        "run_once",
+        lambda *_args, **_kwargs: calls.__setitem__("projections", calls["projections"] + 1),
+    )
     monkeypatch.setattr(
         worker_main_module.LOGGER,
         "exception",
@@ -210,7 +220,7 @@ def test_worker_duties_are_isolated_from_one_another(
     )
 
     assert run_worker(settings, StopAfterTwoWaits(), poll_interval=0.001) == 0
-    assert calls == {"outbox": 1, "notifications": 1}
+    assert calls == {"projections": 1, "outbox": 1, "notifications": 1}
     assert diagnostics == ["Reminder sweep failed; the worker will continue other duties."]
 
 

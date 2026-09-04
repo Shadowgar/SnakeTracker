@@ -47,9 +47,23 @@ UUID, normalized unique email, password hash/version, account status, audit time
 
 UUID, user, unique token hash, created/last-seen/idle-expiry/absolute-expiry/revoked times, safe client metadata. Index token hash and expiry. Session rows are excluded or invalidated on restore.
 
+### `password_reset_credentials`
+
+UUID, user, unique keyed token digest, requested/expiry/consumed/invalidated times, and initiation
+source (`self_service` or `operator`). The table is conventional mutable identity/security state,
+not an event stream. Only one credential per user remains usable: new requests invalidate older rows,
+and successful reset consumes the presented row while invalidating every other row and revoking all
+user sessions in the same transaction. Raw reset tokens and URLs never enter this table. Reset rows
+are removed from backup copies with sessions and other temporary credentials.
+
 ### `authorization_memberships`
 
 Synchronous projection keyed by household/user with role, status, source stream version/global position, and updated time. Protected requests use this table and current ownership joins.
+
+Normal self-service registration is a dedicated production application operation. It creates the
+server-selected user and household identities, canonical household events, household summary, owner
+membership, idempotency result, and security audit in one immediate transaction. Initial empty-install
+bootstrap remains one-time, while ADR-0040 demo provisioning remains separately environment-gated.
 
 ### `security_audit`
 
@@ -76,6 +90,13 @@ Intent is unique by rule occurrence, recipient, and channel. Attempts are unique
 ### `backup_operations`
 
 Operation ID, requestor, schedule/reason, state, global lease owner/token/times, captured position, manifest/key versions, bytes/duration, verification state, safe error, and timestamps. Only one active lease is permitted.
+
+### `inventory_balance`
+
+Household/item identity, current name and unit, on-hand/reserved/consumed/expired quantities, reorder
+threshold, active-or-archived status, source stream version/event, and updated time. This synchronous
+projection is rebuildable from the immutable inventory-item stream; archive never deletes historical
+consumption links or allocations.
 
 ## Attachments
 

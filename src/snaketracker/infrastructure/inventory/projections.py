@@ -15,7 +15,10 @@ from snaketracker.application.inventory import (
 )
 from snaketracker.domains.inventory.contracts import (
     InventoryConsumptionReversedV1,
+    InventoryItemArchivedV1,
     InventoryItemRegisteredV1,
+    InventoryItemRestoredV1,
+    InventoryItemUpdatedV1,
     InventoryReorderPolicyChangedV1,
     InventoryStockAdjustedV1,
     InventoryStockConsumedV1,
@@ -48,6 +51,9 @@ class SQLAlchemyInventoryBalanceProjection:
             reorder = (
                 int(row["reorder_threshold"]) if row["reorder_threshold"] is not None else None
             )
+            name = str(row["name"])
+            unit = str(row["unit"])
+            status = str(row["status"])
             payload = event.payload
             if isinstance(payload, InventoryStockReceivedV1):
                 on_hand += payload.quantity
@@ -171,6 +177,18 @@ class SQLAlchemyInventoryBalanceProjection:
                 expired += payload.quantity
             elif isinstance(payload, InventoryReorderPolicyChangedV1):
                 reorder = payload.reorder_threshold
+            elif isinstance(payload, InventoryItemUpdatedV1):
+                name = payload.name
+                unit = payload.unit
+                reorder = payload.reorder_threshold
+            elif isinstance(payload, InventoryItemArchivedV1):
+                if status != "active":
+                    raise InventoryValidationError("Inventory item is already archived.")
+                status = "archived"
+            elif isinstance(payload, InventoryItemRestoredV1):
+                if status != "archived":
+                    raise InventoryValidationError("Inventory item is already active.")
+                status = "active"
             else:
                 continue
             if on_hand < 0:
@@ -179,7 +197,8 @@ class SQLAlchemyInventoryBalanceProjection:
                 text(
                     "UPDATE inventory_balance SET on_hand_quantity=:on_hand,"
                     "reserved_quantity=:reserved,consumed_quantity=:consumed,"
-                    "expired_quantity=:expired,reorder_threshold=:reorder,"
+                    "expired_quantity=:expired,reorder_threshold=:reorder,name=:name,unit=:unit,"
+                    "status=:status,"
                     "stream_version=:version,last_event_id=:event_id,updated_at=:updated_at "
                     "WHERE household_id=:household_id AND item_id=:item_id"
                 ),
@@ -189,6 +208,9 @@ class SQLAlchemyInventoryBalanceProjection:
                     "consumed": consumed,
                     "expired": expired,
                     "reorder": reorder,
+                    "name": name,
+                    "unit": unit,
+                    "status": status,
                     "version": event.stream_version,
                     "event_id": str(event.event_id),
                     "updated_at": event.recorded_at.isoformat(timespec="microseconds"),
@@ -202,15 +224,16 @@ class SQLAlchemyInventoryBalanceProjection:
             row = self._row(connection, household_id, item_id)
         return _balance(row) if row is not None else None
 
-    def list_for(self, household_id: UUID) -> tuple[InventoryBalance, ...]:
+    def list_for(self, household_id: UUID, status: str) -> tuple[InventoryBalance, ...]:
         with self._engine.connect() as connection:
             rows = (
                 connection.execute(
                     text(
                         "SELECT * FROM inventory_balance WHERE household_id=:household_id "
+                        "AND status=:status "
                         "ORDER BY name COLLATE NOCASE,item_id"
                     ),
-                    {"household_id": str(household_id)},
+                    {"household_id": str(household_id), "status": status},
                 )
                 .mappings()
                 .all()
@@ -269,8 +292,9 @@ class SQLAlchemyInventoryBalanceProjection:
                 "INSERT INTO inventory_balance "
                 "(household_id,item_id,name,unit,on_hand_quantity,reserved_quantity,"
                 "consumed_quantity,expired_quantity,reorder_threshold,stream_version,"
-                "last_event_id,updated_at) VALUES "
-                "(:household_id,:item_id,:name,:unit,0,0,0,0,:reorder,1,:event_id,:updated_at)"
+                "status,last_event_id,updated_at) VALUES "
+                "(:household_id,:item_id,:name,:unit,0,0,0,0,:reorder,1,'active',"
+                ":event_id,:updated_at)"
             ),
             {
                 "household_id": str(event.household_id),
@@ -297,5 +321,6 @@ def _balance(row: RowMapping) -> InventoryBalance:
         reorder_threshold=(
             int(row["reorder_threshold"]) if row["reorder_threshold"] is not None else None
         ),
+        status=str(row["status"]),
         stream_version=int(row["stream_version"]),
     )

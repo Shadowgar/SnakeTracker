@@ -24,6 +24,7 @@ from snaketracker.application.animals import (
 from snaketracker.application.household_bootstrap import BootstrapCommand, HouseholdBootstrapService
 from snaketracker.application.inventory import (
     AdjustStockCommand,
+    ArchiveInventoryItemCommand,
     ChangeReorderPolicyCommand,
     ConsumeStockCommand,
     ExpireStockCommand,
@@ -32,7 +33,9 @@ from snaketracker.application.inventory import (
     ReceiveStockCommand,
     RegisterInventoryItemCommand,
     ReserveStockCommand,
+    RestoreInventoryItemCommand,
     ReverseConsumptionCommand,
+    UpdateInventoryItemCommand,
 )
 from snaketracker.domains.inventory.contracts import InventoryConsumptionReversedV1
 from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
@@ -181,6 +184,108 @@ def test_inventory_balance_follows_receipt_consumption_compensation_and_adjustme
             "inventory.stock_expired",
         ]
         assert received.event.stream_version == 2
+    finally:
+        engine.dispose()
+
+
+def test_inventory_item_edit_archive_restore_preserves_stock_history(tmp_path: Path) -> None:
+    engine, bootstrap, store, service, _projection = _setup(tmp_path)
+    try:
+        registered = service.register(
+            RegisterInventoryItemCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                uuid4(),
+                "inventory-lifecycle-register",
+                "Small mice",
+                "item",
+                2,
+            )
+        )
+        service.receive(
+            ReceiveStockCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                registered.item_id,
+                uuid4(),
+                "inventory-lifecycle-receive",
+                1,
+                8,
+                "Order 2002",
+            )
+        )
+        updated = service.update_item(
+            UpdateInventoryItemCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                registered.item_id,
+                uuid4(),
+                "inventory-lifecycle-edit",
+                2,
+                "Small thawed mice",
+                "prey",
+                3,
+            )
+        )
+        assert updated.balance.name == "Small thawed mice"
+        assert updated.balance.on_hand_quantity == 8
+        archived = service.archive_item(
+            ArchiveInventoryItemCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                registered.item_id,
+                uuid4(),
+                "inventory-lifecycle-archive",
+                3,
+                "Supplier changed.",
+            )
+        )
+        assert archived.balance.status == "archived"
+        assert service.list_balances(bootstrap.household_id) == ()
+        assert service.list_balances(bootstrap.household_id, status="archived") == (
+            archived.balance,
+        )
+        with pytest.raises(InventoryValidationError, match="Only active"):
+            service.adjust(
+                AdjustStockCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    registered.item_id,
+                    uuid4(),
+                    "inventory-lifecycle-archived-adjust",
+                    4,
+                    1,
+                    "Must fail.",
+                )
+            )
+
+        restored = service.restore_item(
+            RestoreInventoryItemCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                registered.item_id,
+                uuid4(),
+                "inventory-lifecycle-restore",
+                4,
+                "Supplier returned.",
+            )
+        )
+        assert restored.balance.status == "active"
+        assert restored.balance.on_hand_quantity == 8
+        assert service.list_balances(bootstrap.household_id) == (restored.balance,)
+        assert not hasattr(service, "delete_item")
+        assert [
+            event.event_type
+            for event in store.load_stream(
+                StreamKey(bootstrap.household_id, "inventory-item", registered.item_id)
+            )
+        ] == [
+            "inventory.item_registered",
+            "inventory.stock_received",
+            "inventory.item_updated",
+            "inventory.item_archived",
+            "inventory.item_restored",
+        ]
     finally:
         engine.dispose()
 

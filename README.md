@@ -1,9 +1,14 @@
-# SnakeTracker
+# Care Keeper
 
-SnakeTracker is a lightweight, self-hosted reptile husbandry tracker. The Phase 4 branch provides
-the secure local household experience plus animal profiles, feeding and measurement records,
-sheds, baths/soaks, enclosures, cleaning, profile photos, effective history, and basic verified
-backups. Remote access and Raspberry Pi deployment qualification remain deferred.
+Care Keeper (internally packaged as `snaketracker`) is a lightweight, self-hosted exotic-animal
+care application for Snakes, Spiders, Lizards, and Scorpions. Trusted capability profiles keep
+shared identity, enclosure, feeding, inventory, expense, reminder, attachment, search, report, and
+backup workflows consistent while showing only relevant care actions for each animal group.
+
+The current owner-review build includes effective-history corrections, measurements, snake shed
+history, neutral Spider/Scorpion molt and premolt history, baths and misting where applicable,
+profile photos, reminders, reports, analytics, and deterministic care-window estimates. The major
+M6 UX redesign remains deliberately paused until this four-group expansion is owner-reviewed.
 
 ## Run the local site
 
@@ -21,7 +26,7 @@ chmod 700 runtime/data secrets
 chmod 600 secrets/runtime_secret secrets/backup_encryption_key
 ```
 
-Then build and start SnakeTracker:
+Then build and start Care Keeper:
 
 ```sh
 SNAKETRACKER_DATA_DIR=./runtime/data \

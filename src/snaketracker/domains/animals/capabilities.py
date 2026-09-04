@@ -13,6 +13,8 @@ from snaketracker.domains.animals.contracts import AnimalRegisteredV1, AnimalReg
 class AnimalType(StrEnum):
     SNAKE = "snake"
     SPIDER = "spider"
+    LIZARD = "lizard"
+    SCORPION = "scorpion"
 
 
 class AnimalCapability(StrEnum):
@@ -33,6 +35,14 @@ class AnimalCapability(StrEnum):
     TIMELINE = "timeline"
 
 
+class AnimalAnalyticsKind(StrEnum):
+    FEEDING = "feeding"
+    WEIGHT = "weight"
+    LENGTH = "length"
+    SHED = "shed"
+    MOLT = "molt"
+
+
 class UnknownCapabilityProfileError(LookupError):
     """The requested profile is not registered by this release."""
 
@@ -45,6 +55,7 @@ class CapabilityProfile:
     capabilities: frozenset[AnimalCapability]
     care_actions: tuple[str, ...]
     reminder_kinds: tuple[str, ...]
+    analytics_kinds: frozenset[AnimalAnalyticsKind]
 
     @property
     def identity(self) -> str:
@@ -52,6 +63,9 @@ class CapabilityProfile:
 
     def permits(self, capability: AnimalCapability) -> bool:
         return capability in self.capabilities
+
+    def permits_analytics(self, kind: AnimalAnalyticsKind) -> bool:
+        return kind in self.analytics_kinds
 
 
 class AnimalCapabilityRegistry:
@@ -111,6 +125,14 @@ animal_capability_registry = AnimalCapabilityRegistry(
             ),
             care_actions=("feeding", "weight", "length", "shed", "bath"),
             reminder_kinds=("feeding", "weight", "length", "bath", "cleaning", "water_change"),
+            analytics_kinds=frozenset(
+                {
+                    AnimalAnalyticsKind.FEEDING,
+                    AnimalAnalyticsKind.WEIGHT,
+                    AnimalAnalyticsKind.LENGTH,
+                    AnimalAnalyticsKind.SHED,
+                }
+            ),
         ),
         CapabilityProfile(
             animal_type=AnimalType.SPIDER,
@@ -132,6 +154,72 @@ animal_capability_registry = AnimalCapabilityRegistry(
                 "misting",
                 "cleaning",
                 "water_change",
+            ),
+            analytics_kinds=frozenset(
+                {
+                    AnimalAnalyticsKind.FEEDING,
+                    AnimalAnalyticsKind.WEIGHT,
+                    AnimalAnalyticsKind.MOLT,
+                }
+            ),
+        ),
+        CapabilityProfile(
+            animal_type=AnimalType.LIZARD,
+            version=1,
+            label="Lizard",
+            capabilities=_SHARED
+            | frozenset(
+                {
+                    AnimalCapability.LENGTH,
+                    AnimalCapability.BATH,
+                    AnimalCapability.MISTING,
+                }
+            ),
+            care_actions=("feeding", "weight", "length", "bath", "misting"),
+            reminder_kinds=(
+                "feeding",
+                "weight",
+                "length",
+                "bath",
+                "misting",
+                "cleaning",
+                "water_change",
+            ),
+            analytics_kinds=frozenset(
+                {
+                    AnimalAnalyticsKind.FEEDING,
+                    AnimalAnalyticsKind.WEIGHT,
+                    AnimalAnalyticsKind.LENGTH,
+                }
+            ),
+        ),
+        CapabilityProfile(
+            animal_type=AnimalType.SCORPION,
+            version=1,
+            label="Scorpion",
+            capabilities=_SHARED
+            | frozenset(
+                {
+                    AnimalCapability.MOLT,
+                    AnimalCapability.PREMOLT,
+                    AnimalCapability.MISTING,
+                }
+            ),
+            care_actions=("feeding", "weight", "molt", "premolt", "misting"),
+            reminder_kinds=(
+                "feeding",
+                "weight",
+                "molt",
+                "misting",
+                "cleaning",
+                "water_change",
+            ),
+            analytics_kinds=frozenset(
+                {
+                    AnimalAnalyticsKind.FEEDING,
+                    AnimalAnalyticsKind.WEIGHT,
+                    AnimalAnalyticsKind.MOLT,
+                }
             ),
         ),
     )

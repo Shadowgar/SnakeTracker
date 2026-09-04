@@ -1,0 +1,60 @@
+{
+  "status": "passed",
+  "qualification_date": "2026-08-27",
+  "origin": "https://tracker.theroccos.us",
+  "browser": "Chrome/151.0.7922.173 (native ARM64)",
+  "screenshots": [
+    "mobile-snake-overview.png",
+    "mobile-spider-overview.png",
+    "mobile-lizard-overview.png",
+    "mobile-scorpion-overview.png",
+    "mobile-history.png",
+    "mobile-trends-sufficient.png",
+    "mobile-trends-insufficient.png",
+    "mobile-care-schedules.png",
+    "mobile-schedule-editor.png",
+    "mobile-quick-care.png",
+    "desktop-overview.png",
+    "desktop-history.png",
+    "desktop-trends.png",
+    "desktop-care.png"
+  ],
+  "viewports": {
+    "mobile_primary": "390x844",
+    "mobile_narrow": "360x800",
+    "desktop": "1440x900",
+    "shell_transition": {
+      "1023x800": "mobile",
+      "1024x800": "desktop"
+    }
+  },
+  "layout": {
+    "horizontal_overflow": false,
+    "mobile_content_clears_bottom_navigation": true
+  },
+  "accessibility": {
+    "standard": "axe WCAG 2.2 A/AA",
+    "screens_scanned": 14,
+    "violations": 0,
+    "chart_text_alternatives": true
+  },
+  "console": {
+    "evidence": "console.json",
+    "care_keeper_application_findings": 0,
+    "page_errors": 0,
+    "same_origin_response_errors": 0,
+    "care_keeper_owned_csp_violations": 0,
+    "external_cloudflare_diagnostics": 16
+  },
+  "csp": {
+    "production_policy_changed": false,
+    "origin_contains_cloudflare_markup": false,
+    "public_edge_contains_cloudflare_markup": true,
+    "classification": "Cloudflare's public edge injects an inline loader and static.cloudflareinsights.com beacon; Care Keeper's script-src 'self' policy intentionally blocks them. Axe-only diagnostics are browser qualification instrumentation."
+  },
+  "notes": [
+    "All 14 deployed screenshot, layout, and axe assertions completed before the original harness made one redundant final request.",
+    "That redundant request exposed write amplification in an initial reminder-source adapter and a transient SQLite session lock. The adapter was replaced with the final read-only reminder projection path.",
+    "The rebuilt final image then passed focused regression tests and a narrow deployed scan of Overview, History, sufficient Trends, Care, and insufficient Trends with zero application findings, page errors, or same-origin failures. The presentation markup and CSS covered by the completed axe scans did not change."
+  ]
+}

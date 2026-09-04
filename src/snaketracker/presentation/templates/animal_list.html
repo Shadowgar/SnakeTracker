@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Animals · Care Keeper{% endblock %}
+{% block content %}
+<section class="animal-collection" aria-labelledby="page-title">
+  <header class="section-heading collection-heading"><div><p class="page-kicker">Collection</p><h1 id="page-title">Animals</h1><p class="lede">Photos, locations, and the next care that matters.</p></div><a class="button-link collection-add" href="/animals/new"><span aria-hidden="true">+</span> Add</a></header>
+  <div class="filter-rail"><nav class="filter-chips" aria-label="Filter animals">{% for key, label, count in animal_filters %}<a href="/animals?kind={{ key }}"{% if selected_kind == key %} aria-current="page"{% endif %}>{{ label }} <span>{{ count }}</span></a>{% endfor %}</nav></div>
+  {% if animal_rows %}<ul class="animal-list" aria-label="Animals">{% for row in animal_rows %}{% set animal = row.animal %}<li>
+    <a class="animal-card animal-collection-card" href="/animals/{{ animal.animal_id }}">
+      <span class="animal-card-media">{% if animal.photo_attachment_version_id %}<img class="animal-card-photo" src="/attachments/{{ animal.photo_attachment_version_id }}" alt="Profile photo of {{ animal.name }}">{% else %}<span class="animal-card-placeholder fallback-{{ animal.animal_type }}" aria-hidden="true"><small>{{ animal.type_label }}</small><b>{{ animal.name[0]|upper }}</b></span>{% endif %}<span class="animal-type-pill">{{ animal.type_label }}</span></span>
+      <span class="animal-card-copy"><strong>{{ animal.name }}</strong><span class="animal-identity">{{ animal.species }}{% if animal.morph %} · {{ animal.morph }}{% endif %}</span><span class="animal-secondary">{{ row.enclosure_name or 'No enclosure assigned' }} · {{ animal.status|capitalize }}</span><span class="next-care status-text-{{ row.care_status }}">{{ row.care_label }}</span></span>
+      <span class="animal-card-open" aria-hidden="true">View →</span>
+    </a>
+  </li>{% endfor %}</ul>
+  {% else %}<div class="empty-state onboarding-state"><p class="eyebrow">Start your collection</p><h2>{% if selected_kind == 'all' %}No animals yet{% else %}No {{ selected_kind }} found{% endif %}</h2><p>{% if selected_kind == 'all' %}Add the first animal to begin its profile, care history, enclosure, and reminders.{% else %}Choose another collection filter or add an animal.{% endif %}</p>{% if selected_kind == 'all' %}<a class="button-link" href="/animals/new">Add your first animal</a>{% else %}<a class="button-link secondary-link" href="/animals">View all animals</a>{% endif %}</div>{% endif %}
+</section>
+{% endblock %}

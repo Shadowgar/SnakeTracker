@@ -257,14 +257,14 @@ def test_profile_photo_policy_is_tenant_scoped_and_cleans_orphans(
                 )
 
         oversized = BytesIO()
-        Image.new("RGB", (4097, 1)).save(oversized, format="PNG")
+        Image.new("1", (8193, 1)).save(oversized, format="PNG")
         with monkeypatch.context() as image_patch:
             image_patch.setattr(
                 Image.Image,
                 "load",
                 lambda self: (_ for _ in ()).throw(AssertionError("oversized image decoded")),
             )
-            with pytest.raises(AttachmentValidationError, match="dimensions exceed"):
+            with pytest.raises(AttachmentValidationError, match="dimension limit"):
                 attachments.stage_profile_photo(
                     StageProfilePhotoCommand(
                         household_id=bootstrap.household_id,

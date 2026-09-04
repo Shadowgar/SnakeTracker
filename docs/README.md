@@ -1,9 +1,24 @@
-# SnakeTracker Architecture Package
+# Care Keeper Architecture Package
 
 Status: Approved
 Acceptance date: 2026-08-04
 
-This package is the approved architecture baseline for SnakeTracker. The decision freeze in [ADR-0028](adr/0028-architecture-governance-and-decision-freeze.md) is active as of 2026-08-04. [ADR-0036](adr/0036-development-and-pi-deployment-qualification.md) separates laptop development qualification from mandatory pre-deployment Raspberry Pi qualification. [ADR-0037](adr/0037-phase-order-minimal-household-events.md) moves only the permanent household-event bootstrap slice into Phase 2 while leaving the general event platform in Phase 3. [ADR-0038](adr/0038-scheduling-and-husbandry-reference-profiles.md) fixes the boundary between owner-configured effective-history scheduling in M5 and optional explainable analytics/reference profiles in M6. [ADR-0039](adr/0039-multispecies-animal-capabilities.md) inserts the additive multi-species Animal capability foundation before M6 without rewriting existing snake events.
+This package is the approved architecture baseline for the Care Keeper application (whose
+repository and internal package retain the historical SnakeTracker name). The decision freeze in
+[ADR-0028](adr/0028-architecture-governance-and-decision-freeze.md) is active as of 2026-08-04.
+[ADR-0036](adr/0036-development-and-pi-deployment-qualification.md) separates laptop development
+qualification from mandatory pre-deployment Raspberry Pi qualification.
+[ADR-0037](adr/0037-phase-order-minimal-household-events.md) moves only the permanent
+household-event bootstrap slice into Phase 2 while leaving the general event platform in Phase 3.
+[ADR-0038](adr/0038-scheduling-and-husbandry-reference-profiles.md) fixes the boundary between
+owner-configured effective-history scheduling in M5 and optional explainable analytics/reference
+profiles in M6. [ADR-0039](adr/0039-multispecies-animal-capabilities.md) inserts the additive
+multi-species Animal capability foundation before M6 without rewriting existing snake events.
+[ADR-0040](adr/0040-trusted-local-demo-household-provisioning.md) permits one fail-closed,
+event-sourced fictional household only in trusted local M6 review environments.
+[ADR-0041](adr/0041-four-group-capability-expansion-and-neutral-molt-contracts.md) adds trusted
+Lizard and Scorpion profiles and preserves historical Spider-only molt/premolt v1 contracts while
+introducing capability-neutral v2 contracts.
 
 ## Document map
 
@@ -22,6 +37,7 @@ This package is the approved architecture baseline for SnakeTracker. The decisio
 - [Representative dataset](quality/representative-dataset.md)
 - [UX information architecture](ux/information-architecture.md)
 - [Roadmap and milestone checklist](roadmap/milestones.md)
+- [Raw owner problem log and roadmap triage](problems/README.md)
 - [Evidence policy](evidence/README.md)
 - [ADR index](adr/README.md)
 

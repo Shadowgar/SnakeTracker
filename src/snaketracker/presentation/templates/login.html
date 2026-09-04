@@ -1,18 +1,23 @@
 {% extends "base.html" %}
-{% block title %}Log in to SnakeTracker{% endblock %}
+{% block title %}Sign in to Care Keeper{% endblock %}
 {% block content %}
 <section class="auth-layout compact" aria-labelledby="page-title">
-  <div class="intro-panel">
-    <p class="eyebrow">Welcome back</p>
-    <h1 id="page-title">Log in to SnakeTracker</h1>
-    <p>Your household records stay available only to current members.</p>
+  <div class="intro-panel auth-intro">
+    <p class="eyebrow">Care Keeper</p>
+    <h1 id="page-title">Your care, clearly organized.</h1>
+    <p>Sign in to open your private collection workspace.</p>
+    <div class="auth-orbit" aria-hidden="true"><span>Animals</span><span>Care</span><span>History</span></div>
   </div>
-  <form class="card form-stack" method="post" action="/login">
+  <form class="card form-stack auth-form" method="post" action="/login">
+    <div><p class="page-kicker">Account</p><h2>Sign in</h2></div>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% if password_reset_complete %}<div class="alert success" role="status">Password updated. Sign in with your new password.</div>{% endif %}
     {% if error %}<div class="alert" role="alert">{{ error }}</div>{% endif %}
     <label>Email<input name="email" type="email" required autocomplete="username" value="{{ email or '' }}"></label>
     <label>Password<input name="password" type="password" required autocomplete="current-password"></label>
-    <button type="submit">Log in</button>
+    <p><a href="/forgot-password">Forgot password?</a></p>
+    <button type="submit">Sign in</button>
+    <p>New to Care Keeper? <a href="/register">Create account</a>.</p>
   </form>
 </section>
 {% endblock %}

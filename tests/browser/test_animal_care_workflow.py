@@ -3,11 +3,14 @@ from __future__ import annotations
 import re
 from base64 import b64decode
 from datetime import UTC, datetime, timedelta
+from io import BytesIO
 from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
+from PIL import Image
+from PIL.TiffImagePlugin import IFDRational
 from sqlalchemy import text
 
 from snaketracker.bootstrap.application import build_application
@@ -69,10 +72,13 @@ def test_authenticated_keeper_can_track_animal_care_and_enclosure_workflow(
     with client_for(tmp_path) as client:
         setup_and_sign_in(client)
 
-        home = client.get("/home")
-        assert "Add animal" in home.text
-        assert 'href="/settings/backups"' in home.text
-        assert "No animals yet" in home.text
+        animals_page = client.get("/animals")
+        assert (
+            '<a class="button-link collection-add" href="/animals/new">'
+            '<span aria-hidden="true">+</span> Add</a>' in animals_page.text
+        )
+        assert 'href="/settings/backups"' in client.get("/more").text
+        assert "No animals yet" in animals_page.text
 
         add_animal = client.get("/animals/new")
         registered = client.post(
@@ -467,7 +473,7 @@ def test_authenticated_keeper_can_edit_and_archive_an_enclosure(tmp_path: Path) 
         assert "Archived" in client.get(enclosure_url).text
 
 
-def test_authenticated_keeper_can_upload_and_view_an_immutable_profile_photo(
+def test_authenticated_keeper_can_upload_and_view_a_processed_phone_profile_photo(
     tmp_path: Path,
 ) -> None:
     with client_for(tmp_path) as client:
@@ -491,13 +497,29 @@ def test_authenticated_keeper_can_upload_and_view_an_immutable_profile_photo(
         )
         profile_url = created.headers["location"]
         profile = client.get(profile_url)
+        phone_photo = Image.effect_noise((3072, 4080), 65).convert("RGB")
+        exif = Image.Exif()
+        exif[274] = 6
+        exif[271] = "Motorola"
+        exif[272] = "Moto G 5G (2024)"
+        exif[34853] = {
+            1: "N",
+            2: (IFDRational(40), IFDRational(0), IFDRational(0)),
+            3: "W",
+            4: (IFDRational(74), IFDRational(0), IFDRational(0)),
+        }
+        encoded = BytesIO()
+        phone_photo.save(encoded, format="JPEG", quality=70, exif=exif)
+        phone_photo.close()
+        source_content = encoded.getvalue()
+        assert len(source_content) > 5 * 1024 * 1024
         uploaded = client.post(
             f"{profile_url}/photo",
             data={
                 "csrf_token": csrf_from(profile.text),
                 "idempotency_key": "browser-profile-photo",
             },
-            files={"photo": ("nyx.png", ONE_PIXEL_PNG, "image/png")},
+            files={"photo": ("nyx.jpg", source_content, "image/jpeg")},
             follow_redirects=False,
         )
         assert uploaded.status_code == 303
@@ -507,11 +529,16 @@ def test_authenticated_keeper_can_upload_and_view_an_immutable_profile_photo(
         assert match is not None
         delivered = client.get(match.group(1))
         assert delivered.status_code == 200
-        assert delivered.content == ONE_PIXEL_PNG
-        assert delivered.headers["content-type"] == "image/png"
-        assert delivered.headers["content-disposition"] == 'inline; filename="profile-photo.png"'
+        assert len(delivered.content) < len(source_content)
+        assert delivered.headers["content-type"] == "image/jpeg"
+        assert delivered.headers["content-disposition"] == 'inline; filename="profile-photo.jpg"'
         assert delivered.headers["cache-control"] == "private, immutable, max-age=31536000"
         assert delivered.headers["x-content-type-options"] == "nosniff"
+        with Image.open(BytesIO(delivered.content)) as derivative:
+            assert max(derivative.size) == 1600
+            assert derivative.width > derivative.height
+            assert not derivative.getexif()
+            assert "exif" not in derivative.info
         assert client.get("/attachments/00000000-0000-0000-0000-000000000000").status_code == 404
 
 
@@ -558,6 +585,8 @@ def test_animal_list_and_profile_present_a_focused_keeper_experience(tmp_path: P
         assert f'href="{profile_url}/weights/new"' in profile.text
         assert f'action="{profile_url}/feedings"' not in profile.text
         assert f'action="{profile_url}/weights"' not in profile.text
+        assert profile.text.index("Care actions") < profile.text.index("Recent care")
+        assert profile.text.index("Recent care") < profile.text.index("Care schedule")
 
         care_pages = {
             "feedings/new": ("Record feeding", f"{profile_url}/feedings"),
@@ -572,6 +601,12 @@ def test_animal_list_and_profile_present_a_focused_keeper_experience(tmp_path: P
             assert title in page.text
             assert f'action="{action}"' in page.text
             assert 'href="' + profile_url + '"' in page.text
+        feeding_form = client.get(f"{profile_url}/feedings/new")
+        assert '<details class="form-advanced">' in feeding_form.text
+        assert "More feeding details" in feeding_form.text
+        assert feeding_form.text.index("Prey type") < feeding_form.text.index(
+            "More feeding details"
+        )
 
 
 def test_keeper_histories_show_effective_values_and_hide_voided_facts(tmp_path: Path) -> None:
@@ -626,6 +661,14 @@ def test_keeper_histories_show_effective_values_and_hide_voided_facts(tmp_path: 
                 follow_redirects=False,
             )
             assert response.status_code == 303
+
+        profile = client.get(profile_url)
+        assert "2 medium mouse" in profile.text
+        assert "510 g" in profile.text
+        assert "925 mm" in profile.text
+        assert "Animal registered" not in profile.text
+        assert "Profile photo selected" not in profile.text
+        assert "Inventory stock consumed" not in profile.text
 
         feeding_history = client.get(f"{profile_url}/feedings")
         effective_feeding = feeding_history.text.split('<details class="technical-audit"', 1)[0]
@@ -1092,7 +1135,7 @@ def test_phase4_missing_resources_fail_closed_without_tenant_disclosure(tmp_path
         ):
             assert client.get(path).status_code == 404, path
 
-        csrf = csrf_from(client.get("/home").text)
+        csrf = csrf_from(client.get("/more").text)
         for index, path in enumerate(
             (
                 f"/animals/{missing_id}/edit",

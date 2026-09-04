@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ action|title }} {{ item.name }} · Care Keeper{% endblock %}
+{% block content %}
+<section class="form-page focused-stock-form" aria-labelledby="page-title">
+  <header><p class="page-kicker">{{ item.name }}</p><h1 id="page-title">{% if action == 'receive' %}Receive stock{% elif action == 'adjust' %}Adjust stock{% elif action == 'archive' %}Archive item{% else %}Restore item{% endif %}</h1><p class="lede">Current balance: {{ item.on_hand_quantity }} {{ item.unit }}.</p></header>
+  <form class="card form-stack" method="post" action="/inventory/{{ item.item_id }}/{{ action }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}"><input type="hidden" name="expected_stream_version" value="{{ item.stream_version }}">
+    {% if action == 'receive' %}<label>Quantity received<input name="quantity" type="number" min="1" inputmode="numeric" required autofocus></label><label>Reference<input name="reference" placeholder="Optional order or receipt"></label><button type="submit">Receive stock</button>
+    {% elif action == 'adjust' %}<label>Quantity change<input name="quantity_delta" type="number" inputmode="numeric" required autofocus><small>Use a positive or negative whole number.</small></label><label>Reason<input name="reason" maxlength="200" required></label><button type="submit">Save adjustment</button>
+    {% elif action == 'archive' %}<div class="alert-neutral"><strong>Historical identity is preserved.</strong><p>This item will no longer be available for new feeding records.</p></div><label>Reason<input name="reason" maxlength="200" required autofocus></label><button type="submit">Archive item</button>
+    {% else %}<p>Restoring makes this item available for new feeding records again.</p><label>Reason<input name="reason" maxlength="200" required autofocus></label><button type="submit">Restore item</button>{% endif %}
+  </form>
+  <p><a href="/inventory/{{ item.item_id }}">← Cancel</a></p>
+</section>
+{% endblock %}

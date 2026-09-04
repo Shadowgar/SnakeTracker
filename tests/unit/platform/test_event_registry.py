@@ -8,7 +8,15 @@ from pathlib import Path
 import pytest
 
 from snaketracker.domains.animals.capabilities import capability_profile_for_registration
-from snaketracker.domains.animals.contracts import AnimalRegisteredV1
+from snaketracker.domains.animals.contracts import (
+    AnimalMoltCorrectedV1,
+    AnimalMoltCorrectedV2,
+    AnimalMoltRecordedV1,
+    AnimalMoltRecordedV2,
+    AnimalPremoltObservedV1,
+    AnimalPremoltObservedV2,
+    AnimalRegisteredV1,
+)
 from snaketracker.domains.households.replay import replay_household
 from snaketracker.platform.events import registry as registry_module
 from snaketracker.platform.events.envelope import canonical_event_data, event_checksum
@@ -97,6 +105,40 @@ def test_legacy_animal_registration_fixture_remains_byte_stable_and_maps_to_snak
     )
     assert isinstance(event.payload, AnimalRegisteredV1)
     assert capability_profile_for_registration(event.payload).identity == "snake.v1"
+
+
+def test_historical_spider_molt_v1_and_neutral_v2_contracts_are_distinct() -> None:
+    registry = registry_module.production_event_registry
+
+    assert registry.deserialize_for_replay(
+        "animal.molt_recorded", 1, {"result": "complete", "observation": "Spider v1"}
+    ) == AnimalMoltRecordedV1("complete", "Spider v1")
+    assert registry.deserialize_for_replay(
+        "animal.molt_recorded", 2, {"result": "complete", "observation": "Neutral v2"}
+    ) == AnimalMoltRecordedV2("complete", "Neutral v2")
+    target = "1cf4208c-e18a-4d97-93a9-ecb4317d2c14"
+    assert isinstance(
+        registry.deserialize_for_replay(
+            "animal.molt_corrected",
+            1,
+            {"target_event_id": target, "result": "partial", "observation": None},
+        ),
+        AnimalMoltCorrectedV1,
+    )
+    assert isinstance(
+        registry.deserialize_for_replay(
+            "animal.molt_corrected",
+            2,
+            {"target_event_id": target, "result": "partial", "observation": None},
+        ),
+        AnimalMoltCorrectedV2,
+    )
+    assert registry.deserialize_for_replay(
+        "animal.premolt_observed", 1, {"observed": True, "observation": "Spider v1"}
+    ) == AnimalPremoltObservedV1(True, "Spider v1")
+    assert registry.deserialize_for_replay(
+        "animal.premolt_observed", 2, {"observed": True, "observation": "Neutral v2"}
+    ) == AnimalPremoltObservedV2(True, "Neutral v2")
 
 
 def test_test_registry_requires_explicit_reserved_namespace_opt_in() -> None:

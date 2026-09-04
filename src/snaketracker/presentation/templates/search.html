@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Search · Care Keeper{% endblock %}
+{% block content %}
+<section class="dashboard" aria-labelledby="page-title">
+  <header class="page-heading"><div>
+    <p class="page-kicker">Find anything</p>
+    <h1 id="page-title">Search</h1>
+    <p class="lede">Find animals, enclosures, care history, inventory, and records you can access.</p>
+  </div></header>
+  <form class="card search-page-form" action="/search" method="get" role="search">
+    <label for="search-query">Search terms</label>
+    <div class="search-row">
+      <input id="search-query" name="q" type="search" maxlength="100" value="{{ query }}" required>
+      <button type="submit">Search</button>
+    </div>
+    {% if error %}<p class="field-error" role="alert">{{ error }}</p>{% endif %}
+  </form>
+  {% if search_unavailable %}
+  <div class="card status-card" role="status">
+    <div><strong>Search is catching up</strong><p>The search index is rebuilding. Try again shortly.</p></div>
+  </div>
+  {% elif query and results %}
+  <p role="status">{{ results|length }} result{% if results|length != 1 %}s{% endif %}</p>
+  <ul class="search-results" aria-label="Search results">
+    {% for row in results %}{% set result = row.result %}
+    <li class="card search-result-row">
+      {% if row.animal %}{% if row.animal.photo_attachment_version_id %}<img class="search-thumbnail" src="/attachments/{{ row.animal.photo_attachment_version_id }}" alt="">{% else %}<span class="search-thumbnail search-placeholder fallback-{{ row.animal.animal_type }}" aria-hidden="true">{{ row.animal.name[0]|upper }}</span>{% endif %}{% else %}<span class="search-type-mark" aria-hidden="true">{{ result.kind[0]|upper }}</span>{% endif %}
+      <div><p class="eyebrow">{{ result.kind|replace('_', ' ')|title }}</p>
+      <h2><a href="{{ result.route }}">{{ result.title }}</a></h2>
+      <p>{{ result.body }}</p>{% if row.animal %}<p class="search-context">{{ row.animal.type_label }} · {{ row.animal.species }}</p>{% endif %}</div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% elif query %}
+  <div class="empty-state"><h2>No matches</h2><p>Try a name, species, enclosure, or care term.</p></div>
+  {% endif %}
+</section>
+{% endblock %}

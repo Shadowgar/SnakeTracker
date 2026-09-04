@@ -13,7 +13,9 @@ x-app-common: &app-common
     SNAKETRACKER_BACKUP_STORAGE_PATH: /var/lib/snaketracker/backups
     SNAKETRACKER_BACKUP_ENCRYPTION_KEY_ID: ${SNAKETRACKER_BACKUP_ENCRYPTION_KEY_ID:-local-development-v1}
     SNAKETRACKER_EXTERNAL_ORIGIN: ${SNAKETRACKER_EXTERNAL_ORIGIN:-http://localhost:8081}
-    SNAKETRACKER_SESSION_COOKIE_SECURE: "false"
+    SNAKETRACKER_SESSION_COOKIE_SECURE: ${SNAKETRACKER_SESSION_COOKIE_SECURE:-false}
+    SNAKETRACKER_PASSWORD_RESET_DELIVERY: ${SNAKETRACKER_PASSWORD_RESET_DELIVERY:-disabled}
+    SNAKETRACKER_PASSWORD_RESET_DELIVERY_PATH: ${SNAKETRACKER_PASSWORD_RESET_DELIVERY_PATH:-/var/lib/snaketracker/identity-messages}
     SNAKETRACKER_RUNTIME_SECRET_FILE: /run/secrets/runtime_secret
     SNAKETRACKER_BACKUP_ENCRYPTION_KEY_FILE: /run/secrets/backup_encryption_key
   secrets:
@@ -89,7 +91,7 @@ services:
       - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     read_only: true
     tmpfs:
-      - /tmp:size=16m,mode=1777,uid=101,gid=101
+      - /tmp:size=32m,mode=1777,uid=101,gid=101
     cap_drop:
       - ALL
     security_opt:

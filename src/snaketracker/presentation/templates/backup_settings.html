@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Backups · SnakeTracker{% endblock %}
+{% block title %}Backups · Care Keeper{% endblock %}
 {% block content %}
 <section class="dashboard" aria-labelledby="page-title">
   <header class="profile-header">
     <div>
-      <p class="eyebrow">Household settings</p>
+      <p class="eyebrow">Advanced · Data protection</p>
       <h1 id="page-title">Backup and restore</h1>
       <p class="lede">Queue a verified local backup or set the worker schedule.</p>
     </div>
-    <a class="button-link secondary-link" href="/home">Back to animals</a>
+    <a class="button-link secondary-link" href="/more">Back to More</a>
   </header>
   {% if errors and errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
   <section class="care-grid" aria-label="Backup controls">
@@ -72,6 +72,6 @@
       </ul>
     {% endif %}
   </section>
-  <p class="muted">Restore rehearsal remains an operator command and is never exposed as a web action.</p>
+  <p class="card recovery-boundary"><strong>Restore is deliberately operator-controlled.</strong><span>Recovery rehearsal uses the verified command-line workflow so a household cannot be replaced by an ambiguous web action.</span></p>
 </section>
 {% endblock %}

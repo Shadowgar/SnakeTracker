@@ -9,22 +9,35 @@ from datetime import timedelta
 from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.types import Lifespan
 
+from snaketracker.application.analytics import AnimalAnalyticsService
 from snaketracker.application.animals import AnimalService
 from snaketracker.application.attachments import AttachmentService
 from snaketracker.application.backups import BackupService
+from snaketracker.application.dashboard import DashboardStatisticsService
 from snaketracker.application.enclosures import EnclosureService
 from snaketracker.application.expenses import ExpenseService
-from snaketracker.application.household_bootstrap import HouseholdBootstrapService
+from snaketracker.application.household_bootstrap import (
+    AccountRegistrationService,
+    HouseholdBootstrapService,
+)
 from snaketracker.application.identity import IdentityService
 from snaketracker.application.inventory import InventoryService
 from snaketracker.application.ports.readiness import ReadinessPort
 from snaketracker.application.readiness import PlatformReadiness
 from snaketracker.application.reminders import ReminderFactService, ReminderRuleService
+from snaketracker.application.reports import ReportService
+from snaketracker.application.search import SearchService
 from snaketracker.bootstrap.compatibility import inspect_startup_compatibility
-from snaketracker.bootstrap.configuration import Environment, Settings, load_settings
+from snaketracker.bootstrap.configuration import (
+    Environment,
+    PasswordResetDeliveryMode,
+    Settings,
+    load_settings,
+)
 from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
 from snaketracker.infrastructure.attachments.repository import SQLAlchemyAttachmentRepository
 from snaketracker.infrastructure.attachments.storage import LocalAttachmentStorage
@@ -38,6 +51,9 @@ from snaketracker.infrastructure.identity.bootstrap_repository import (
     SQLAlchemyHouseholdBootstrapRepository,
 )
 from snaketracker.infrastructure.identity.identity_repository import SQLAlchemyIdentityRepository
+from snaketracker.infrastructure.identity.password_reset_delivery import (
+    LocalFilePasswordResetDelivery,
+)
 from snaketracker.infrastructure.inventory.projections import SQLAlchemyInventoryBalanceProjection
 from snaketracker.infrastructure.jobs.repository import SQLAlchemyJobRepository
 from snaketracker.infrastructure.notifications.repository import (
@@ -49,11 +65,23 @@ from snaketracker.infrastructure.observability.correlation import (
 )
 from snaketracker.infrastructure.observability.logging import configure_logging
 from snaketracker.infrastructure.observability.metrics import PlatformMetrics
+from snaketracker.infrastructure.product_experience.projections import (
+    ensure_product_projection_generations,
+    product_projection_registry,
+)
+from snaketracker.infrastructure.product_experience.read_models import (
+    SQLAlchemyProjectedEventReader,
+)
+from snaketracker.infrastructure.projections.sqlite_generations import (
+    SQLiteProjectionGenerationManager,
+)
 from snaketracker.infrastructure.reminders.projections import SQLAlchemyReminderProjection
+from snaketracker.infrastructure.search.fts import SQLAlchemyFTSSearchRepository
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 from snaketracker.platform.notifications.service import NotificationIntentService
 from snaketracker.presentation.health import create_health_router
 from snaketracker.presentation.web import create_web_router
+from snaketracker.worker.projections import ProjectionWorker
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +100,15 @@ def create_application(
     metrics = PlatformMetrics()
     app.include_router(create_health_router(readiness, metrics))
     static_directory = Path(__file__).parents[1] / "presentation" / "static"
+
+    @app.get("/service-worker.js", include_in_schema=False)
+    def service_worker() -> FileResponse:
+        return FileResponse(
+            static_directory / "service-worker.js",
+            media_type="text/javascript",
+            headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"},
+        )
+
     app.mount("/static", StaticFiles(directory=static_directory), name="static")
 
     @app.middleware("http")
@@ -115,7 +152,7 @@ def build_application(settings: Settings) -> FastAPI:
         settings.database_path,
         require_local_storage=settings.environment is Environment.PRODUCTION,
     )
-    compatibility = inspect_startup_compatibility(engine)
+    compatibility = inspect_startup_compatibility(engine, product_projection_registry)
     readiness = PlatformReadiness(
         database=SQLAlchemyDatabaseHealth(engine),
         compatibility=compatibility,
@@ -153,9 +190,55 @@ def build_application(settings: Settings) -> FastAPI:
             event_store, SQLAlchemyEnclosureCurrentProjection(engine)
         )
         reminder_projection = SQLAlchemyReminderProjection(engine)
+        expense_service = ExpenseService(event_store, SQLAlchemyExpenseCurrentProjection(engine))
+        projection_manager = SQLiteProjectionGenerationManager(engine, product_projection_registry)
+        projection_catch_up: Callable[[], object] | None = None
+        if settings.environment is Environment.TEST:
+
+            def catch_up_test_projections() -> object:
+                test_manager = ensure_product_projection_generations(engine)
+                return ProjectionWorker(
+                    engine, test_manager, product_projection_registry
+                ).run_once()
+
+            projection_catch_up = catch_up_test_projections
+        analytics_events = SQLAlchemyProjectedEventReader(
+            engine,
+            projection_manager,
+            product_projection_registry,
+            "measurement_analytics",
+        )
+        report_events = SQLAlchemyProjectedEventReader(
+            engine, projection_manager, product_projection_registry, "report_facts"
+        )
+        dashboard_events = SQLAlchemyProjectedEventReader(
+            engine,
+            projection_manager,
+            product_projection_registry,
+            "dashboard_statistics",
+        )
+        external_origin = (
+            str(settings.external_origin).rstrip("/")
+            if settings.external_origin is not None
+            else None
+        )
+        password_reset_delivery = (
+            LocalFilePasswordResetDelivery(
+                settings.password_reset_delivery_path,
+                environment=settings.environment.value,
+            )
+            if settings.password_reset_delivery is PasswordResetDeliveryMode.LOCAL_FILE
+            and settings.password_reset_delivery_path is not None
+            else None
+        )
         app.include_router(
             create_web_router(
                 bootstrap_service=HouseholdBootstrapService(
+                    bootstrap_repository,
+                    password_hasher,
+                    command_hash_secret=secret,
+                ),
+                account_registration_service=AccountRegistrationService(
                     bootstrap_repository,
                     password_hasher,
                     command_hash_secret=secret,
@@ -169,15 +252,22 @@ def build_application(settings: Settings) -> FastAPI:
                     rate_limit=5,
                     rate_window=timedelta(minutes=15),
                     block_duration=timedelta(minutes=15),
+                    password_reset_delivery=password_reset_delivery,
+                    external_origin=external_origin,
                 ),
                 animal_service=animal_service,
                 attachment_service=attachment_service,
                 backup_service=BackupService(SQLAlchemyBackupRepository(engine)),
                 enclosure_service=enclosure_service,
                 inventory_service=inventory_service,
-                expense_service=ExpenseService(
-                    event_store, SQLAlchemyExpenseCurrentProjection(engine)
+                expense_service=expense_service,
+                analytics_service=AnimalAnalyticsService(
+                    animal_service, projected_events=analytics_events
                 ),
+                report_service=ReportService(
+                    animal_service, expense_service, projected_events=report_events
+                ),
+                dashboard_statistics_service=DashboardStatisticsService(dashboard_events),
                 reminder_rule_service=ReminderRuleService(event_store, reminder_projection),
                 reminder_fact_service=ReminderFactService(event_store, reminder_projection),
                 reminder_projection=reminder_projection,
@@ -185,13 +275,13 @@ def build_application(settings: Settings) -> FastAPI:
                     SQLAlchemyNotificationIntentRepository(engine)
                 ),
                 job_repository=SQLAlchemyJobRepository(engine),
+                search_service=SearchService(
+                    SQLAlchemyFTSSearchRepository(engine, projection_manager)
+                ),
+                projection_catch_up=projection_catch_up,
                 is_bootstrapped=identity_repository.has_users,
                 secure_cookie=settings.session_cookie_secure,
-                expected_origin=(
-                    str(settings.external_origin).rstrip("/")
-                    if settings.external_origin is not None
-                    else None
-                ),
+                expected_origin=external_origin,
             )
         )
     elif settings.runtime_secret is None:

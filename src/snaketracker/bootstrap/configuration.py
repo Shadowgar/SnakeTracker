@@ -21,6 +21,13 @@ class Environment(StrEnum):
     PRODUCTION = "production"
 
 
+class PasswordResetDeliveryMode(StrEnum):
+    """Configured identity-message delivery adapter."""
+
+    DISABLED = "disabled"
+    LOCAL_FILE = "local_file"
+
+
 class Settings(BaseSettings):
     """Validated settings composed at process startup."""
 
@@ -41,6 +48,8 @@ class Settings(BaseSettings):
     backup_encryption_key_id: str = "local-development-v1"
     log_level: str = "INFO"
     session_cookie_secure: bool = True
+    password_reset_delivery: PasswordResetDeliveryMode = PasswordResetDeliveryMode.DISABLED
+    password_reset_delivery_path: Path | None = None
 
     @field_validator("external_origin")
     @classmethod
@@ -101,6 +110,11 @@ class Settings(BaseSettings):
             and not self.backup_storage_path.is_absolute()
         ):
             raise ValueError("production backup storage path must be absolute")
+        if self.password_reset_delivery is PasswordResetDeliveryMode.LOCAL_FILE:
+            if self.environment is Environment.PRODUCTION:
+                raise ValueError("local password-reset delivery is forbidden in production")
+            if self.password_reset_delivery_path is None:
+                raise ValueError("local password-reset delivery requires an explicit path")
         return self
 
 
@@ -134,6 +148,8 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         "SNAKETRACKER_EXTERNAL_ORIGIN": "external_origin",
         "SNAKETRACKER_LOG_LEVEL": "log_level",
         "SNAKETRACKER_SESSION_COOKIE_SECURE": "session_cookie_secure",
+        "SNAKETRACKER_PASSWORD_RESET_DELIVERY": "password_reset_delivery",
+        "SNAKETRACKER_PASSWORD_RESET_DELIVERY_PATH": "password_reset_delivery_path",
     }
     for environment_key, field_name in keys.items():
         if environment_key in source:

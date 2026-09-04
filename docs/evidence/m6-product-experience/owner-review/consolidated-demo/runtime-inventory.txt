@@ -1,0 +1,26 @@
+Captured: 2026-08-16 America/New_York
+
+Docker Compose projects after consolidation:
+astronomy-hub  running(2)  /home/rocco/Astronomy-Hub/docker-compose.yml
+snaketracker   running(3)  /home/rocco/SnakeTracker/compose.yaml
+
+SnakeTracker containers:
+snaketracker-nginx-1   healthy  127.0.0.1:8081->8080/tcp
+snaketracker-web-1     healthy  no host port
+snaketracker-worker-1  healthy  no host port
+
+SnakeTracker listeners checked:
+127.0.0.1:8081  listening
+127.0.0.1:18083 closed
+127.0.0.1:18084 closed
+127.0.0.1:18085 closed
+127.0.0.1:18086 closed
+127.0.0.1:18087 closed
+
+Stopped without volume deletion:
+snaketracker-m4
+snaketracker-m4-browser
+snaketracker-m4-final
+snaketracker-m4-qualification
+snaketracker-m4-ux
+snaketracker-m6-demo

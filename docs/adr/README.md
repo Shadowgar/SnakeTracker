@@ -1,6 +1,11 @@
 # Architecture Decision Records
 
-ADR-0001 through ADR-0035 were **Accepted on 2026-08-04**. ADR-0036 and ADR-0037 were **Accepted on 2026-08-05**, ADR-0038 was **Accepted on 2026-08-10**, and ADR-0039 was **Accepted on 2026-08-11**, through ADR-0028 governance. ADR-0028's decision freeze is active. Later architectural changes must create or supersede an ADR and must never silently rewrite accepted decisions.
+ADR-0001 through ADR-0035 were **Accepted on 2026-08-04**. ADR-0036 and ADR-0037 were
+**Accepted on 2026-08-05**, ADR-0038 was **Accepted on 2026-08-10**, ADR-0039 was **Accepted on
+2026-08-11**, ADR-0040 was **Accepted on 2026-08-16**, and ADR-0041 was **Accepted on
+2026-08-24**, through ADR-0028 governance. ADR-0028's decision freeze is active. Later
+architectural changes must create or supersede an ADR and must never silently rewrite accepted
+decisions.
 
 | ADR | Decision |
 |---|---|
@@ -43,3 +48,5 @@ ADR-0001 through ADR-0035 were **Accepted on 2026-08-04**. ADR-0036 and ADR-0037
 | [0037](0037-phase-order-minimal-household-events.md) | Phase-order amendment for minimal Phase 2 household events |
 | [0038](0038-scheduling-and-husbandry-reference-profiles.md) | Effective-history scheduling and versioned husbandry reference profiles |
 | [0039](0039-multispecies-animal-capabilities.md) | Multi-species Animal capability profiles and compatibility |
+| [0040](0040-trusted-local-demo-household-provisioning.md) | Trusted local demo-household provisioning |
+| [0041](0041-four-group-capability-expansion-and-neutral-molt-contracts.md) | Four-group capability expansion and neutral molt contracts |

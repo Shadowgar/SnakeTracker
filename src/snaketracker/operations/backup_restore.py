@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from collections.abc import Sequence
 from pathlib import Path
 from uuid import UUID
@@ -23,6 +24,7 @@ def run_restore_rehearsal(settings: Settings, run_id: UUID, restore_root: Path) 
     attachment_root = (
         settings.attachment_storage_path or settings.database_path.parent / "attachments"
     )
+    _require_isolated_restore_root(settings, restore_root, attachment_root, backup_root)
     engine = create_sqlite_engine(
         settings.database_path,
         require_local_storage=settings.environment is Environment.PRODUCTION,
@@ -41,6 +43,31 @@ def run_restore_rehearsal(settings: Settings, run_id: UUID, restore_root: Path) 
         encryption_key_id=settings.backup_encryption_key_id,
     )
     return pipeline.rehearse_restore(run, restore_root)
+
+
+def _require_isolated_restore_root(
+    settings: Settings,
+    restore_root: Path,
+    attachment_root: Path,
+    backup_root: Path,
+) -> None:
+    target = restore_root.expanduser().resolve()
+    database = settings.database_path.expanduser().resolve()
+    attachments = attachment_root.expanduser().resolve()
+    backups = backup_root.expanduser().resolve()
+    protected_paths = (database, attachments, backups)
+    if any(_paths_overlap(target, protected) for protected in protected_paths):
+        raise ValueError("Restore rehearsal target overlaps an active runtime path.")
+
+    runtime_parents = (database.parent, attachments.parent, backups.parent)
+    if settings.environment is not Environment.TEST and len(set(runtime_parents)) == 1:
+        runtime_root = Path(os.path.commonpath([str(path) for path in runtime_parents]))
+        if _paths_overlap(target, runtime_root):
+            raise ValueError("Restore rehearsal target must be outside the active runtime root.")
+
+
+def _paths_overlap(first: Path, second: Path) -> bool:
+    return first == second or first in second.parents or second in first.parents
 
 
 def main(argv: Sequence[str] | None = None) -> int:

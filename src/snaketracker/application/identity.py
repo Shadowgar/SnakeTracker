@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import re
 import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
+from urllib.parse import quote
 from uuid import UUID, uuid4
 
 
@@ -17,6 +19,14 @@ class AuthenticationError(RuntimeError):
 
 class LoginBlockedError(AuthenticationError):
     """A login attempt rejected by the durable throttle."""
+
+
+class PasswordResetValidationError(AuthenticationError):
+    """A password-reset submission that violates the public password policy."""
+
+
+class InvalidPasswordResetError(AuthenticationError):
+    """An invalid, expired, superseded, or consumed reset credential."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,10 +68,38 @@ class SessionWrite:
     user_agent_class: str | None
 
 
+@dataclass(frozen=True, slots=True)
+class PasswordResetWrite:
+    reset_id: UUID
+    token_hash: str
+    requested_at: datetime
+    expires_at: datetime
+    source: str
+
+
+@dataclass(frozen=True, slots=True)
+class PasswordResetRecipient:
+    reset_id: UUID
+    user_id: UUID
+    email_normalized: str
+
+
+@dataclass(frozen=True, slots=True)
+class PasswordResetMessage:
+    message_id: UUID
+    recipient_email: str
+    reset_url: str
+    expires_at: datetime
+
+
 class PasswordVerifyPort(Protocol):
     def hash(self, password: str) -> str: ...
 
     def verify(self, password_hash: str, password: str) -> bool: ...
+
+
+class PasswordResetDeliveryPort(Protocol):
+    def deliver(self, message: PasswordResetMessage) -> None: ...
 
 
 class IdentityRepository(Protocol):
@@ -86,6 +124,19 @@ class IdentityRepository(Protocol):
 
     def clear_login_failures(self, key_hash: str) -> None: ...
 
+    def record_registration_failure(
+        self,
+        key_hash: str,
+        *,
+        limit: int,
+        window: timedelta,
+        block_duration: timedelta,
+        now: datetime,
+        correlation_id: UUID,
+        client_ip: str | None,
+        user_agent: str | None,
+    ) -> None: ...
+
     def create_session(self, write: SessionWrite, *, correlation_id: UUID) -> None: ...
 
     def resolve_session(
@@ -106,6 +157,40 @@ class IdentityRepository(Protocol):
     ) -> None: ...
 
     def revoke_all_sessions(self, *, reason: str, now: datetime, correlation_id: UUID) -> None: ...
+
+    def request_password_reset(
+        self,
+        email_normalized: str,
+        write: PasswordResetWrite,
+        *,
+        rate_key: str | None,
+        limit: int,
+        window: timedelta,
+        block_duration: timedelta,
+        correlation_id: UUID,
+        client_ip: str | None,
+        user_agent: str | None,
+    ) -> PasswordResetRecipient | None: ...
+
+    def invalidate_password_reset(
+        self,
+        reset_id: UUID,
+        *,
+        now: datetime,
+        correlation_id: UUID,
+        reason: str,
+    ) -> None: ...
+
+    def complete_password_reset(
+        self,
+        token_hash: str,
+        password_hash: str,
+        *,
+        now: datetime,
+        correlation_id: UUID,
+        client_ip: str | None,
+        user_agent: str | None,
+    ) -> bool: ...
 
 
 ROLE_CAPABILITIES: dict[str, frozenset[str]] = {
@@ -158,6 +243,9 @@ class IdentityService:
         rate_limit: int,
         rate_window: timedelta,
         block_duration: timedelta,
+        password_reset_delivery: PasswordResetDeliveryPort | None = None,
+        external_origin: str | None = None,
+        password_reset_ttl: timedelta = timedelta(minutes=45),
     ) -> None:
         if len(secret) < 32:
             raise ValueError("identity secret must be at least 32 bytes")
@@ -169,6 +257,9 @@ class IdentityService:
         self._rate_limit = rate_limit
         self._rate_window = rate_window
         self._block_duration = block_duration
+        self._password_reset_delivery = password_reset_delivery
+        self._external_origin = external_origin.rstrip("/") if external_origin else None
+        self._password_reset_ttl = password_reset_ttl
         self._dummy_hash = password_hasher.hash("not-a-real-user-password")
 
     def login(
@@ -226,6 +317,183 @@ class IdentityService:
             correlation_id=correlation_id,
             now=now or datetime.now(UTC),
         )
+
+    def registration_is_blocked(
+        self,
+        email: str,
+        *,
+        client_ip: str | None,
+        now: datetime | None = None,
+    ) -> bool:
+        current = now or datetime.now(UTC)
+        return self._repository.login_is_blocked(
+            self._registration_rate_key(email, client_ip), current
+        )
+
+    def record_registration_failure(
+        self,
+        email: str,
+        *,
+        client_ip: str | None,
+        user_agent: str | None,
+        correlation_id: UUID,
+        now: datetime | None = None,
+    ) -> None:
+        self._repository.record_registration_failure(
+            self._registration_rate_key(email, client_ip),
+            limit=self._rate_limit,
+            window=self._rate_window,
+            block_duration=self._block_duration,
+            now=now or datetime.now(UTC),
+            correlation_id=correlation_id,
+            client_ip=client_ip,
+            user_agent=user_agent,
+        )
+
+    def clear_registration_failures(self, email: str, *, client_ip: str | None) -> None:
+        self._repository.clear_login_failures(self._registration_rate_key(email, client_ip))
+
+    def request_password_reset(
+        self,
+        email: str,
+        *,
+        client_ip: str | None,
+        user_agent: str | None,
+        correlation_id: UUID,
+        now: datetime | None = None,
+    ) -> None:
+        """Request reset delivery without exposing account or delivery state."""
+        current = now or datetime.now(UTC)
+        token, recipient = self._create_password_reset(
+            email,
+            source="self_service",
+            rate_key=self._password_reset_rate_key(email, client_ip),
+            client_ip=client_ip,
+            user_agent=user_agent,
+            correlation_id=correlation_id,
+            now=current,
+        )
+        if recipient is None:
+            return
+        if self._password_reset_delivery is None or self._external_origin is None:
+            self._repository.invalidate_password_reset(
+                recipient.reset_id,
+                now=current,
+                correlation_id=correlation_id,
+                reason="delivery_unavailable",
+            )
+            return
+        try:
+            self._password_reset_delivery.deliver(
+                PasswordResetMessage(
+                    message_id=uuid4(),
+                    recipient_email=recipient.email_normalized,
+                    reset_url=self._reset_url(token),
+                    expires_at=current + self._password_reset_ttl,
+                )
+            )
+        except Exception:
+            self._repository.invalidate_password_reset(
+                recipient.reset_id,
+                now=current,
+                correlation_id=correlation_id,
+                reason="delivery_failed",
+            )
+
+    def initiate_operator_password_reset(
+        self,
+        email: str,
+        *,
+        correlation_id: UUID,
+        now: datetime | None = None,
+    ) -> str | None:
+        """Create a local-operator one-time link without accepting a plaintext password."""
+        if self._external_origin is None:
+            raise RuntimeError("Operator password recovery requires a configured external origin.")
+        current = now or datetime.now(UTC)
+        token, recipient = self._create_password_reset(
+            email,
+            source="operator",
+            rate_key=None,
+            client_ip=None,
+            user_agent="local-operator",
+            correlation_id=correlation_id,
+            now=current,
+        )
+        return self._reset_url(token) if recipient is not None else None
+
+    def complete_password_reset(
+        self,
+        token: str,
+        password: str,
+        confirmation: str,
+        *,
+        client_ip: str | None,
+        user_agent: str | None,
+        correlation_id: UUID,
+        now: datetime | None = None,
+    ) -> None:
+        if password != confirmation:
+            raise PasswordResetValidationError("Passwords do not match.")
+        if len(password) < 12 or len(password) > 1024:
+            raise PasswordResetValidationError("Password must be between 12 and 1024 characters.")
+        current = now or datetime.now(UTC)
+        password_hash = self._password_hasher.hash(password)
+        if re.fullmatch(r"[A-Za-z0-9_-]{64,128}", token) is None or not (
+            self._repository.complete_password_reset(
+                self._digest(f"password-reset:{token}"),
+                password_hash,
+                now=current,
+                correlation_id=correlation_id,
+                client_ip=client_ip,
+                user_agent=user_agent,
+            )
+        ):
+            raise InvalidPasswordResetError(
+                "This reset link is invalid or has expired. Request a new one."
+            )
+
+    def _create_password_reset(
+        self,
+        email: str,
+        *,
+        source: str,
+        rate_key: str | None,
+        client_ip: str | None,
+        user_agent: str | None,
+        correlation_id: UUID,
+        now: datetime,
+    ) -> tuple[str, PasswordResetRecipient | None]:
+        token = secrets.token_urlsafe(48)
+        recipient = self._repository.request_password_reset(
+            email.strip().casefold(),
+            PasswordResetWrite(
+                reset_id=uuid4(),
+                token_hash=self._digest(f"password-reset:{token}"),
+                requested_at=now,
+                expires_at=now + self._password_reset_ttl,
+                source=source,
+            ),
+            rate_key=rate_key,
+            limit=self._rate_limit,
+            window=self._rate_window,
+            block_duration=self._block_duration,
+            correlation_id=correlation_id,
+            client_ip=client_ip,
+            user_agent=user_agent,
+        )
+        return token, recipient
+
+    def _reset_url(self, token: str) -> str:
+        if self._external_origin is None:
+            raise RuntimeError("Password recovery requires a configured external origin.")
+        return f"{self._external_origin}/reset-password#token={quote(token, safe='')}"
+
+    def _password_reset_rate_key(self, email: str, client_ip: str | None) -> str:
+        return self._digest(f"password-reset:{email.strip().casefold()}:{client_ip or '-'}")
+
+    def _registration_rate_key(self, email: str, client_ip: str | None) -> str:
+        return self._digest(f"registration:{email.strip().casefold()}:{client_ip or '-'}")
 
     def authenticate(self, token: str, *, now: datetime | None = None) -> Principal:
         principal = self._repository.resolve_session(
