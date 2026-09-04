@@ -1,6 +1,6 @@
 # M6 Product Experience Evidence
 
-Status: **M6 implementation-qualified; owner acceptance pending**
+Status: **Final M6 technical qualification passed; explicit owner acceptance pending**
 
 The M6 product experience is qualified on the laptop/Docker development environment. It adds
 household-authorized FTS5 search, HTML/CSV reports, capability-aware effective-history analytics,
@@ -16,6 +16,7 @@ a strict-CSP read-only PWA shell. No production husbandry guidance is enabled.
 - [Owner-review demo and login recovery](owner-review/README.md)
 - [UX Overhaul Pass 4 owner-review evidence](owner-review/ux-pass4/README.md)
 - [M6.1 final usability/correctness corrections](m6.1-usability-corrections/README.md)
+- [Final M6 qualification](final-qualification/README.md)
 - [Accessibility](accessibility/critical-journeys/README.md)
 - [Reference-content gate](references/provenance/README.md)
 - [Review status](reviews/README.md)
@@ -33,6 +34,6 @@ The later [ADR-0041 four-group extension](four-group-expansion/README.md) is
 implementation-qualified on the promoted Raspberry Pi 5 and tracked separately so
 the accepted M5.5 and earlier M6 evidence continues to describe its original Snake/Spider scope.
 The four staged UX passes and bounded [M6.1](m6.1-usability-corrections/README.md) corrections are
-implementation-qualified on the owner-review Raspberry Pi. M6.1 owner review must still precede
-complete final M6 qualification, PR #8 review readiness, and explicit owner acceptance. This
-status note does not rewrite historical evidence or mark M6 accepted.
+owner-reviewed. [Final M6 technical qualification](final-qualification/README.md) passed on the
+owner-review Raspberry Pi. Explicit final owner acceptance remains pending; this status does not
+mark M6 accepted or authorize PR #8 merge.

@@ -61,6 +61,23 @@ ONE_PIXEL_PNG = base64.b64decode(
 )
 
 
+@pytest.mark.parametrize("relative_target", ("restore", "attachments/rehearsal"))
+def test_operator_restore_rejects_active_runtime_targets(
+    tmp_path: Path, relative_target: str
+) -> None:
+    runtime_root = tmp_path / "active-runtime"
+    settings = Settings(
+        environment=Environment.DEVELOPMENT,
+        database_path=runtime_root / "snaketracker.sqlite3",
+        attachment_storage_path=runtime_root / "attachments",
+        backup_storage_path=runtime_root / "backups",
+        backup_encryption_key=BACKUP_KEY.hex(),
+    )
+
+    with pytest.raises(ValueError, match="active runtime"):
+        run_restore_rehearsal(settings, uuid4(), runtime_root / relative_target)
+
+
 def test_worker_creates_encrypted_verified_backup_and_rehearses_restore(tmp_path: Path) -> None:
     database = tmp_path / "source.sqlite3"
     config = Config(ROOT / "alembic.ini")

@@ -10,9 +10,8 @@
 
 ## Planned sequence from M6 forward
 
-M6 UX implementation Passes 1–4 and bounded M6.1 implementation qualification are complete, but
-M6 is not finally qualified or accepted. The authoritative remaining sequence is M6.1 owner review,
-final M6 qualification and explicit owner
+M6 UX Passes 1–4 and M6.1 are owner-reviewed, and final M6 technical qualification is complete.
+M6 is not owner-accepted. The authoritative remaining sequence is explicit final M6 owner
 acceptance, M6.5 inventory intelligence, M7 deployment/recovery qualification, M8 release
 qualification, and M9 public profiles/media sharing. Early Raspberry Pi owner-review use is not a
 substitute for M7 qualification.
@@ -153,8 +152,7 @@ or M7 work.
 
 ## Phase 6 / M6 — Product experience complete
 
-Status: M6 UX Passes 1–4 and M6.1 implementation qualification complete; M6.1 owner review, final
-qualification, and owner acceptance pending
+Status: Final M6 technical qualification complete; explicit final owner acceptance pending
 
 M6 begins only after M5.5 acceptance. Its search, reports, dashboards, analytics, reference profiles,
 and explainable suggestions must consume the registered animal type/capability identity, effective
@@ -180,27 +178,27 @@ the Animal aggregate or infer that every care fact applies to every type.
 - [x] RB Password recovery uses generic throttled requests, short-lived single-use credentials, canonical-origin identity delivery, atomic password change/session revocation, and trusted-local operator recovery. Evidence: [password recovery](../evidence/m6-product-experience/password-recovery/README.md).
 - [x] RB The four staged UX implementation passes cover the global shell, daily experience, animal experience, secondary destinations, authentication, and onboarding without recording final M6 acceptance. Evidence: [Pass 4 owner-review index](../evidence/m6-product-experience/owner-review/ux-pass4/README.md).
 
-Pass 4 and M6.1 implementation completion do not finish M6. Owner acceptance is not recorded, PR #8
-must not be merged, and final M6 qualification must not begin until the bounded M6.1 tranche below
-is owner-reviewed.
+Pass 4 and M6.1 owner review do not by themselves finish M6. Final technical qualification is
+recorded below; owner acceptance is not recorded and PR #8 must not be merged without separate
+authorization.
 
 ## Phase 6.1 / M6.1 — Final usability and correctness corrections
 
-Status: Implementation-qualified on Raspberry Pi — owner review pending
+Status: Implemented, qualified, and owner-reviewed
 
 M6.1 is the bounded correction tranche discovered during owner review. It precedes final M6
 qualification and must not expand into M6.5, M7, M8, or M9 work.
 
-- [ ] RB Sign out is easy to discover from the mobile More/account area and an appropriate desktop account menu without becoming a primary care-navigation item. Mobile and desktop owner review must confirm discoverability. (`R-065`, `AT-M61-01`)
-- [ ] RB A still-valid authenticated session survives normal mobile-browser background/minimize and resume behavior and brief application switching. Normal expiry remains authoritative; explicit sign out terminates the session, and successful password reset still revokes all sessions. Qualification must reproduce real mobile-browser lifecycle behavior without extending sessions indefinitely or weakening security. (`R-066`, `AT-M61-02`)
-- [ ] RB Every selected-day Calendar care item links to the relevant existing animal/profile, care action or schedule, or completed-history context where supported; no new scheduling domain is introduced. (`R-067`, `AT-M61-03`)
-- [ ] RB Calendar date cells communicate due, overdue, upcoming, and completed meaning compactly without relying on color alone, and an understandable legend appears before or adjacent to the calendar on mobile and desktop rather than below it. (`R-068`, `AT-M61-04`)
-- [ ] RB The global desktop and mobile shells render `© <current year> Paul Rocco` with suitable `mailto:rocco.paul@gmail.com` and `https://github.com/Shadowgar/SnakeTracker` links without obstructing mobile bottom navigation or safe-area behavior. (`R-069`, `AT-M61-05`)
-- [ ] RB An ordinary modern phone-camera profile photo, including the known 5.7 MB, 3072×4080 Motorola Moto G 5G (2024) image, uploads without requiring manual resizing; Care Keeper validates and processes it into orientation-correct, privacy-safe, web-appropriate derivatives under bounded Raspberry Pi resources. (`R-082`, `AT-M61-06`)
+- [x] RB Sign out is easy to discover from the mobile More/account area and an appropriate desktop account menu without becoming a primary care-navigation item. (`R-065`, `AT-M61-01`)
+- [x] RB A still-valid authenticated session survives normal mobile-browser background/minimize and resume behavior and brief application switching. Normal expiry remains authoritative; explicit sign out terminates the session, and successful password reset still revokes all sessions. (`R-066`, `AT-M61-02`)
+- [x] RB Every selected-day Calendar care item links to the relevant existing animal/profile, care action or schedule, or completed-history context where supported. (`R-067`, `AT-M61-03`)
+- [x] RB Calendar date cells communicate due, overdue, upcoming, and completed meaning compactly without relying on color alone, with the legend before or adjacent to the calendar. (`R-068`, `AT-M61-04`)
+- [x] RB The global desktop and mobile shells render the accepted Paul Rocco attribution and links without obstructing navigation. (`R-069`, `AT-M61-05`)
+- [x] RB Ordinary modern phone-camera profile photos, including the accepted 5.7 MB 3072×4080 case, are processed into orientation-correct, privacy-safe derivatives under bounded Raspberry Pi resources. (`R-082`, `AT-M61-06`)
 - [x] RB The bounded M6.1 browser, mobile lifecycle, accessibility, security, responsive, console/CSP, regression, household-isolation, and phone-image processing suites pass and retain evidence under [`m6.1-usability-corrections`](../evidence/m6-product-experience/m6.1-usability-corrections/README.md). (`R-065`–`R-069`, `R-082`)
 
-The six requirement checkboxes remain open because owner review is part of M6.1 acceptance. Their
-implementation and automated qualification are complete and traced in the evidence package above.
+The owner has reviewed and accepted all six bounded M6.1 corrections. Their implementation and
+qualification remain traced in the evidence package above.
 
 For `R-082`, the expected flow is `Choose photo → Care Keeper validates/processes it → profile
 picture appears`, not a demand that the keeper edit an ordinary phone photo elsewhere. Its
@@ -215,13 +213,13 @@ implementation and qualification must:
 
 ## Final M6 qualification and owner acceptance gate
 
-Status: Blocked on M6.1 owner review
+Status: Technical qualification passed; explicit final owner acceptance pending
 
 - [x] RB M6.1 requirements `R-065`–`R-069` and later-discovered `R-082` are implemented within their bounded scope. Evidence: [M6.1 corrections](../evidence/m6-product-experience/m6.1-usability-corrections/README.md).
-- [ ] RB The owner reviews every M6.1 correction, including successful use of a representative normal phone profile photo, and accepts them for final qualification.
-- [ ] RB Complete final M6 functional, security, accessibility, attachment/image-processing, data-integrity, backup/recovery, browser, responsive, and runtime qualification passes against the candidate head.
-- [ ] RB GitHub's authoritative `Quality / quality` check is green for the candidate head.
-- [ ] RB PR #8 is current, review-ready, and retains the required evidence; this criterion alone does not authorize merge.
+- [x] RB The owner reviewed every M6.1 correction, including successful use of a representative normal phone profile photo, and accepted them for final qualification.
+- [x] RB Complete final M6 functional, security, accessibility, attachment/image-processing, data-integrity, backup/recovery, browser, responsive, and runtime qualification passes against the candidate head. Evidence: [final M6 qualification](../evidence/m6-product-experience/final-qualification/README.md).
+- [x] RB GitHub's authoritative `Quality / quality` check is green for the final candidate head.
+- [x] RB PR #8 is current, review-ready, and retains the required evidence; this criterion alone does not authorize merge.
 - [ ] RB The owner explicitly accepts M6. Only then may M6 be marked accepted and PR #8 merge be separately authorized.
 
 ## Phase 6.5 / M6.5 — Inventory intelligence and cost tracking

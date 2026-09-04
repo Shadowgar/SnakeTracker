@@ -1,11 +1,10 @@
 # M6.1 Final Usability and Correctness Corrections
 
-Status: **implementation-qualified on the owner-review Raspberry Pi; owner review pending**
+Status: **implementation-qualified and owner-reviewed; explicit final M6 acceptance pending**
 
 Qualification date: 2026-09-04. Branch: `phase6/product-experience`. Owner-review origin:
 `https://tracker.theroccos.us`. This bounded package covers only `R-065`–`R-069` and `R-082`.
-It does not record final M6 qualification or owner acceptance, merge PR #8, or begin M6.5, M7,
-M8, or M9.
+It does not record final M6 owner acceptance, merge PR #8, or begin M6.5, M7, M8, or M9.
 
 ## R-065 — discoverable, revoking Sign out
 
