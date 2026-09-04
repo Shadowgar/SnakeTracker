@@ -98,6 +98,56 @@ threshold, active-or-archived status, source stream version/event, and updated t
 projection is rebuildable from the immutable inventory-item stream; archive never deletes historical
 consumption links or allocations.
 
+## Proposed M6.5 logical schema (not an executable migration)
+
+ADR-0042 proposes an expand-only schema evolution after owner acceptance. No migration exists or is
+authorized by this document.
+
+### Evolved `inventory_balance`
+
+Parallel integer-thousandth on-hand, reserved, consumed, and expired quantities; canonical
+unit/category; reorder minimum/target/maximum/lead time; recount interval; last physical-count
+event/time/quantity; compatibility state; and existing version/lifecycle fields. Legacy integer
+columns remain during the compatibility window and backfill exactly as `value * 1,000`.
+
+### `purchase_current` and `purchase_line_current`
+
+Household-scoped effective Purchase header/lifecycle with one currency, vendor, occurrence time,
+reference, line/tax/fee/discount/total minor units, source versions, and bounded line count. Lines
+have stable ID, Inventory Item, scaled canonical quantity, subtotal, deterministically allocated
+acquisition cost, resulting receipt event ID, and active state. Unique Purchase/line and receipt
+links prevent duplicate projection.
+
+### `inventory_effective_receipts`
+
+Household/item/root-receipt identity, effective receipt/correction/control event, scaled quantity,
+immutable optional Purchase/line source, status, and stream/global versions. It supports synchronous
+correction/void/reinstate validation without mutating history.
+
+### `inventory_cost_lots` and `inventory_cost_allocations`
+
+Generation-scoped FIFO lot source, occurrence/order keys, received/remaining scaled quantity,
+currency, allocated acquisition cost, known/unknown state, and correction provenance. Allocations
+link effective depletion events to lots with scaled quantity, integer minor-unit value, and
+classification (`consumption`, `expiry`, or `variance`). Same-generation foreign keys and uniqueness
+make quantity/value reconciliation testable.
+
+### `inventory_intelligence` and `inventory_report_facts`
+
+Generation-scoped per-item usage windows, rate/duration inputs/results, last use/restock/count,
+reorder/count-due/unused observations, known/unknown current value, per-currency period facts,
+explanation fields, source high-water position, and calculated time.
+
+### `cash_spend_facts`
+
+Generation-scoped household, source kind (`expense` or `purchase`), source ID, effective status,
+occurred time, category/vendor/payee, currency, amount minor, and destination link. Unique
+`(household_id, source_kind, source_id)` guarantees that a Purchase is not duplicated as an Expense.
+
+All tables retain household scope and bounded integer/text constraints. Asynchronous tables use
+ADR-0008 shadow generations. Historical v1 receipts become explicit unknown-cost lots; legacy
+Expenses are never inferred to be Purchases.
+
 ## Attachments
 
 ### `attachments`

@@ -1,13 +1,13 @@
 # Owner Problem Triage
 
-Status: M6.1 corrections owner-reviewed; final M6 acceptance pending. Later milestones remain
-prospective.
+Status: M6 owner-accepted and merged; M6.5 architecture/domain proposal prepared. Later
+milestones remain prospective.
 
 The [raw owner problem log](problemsfound.md) is preserved verbatim as the source record. This
 companion maps every statement into the authoritative [milestone roadmap](../roadmap/milestones.md)
 and [requirements traceability matrix](../requirements/traceability-matrix.md). M6.1 implementation
-evidence is [here](../evidence/m6-product-experience/m6.1-usability-corrections/README.md); owner
-review is complete; explicit final M6 acceptance remains pending.
+evidence is [here](../evidence/m6-product-experience/m6.1-usability-corrections/README.md); M6 owner
+acceptance and PR #8 merge are complete.
 
 ## 1. Easier logout
 
@@ -15,7 +15,7 @@ review is complete; explicit final M6 acceptance remains pending.
 
 - Target milestone: M6.1 — Final usability and correctness corrections
 - Requirement: `R-065`; acceptance procedure `AT-M61-01`
-- Status: **Owner-reviewed — final M6 acceptance pending**
+- Status: **Accepted in M6**
 
 ## 2. Mobile browser minimize/resume session persistence
 
@@ -23,7 +23,7 @@ review is complete; explicit final M6 acceptance remains pending.
 
 - Target milestone: M6.1 — Final usability and correctness corrections
 - Requirement: `R-066`; acceptance procedure `AT-M61-02`
-- Status: **Owner-reviewed — final M6 acceptance pending**
+- Status: **Accepted in M6**
 
 ## 3. Calendar selected-day item navigation
 
@@ -31,7 +31,7 @@ review is complete; explicit final M6 acceptance remains pending.
 
 - Target milestone: M6.1 — Final usability and correctness corrections
 - Requirement: `R-067`; acceptance procedure `AT-M61-03`
-- Status: **Owner-reviewed — final M6 acceptance pending**
+- Status: **Accepted in M6**
 
 ## 4. Calendar meaning and top legend
 
@@ -39,7 +39,7 @@ review is complete; explicit final M6 acceptance remains pending.
 
 - Target milestone: M6.1 — Final usability and correctness corrections
 - Requirement: `R-068`; acceptance procedure `AT-M61-04`
-- Status: **Owner-reviewed — final M6 acceptance pending**
+- Status: **Accepted in M6**
 
 ## 5. Animal profile photo, album, video, and public gallery
 
@@ -59,7 +59,7 @@ security, capacity, and no-leakage gates before public access is enabled.
 
 - Target milestone: M6.1 — Final usability and correctness corrections
 - Requirement: `R-069`; acceptance procedure `AT-M61-05`
-- Status: **Owner-reviewed — final M6 acceptance pending**
+- Status: **Accepted in M6**
 
 The planned attribution is `© <current year> Paul Rocco`, linked appropriately to
 `mailto:rocco.paul@gmail.com` and `https://github.com/Shadowgar/SnakeTracker`.
@@ -70,7 +70,7 @@ The planned attribution is `© <current year> Paul Rocco`, linked appropriately 
 
 - Target milestone: M6.5 — Inventory intelligence and cost tracking
 - Requirements: `R-070`–`R-072` and `R-076`; acceptance procedures `AT-INVINT-01`–`AT-INVINT-03` and `AT-INVINT-06`
-- Status: **Planned — M6.5**
+- Status: **Architecture proposed — M6.5 not implemented**
 
 ## 8. Inventory-linked expenses and consumption cost
 
@@ -78,11 +78,14 @@ The planned attribution is `© <current year> Paul Rocco`, linked appropriately 
 
 - Target milestone: M6.5 — Inventory intelligence and cost tracking
 - Requirements: `R-073`–`R-076`; acceptance procedures `AT-INVINT-04`–`AT-INVINT-06` and architecture review `AR-INVINT-01`
-- Status: **Planned — M6.5**
+- Status: **Architecture proposed — M6.5 not implemented**
 
 The roadmap distinguishes cash spending, inventory value, and consumption cost. Purchase history or
 cost lots are required; a single mutable price is insufficient. The exact deterministic costing
 policy is deliberately deferred to M6.5 architecture/domain review and an ADR if required.
+The [architecture proposal](../plans/2026-09-04-m6.5-inventory-intelligence-architecture.md) and
+[ADR-0042](../adr/0042-inventory-purchases-fifo-and-quantity-policy.md) now recommend the policy;
+the ADR remains Proposed pending owner review.
 
 ## 9. Normal phone profile-photo upload
 
@@ -90,7 +93,7 @@ policy is deliberately deferred to M6.5 architecture/domain review and an ADR if
 
 - Target milestone: M6.1 — Final usability and correctness corrections
 - Requirement: `R-082`; acceptance procedure `AT-M61-06`
-- Status: **Owner-reviewed — final M6 acceptance pending**
+- Status: **Accepted in M6**
 
 This is a newly discovered existing-feature usability/correctness issue. The known image must pass,
 but implementation must justify bounded file/pixel/resource limits, validate decoded content,
@@ -100,6 +103,6 @@ deliberately extend this privacy-safe boundary rather than expose raw metadata.
 
 ## Milestone sequence and status boundary
 
-The roadmap order is M6 UX Passes 1–4, M6.1 (six owner issues), final M6 qualification and explicit
-owner acceptance, M6.5, M7, M8, then M9. M6.1 implementation qualification does not complete M6,
-authorize PR #8 merge, qualify M7 Raspberry Pi deployment/recovery, or enable public sharing.
+The roadmap order is M6 UX Passes 1–4, M6.1 (six owner issues), final M6 qualification/acceptance,
+M6.5, M7, M8, then M9. M6 and PR #8 are complete. M6.5 design does not qualify M7 Raspberry Pi
+deployment/recovery, authorize M8 release qualification, or enable M9 public sharing.

@@ -18,6 +18,7 @@ ACCEPTANCE_DATES = {
     "0040": "2026-08-16",
     "0041": "2026-08-24",
 }
+PROPOSED_ADRS = {"0042"}
 APPROVED_AMENDMENT_PATHS = {
     "docs/README.md",
     "docs/adr/README.md",
@@ -27,6 +28,7 @@ APPROVED_AMENDMENT_PATHS = {
     "docs/adr/0039-multispecies-animal-capabilities.md",
     "docs/adr/0040-trusted-local-demo-household-provisioning.md",
     "docs/adr/0041-four-group-capability-expansion-and-neutral-molt-contracts.md",
+    "docs/adr/0042-inventory-purchases-fifo-and-quantity-policy.md",
     "docs/architecture/domain-catalog.md",
     "docs/architecture/database-schema.md",
     "docs/architecture/event-catalog.md",
@@ -64,15 +66,19 @@ def protected_architecture_changes(paths: set[str]) -> set[str]:
 def main() -> int:
     failures: list[str] = []
     adr_paths = sorted((ROOT / "docs/adr").glob("[0-9][0-9][0-9][0-9]-*.md"))
-    expected_names = set(ACCEPTANCE_DATES)
+    expected_names = set(ACCEPTANCE_DATES) | PROPOSED_ADRS
     actual_names = {path.name[:4] for path in adr_paths}
     if actual_names != expected_names:
-        failures.append("ADR catalog must contain exactly ADR-0001 through ADR-0041")
+        failures.append("ADR catalog does not match the accepted and explicitly proposed set")
     for path in adr_paths:
         text = path.read_text(encoding="utf-8")
-        acceptance_date = ACCEPTANCE_DATES[path.name[:4]]
-        if "Status: Accepted" not in text or f"Acceptance date: {acceptance_date}" not in text:
-            failures.append(f"{path.relative_to(ROOT)} is not accepted on {acceptance_date}")
+        number = path.name[:4]
+        if number in ACCEPTANCE_DATES:
+            acceptance_date = ACCEPTANCE_DATES[number]
+            if "Status: Accepted" not in text or f"Acceptance date: {acceptance_date}" not in text:
+                failures.append(f"{path.relative_to(ROOT)} is not accepted on {acceptance_date}")
+        elif "Status: Proposed" not in text or "Acceptance date:" in text:
+            failures.append(f"{path.relative_to(ROOT)} is not an unaccepted Proposed ADR")
 
     docs_index = (ROOT / "docs/README.md").read_text(encoding="utf-8")
     adr_index = (ROOT / "docs/adr/README.md").read_text(encoding="utf-8")
@@ -113,7 +119,10 @@ def main() -> int:
     if failures:
         print("architecture freeze failures:\n" + "\n".join(failures), file=sys.stderr)
         return 1
-    print(f"architecture freeze passed: {len(adr_paths)} accepted ADRs")
+    print(
+        "architecture freeze passed: "
+        f"{len(ACCEPTANCE_DATES)} accepted ADRs, {len(PROPOSED_ADRS)} proposed ADRs"
+    )
     return 0
 
 

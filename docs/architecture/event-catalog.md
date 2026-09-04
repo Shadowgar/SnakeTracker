@@ -129,6 +129,27 @@ remain shared where the active profile permits them.
 | `inventory.stock_expired` | Removes expired stock |
 | `inventory.reorder_policy_changed` | Changes threshold policy |
 
+#### Proposed M6.5 contracts (not registered)
+
+The following contract versions/types are proposed by ADR-0042. Version-1 Inventory history remains
+registered unchanged.
+
+| Event contract | Meaning |
+|---|---|
+| `inventory.item_registered` v2 | Adds owner category while retaining one canonical item unit |
+| `inventory.item_updated` v2 | Changes name/category and permits unit change only before movement |
+| `inventory.stock_received` v2 | Adds scaled quantity with an optional typed Purchase-line source |
+| `inventory.receipt_corrected` v1 | Replaces effective quantity of a targeted v2 receipt without relinking its source |
+| `inventory.stock_consumed` v2 | Removes scaled quantity for typed generic or linked inventory use |
+| `inventory.stock_adjusted` v2 | Applies a scaled nonzero manual delta with structured reason/context |
+| `inventory.stock_counted` v1 | Records expected, actual, variance, actor/time, and count-workflow context |
+| `inventory.reorder_policy_changed` v2 | Sets minimum, target, maximum, and owner lead time |
+| `inventory.verification_policy_changed` v1 | Sets or clears the owner recount interval |
+
+`event.voided`, `event.reinstated`, and `inventory.consumption_reversed` are reused where their
+target registration permits them. A physical count applies its own variance and does not generate a
+duplicate adjustment event.
+
 ### Expenses, reminders, and documents
 
 | Event type | Meaning |
@@ -136,6 +157,8 @@ remain shared where the active profile permits them.
 | `expense.recorded` | Creates expense |
 | `expense.corrected` | Replaces effective financial facts |
 | `expense.voided` | Voids expense |
+| `purchase.recorded` v1 *(Proposed M6.5)* | Records one specialized cash-spend receipt with bounded inventory lines |
+| `purchase.corrected` v1 *(Proposed M6.5)* | Replaces effective Purchase facts and coordinates receipt corrections |
 | `reminder.rule_created` | Creates rule |
 | `reminder.rule_changed` | Changes schedule or channels |
 | `reminder.rule_disabled` | Disables rule |

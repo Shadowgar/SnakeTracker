@@ -62,11 +62,37 @@ they do not change enclosure ownership or create type-specific enclosure aggrega
 
 A feeding that consumes stock uses one atomic multi-stream operation across the animal and inventory-item streams. Archived items remain replayable and visible in historical reads but cannot receive stock changes or new feeding consumption. Restoration is an explicit event. Permanent deletion is intentionally unavailable because registration itself creates immutable item history.
 
+#### Proposed M6.5 extension (not accepted or implemented)
+
+ADR-0042 proposes retaining the Inventory Item boundary while adding canonical scaled quantities,
+owner categories/reorder/verification policies, purchase-linked receipt lots, enriched physical
+counts, and generic use. Physical counts and all balance-affecting facts remain on the item stream.
+FIFO lots, allocations, usage, duration, and valuation remain rebuildable read-side concepts.
+Existing v1 integer events remain valid and normalize exactly; historical cost stays unknown where
+no Purchase exists. See the [M6.5 architecture proposal](../plans/2026-09-04-m6.5-inventory-intelligence-architecture.md).
+
+The proposal also permits authorized correction/void/reinstate effects against archived item
+history while continuing to reject new ordinary movements. Stock remains nonnegative and reserved
+quantity cannot exceed on hand.
+
 ### Expenses
 
 - **Aggregate:** Expense
 - **Stream:** `expense:{expense_uuid}`
 - **Owns:** amount, currency, category, payee/reference, subject associations, correction and void state
+
+#### Proposed M6.5 Purchase boundary (not accepted or implemented)
+
+- **Aggregate:** Purchase
+- **Stream:** `purchase:{purchase_uuid}`
+- **Owns:** one bounded multi-line inventory receipt, vendor, purchase time, currency, monetary
+  totals, stable line identities, correction, void, and reinstate state
+- **Does not own:** Inventory Item balance, FIFO projection rows, or standalone Expenses
+
+ADR-0042 proposes that a Purchase is the single specialized cash-spend source for its receipt; it
+does not append `expense.recorded`. A unified read model presents Purchases and existing standalone
+Expenses exactly once. Posting or historically controlling a Purchase coordinates the Purchase and
+affected Inventory Item streams through atomic multi-stream append.
 
 ### Reminders
 

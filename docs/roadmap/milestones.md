@@ -10,11 +10,11 @@
 
 ## Planned sequence from M6 forward
 
-M6 UX Passes 1–4 and M6.1 are owner-reviewed, and final M6 technical qualification is complete.
-M6 is not owner-accepted. The authoritative remaining sequence is explicit final M6 owner
-acceptance, M6.5 inventory intelligence, M7 deployment/recovery qualification, M8 release
-qualification, and M9 public profiles/media sharing. Early Raspberry Pi owner-review use is not a
-substitute for M7 qualification.
+M6 is owner-accepted and PR #8 is merged at
+`8b0c062a39453bd2a4e65cb6ce288eea6298137f`. The authoritative remaining sequence is M6.5
+inventory intelligence, M7 deployment/recovery qualification, M8 release qualification, and M9
+public profiles/media sharing. Early Raspberry Pi owner-review use is not a substitute for M7
+qualification.
 
 ## Phase 0 / M0 — Architecture approved
 
@@ -134,7 +134,7 @@ Owner acceptance: [August 15, 2026 owner acceptance record](../evidence/m5.5-mul
 
 ## Pre-M6 capability extension — Four supported animal groups
 
-Status: Implementation-qualified August 24, 2026; M6 owner acceptance remains pending
+Status: Implementation-qualified August 24, 2026; included in accepted M6
 
 This additive extension follows accepted M5.5 history. It adds `lizard.v1` and `scorpion.v1`,
 neutral molt/premolt schema v2, and four-group owner-review data under ADR-0041 without claiming
@@ -147,12 +147,15 @@ that M5.5 originally qualified more than Snake and Spider.
 - [x] RB Backup/restore and the deterministic demo-only reset preserve all four groups while the real household remains unchanged. Evidence: [four-group qualification](../evidence/m6-product-experience/four-group-expansion/README.md).
 - [x] RB Four-group browser, accessibility, compatibility, migration, integrity, and Raspberry Pi ARM64 runtime qualification pass on the promoted port-8081 instance. Evidence: [four-group qualification](../evidence/m6-product-experience/four-group-expansion/README.md).
 
-This extension does not authorize the deferred M6 UX redesign, M6 owner acceptance, PR #8 merge,
-or M7 work.
+This extension did not independently authorize the then-deferred M6 UX redesign, M6 owner
+acceptance, PR #8 merge, or M7 work. Those historical boundaries remain part of its evidence.
 
 ## Phase 6 / M6 — Product experience complete
 
-Status: Final M6 technical qualification complete; explicit final owner acceptance pending
+Status: M6 product experience accepted
+
+Accepted: September 4, 2026 through merged PR #8 commit
+`8b0c062a39453bd2a4e65cb6ce288eea6298137f`
 
 M6 begins only after M5.5 acceptance. Its search, reports, dashboards, analytics, reference profiles,
 and explainable suggestions must consume the registered animal type/capability identity, effective
@@ -178,9 +181,8 @@ the Animal aggregate or infer that every care fact applies to every type.
 - [x] RB Password recovery uses generic throttled requests, short-lived single-use credentials, canonical-origin identity delivery, atomic password change/session revocation, and trusted-local operator recovery. Evidence: [password recovery](../evidence/m6-product-experience/password-recovery/README.md).
 - [x] RB The four staged UX implementation passes cover the global shell, daily experience, animal experience, secondary destinations, authentication, and onboarding without recording final M6 acceptance. Evidence: [Pass 4 owner-review index](../evidence/m6-product-experience/owner-review/ux-pass4/README.md).
 
-Pass 4 and M6.1 owner review do not by themselves finish M6. Final technical qualification is
-recorded below; owner acceptance is not recorded and PR #8 must not be merged without separate
-authorization.
+Pass 4 and M6.1 owner review did not by themselves finish M6. Final technical qualification and
+the later explicit owner acceptance/PR #8 merge completed the milestone.
 
 ## Phase 6.1 / M6.1 — Final usability and correctness corrections
 
@@ -213,18 +215,19 @@ implementation and qualification must:
 
 ## Final M6 qualification and owner acceptance gate
 
-Status: Technical qualification passed; explicit final owner acceptance pending
+Status: Accepted and merged September 4, 2026
 
 - [x] RB M6.1 requirements `R-065`–`R-069` and later-discovered `R-082` are implemented within their bounded scope. Evidence: [M6.1 corrections](../evidence/m6-product-experience/m6.1-usability-corrections/README.md).
 - [x] RB The owner reviewed every M6.1 correction, including successful use of a representative normal phone profile photo, and accepted them for final qualification.
 - [x] RB Complete final M6 functional, security, accessibility, attachment/image-processing, data-integrity, backup/recovery, browser, responsive, and runtime qualification passes against the candidate head. Evidence: [final M6 qualification](../evidence/m6-product-experience/final-qualification/README.md).
 - [x] RB GitHub's authoritative `Quality / quality` check is green for the final candidate head.
 - [x] RB PR #8 is current, review-ready, and retains the required evidence; this criterion alone does not authorize merge.
-- [ ] RB The owner explicitly accepts M6. Only then may M6 be marked accepted and PR #8 merge be separately authorized.
+- [x] RB The owner explicitly accepted M6 and separately authorized PR #8's merge at
+  `8b0c062a39453bd2a4e65cb6ce288eea6298137f`.
 
 ## Phase 6.5 / M6.5 — Inventory intelligence and cost tracking
 
-Status: Planned — not implemented
+Status: Architecture/domain proposal prepared — ADR-0042 Proposed; not implemented
 
 M6.5 is a substantial product milestone after final M6 acceptance and before M7. It turns Inventory
 from a list of owned objects into an explainable decision-support system. It must have its own
@@ -235,6 +238,11 @@ fast? What needs reordered? What may be overstocked? When was stock last physica
 how trustworthy is the recorded quantity? What did inventory cost? What value was consumed, what
 stock value remains, and what future spending may be required?
 
+The [M6.5 architecture/domain proposal](../plans/2026-09-04-m6.5-inventory-intelligence-architecture.md)
+and [ADR-0042](../adr/0042-inventory-purchases-fifo-and-quantity-policy.md) are ready for owner
+review. ADR-0042 is Proposed, not accepted. All criteria below remain unchecked and no product code
+or migration may begin until the decision is accepted or amended.
+
 ### Inventory levels and reorder intelligence
 
 - [ ] RB Items support decision-useful quantity on hand, unit, owner-controlled reorder minimum, optional target/maximum where appropriate, active/archive state, usage history, recent consumption rate, estimated remaining duration where supportable, last purchase/restock, and last physical verification. (`R-070`, `AT-INVINT-01`)
@@ -243,7 +251,7 @@ stock value remains, and what future spending may be required?
 ### Physical recount and cycle count
 
 - [ ] RB A physical-count workflow compares expected and actual stock and records any variance through immutable inventory adjustment semantics with an explicit reason such as physical count, lost/damaged, purchase/receipt, correction, consumption, or other. (`R-071`, `AT-INVINT-02`)
-- [ ] RB Last-verified and recount-due information supports full, category, and rolling/cycle-count workflows. The exact recurrence policy remains an implementation/design decision and is not selected by this roadmap update. (`R-071`, `AT-INVINT-02`)
+- [ ] RB Last-verified and recount-due information supports full, category, and rolling/cycle-count workflows. ADR-0042 proposes an optional owner-selected per-item interval; that policy remains unaccepted while the ADR is Proposed. (`R-071`, `AT-INVINT-02`)
 
 A representative count is `Expected: 25; actual physical count: 23`; the difference becomes an
 explainable immutable adjustment rather than an in-place overwrite.
@@ -256,7 +264,7 @@ explainable immutable adjustment rather than an in-place overwrite.
 
 - [ ] RB The product represents the conceptual flow `Purchase → Inventory received → Inventory consumed → Cost of consumption` while keeping cash spending, inventory value, and consumption cost as distinct metrics. (`R-073`, `AT-INVINT-04`)
 - [ ] RB Purchase/receipt history retains purchase date, supplier/vendor, quantity, amount paid, unit cost, and resulting inventory receipt. Changing prices are represented by history/cost lots rather than one mutable item-price field. (`R-074`, `AT-INVINT-05`)
-- [ ] RB Before consumption value is implemented, architecture/domain review explicitly selects and documents a deterministic costing policy such as weighted average, FIFO, or another justified method. An ADR is required if the decision changes or extends accepted architecture; this roadmap does not select the policy. (`R-075`, `AR-INVINT-01`)
+- [ ] RB Before consumption value is implemented, architecture/domain review explicitly selects and documents a deterministic costing policy such as weighted average, FIFO, or another justified method. ADR-0042 proposes FIFO; implementation remains blocked until owner acceptance. (`R-075`, `AR-INVINT-01`)
 
 For example, a $65 purchase of 50 frozen mice has a $1.30 purchase unit cost. If 18 are consumed,
 the $65 cash outflow and $23.40 consumption value are different measures; remaining stock value is
