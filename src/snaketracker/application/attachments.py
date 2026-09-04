@@ -11,7 +11,7 @@ from io import BytesIO
 from typing import Protocol
 from uuid import UUID, uuid4
 
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 from snaketracker.application.animals import (
     AnimalEventResult,
@@ -21,11 +21,16 @@ from snaketracker.application.animals import (
     SelectProfilePhotoCommand as SelectAnimalProfilePhotoCommand,
 )
 
-MAX_PROFILE_PHOTO_BYTES = 5 * 1024 * 1024
-MAX_PROFILE_PHOTO_DIMENSION = 4096
-MAX_PROFILE_PHOTO_PIXELS = MAX_PROFILE_PHOTO_DIMENSION**2
+MAX_PROFILE_PHOTO_BYTES = 20 * 1024 * 1024
+MAX_PROFILE_PHOTO_DIMENSION = 8192
+MAX_PROFILE_PHOTO_PIXELS = 25_000_000
+MAX_PROFILE_PHOTO_LONG_EDGE = 1600
 STAGING_RETENTION = timedelta(days=1)
-_MEDIA_TYPE_BY_FORMAT = {"JPEG": "image/jpeg", "PNG": "image/png"}
+_MEDIA_TYPE_BY_FORMAT = {
+    "JPEG": "image/jpeg",
+    "PNG": "image/png",
+    "WEBP": "image/webp",
+}
 
 
 class AttachmentValidationError(ValueError):
@@ -39,6 +44,12 @@ class ProfilePhotoMetadata:
     size_bytes: int
     width: int
     height: int
+
+
+@dataclass(frozen=True, slots=True)
+class _ProcessedProfilePhoto:
+    content: bytes
+    metadata: ProfilePhotoMetadata
 
 
 @dataclass(frozen=True, slots=True)
@@ -184,7 +195,8 @@ class AttachmentService:
     def stage_profile_photo(self, command: StageProfilePhotoCommand) -> StagedProfilePhoto:
         if self._animals.profile_for(command.household_id, command.animal_id) is None:
             raise AttachmentValidationError("Animal does not exist in this household.")
-        metadata = _validate_profile_photo(command.content, command.declared_media_type)
+        processed = _process_profile_photo(command.content, command.declared_media_type)
+        metadata = processed.metadata
         command_hash = _stage_command_hash(command.animal_id, metadata)
         staged = StagedProfilePhoto(
             staged_attachment_id=uuid4(),
@@ -206,7 +218,7 @@ class AttachmentService:
                         "Idempotency key conflicts with a different profile-photo upload."
                     )
                 return existing
-            self._storage.stage(staged.staged_attachment_id, command.content)
+            self._storage.stage(staged.staged_attachment_id, processed.content)
             try:
                 self._repository.create_staged(staged)
             except Exception as error:
@@ -324,28 +336,60 @@ class AttachmentService:
         )
 
 
-def _validate_profile_photo(content: bytes, declared_media_type: str) -> ProfilePhotoMetadata:
+def _process_profile_photo(content: bytes, declared_media_type: str) -> _ProcessedProfilePhoto:
     if not content or len(content) > MAX_PROFILE_PHOTO_BYTES:
-        raise AttachmentValidationError("Profile photo must be between 1 byte and 5 MiB.")
+        raise AttachmentValidationError("Profile photo must be between 1 byte and 20 MiB.")
     if not isinstance(declared_media_type, str):
         raise AttachmentValidationError("Profile photo media type is invalid.")
     normalized_declared_type = declared_media_type.strip().lower()
+    if _looks_like_heif(content):
+        raise AttachmentValidationError(
+            "HEIC/HEIF profile photos are not supported. Choose a JPEG, PNG, or WebP image."
+        )
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("error", Image.DecompressionBombWarning)
             with Image.open(BytesIO(content)) as image:
-                detected_format = image.format
+                detected_format = image.format or ""
                 width, height = image.size
+                _validate_source_dimensions(width, height)
                 image.verify()
     except (
         Image.DecompressionBombError,
         Image.DecompressionBombWarning,
+        MemoryError,
         OSError,
         SyntaxError,
         UnidentifiedImageError,
         ValueError,
     ) as error:
-        raise AttachmentValidationError("Profile photo is not a valid supported image.") from error
+        if isinstance(error, AttachmentValidationError):
+            raise
+        raise AttachmentValidationError(
+            "Profile photo is damaged or is not a valid image."
+        ) from error
+    detected_media_type = _MEDIA_TYPE_BY_FORMAT.get(detected_format)
+    if detected_media_type is None:
+        raise AttachmentValidationError("Profile photo must be a JPEG, PNG, or WebP image.")
+    if normalized_declared_type != detected_media_type:
+        raise AttachmentValidationError("Declared profile photo type does not match its content.")
+    try:
+        processed_content, processed_width, processed_height = _render_web_derivative(
+            content, detected_format
+        )
+    except (MemoryError, OSError, SyntaxError, UnidentifiedImageError, ValueError) as error:
+        raise AttachmentValidationError("Profile photo could not be processed safely.") from error
+    metadata = ProfilePhotoMetadata(
+        media_type=detected_media_type,
+        content_sha256=hashlib.sha256(processed_content).hexdigest(),
+        size_bytes=len(processed_content),
+        width=processed_width,
+        height=processed_height,
+    )
+    return _ProcessedProfilePhoto(content=processed_content, metadata=metadata)
+
+
+def _validate_source_dimensions(width: int, height: int) -> None:
     if (
         width < 1
         or height < 1
@@ -353,24 +397,57 @@ def _validate_profile_photo(content: bytes, declared_media_type: str) -> Profile
         or height > MAX_PROFILE_PHOTO_DIMENSION
         or width * height > MAX_PROFILE_PHOTO_PIXELS
     ):
-        raise AttachmentValidationError("Profile photo dimensions exceed the allowed limit.")
-    try:
-        with Image.open(BytesIO(content)) as image:
-            image.load()
-    except (OSError, SyntaxError, UnidentifiedImageError, ValueError) as error:
-        raise AttachmentValidationError("Profile photo is not a valid supported image.") from error
-    detected_media_type = _MEDIA_TYPE_BY_FORMAT.get(detected_format or "")
-    if detected_media_type is None:
-        raise AttachmentValidationError("Profile photo must be a JPEG or PNG image.")
-    if normalized_declared_type != detected_media_type:
-        raise AttachmentValidationError("Declared profile photo type does not match its content.")
-    return ProfilePhotoMetadata(
-        media_type=detected_media_type,
-        content_sha256=hashlib.sha256(content).hexdigest(),
-        size_bytes=len(content),
-        width=width,
-        height=height,
-    )
+        raise AttachmentValidationError(
+            "Profile photo exceeds the safe 25-megapixel or 8192-pixel dimension limit."
+        )
+
+
+def _render_web_derivative(content: bytes, detected_format: str) -> tuple[bytes, int, int]:
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", Image.DecompressionBombWarning)
+        with Image.open(BytesIO(content)) as source:
+            source.load()
+            oriented = ImageOps.exif_transpose(source)
+            has_alpha = "A" in oriented.getbands() or (
+                oriented.mode == "P" and "transparency" in oriented.info
+            )
+            output_mode = "RGBA" if has_alpha and detected_format != "JPEG" else "RGB"
+            derivative = oriented.convert(output_mode)
+            derivative.thumbnail(
+                (MAX_PROFILE_PHOTO_LONG_EDGE, MAX_PROFILE_PHOTO_LONG_EDGE),
+                Image.Resampling.LANCZOS,
+            )
+            output = BytesIO()
+            if detected_format == "JPEG":
+                derivative.save(
+                    output,
+                    format="JPEG",
+                    quality=88,
+                    optimize=True,
+                    progressive=True,
+                )
+            elif detected_format == "PNG":
+                derivative.save(output, format="PNG", optimize=True, compress_level=7)
+            else:
+                derivative.save(output, format="WEBP", quality=86, method=4)
+            width, height = derivative.size
+            derivative.close()
+    return output.getvalue(), width, height
+
+
+def _looks_like_heif(content: bytes) -> bool:
+    if len(content) < 12 or content[4:8] != b"ftyp":
+        return False
+    return content[8:12] in {
+        b"heic",
+        b"heix",
+        b"hevc",
+        b"hevx",
+        b"heim",
+        b"heis",
+        b"mif1",
+        b"msf1",
+    }
 
 
 def _stage_command_hash(animal_id: UUID, metadata: ProfilePhotoMetadata) -> str:

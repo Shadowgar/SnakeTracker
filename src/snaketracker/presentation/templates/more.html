@@ -19,6 +19,7 @@
       {% if 'operations.view' in principal.capabilities %}<a class="more-destination" href="/operations/jobs">{{ icon('advanced') }}<span class="more-destination-copy"><strong>System operations</strong><span>Delivery jobs and technical state</span></span>{{ icon('chevron', 'destination-arrow icon') }}</a>{% endif %}
     </nav></section>{% endif %}
   </div>
-  <section id="account" class="card account-card" aria-labelledby="account-heading"><div><p class="page-kicker">{{ principal.household_name }}</p><h2 id="account-heading">{{ principal.display_name }}</h2><p>{{ principal.role|capitalize }} account · {{ principal.household_timezone }}</p><a class="account-setup-link" href="/onboarding">Collection setup</a></div><form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="secondary" type="submit">Log out</button></form></section>
+  <section id="account" class="card account-card" aria-labelledby="account-heading"><div><p class="page-kicker">{{ principal.household_name }}</p><h2 id="account-heading">{{ principal.display_name }}</h2><p>{{ principal.role|capitalize }} account · {{ principal.household_timezone }}</p><a class="account-setup-link" href="/onboarding">Collection setup</a></div><form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="secondary" type="submit">Sign out</button></form></section>
+  <footer class="mobile-attribution product-attribution"><span>© {{ current_year }} <a href="mailto:rocco.paul@gmail.com">Paul Rocco</a></span><a href="https://github.com/Shadowgar/SnakeTracker">GitHub</a></footer>
 </section>
 {% endblock %}

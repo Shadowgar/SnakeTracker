@@ -10,7 +10,11 @@ from contextlib import contextmanager
 from pathlib import Path
 from uuid import UUID
 
-_EXTENSION_BY_MEDIA_TYPE = {"image/jpeg": ".jpg", "image/png": ".png"}
+_EXTENSION_BY_MEDIA_TYPE = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
 
 
 class LocalAttachmentStorage:

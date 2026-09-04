@@ -1,0 +1,352 @@
+{
+  "browser": "native ARM64 Chromium",
+  "executablePath": "/home/rocco/.cache/ms-playwright/chromium-1208/chrome-linux/chrome",
+  "origin": "https://tracker.theroccos.us",
+  "authCookies": [
+    {
+      "name": "snaketracker_session",
+      "expires": 1788539273.278185,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Strict"
+    },
+    {
+      "name": "snaketracker_csrf",
+      "expires": 1788539273.278329,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Strict"
+    }
+  ],
+  "lifecycleTransition": "frozen-active",
+  "resumeInProcess": true,
+  "resumeAfterRelaunch": true,
+  "logoutDenied": true,
+  "logoutSurvivesRelaunch": true,
+  "upload": {
+    "sourceBytes": 6172221,
+    "sourceDimensions": [
+      3072,
+      4080
+    ],
+    "uploadDurationMs": 4270,
+    "derivativePath": "/attachments/394a0094-873f-443b-8ae4-f8427c065636",
+    "derivativeBytes": 830711
+  },
+  "axeResults": [
+    {
+      "label": "mobile-more",
+      "violations": []
+    },
+    {
+      "label": "mobile-calendar-month",
+      "violations": []
+    },
+    {
+      "label": "mobile-profile-after-upload",
+      "violations": []
+    },
+    {
+      "label": "desktop-calendar-month",
+      "violations": []
+    }
+  ],
+  "overflowResults": [
+    {
+      "label": "390x844-more",
+      "innerWidth": 390,
+      "scrollWidth": 390,
+      "pass": true
+    },
+    {
+      "label": "390x844-calendar",
+      "innerWidth": 390,
+      "scrollWidth": 390,
+      "pass": true
+    },
+    {
+      "label": "360x800-calendar",
+      "innerWidth": 360,
+      "scrollWidth": 360,
+      "pass": true
+    },
+    {
+      "label": "1023x900-calendar",
+      "innerWidth": 1023,
+      "scrollWidth": 1023,
+      "pass": true
+    },
+    {
+      "label": "1024x900-calendar",
+      "innerWidth": 1024,
+      "scrollWidth": 1024,
+      "pass": true
+    },
+    {
+      "label": "1440x900-home",
+      "innerWidth": 1440,
+      "scrollWidth": 1440,
+      "pass": true
+    }
+  ],
+  "console": {
+    "cloudflareExternalResourceDiagnostics": [
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/login"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/home"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/more"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/calendar?view=month"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/calendar?view=month&month=2026-09&selected=2026-08-31"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/animals"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/photo"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/calendar?view=month"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/calendar?view=month"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/calendar?view=month"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/calendar?view=month"
+      },
+      {
+        "label": "resume",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/home"
+      },
+      {
+        "label": "resume",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/home"
+      },
+      {
+        "label": "resume",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/calendar?view=month"
+      },
+      {
+        "label": "resume",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/calendar?view=month&month=2026-09&selected=2026-08-31"
+      },
+      {
+        "label": "resume",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/more"
+      },
+      {
+        "label": "resume",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e"
+      },
+      {
+        "label": "resume",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/more"
+      },
+      {
+        "label": "resume",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/login"
+      },
+      {
+        "label": "resume",
+        "type": "error",
+        "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/login"
+      }
+    ],
+    "cloudflareInjectedInlineDiagnostics": [
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-KYWfGOGr+HDOjIT4x23qoMPwuUb50z7dVPLgNKreQ+s='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/login"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-mMk5IJ2PCkE2SX4GpMUafgOmEOBy+xLmFq0MGiVVSvo='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/home"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-q32upOgqNF+qGwvJFwX8oQr8jigAhjc/MpcSc/AzOg4='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/more"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Ak6MnISSp017lhP5ZHQ7zlnL0d0JsJJPn6bkycduui0='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/calendar?view=month"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-tQBmFDVOsn6JF7uiHscQs46SsPoPyyOV/9Og8kTfBzs='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/calendar?view=month&month=2026-09&selected=2026-08-31"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-MxU9+n3JcmsrY/6WFhaQErxiu/P3HJPuU72H9HahVOE='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/animals"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-x/sKNdpFt2uYoahCziARAubAQnrt1z2Xr5t5ThgSzAI='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/photo"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-luhMP9DISkZnvN/ZeU4Eg6TkMx+RA6qhs65vJFfAr6g='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-G47ND+cFa7TpPR+WhhBdsaEiqL/K9OoQYq/KboF5ZZQ='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/calendar?view=month"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-ius2F4DDj5ynxZ4d9wDAn8Fw3SvAtN4zqfHHVw4kBNg='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/calendar?view=month"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-VWyPlIkD0TFW2zH8OrDUAhbwzOE6g/FMT9zo8kFp/gc='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/calendar?view=month"
+      },
+      {
+        "label": "mobile",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-QooyzJHtIXI+NPs3AKsCZ8oUho7J2xWc/iH7Dw7WqyE='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/calendar?view=month"
+      },
+      {
+        "label": "resume",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-jQuiWTrLfa0Ts48KXGWqRVWCLNZL/MNZW+NB1qbucQ0='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/home"
+      },
+      {
+        "label": "resume",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-FawiQTwRbBIjmFGC++mQDQfCQqHt/GoRF0k+uV6D96I='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/home"
+      },
+      {
+        "label": "resume",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-HD09eh/Anm03unIYl7k62EeJHBjrVXZOvqz0ixkmP+w='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/calendar?view=month"
+      },
+      {
+        "label": "resume",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-EFgXLzrHox2LEPbM3Incfj+7VsHgpYMpGWzsbN+sthw='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/calendar?view=month&month=2026-09&selected=2026-08-31"
+      },
+      {
+        "label": "resume",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-gBx55I0QiE/0SoY1/VPBlgWRN2cPrhy0jrfwSCQKUzs='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/more"
+      },
+      {
+        "label": "resume",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-DIbzEb/gMise0MnJKGe09F5I6QRFe0/xfHM2e6P9qYE='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e"
+      },
+      {
+        "label": "resume",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Izcf0grDBLn7A3ZacTMtGhnQvM560IikUXaCToePxiw='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/more"
+      },
+      {
+        "label": "resume",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-2qhA41UijTTGmmGxuKtyZK4e13T7TqPUZIgCZ3FKk8k='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/login"
+      },
+      {
+        "label": "resume",
+        "type": "error",
+        "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-3i90fhxds20qmyYrLHJbaH7mSJmAVGqmbLCayF3xZqw='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+        "url": "https://tracker.theroccos.us/login"
+      }
+    ],
+    "applicationOwnedDiagnostics": [],
+    "pageErrors": []
+  }
+}

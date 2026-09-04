@@ -70,6 +70,13 @@ def test_first_run_login_home_logout_and_login_again(tmp_path: Path) -> None:
         assert "Create your Care Keeper home" in setup.text
         complete_setup(client)
 
+        auth_cookies = client.cookies.jar
+        for cookie_name in ("snaketracker_session", "snaketracker_csrf"):
+            cookie = next(cookie for cookie in auth_cookies if cookie.name == cookie_name)
+            assert cookie.expires is not None
+            assert "HttpOnly" in cookie._rest
+            assert cookie.get_nonstandard_attr("SameSite") == "strict"
+
         home = client.get("/home")
         assert home.status_code == 200
         assert "Rocco" in home.text
@@ -86,7 +93,15 @@ def test_first_run_login_home_logout_and_login_again(tmp_path: Path) -> None:
         assert "arrive in Phase 3" not in home.text
         assert "viewport" in home.text
 
+        client.cookies.delete("snaketracker_csrf")
+        resumed = client.get("/home")
+        assert resumed.status_code == 200
+        assert client.cookies.get("snaketracker_session") is not None
+        assert client.cookies.get("snaketracker_csrf") is not None
+
         more = client.get("/more")
+        assert ">Sign out</button>" in more.text
+        assert 'class="sidebar-signout"' in more.text
         logout = client.post(
             "/logout",
             data={"csrf_token": csrf_from(more.text)},

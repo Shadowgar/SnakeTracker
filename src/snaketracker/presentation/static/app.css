@@ -273,6 +273,10 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
 .account-card { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
 .account-card h2, .account-card p { margin: 0; }
 .account-card p { color: var(--color-text-muted); }
+.product-attribution { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .3rem .75rem; color: var(--color-text-muted); font-size: var(--text-xs); }
+.product-attribution a:hover { color: var(--color-text); }
+.mobile-attribution { border-top: 1px solid var(--color-border-subtle); padding: var(--space-4) 0 var(--space-2); }
+.auth-attribution { padding: 0 var(--space-4) var(--space-6); }
 .calendar-preview { position: relative; overflow: hidden; min-height: 18rem; background: radial-gradient(circle at 80% 10%, rgba(167,139,250,.16), transparent 22rem), var(--color-surface-raised); }
 .calendar-preview::before { position: absolute; top: var(--space-5); right: var(--space-5); width: 7rem; height: 7rem; border: 1px solid rgba(167,139,250,.2); border-radius: 50%; content: ""; }
 .calendar-preview-content { position: relative; z-index: 1; display: grid; max-width: 40rem; gap: var(--space-4); }
@@ -373,9 +377,13 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
 .selected-day { box-shadow: none; }
 .selected-day h2 { margin: 0 0 var(--space-5); }
 .selected-day h3 { margin: var(--space-5) 0 var(--space-2); font-size: var(--text-sm); }
-.selected-day li { display: grid; border-bottom: 1px solid var(--color-border-subtle); padding: var(--space-2) 0; }
-.selected-day li span { color: var(--color-text-muted); font-size: var(--text-sm); }
-.calendar-legend { justify-content: end; margin: 0; color: var(--color-text-muted); font-size: var(--text-xs); }
+.selected-day li { border-bottom: 1px solid var(--color-border-subtle); }
+.selected-care-link { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 var(--space-2); min-height: var(--control-height); align-content: center; border-radius: var(--radius-sm); padding: var(--space-2); text-decoration: none; }
+.selected-care-link strong, .selected-care-link span:nth-child(2) { min-width: 0; }
+.selected-care-link span:nth-child(2) { grid-column: 1; color: var(--color-text-muted); font-size: var(--text-sm); }
+.selected-care-link span:last-child { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: var(--color-primary); }
+.selected-care-link:hover { background: var(--color-surface-hover); }
+.calendar-legend { justify-content: start; gap: .5rem 1rem; margin: 0; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-sm); padding: .55rem .7rem; color: var(--color-text-secondary); background: var(--color-surface); font-size: var(--text-xs); font-weight: 750; }
 
 .filter-rail { position: relative; min-width: 0; }
 .filter-rail::after { position: absolute; top: 0; right: 0; bottom: .25rem; display: grid; width: 2.5rem; place-items: center end; pointer-events: none; color: var(--color-text-muted); background: linear-gradient(90deg, transparent, var(--color-canvas) 68%); content: "›"; font-size: 1.2rem; font-weight: 850; }
@@ -498,6 +506,7 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
   .more-destination-copy { gap: 0; }
   .more-destination-copy span { font-size: .7rem; }
   .account-card { gap: var(--space-3); }
+  .account-card form, .account-card button { width: 100%; }
 }
 
 @media (max-width: 20.99rem) {
@@ -522,11 +531,16 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
   .sidebar-nav .quick-log-button { margin: var(--space-3) 0; color: var(--color-on-primary); background: linear-gradient(135deg, #bca7ff, var(--color-primary-strong)); }
   .sidebar-nav .quick-log-button:hover { color: var(--color-on-primary); background: #b69dfa; }
   .nav-section-label { margin: var(--space-4) var(--space-3) var(--space-1); color: var(--color-text-muted); font-size: .65rem; }
-  .sidebar-account { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); margin-top: auto; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); padding: var(--space-3); text-decoration: none; }
+  .sidebar-account-area { display: grid; gap: var(--space-2); margin-top: auto; }
+  .sidebar-account { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); padding: var(--space-3); text-decoration: none; }
   .sidebar-account:hover { border-color: var(--color-primary); background: var(--color-surface-raised); }
   .sidebar-account > span:nth-child(2) { display: grid; min-width: 0; }
   .sidebar-account strong, .sidebar-account small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sidebar-account small { font-size: .68rem; }
+  .sidebar-signout button { width: 100%; min-height: 2.35rem; border: 1px solid var(--color-border-subtle); padding: .4rem .65rem; color: var(--color-text-secondary); background: transparent; font-size: var(--text-xs); }
+  .sidebar-signout button:hover { border-color: var(--color-primary); color: var(--color-text); background: var(--color-primary-soft); }
+  .sidebar-account-area .product-attribution { justify-content: start; padding: var(--space-1) var(--space-2) 0; font-size: .65rem; }
+  .mobile-attribution { display: none; }
   .account-avatar { display: grid; width: 2rem; height: 2rem; place-items: center; border-radius: 50%; color: var(--color-primary); background: var(--color-primary-soft); font-weight: 850; }
   .sidebar-chevron { width: 1rem; height: 1rem; color: var(--color-text-muted); }
   .app-header { padding-inline: var(--space-8); }

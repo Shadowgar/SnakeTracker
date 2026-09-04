@@ -160,6 +160,8 @@ def test_care_keeper_shell_uses_distinct_mobile_and_desktop_navigation(
     tmp_path: Path,
 ) -> None:
     with client_for(tmp_path) as client:
+        setup = client.get("/setup")
+        assert "© 2026" in setup.text
         complete_setup(client)
 
         home = client.get("/home")
@@ -192,7 +194,7 @@ def test_care_keeper_shell_uses_distinct_mobile_and_desktop_navigation(
             "Reminders",
             "Backups",
             "System operations",
-            "Log out",
+            "Sign out",
         ):
             assert label in more.text
         assert "Advanced" in more.text
@@ -205,8 +207,18 @@ def test_care_keeper_shell_uses_distinct_mobile_and_desktop_navigation(
         month = client.get("/calendar?view=month")
         assert month.status_code == 200
         assert 'class="month-table"' in month.text
+        assert month.text.index('class="calendar-legend"') < month.text.index('class="month-table"')
+        for marker in ("✓", "!", "D", "↑"):
+            assert marker in month.text
         assert "Scheduled" in month.text
         assert "Completed" in month.text
+        for expected in (
+            "Paul Rocco",
+            "mailto:rocco.paul@gmail.com",
+            "https://github.com/Shadowgar/SnakeTracker",
+        ):
+            assert expected in home.text
+        assert "© 2026" in home.text
         quick_log = client.get("/quick-log")
         assert quick_log.status_code == 200
         assert "Add care" in quick_log.text
@@ -216,6 +228,73 @@ def test_care_keeper_shell_uses_distinct_mobile_and_desktop_navigation(
         assert "min-height: 2.75rem" in stylesheet
         assert "--color-primary: #a78bfa" in stylesheet
         assert "@media (min-width: 64rem)" in stylesheet
+
+
+def test_selected_calendar_care_rows_are_large_navigable_household_scoped_links(
+    tmp_path: Path,
+) -> None:
+    with client_for(tmp_path) as client:
+        complete_setup(client)
+        form = client.get("/animals/new")
+        created = client.post(
+            "/animals",
+            data={
+                "csrf_token": csrf_from(form.text),
+                "idempotency_key": "m61-calendar-animal",
+                "animal_type": "snake",
+                "name": "Atlas",
+                "species": "Python regius",
+                "sex": "male",
+            },
+            follow_redirects=False,
+        )
+        animal_url = created.headers["location"]
+        profile = client.get(animal_url)
+        selected_day = (date.today() - timedelta(days=1)).isoformat()
+        completed = client.post(
+            f"{animal_url}/feedings",
+            data={
+                "csrf_token": csrf_from(profile.text),
+                "idempotency_key": "m61-calendar-completed",
+                "occurred_at": f"{selected_day}T08:00",
+                "prey_type": "mouse",
+                "prey_size": "small",
+                "prey_weight_grams": "20",
+                "preparation_method": "frozen_thawed",
+                "quantity": "1",
+                "outcome": "accepted",
+                "notes": "Calendar link fixture",
+            },
+            follow_redirects=False,
+        )
+        assert completed.status_code == 303
+        profile = client.get(animal_url)
+        schedule = client.post(
+            f"{animal_url}/care-schedule/feeding",
+            data={
+                "csrf_token": csrf_from(profile.text),
+                "idempotency_key": "m61-calendar-schedule",
+                "expected_stream_version": "0",
+                "enabled": "true",
+                "interval_days": "7",
+                "override_due_at": f"{selected_day}T12:00",
+            },
+            follow_redirects=False,
+        )
+        assert schedule.status_code == 303
+
+        month = client.get(f"/calendar?view=month&selected={selected_day}")
+        assert month.status_code == 200
+        assert 'class="selected-care-link"' in month.text
+        assert f'href="{animal_url}/care"' in month.text
+        assert f'href="{animal_url}/timeline"' in month.text
+        assert client.get(f"{animal_url}/care").status_code == 200
+        assert client.get(f"{animal_url}/timeline").status_code == 200
+        assert client.get(f"/animals/{uuid4()}/timeline").status_code == 404
+
+        stylesheet = client.get("/static/app.css").text
+        assert ".selected-care-link" in stylesheet
+        assert "min-height: var(--control-height)" in stylesheet
 
 
 def test_today_and_animals_are_separate_keeper_workspaces(tmp_path: Path) -> None:

@@ -24,7 +24,11 @@ from snaketracker.infrastructure.attachments.storage import LocalAttachmentStora
 _ARCHIVE_FORMAT_VERSION = 1
 _ARTIFACT_MAGIC = b"STBK1"
 _NONCE_LENGTH = 12
-_EXTENSION_BY_MEDIA_TYPE = {"image/jpeg": ".jpg", "image/png": ".png"}
+_EXTENSION_BY_MEDIA_TYPE = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
 
 
 class BackupVerificationError(RuntimeError):

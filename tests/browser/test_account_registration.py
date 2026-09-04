@@ -61,7 +61,7 @@ def test_existing_installation_supports_registration_session_and_normal_login(
         assert "Good evening" not in home.text
         assert "Welcome back" not in home.text
         assert "New Keeper Collection" in home.text
-        assert "Rocco" not in home.text
+        assert "Rocco&#39;s Reptiles" not in home.text
         assert "No animals yet" in client.get("/animals").text
 
         with client.app.state.database_engine.connect() as connection:

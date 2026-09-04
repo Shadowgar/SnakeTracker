@@ -200,3 +200,4 @@ def test_completed_calendar_rows_deduplicate_and_label_subject_streams() -> None
 
     assert {row["subject_name"] for row in rows} == {"Atlas", "Habitat", "Care"}
     assert any(row["subject_url"] == "/home" for row in rows)
+    assert any(row["calendar_url"] == f"/animals/{atlas.animal_id}/timeline" for row in rows)

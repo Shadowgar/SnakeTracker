@@ -39,6 +39,7 @@ def test_animal_agenda_row_links_to_registered_care_form_and_today_return() -> N
 
     assert row["action_url"] == f"/animals/{animal_id}/feedings/new?return_to=today"
     assert row["action_label"] == "Feed"
+    assert row["calendar_url"] == f"/animals/{animal_id}/care"
 
 
 def test_care_return_context_rejects_arbitrary_redirect_values() -> None:

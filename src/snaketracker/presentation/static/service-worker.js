@@ -1,8 +1,8 @@
 "use strict";
 
 const CACHE_PREFIX = "snaketracker-shell-";
-const CACHE = `${CACHE_PREFIX}v4`;
-const SHELL = ["/static/app.css?v=m6-ux-pass21c", "/static/favicon.svg", "/static/offline.html"];
+const CACHE = `${CACHE_PREFIX}v5`;
+const SHELL = ["/static/app.css?v=m61-corrections", "/static/favicon.svg", "/static/offline.html"];
 self.addEventListener("install", (event) => event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL))));
 self.addEventListener("activate", (event) => event.waitUntil(
   caches.keys()

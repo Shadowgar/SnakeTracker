@@ -3,11 +3,14 @@ from __future__ import annotations
 import re
 from base64 import b64decode
 from datetime import UTC, datetime, timedelta
+from io import BytesIO
 from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
+from PIL import Image
+from PIL.TiffImagePlugin import IFDRational
 from sqlalchemy import text
 
 from snaketracker.bootstrap.application import build_application
@@ -470,7 +473,7 @@ def test_authenticated_keeper_can_edit_and_archive_an_enclosure(tmp_path: Path) 
         assert "Archived" in client.get(enclosure_url).text
 
 
-def test_authenticated_keeper_can_upload_and_view_an_immutable_profile_photo(
+def test_authenticated_keeper_can_upload_and_view_a_processed_phone_profile_photo(
     tmp_path: Path,
 ) -> None:
     with client_for(tmp_path) as client:
@@ -494,13 +497,29 @@ def test_authenticated_keeper_can_upload_and_view_an_immutable_profile_photo(
         )
         profile_url = created.headers["location"]
         profile = client.get(profile_url)
+        phone_photo = Image.effect_noise((3072, 4080), 65).convert("RGB")
+        exif = Image.Exif()
+        exif[274] = 6
+        exif[271] = "Motorola"
+        exif[272] = "Moto G 5G (2024)"
+        exif[34853] = {
+            1: "N",
+            2: (IFDRational(40), IFDRational(0), IFDRational(0)),
+            3: "W",
+            4: (IFDRational(74), IFDRational(0), IFDRational(0)),
+        }
+        encoded = BytesIO()
+        phone_photo.save(encoded, format="JPEG", quality=70, exif=exif)
+        phone_photo.close()
+        source_content = encoded.getvalue()
+        assert len(source_content) > 5 * 1024 * 1024
         uploaded = client.post(
             f"{profile_url}/photo",
             data={
                 "csrf_token": csrf_from(profile.text),
                 "idempotency_key": "browser-profile-photo",
             },
-            files={"photo": ("nyx.png", ONE_PIXEL_PNG, "image/png")},
+            files={"photo": ("nyx.jpg", source_content, "image/jpeg")},
             follow_redirects=False,
         )
         assert uploaded.status_code == 303
@@ -510,11 +529,16 @@ def test_authenticated_keeper_can_upload_and_view_an_immutable_profile_photo(
         assert match is not None
         delivered = client.get(match.group(1))
         assert delivered.status_code == 200
-        assert delivered.content == ONE_PIXEL_PNG
-        assert delivered.headers["content-type"] == "image/png"
-        assert delivered.headers["content-disposition"] == 'inline; filename="profile-photo.png"'
+        assert len(delivered.content) < len(source_content)
+        assert delivered.headers["content-type"] == "image/jpeg"
+        assert delivered.headers["content-disposition"] == 'inline; filename="profile-photo.jpg"'
         assert delivered.headers["cache-control"] == "private, immutable, max-age=31536000"
         assert delivered.headers["x-content-type-options"] == "nosniff"
+        with Image.open(BytesIO(delivered.content)) as derivative:
+            assert max(derivative.size) == 1600
+            assert derivative.width > derivative.height
+            assert not derivative.getexif()
+            assert "exif" not in derivative.info
         assert client.get("/attachments/00000000-0000-0000-0000-000000000000").status_code == 404
 
 

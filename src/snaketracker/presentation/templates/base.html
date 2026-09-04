@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Care Keeper{% endblock %}</title>
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/static/app.css?v=m6-ux-pass4a">
+    <link rel="stylesheet" href="/static/app.css?v=m61-corrections">
     <link rel="manifest" href="/static/manifest.webmanifest">
     <meta name="theme-color" content="#100d18">
     <script defer src="/static/vendor/chart.js/chart.umd.min.js"></script>
@@ -36,11 +36,15 @@
           {% if 'expense.view' in principal.capabilities %}<a href="/expenses"{% if current_path.startswith('/expenses') %} aria-current="page"{% endif %}>{{ icon('expenses', 'nav-icon') }}<span>Expenses</span></a>{% endif %}
           <a href="/more"{% if more_active %} aria-current="page"{% endif %}>{{ icon('more', 'nav-icon') }}<span>More</span></a>
         </nav>
-        <a class="sidebar-account" href="/more#account">
-          <span class="account-avatar" aria-hidden="true">{{ principal.display_name[0]|upper }}</span>
-          <span><strong>{{ principal.display_name }}</strong><small>{{ principal.household_name }}</small></span>
-          {{ icon('chevron', 'sidebar-chevron') }}
-        </a>
+        <div class="sidebar-account-area">
+          <a class="sidebar-account" href="/more#account">
+            <span class="account-avatar" aria-hidden="true">{{ principal.display_name[0]|upper }}</span>
+            <span><strong>{{ principal.display_name }}</strong><small>{{ principal.household_name }}</small></span>
+            {{ icon('chevron', 'sidebar-chevron') }}
+          </a>
+          <form class="sidebar-signout" method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit">Sign out</button></form>
+          <footer class="product-attribution"><span>© {{ current_year }} <a href="mailto:rocco.paul@gmail.com">Paul Rocco</a></span><a href="https://github.com/Shadowgar/SnakeTracker">GitHub</a></footer>
+        </div>
       </aside>
       <div class="app-main">
         <header class="app-header">
@@ -65,6 +69,7 @@
     {% endif %}
       {% block content %}{% endblock %}
     </main>
+    {% if principal is not defined %}<footer class="auth-attribution product-attribution"><span>© {{ current_year }} <a href="mailto:rocco.paul@gmail.com">Paul Rocco</a></span><a href="https://github.com/Shadowgar/SnakeTracker">GitHub</a></footer>{% endif %}
     {% if principal is defined %}
       </div>
       <nav class="mobile-nav primary-nav" aria-label="Mobile primary navigation">

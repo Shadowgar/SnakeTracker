@@ -98,6 +98,7 @@ from snaketracker.application.identity import (
     AuthenticationError,
     IdentityService,
     InvalidPasswordResetError,
+    IssuedSession,
     LoginBlockedError,
     PasswordResetValidationError,
     Principal,
@@ -153,6 +154,7 @@ SESSION_COOKIE = "snaketracker_session"
 CSRF_COOKIE = "snaketracker_csrf"
 PACKAGE_DIR = Path(__file__).parent
 templates = Jinja2Templates(directory=PACKAGE_DIR / "templates")
+templates.env.globals["current_year"] = datetime.now(UTC).year
 
 CARE_FORM_DETAILS: dict[str, tuple[str, str, str]] = {
     "feeding": ("Record feeding", "Add the offered prey and observed outcome.", "feedings"),
@@ -547,8 +549,16 @@ def _client_context(request: Request) -> tuple[str | None, str | None]:
 
 
 def _set_cookie(
-    response: RedirectResponse | HTMLResponse, name: str, value: str, secure: bool
+    response: Response,
+    name: str,
+    value: str,
+    secure: bool,
+    *,
+    expires_at: datetime | None = None,
 ) -> None:
+    max_age = None
+    if expires_at is not None:
+        max_age = max(0, int((expires_at - datetime.now(UTC)).total_seconds()))
     response.set_cookie(
         name,
         value,
@@ -556,6 +566,25 @@ def _set_cookie(
         httponly=True,
         samesite="strict",
         path="/",
+        max_age=max_age,
+        expires=expires_at,
+    )
+
+
+def _set_session_cookies(response: Response, issued: IssuedSession, secure: bool) -> None:
+    _set_cookie(
+        response,
+        SESSION_COOKIE,
+        issued.token,
+        secure,
+        expires_at=issued.absolute_expires_at,
+    )
+    _set_cookie(
+        response,
+        CSRF_COOKIE,
+        issued.csrf_token,
+        secure,
+        expires_at=issued.absolute_expires_at,
     )
 
 
@@ -700,8 +729,7 @@ def create_web_router(
             status_code=status_code,
         )
         if issued is not None:
-            _set_cookie(response, SESSION_COOKIE, issued.token, secure_cookie)
-            _set_cookie(response, CSRF_COOKIE, issued.csrf_token, secure_cookie)
+            _set_session_cookies(response, issued, secure_cookie)
         return response
 
     async def protected_form(
@@ -1049,8 +1077,7 @@ def create_web_router(
             correlation_id=uuid4(),
         )
         response = RedirectResponse("/home", status_code=303)
-        _set_cookie(response, SESSION_COOKIE, issued.token, secure_cookie)
-        _set_cookie(response, CSRF_COOKIE, issued.csrf_token, secure_cookie)
+        _set_session_cookies(response, issued, secure_cookie)
         return response
 
     @router.get("/login", response_class=HTMLResponse)
@@ -1319,8 +1346,7 @@ def create_web_router(
             correlation_id=uuid4(),
         )
         response = RedirectResponse("/onboarding", status_code=303)
-        _set_cookie(response, SESSION_COOKIE, issued.token, secure_cookie)
-        _set_cookie(response, CSRF_COOKIE, issued.csrf_token, secure_cookie)
+        _set_session_cookies(response, issued, secure_cookie)
         return response
 
     @router.post("/login", response_class=HTMLResponse)
@@ -1374,8 +1400,7 @@ def create_web_router(
                 context={"error": str(error), "email": email},
             )
         response = RedirectResponse("/home", status_code=303)
-        _set_cookie(response, SESSION_COOKIE, issued.token, secure_cookie)
-        _set_cookie(response, CSRF_COOKIE, issued.csrf_token, secure_cookie)
+        _set_session_cookies(response, issued, secure_cookie)
         return response
 
     @router.get("/home", response_class=HTMLResponse)
@@ -1432,8 +1457,7 @@ def create_web_router(
             },
         )
         if issued is not None:
-            _set_cookie(response, SESSION_COOKIE, issued.token, secure_cookie)
-            _set_cookie(response, CSRF_COOKIE, issued.csrf_token, secure_cookie)
+            _set_session_cookies(response, issued, secure_cookie)
         return response
 
     @router.get("/onboarding", response_class=HTMLResponse)
@@ -3208,7 +3232,7 @@ def create_web_router(
             max_files=1,
             max_fields=8,
             max_part_size=MAX_PROFILE_PHOTO_BYTES,
-            parse_error_message="Choose a smaller profile photo and try again.",
+            parse_error_message="Profile photo upload failed. Choose an image up to 20 MiB.",
         )
         if rejection is not None:
             return rejection
@@ -3269,7 +3293,11 @@ def create_web_router(
             )
         except (AttachmentValidationError, ValueError):
             return Response(status_code=404)
-        extension = "png" if delivered.finalized.metadata.media_type == "image/png" else "jpg"
+        extension = {
+            "image/jpeg": "jpg",
+            "image/png": "png",
+            "image/webp": "webp",
+        }[delivered.finalized.metadata.media_type]
         return Response(
             content=delivered.content,
             media_type=delivered.finalized.metadata.media_type,
@@ -4379,6 +4407,7 @@ def _agenda_rows(
                 "action_url": action_url,
                 "action_label": action_label,
                 "schedule_url": schedule_url,
+                "calendar_url": schedule_url or action_url or subject_url,
                 "photo_attachment_version_id": photo_attachment_version_id,
                 "photo_fallback_key": photo_fallback_key,
                 "due_label": _friendly_due(item.due_at, now=now, timezone=timezone),
@@ -4513,6 +4542,13 @@ def _completed_care_rows(
                 "subject_name": animal.name if animal else enclosure.name if enclosure else "Care",
                 "subject_url": (
                     f"/animals/{animal.animal_id}"
+                    if animal
+                    else f"/enclosures/{enclosure.enclosure_id}"
+                    if enclosure
+                    else "/home"
+                ),
+                "calendar_url": (
+                    f"/animals/{animal.animal_id}/timeline"
                     if animal
                     else f"/enclosures/{enclosure.enclosure_id}"
                     if enclosure
