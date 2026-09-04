@@ -82,8 +82,22 @@ The roadmap distinguishes cash spending, inventory value, and consumption cost. 
 cost lots are required; a single mutable price is insufficient. The exact deterministic costing
 policy is deliberately deferred to M6.5 architecture/domain review and an ADR if required.
 
+## 9. Normal phone profile-photo upload
+
+> A normal modern phone photo (5.7 MB, 3072×4080) could not be uploaded as an animal profile picture because Care Keeper reported that it was too large. Users should not have to manually resize ordinary phone photos before uploading them.
+
+- Target milestone: M6.1 — Final usability and correctness corrections
+- Requirement: `R-082`; acceptance procedure `AT-M61-06`
+- Status: **Planned — M6.1**
+
+This is a newly discovered existing-feature usability/correctness issue. The known image must pass,
+but implementation must justify bounded file/pixel/resource limits, validate decoded content,
+normalize orientation, generate web-appropriate derivatives, strip unnecessary EXIF/GPS metadata,
+and preserve attachment authorization and Raspberry Pi safety. Future M9 public media must reuse or
+deliberately extend this privacy-safe boundary rather than expose raw metadata.
+
 ## Milestone sequence and status boundary
 
-The roadmap order is M6 UX Passes 1–4, M6.1, final M6 qualification and explicit owner acceptance,
+The roadmap order is M6 UX Passes 1–4, M6.1 (now six owner issues), final M6 qualification and explicit owner acceptance,
 M6.5, M7, M8, then M9. This triage records planned work only: it does not complete M6, authorize
 PR #8 merge, qualify Raspberry Pi deployment, enable public sharing, or begin any implementation.

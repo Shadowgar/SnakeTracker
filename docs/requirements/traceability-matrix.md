@@ -85,6 +85,7 @@ This matrix is authoritative for architecture acceptance. Evidence paths are rel
 | R-079 | Public sharing is private by default, explicitly enabled per household and animal with per-media visibility where appropriate, reversible, and fail-private on archive/deletion | RB/RD | 0015, 0017, 0032 | TM-04, TM-06, TM-07, TM-16 | 9 | AT-PUB-03 opt-in, visibility, unpublish, archive/delete, cache, and audit suite | m9-public-media/security/privacy | M9 |
 | R-080 | Public media design qualifies validation, size/video processing, safe delivery, metadata privacy, retention, authorization, caching, abuse limits, storage, and Raspberry Pi capacity before enablement | RB/RD | 0017, 0024, 0028, 0036 | TM-06, TM-07, TM-18, TM-20 | 9 design/implementation | AR-PUB-01 architecture review; AT-PUB-04 adversarial media, metadata, retention, cache, rate, and capacity suite | m9-public-media/architecture-and-security | M9 |
 | R-081 | Anonymous visitors cannot access private animals/albums, household data, private care history, inventory, expenses, schedules, backups, operations, or internal attachment identifiers/routes | RD | 0015, 0017, 0029, 0032, 0035 | TM-04, TM-06, TM-07, TM-08, TM-16 | 9 | AT-PUB-05 public/private leakage matrix and independent security review | m9-public-media/security/no-leakage | M9 |
+| R-082 | Profile-photo upload accepts ordinary modern phone images, including the known 5.7 MB 3072×4080 case, by validating decoded content and producing orientation-correct, metadata-stripped web derivatives within justified file, pixel, memory, timeout, and ARM64 resource bounds without weakening attachment authorization or safe serving | RB/RD | 0017, 0024, 0034, 0036 | TM-04, TM-06, TM-07, TM-18 | 6.1 | AT-M61-06 phone-image acceptance, content/format validation, clear errors, EXIF orientation/metadata stripping, derivative/thumbnail, authorization, decompression/resource, and native ARM64 suite | m6.1-usability-corrections/profile-photo-processing | M6.1 |
 
 ## Coverage rule
 
@@ -103,10 +104,10 @@ A mandatory requirement is satisfied only when its governing document is accepte
 - **M5.5 multi-species animal foundation accepted** — accepted August 15, 2026; evidence under
   `m5.5-multispecies-foundation`.
 - **M6 UX Passes 1–4 implementation and visual review complete; M6 owner acceptance pending** —
-  evidence is under `m6-product-experience`. M6.1 requirements `R-065`–`R-069`, M6.1 owner review,
-  complete final M6 qualification, green authoritative CI, PR #8 review readiness, and explicit
-  owner acceptance remain required. Production husbandry guidance remains unavailable pending its
-  separate source-bundle approval.
+  evidence is under `m6-product-experience`. M6.1 requirements `R-065`–`R-069` and later-discovered
+  `R-082`, M6.1 owner review, complete final M6 qualification, green authoritative CI, PR #8 review
+  readiness, and explicit owner acceptance remain required. Production husbandry guidance remains
+  unavailable pending its separate source-bundle approval.
 - **M6.5 inventory intelligence and cost tracking planned** — requirements `R-070`–`R-076`; no
   implementation or costing-policy decision has started.
 - **M7 recovery and formal Raspberry Pi deployment qualification unstarted** — its existing scope
@@ -114,5 +115,6 @@ A mandatory requirement is satisfied only when its governing document is accepte
 - **M8 production release acceptance unstarted** — existing release/security/evidence gates remain
   mandatory.
 - **M9 public profiles, albums, and media sharing planned** — requirements `R-077`–`R-081`; public
-  sharing remains disabled and architecture/security review precedes implementation.
+  sharing remains disabled and architecture/security review precedes implementation. M9 must reuse
+  or deliberately extend the privacy-safe media-processing boundary established by M6.1 `R-082`.
 - `Raspberry Pi deployment qualified` remains pending under Phase 7/pre-deployment controls.

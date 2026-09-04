@@ -195,15 +195,27 @@ qualification and must not expand into M6.5, M7, M8, or M9 work.
 - [ ] RB Every selected-day Calendar care item links to the relevant existing animal/profile, care action or schedule, or completed-history context where supported; no new scheduling domain is introduced. (`R-067`, `AT-M61-03`)
 - [ ] RB Calendar date cells communicate due, overdue, upcoming, and completed meaning compactly without relying on color alone, and an understandable legend appears before or adjacent to the calendar on mobile and desktop rather than below it. (`R-068`, `AT-M61-04`)
 - [ ] RB The global desktop and mobile shells render `© <current year> Paul Rocco` with suitable `mailto:rocco.paul@gmail.com` and `https://github.com/Shadowgar/SnakeTracker` links without obstructing mobile bottom navigation or safe-area behavior. (`R-069`, `AT-M61-05`)
-- [ ] RB The bounded M6.1 browser, mobile lifecycle, accessibility, security, responsive, console/CSP, regression, and household-isolation suites pass and retain evidence under `m6.1-usability-corrections`. (`R-065`–`R-069`)
+- [ ] RB An ordinary modern phone-camera profile photo, including the known 5.7 MB, 3072×4080 Motorola Moto G 5G (2024) image, uploads without requiring manual resizing; Care Keeper validates and processes it into orientation-correct, privacy-safe, web-appropriate derivatives under bounded Raspberry Pi resources. (`R-082`, `AT-M61-06`)
+- [ ] RB The bounded M6.1 browser, mobile lifecycle, accessibility, security, responsive, console/CSP, regression, household-isolation, and phone-image processing suites pass and retain evidence under `m6.1-usability-corrections`. (`R-065`–`R-069`, `R-082`)
+
+For `R-082`, the expected flow is `Choose photo → Care Keeper validates/processes it → profile
+picture appears`, not a demand that the keeper edit an ordinary phone photo elsewhere. Its
+implementation and qualification must:
+
+- accept the known 5.7 MB, 3072×4080, 12.5 MP image and justify a finite inbound limit after review of attachment architecture, image-library behavior, Pi memory, and denial-of-service risk; approximately 15–20 MB may be evaluated but is not promised here;
+- validate decoded file/media content rather than trusting a filename, extension, or browser MIME type, and give clear feedback for malformed or unsupported images;
+- preserve every currently supported format and explicitly review JPEG/JPG, PNG, WebP where supported, and HEIC/HEIF against the deployed processing stack; any unsupported format must fail clearly rather than as a generic size error;
+- normalize EXIF orientation, preserve a useful aspect ratio and recognizable quality, and produce appropriately sized profile/thumbnail derivatives for Animals, Today, Calendar, enclosure occupants, and the animal-profile hero rather than delivering the original multi-megapixel image everywhere;
+- strip unnecessary GPS/location, device, camera, and other EXIF metadata from web-facing processed images; and
+- preserve household isolation, authenticated attachment ownership, safe media serving, no arbitrary execution or path traversal, and no remote-URL upload while enforcing decompression-bomb, pixel/dimension, memory, timeout, and ARM64 Raspberry Pi resource bounds.
 
 ## Final M6 qualification and owner acceptance gate
 
 Status: Blocked on M6.1 implementation and owner review
 
-- [ ] RB M6.1 is implemented within its bounded scope.
-- [ ] RB The owner visually reviews M6.1 and accepts its corrections for final qualification.
-- [ ] RB Complete final M6 functional, security, accessibility, data-integrity, backup/recovery, browser, responsive, and runtime qualification passes against the candidate head.
+- [ ] RB M6.1 requirements `R-065`–`R-069` and later-discovered `R-082` are implemented within their bounded scope.
+- [ ] RB The owner reviews every M6.1 correction, including successful use of a representative normal phone profile photo, and accepts them for final qualification.
+- [ ] RB Complete final M6 functional, security, accessibility, attachment/image-processing, data-integrity, backup/recovery, browser, responsive, and runtime qualification passes against the candidate head.
 - [ ] RB GitHub's authoritative `Quality / quality` check is green for the candidate head.
 - [ ] RB PR #8 is current, review-ready, and retains the required evidence; this criterion alone does not authorize merge.
 - [ ] RB The owner explicitly accepts M6. Only then may M6 be marked accepted and PR #8 merge be separately authorized.
@@ -302,6 +314,7 @@ and media security boundary; authenticated household-private data remains privat
 ### Media security, delivery, and architecture review
 
 - [ ] RD M9 defines and qualifies file-type validation, upload-size limits, photo processing, video limits/processing, safe serving, EXIF/geolocation metadata handling, deletion/retention, authorization, public caching, and abuse/rate limiting. (`R-080`, `AT-PUB-04`)
+- [ ] RD M9 reuses or deliberately extends the privacy-safe derivative boundary established by M6.1 `R-082`, including content validation, metadata stripping, orientation handling, and bounded media processing; public albums must not reintroduce raw EXIF/GPS leakage.
 - [ ] RB M9 architecture review decides public identity/routing, media processing/delivery, storage, retention, and capacity boundaries before implementation. Cloudflare R2 or another object/media store may be evaluated, but no provider is selected here; large public video delivery must not overload the Raspberry Pi without explicit capacity evidence. New or changed architecture requires an ADR under ADR-0028. (`R-080`, `AR-PUB-01`)
 - [ ] RD Anonymous/public authorization tests prove that private animals, albums, household data, care history unless separately approved, inventory, expenses, schedules, backups, operations, and internal attachment routes or identifiers cannot leak. M9 requires an independent security review before acceptance. (`R-081`, `AT-PUB-05`)
 - [ ] RB M9 implementation, media/security qualification, public/private browser journeys, accessibility, capacity testing, owner review, and explicit acceptance are complete before public sharing is enabled.
