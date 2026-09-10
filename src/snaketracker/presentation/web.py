@@ -35,13 +35,14 @@ from snaketracker.application.animals import (
     AssignEnclosureCommand,
     ChangeAnimalStatusCommand,
     CorrectFeedingCommand,
+    CorrectInventoryFeedingCommand,
     CorrectLengthCommand,
     CorrectMoltCommand,
     CorrectShedCommand,
     CorrectWeightCommand,
     DeleteAnimalCareRecordCommand,
     RecordBathCommand,
-    RecordFeedingCommand,
+    RecordInventoryFeedingCommand,
     RecordLengthCommand,
     RecordMoltCommand,
     RecordPremoltCommand,
@@ -107,14 +108,16 @@ from snaketracker.application.identity import (
     Principal,
 )
 from snaketracker.application.inventory import (
+    AdjustScaledStockCommand,
     AdjustStockCommand,
     ArchiveInventoryItemCommand,
+    ConfigureInventoryItemCommand,
     InventoryService,
     InventoryValidationError,
+    ReceiveScaledStockCommand,
     ReceiveStockCommand,
-    RegisterInventoryItemCommand,
+    RegisterStructuredInventoryItemCommand,
     RestoreInventoryItemCommand,
-    UpdateInventoryItemCommand,
 )
 from snaketracker.application.reminders import (
     CreateReminderRuleCommand,
@@ -138,8 +141,18 @@ from snaketracker.domains.animals.capabilities import (
     AnimalCapability,
     animal_capability_registry,
 )
-from snaketracker.domains.animals.contracts import ANIMAL_STATUSES
+from snaketracker.domains.animals.contracts import ANIMAL_STATUSES, AnimalFeedingRecordedV2
 from snaketracker.domains.enclosures.contracts import ENCLOSURE_STATUSES
+from snaketracker.domains.inventory.catalog import (
+    FOOD_CATEGORIES,
+    INSECT_TYPES,
+    INVENTORY_TYPES,
+    PREPARATION_METHODS,
+    SIZE_STAGES,
+    UNITS,
+    WHOLE_PREY_TYPES,
+    parse_quantity_scaled,
+)
 from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
 from snaketracker.platform.events.envelope import DomainEvent
 from snaketracker.platform.events.registry import production_event_registry
@@ -160,7 +173,7 @@ templates = Jinja2Templates(directory=PACKAGE_DIR / "templates")
 templates.env.globals["current_year"] = datetime.now(UTC).year
 
 CARE_FORM_DETAILS: dict[str, tuple[str, str, str]] = {
-    "feeding": ("Record feeding", "Add the offered prey and observed outcome.", "feedings"),
+    "feeding": ("Record feeding", "Choose food from Inventory and record the outcome.", "feedings"),
     "weight": ("Record weight", "Add the animal's measured weight in grams.", "weights"),
     "length": ("Record length", "Add the animal's measured length in millimetres.", "lengths"),
     "shed": ("Record shed", "Add the observed shed state or completed result.", "sheds"),
@@ -370,6 +383,23 @@ def _feeding_inventory_reference(form: Any) -> tuple[UUID | None, int | None, in
     )
 
 
+def _optional_form_text(value: object) -> str | None:
+    normalized = str(value).strip()
+    return normalized or None
+
+
+def _inventory_catalog_context() -> dict[str, object]:
+    return {
+        "inventory_types": INVENTORY_TYPES,
+        "inventory_units": UNITS,
+        "food_categories": FOOD_CATEGORIES,
+        "whole_prey_types": WHOLE_PREY_TYPES,
+        "insect_types": INSECT_TYPES,
+        "size_stages": SIZE_STAGES,
+        "preparation_methods": PREPARATION_METHODS,
+    }
+
+
 def _form_bool(value: object, label: str) -> bool:
     if value == "true":
         return True
@@ -527,6 +557,21 @@ def _correct_animal_event_from_form(
     occurred_at = _form_datetime(form.get("occurred_at", ""), principal.household_timezone)
     notes = str(form.get("notes", ""))
     if target.event_type == "animal.feeding_recorded":
+        if isinstance(target.payload, AnimalFeedingRecordedV2):
+            animal_service.correct_inventory_feeding(
+                CorrectInventoryFeedingCommand(
+                    household_id=principal.household_id,
+                    actor_user_id=principal.user_id,
+                    actor_role=principal.role,
+                    animal_id=animal_id,
+                    target_event_id=target.event_id,
+                    idempotency_key=idempotency_key,
+                    occurred_at=occurred_at,
+                    outcome=str(form.get("outcome", "")),
+                    notes=notes,
+                )
+            )
+            return
         animal_service.correct_feeding(
             CorrectFeedingCommand(
                 household_id=principal.household_id,
@@ -2078,7 +2123,7 @@ def create_web_router(
             request,
             "inventory_new.html",
             principal,
-            context={"errors": {}, "values": {}},
+            context={"errors": {}, "values": {}, **_inventory_catalog_context()},
         )
 
     @router.post("/inventory", response_class=HTMLResponse)
@@ -2090,24 +2135,39 @@ def create_web_router(
         if "inventory.manage" not in principal.capabilities:
             return _access_denied(request, "Inventory access denied")
         try:
-            result = inventory_service.register(
-                RegisterInventoryItemCommand(
-                    principal.household_id,
-                    principal.user_id,
-                    uuid4(),
-                    _form_idempotency_key(form),
-                    str(form.get("name", "")),
-                    str(form.get("unit", "")),
-                    _optional_int(form.get("reorder_threshold", ""), "reorder threshold"),
+            unit_code = str(form.get("unit_code", ""))
+            threshold_value = str(form.get("reorder_threshold", "")).strip()
+            result = inventory_service.register_structured(
+                RegisterStructuredInventoryItemCommand(
+                    household_id=principal.household_id,
+                    actor_user_id=principal.user_id,
+                    correlation_id=uuid4(),
+                    idempotency_key=_form_idempotency_key(form),
+                    name=str(form.get("name", "")),
+                    inventory_type=str(form.get("inventory_type", "")),
+                    unit_code=unit_code,
+                    food_category=_optional_form_text(form.get("food_category", "")),
+                    food_type=_optional_form_text(form.get("food_type", "")),
+                    size_stage=_optional_form_text(form.get("size_stage", "")),
+                    preparation_method=_optional_form_text(form.get("preparation_method", "")),
+                    reorder_threshold_scaled=(
+                        parse_quantity_scaled(threshold_value, unit_code, allow_zero=True)
+                        if threshold_value
+                        else None
+                    ),
                 )
             )
-        except (InventoryValidationError, FormValidationError) as error:
+        except (InventoryValidationError, FormValidationError, ValueError) as error:
             return protected_page(
                 request,
                 "inventory_new.html",
                 principal,
                 status_code=422,
-                context={"errors": {"form": str(error)}, "values": _form_values(form)},
+                context={
+                    "errors": {"form": str(error)},
+                    "values": _form_values(form),
+                    **_inventory_catalog_context(),
+                },
             )
         return RedirectResponse(f"/inventory/{result.item_id}", status_code=303)
 
@@ -2141,18 +2201,35 @@ def create_web_router(
             return _access_denied(request, "Inventory access denied")
         try:
             item_uuid = UUID(item_id)
-            inventory_service.receive(
-                ReceiveStockCommand(
-                    principal.household_id,
-                    principal.user_id,
-                    item_uuid,
-                    uuid4(),
-                    _form_idempotency_key(form),
-                    _required_int(form.get("expected_stream_version", ""), "stream version"),
-                    _required_int(form.get("quantity", ""), "quantity"),
-                    str(form.get("reference", "")) or None,
+            item = inventory_service.balance_for(principal.household_id, item_uuid)
+            if item is None:
+                raise InventoryValidationError("Inventory item does not exist in this household.")
+            if item.needs_setup:
+                inventory_service.receive(
+                    ReceiveStockCommand(
+                        principal.household_id,
+                        principal.user_id,
+                        item_uuid,
+                        uuid4(),
+                        _form_idempotency_key(form),
+                        _required_int(form.get("expected_stream_version", ""), "stream version"),
+                        _required_int(form.get("quantity", ""), "quantity"),
+                        str(form.get("reference", "")) or None,
+                    )
                 )
-            )
+            else:
+                inventory_service.receive_scaled(
+                    ReceiveScaledStockCommand(
+                        principal.household_id,
+                        principal.user_id,
+                        item_uuid,
+                        uuid4(),
+                        _form_idempotency_key(form),
+                        _required_int(form.get("expected_stream_version", ""), "stream version"),
+                        parse_quantity_scaled(str(form.get("quantity", "")), item.unit_code or ""),
+                        str(form.get("reference", "")) or None,
+                    )
+                )
         except (
             InventoryValidationError,
             ExpectedVersionConflictError,
@@ -2187,7 +2264,12 @@ def create_web_router(
             request,
             "inventory_edit.html",
             principal,
-            context={"item": item, "errors": {}, "values": {}},
+            context={
+                "item": item,
+                "errors": {},
+                "values": {},
+                **_inventory_catalog_context(),
+            },
         )
 
     @router.post("/inventory/{item_id}/edit", response_class=HTMLResponse)
@@ -2199,17 +2281,30 @@ def create_web_router(
         if "inventory.manage" not in principal.capabilities:
             return _access_denied(request, "Inventory access denied")
         try:
-            inventory_service.update_item(
-                UpdateInventoryItemCommand(
-                    principal.household_id,
-                    principal.user_id,
-                    UUID(item_id),
-                    uuid4(),
-                    _form_idempotency_key(form),
-                    _required_int(form.get("expected_stream_version", ""), "stream version"),
-                    str(form.get("name", "")),
-                    str(form.get("unit", "")),
-                    _optional_int(form.get("reorder_threshold", ""), "reorder threshold"),
+            unit_code = str(form.get("unit_code", ""))
+            threshold_value = str(form.get("reorder_threshold", "")).strip()
+            inventory_service.configure_item(
+                ConfigureInventoryItemCommand(
+                    household_id=principal.household_id,
+                    actor_user_id=principal.user_id,
+                    item_id=UUID(item_id),
+                    correlation_id=uuid4(),
+                    idempotency_key=_form_idempotency_key(form),
+                    expected_stream_version=_required_int(
+                        form.get("expected_stream_version", ""), "stream version"
+                    ),
+                    name=str(form.get("name", "")),
+                    inventory_type=str(form.get("inventory_type", "")),
+                    unit_code=unit_code,
+                    food_category=_optional_form_text(form.get("food_category", "")),
+                    food_type=_optional_form_text(form.get("food_type", "")),
+                    size_stage=_optional_form_text(form.get("size_stage", "")),
+                    preparation_method=_optional_form_text(form.get("preparation_method", "")),
+                    reorder_threshold_scaled=(
+                        parse_quantity_scaled(threshold_value, unit_code, allow_zero=True)
+                        if threshold_value
+                        else None
+                    ),
                 )
             )
         except (
@@ -2236,18 +2331,40 @@ def create_web_router(
         if "inventory.manage" not in principal.capabilities:
             return _access_denied(request, "Inventory access denied")
         try:
-            inventory_service.adjust(
-                AdjustStockCommand(
-                    principal.household_id,
-                    principal.user_id,
-                    UUID(item_id),
-                    uuid4(),
-                    _form_idempotency_key(form),
-                    _required_int(form.get("expected_stream_version", ""), "stream version"),
-                    _required_int(form.get("quantity_delta", ""), "quantity adjustment"),
-                    str(form.get("reason", "")),
+            item_uuid = UUID(item_id)
+            item = inventory_service.balance_for(principal.household_id, item_uuid)
+            if item is None:
+                raise InventoryValidationError("Inventory item does not exist in this household.")
+            if item.needs_setup:
+                inventory_service.adjust(
+                    AdjustStockCommand(
+                        principal.household_id,
+                        principal.user_id,
+                        item_uuid,
+                        uuid4(),
+                        _form_idempotency_key(form),
+                        _required_int(form.get("expected_stream_version", ""), "stream version"),
+                        _required_int(form.get("quantity_delta", ""), "quantity adjustment"),
+                        str(form.get("reason", "")),
+                    )
                 )
-            )
+            else:
+                inventory_service.adjust_scaled(
+                    AdjustScaledStockCommand(
+                        principal.household_id,
+                        principal.user_id,
+                        item_uuid,
+                        uuid4(),
+                        _form_idempotency_key(form),
+                        _required_int(form.get("expected_stream_version", ""), "stream version"),
+                        parse_quantity_scaled(
+                            str(form.get("quantity_delta", "")),
+                            item.unit_code or "",
+                            allow_negative=True,
+                        ),
+                        str(form.get("reason", "")),
+                    )
+                )
         except (
             InventoryValidationError,
             ExpectedVersionConflictError,
@@ -3515,11 +3632,16 @@ def create_web_router(
             animal_uuid = UUID(animal_id)
             if animal_service.profile_for(principal.household_id, animal_uuid) is None:
                 raise FormValidationError("Animal not found.")
-            inventory_item_id, inventory_version, inventory_quantity = _feeding_inventory_reference(
-                form
+            inventory_item_id, inventory_version = _inventory_reference(form)
+            if inventory_item_id is None or inventory_version is None:
+                raise FormValidationError("Choose a Food Inventory Item.")
+            inventory_item = inventory_service.balance_for(
+                principal.household_id, inventory_item_id
             )
-            animal_service.record_feeding(
-                RecordFeedingCommand(
+            if inventory_item is None or inventory_item.unit_code is None:
+                raise FormValidationError("Choose a configured Food Inventory Item.")
+            animal_service.record_inventory_feeding(
+                RecordInventoryFeedingCommand(
                     household_id=principal.household_id,
                     actor_user_id=principal.user_id,
                     animal_id=animal_uuid,
@@ -3528,18 +3650,13 @@ def create_web_router(
                     occurred_at=_form_datetime(
                         form.get("occurred_at", ""), principal.household_timezone
                     ),
-                    prey_type=str(form.get("prey_type", "")),
-                    prey_size=str(form.get("prey_size", "")),
-                    prey_weight_grams=_optional_int(
-                        form.get("prey_weight_grams", ""), "prey weight"
-                    ),
-                    preparation_method=str(form.get("preparation_method", "")),
-                    quantity=_required_int(form.get("quantity", ""), "quantity"),
-                    outcome=str(form.get("outcome", "")),
-                    notes=str(form.get("notes", "")),
                     inventory_item_id=inventory_item_id,
                     inventory_expected_stream_version=inventory_version,
-                    inventory_quantity=inventory_quantity,
+                    inventory_quantity_scaled=parse_quantity_scaled(
+                        str(form.get("inventory_quantity", "")), inventory_item.unit_code
+                    ),
+                    outcome=str(form.get("outcome", "")),
+                    notes=str(form.get("notes", "")),
                 )
             )
         except (AnimalValidationError, FormValidationError, ValueError) as error:
@@ -5080,7 +5197,11 @@ def _animal_care_form_page(
             "action": f"/animals/{animal_id}/{route}",
             "errors": {"form": error} if error else {},
             "values": form_values,
-            "inventory_items": inventory_service.list_balances(principal.household_id),
+            "inventory_items": tuple(
+                item
+                for item in inventory_service.list_balances(principal.household_id)
+                if not item.needs_setup and item.inventory_type == "food"
+            ),
             "return_context": return_context,
             "return_url": _care_return_location(animal_id, return_context),
         },

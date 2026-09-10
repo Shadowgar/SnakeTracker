@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from tests.browser.test_identity_flow import client_for, complete_setup, csrf_from
+from tests.support.inventory import create_food_inventory, inventory_feeding_fields
 
 
 def _register(client, *, name: str, animal_type: str, species: str) -> str:
@@ -35,6 +36,7 @@ def test_animal_experience_has_distinct_profile_sections_and_focused_editors(
     with client_for(tmp_path) as client:
         complete_setup(client)
         animal_url = _register(client, name="Nyx", animal_type="snake", species="Python regius")
+        create_food_inventory(client, idempotency_prefix="animal-experience-food")
 
         sections = {
             "": ("Overview", 'aria-current="page">Overview'),
@@ -62,13 +64,9 @@ def test_animal_experience_has_distinct_profile_sections_and_focused_editors(
         feeding = client.post(
             f"{animal_url}/feedings",
             data={
-                "csrf_token": csrf_from(schedule.text),
+                **inventory_feeding_fields(client, animal_url),
                 "idempotency_key": "pass3-feeding",
                 "occurred_at": "2026-08-27T08:00",
-                "prey_type": "mouse",
-                "prey_size": "small",
-                "preparation_method": "frozen_thawed",
-                "quantity": "1",
                 "outcome": "accepted",
                 "notes": "",
             },

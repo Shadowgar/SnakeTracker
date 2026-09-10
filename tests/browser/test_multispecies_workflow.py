@@ -138,8 +138,13 @@ def _create_stock(client: TestClient) -> str:
         data={
             "csrf_token": _csrf(form.text),
             "idempotency_key": "m55-shared-prey-stock",
+            "inventory_type": "food",
             "name": "Shared feeder portions",
-            "unit": "item",
+            "food_category": "whole_prey",
+            "food_type": "mouse",
+            "size_stage": "small",
+            "preparation_method": "frozen_thawed",
+            "unit_code": "each",
             "reorder_threshold": "1",
         },
         follow_redirects=False,
@@ -337,7 +342,7 @@ def test_four_group_collection_shows_type_photo_and_applicable_actions(
             key="m55-browser-spider-feeding",
             occurred_at=occurred_at,
         )
-        assert "3 item" in client.get(shared_stock).text
+        assert "3 each" in client.get(shared_stock).text
 
         lizard_profile = client.get(profiles["Lizard A"])
         lizard_length = client.post(

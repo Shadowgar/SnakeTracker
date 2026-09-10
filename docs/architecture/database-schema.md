@@ -98,17 +98,24 @@ threshold, active-or-archived status, source stream version/event, and updated t
 projection is rebuildable from the immutable inventory-item stream; archive never deletes historical
 consumption links or allocations.
 
-## Proposed M6.5 logical schema (not an executable migration)
+## M6.5 schema evolution
 
-ADR-0042 proposes an expand-only schema evolution after owner acceptance. No migration exists or is
-authorized by this document.
+Accepted ADR-0042 governs the expand-only evolution. Migration
+`0014_structured_inventory_feeding` implements the A1 subset; the Purchase/FIFO/intelligence schema
+below remains deferred.
 
 ### Evolved `inventory_balance`
 
-Parallel integer-thousandth on-hand, reserved, consumed, and expired quantities; canonical
-unit/category; reorder minimum/target/maximum/lead time; recount interval; last physical-count
-event/time/quantity; compatibility state; and existing version/lifecycle fields. Legacy integer
-columns remain during the compatibility window and backfill exactly as `value * 1,000`.
+Migration 0014 adds parallel integer-thousandth on-hand, reserved, consumed, expired, and reorder
+threshold quantities; controlled Type/unit and Food metadata; original legacy unit; and existing
+version/lifecycle fields. Legacy integer columns remain and backfill exactly as `value * 1,000`.
+Target/maximum/lead time, recount state, and last physical verification remain later work.
+
+### `inventory_consumption_links_v2` and `inventory_consumption_allocations_v2`
+
+Migration 0014 adds household-scoped exact scaled consumption source links and reversal/allocation
+state alongside the unchanged version-1 tables. This keeps old and new Feeding compensation
+coexistent without rewriting immutable events.
 
 ### `purchase_current` and `purchase_line_current`
 

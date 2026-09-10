@@ -28,13 +28,15 @@
 
 Moving a projection into the synchronous command transaction requires a measured correctness or user-experience need and an ADR impact review.
 
-## Proposed M6.5 projection groups
+## M6.5 projection groups
 
-These read models are proposed by ADR-0042 and are not implemented or active:
+ADR-0042 is accepted. A1 evolves the synchronous balance and adds version-2 consumption
+link/allocation compatibility; the remaining Purchase/FIFO/intelligence read models are deferred:
 
 | Projection/group | Purpose | Consistency |
 |---|---|---|
-| `inventory_balance` v2 | Scaled balance, item category/policies, last verification, lifecycle, and compatibility state | Synchronous |
+| `inventory_balance` A1 evolution *(implemented)* | Scaled balance, controlled Type/unit, Food metadata, lifecycle, and legacy setup state | Synchronous |
+| `inventory_consumption_links_v2` / `inventory_consumption_allocations_v2` *(implemented)* | Exact scaled Feeding linkage, reversal, and reserved-allocation state | Synchronous |
 | `inventory_effective_receipts` | Effective receipt roots/corrections/controls and Purchase-line linkage needed for invariants | Synchronous |
 | `purchase_current` / `purchase_line_current` | Effective Purchase lifecycle, totals, lines, and resulting receipt IDs | Synchronous |
 | `inventory_costing` | FIFO cost layers/allocations, known/unknown quantity, consumed/current/variance value per currency | Asynchronous generation |

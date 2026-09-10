@@ -12,6 +12,7 @@ docs/evidence/
 ├── m5-operations/
 ├── m5.5-multispecies-foundation/
 ├── m6-product-experience/
+├── m6.5-inventory-intelligence/
 ├── m7-recovery-compatibility/
 └── m8-production/
 ```

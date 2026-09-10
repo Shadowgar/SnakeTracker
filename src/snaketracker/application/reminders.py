@@ -18,7 +18,9 @@ from snaketracker.domains.animals.capabilities import (
 from snaketracker.domains.animals.contracts import (
     AnimalBathRecordedV1,
     AnimalFeedingCorrectedV1,
+    AnimalFeedingCorrectedV2,
     AnimalFeedingRecordedV1,
+    AnimalFeedingRecordedV2,
     AnimalLengthCorrectedV1,
     AnimalLengthRecordedV1,
     AnimalMoltCorrectedV1,
@@ -763,7 +765,13 @@ class ReminderFactService:
 def _qualifies(reminder_type: str, event: DomainEvent) -> bool:
     payload = event.payload
     if reminder_type == "feeding" and isinstance(
-        payload, (AnimalFeedingRecordedV1, AnimalFeedingCorrectedV1)
+        payload,
+        (
+            AnimalFeedingRecordedV1,
+            AnimalFeedingCorrectedV1,
+            AnimalFeedingRecordedV2,
+            AnimalFeedingCorrectedV2,
+        ),
     ):
         return payload.outcome == "accepted"
     return (

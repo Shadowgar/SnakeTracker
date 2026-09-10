@@ -79,6 +79,22 @@ class AnimalFeedingRecordedV1:
 
 
 @dataclass(frozen=True, slots=True)
+class AnimalFeedingRecordedV2:
+    """Inventory-authoritative feeding with an immutable Food Item snapshot."""
+
+    inventory_item_id: UUID
+    item_name: str
+    inventory_type: str
+    food_category: str
+    food_type: str | None
+    size_stage: str | None
+    preparation_method: str | None
+    unit_code: str
+    quantity_scaled: int
+    outcome: str
+
+
+@dataclass(frozen=True, slots=True)
 class AnimalFeedingCorrectedV1:
     """Typed replacement facts for one feeding event."""
 
@@ -88,6 +104,23 @@ class AnimalFeedingCorrectedV1:
     prey_weight_grams: int | None
     preparation_method: str
     quantity: int
+    outcome: str
+
+
+@dataclass(frozen=True, slots=True)
+class AnimalFeedingCorrectedV2:
+    """Safe correction retaining an inventory-authoritative Food snapshot."""
+
+    target_event_id: UUID
+    inventory_item_id: UUID
+    item_name: str
+    inventory_type: str
+    food_category: str
+    food_type: str | None
+    size_stage: str | None
+    preparation_method: str | None
+    unit_code: str
+    quantity_scaled: int
     outcome: str
 
 

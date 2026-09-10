@@ -1,6 +1,8 @@
 # ADR-0042: Model Inventory Purchases and Consumption Value with FIFO
 
-Status: Proposed
+Status: Accepted
+
+Acceptance date: 2026-09-10
 
 ## Context
 
@@ -16,7 +18,12 @@ counting between Purchases and Expenses, remain understandable to a household ke
 deterministically after corrections. The active database and attachment store are live data and
 cannot be used for destructive migration, replay, fresh-install, or restoration experiments.
 
-## Proposed decision
+## Decision
+
+The owner accepted the Purchase/FIFO/fixed-precision decision and the A1 structured Inventory and
+inventory-authoritative Feeding amendment on September 10, 2026. M6.5-A1 implements only the
+catalog, quantity, Feeding, snapshot, and compatibility foundation. Purchase, FIFO valuation,
+physical-count intelligence, forecasting, and cost reporting remain later M6.5 tranches.
 
 ### Purchase and cash-spend authority
 
@@ -63,7 +70,8 @@ known value and unknown-cost quantity separately; unknown is never treated as ze
 ### Quantities, units, and negative stock
 
 Each item has one canonical unit. Stored event quantities use signed or unsigned integer
-thousandths of that unit. Whole-item units (`each`, `count`, and `package`) require multiples of
+thousandths of that unit. Whole and container units (`each`, `pair`, `pack`, `package`, `box`,
+`case`, `bag`, `bottle`, `bucket`, `roll`, `bale`, `block`, and `brick`) require multiples of
 1,000; mass and volume units may use up to three decimal places. Existing integer quantities map
 exactly to `quantity * 1,000` without rewriting their events.
 
@@ -75,6 +83,37 @@ requires a future explicit conversion decision rather than silently mixing units
 Stock remains nonnegative, and reserved quantity cannot exceed on-hand quantity. Insufficient use,
 receipt correction, void, or count compensation is rejected with an instruction to verify and
 correct stock. M6.5 does not introduce temporary negative balances.
+
+### Structured Inventory and Inventory-authoritative Feeding
+
+Every new Inventory Item has one owner-selected controlled Type: Food, Equipment, Substrate &
+Bedding, Cleaning Supply, Supplement, Enclosure & Habitat, Heating & Lighting, or Other. One
+central domain catalog defines stable type codes, controlled units, display labels, fractional
+behavior, and type/unit compatibility. The server enforces these constraints; browser progressive
+disclosure is only an aid.
+
+Food Items also store a controlled category: Whole prey, Insect, Prepared food, Pellets / Dry
+food, Produce, or Other. Whole prey stores a common controlled prey type, size/stage, and
+preparation/form. Insects store a common controlled feeder type and optional size/stage. Other
+Food categories do not accept irrelevant prey fields. Item Name remains the primary keeper-facing
+identifier.
+
+Every new Feeding selects an active, configured, same-household Food Inventory Item and a positive
+amount in that Item's canonical unit. Recording atomically appends a version-2 Feeding and linked
+version-2 scaled Inventory consumption. The selected amount is stock taken or offered and remains
+consumed for accepted, refused, and regurgitated outcomes. Outcome remains an independent care and
+analytics fact.
+
+The Feeding event snapshots Item ID and name, Food category/type/size/preparation, canonical unit,
+scaled amount, and outcome. Later catalog edits or renames cannot rewrite historical meaning. The
+normal form no longer offers an unlinked path or asks for duplicate prey type, prey size, prey
+weight, or preparation. Version-1 linked and unlinked Feedings remain registered and replayable.
+
+A1 intentionally bounds correction of a version-2 Feeding to date/time, outcome, and notes; its
+snapshotted Food and amount remain fixed. Correction reverses and reapplies the same consumption
+atomically. Delete/void reverses it exactly once, and reinstatement reapplies it only when stock
+invariants permit. Changing Food or amount in a correction is deferred to a later explicit
+workflow rather than permitting partial or unlinked state.
 
 ### Physical verification and policy
 
@@ -172,17 +211,22 @@ effective, non-reversed facts and rebuild deterministically from their correlati
 
 ## Migration and backward compatibility
 
-Implementation requires an expand-only migration after this ADR is accepted; none is created or
-run by this proposal. It will add parallel scaled-quantity state and new purchase/cost/read-model
-tables, populate scaled current quantities as exact multiples of 1,000, retain legacy columns for
-the compatibility window, and build new projections without destructive event rewriting.
+M6.5-A1 uses expand-only migration `0014_structured_inventory_feeding`. It adds nullable structured
+catalog fields, parallel scaled-quantity state, and separate version-2 consumption link/allocation
+tables. It populates scaled current quantities as exact multiples of 1,000 and retains legacy
+columns and original unit text without destructive event rewriting. Purchase/cost/read-model
+tables remain deferred to A2 and later tranches.
 
-Historical version-1 receipts become uncosted FIFO layers. Historical version-1 consumption and
-feeding links remain effective and normalize to scaled quantities. Existing Expenses remain
+Historical version-1 receipts will become uncosted FIFO layers when A2 implements costing.
+Historical version-1 consumption and feeding links remain effective and normalize to scaled
+quantities. Existing Expenses remain
 standalone cash-spend facts and are never inferred to be Purchases. Existing reorder thresholds map
 to reorder minimum; target, maximum, lead time, recount interval, cost, and last verification start
-as unavailable. Items with historical unit changes require canonical-unit review and a physical
-count before duration/value claims are trusted.
+as unavailable. Legacy Items remain explicitly unclassified/Needs setup, with original unit text
+retained. An exact documented alias such as `item` to `each` may be confirmed without changing
+quantity; ambiguous meaning is rejected and awaits the physical-count workflow. No name-based
+classification occurs. Items with historical unit changes require canonical-unit review and a
+physical count before duration/value claims are trusted.
 
 Migration-from-zero, upgrade, downgrade/re-upgrade, replay, and restore rehearsals use isolated
 temporary databases or copied snapshots outside active runtime paths. The live database is never a
@@ -204,8 +248,9 @@ rebuildable asynchronous projections with visible freshness. Backdated/corrected
 bounded per-item recalculation and eventually a generation rebuild; templates never calculate cost
 from raw event JSON.
 
-No deploy, migration, backup, restore, or runtime change is authorized by this Proposed ADR. Formal
-M7 recovery/deployment and M8 release qualification remain separate.
+Normal forward migration and deployment are authorized only after isolated qualification and a
+verified encrypted backup. Formal M7 recovery/deployment and M8 release qualification remain
+separate.
 
 ## Security and privacy consequences
 
@@ -214,9 +259,12 @@ projection row, query, export, and direct-ID route remains household-scoped and 
 retain CSRF, idempotency, expected-version, typed-subject, audit, bounded-input, and output-encoding
 controls. Cost data is never exposed through M9 public profile/media routes or unsafe logs.
 
-## Testing and evidence required before acceptance of M6.5
+## Testing and evidence
 
-- Historical v1 replay, v2 contract fixtures, unknown-contract failure, and deterministic rebuild.
+- A1: historical v1 replay, v2 contract fixtures, unknown-contract failure, structured catalog,
+  fixed precision, atomic Feeding consumption, immutable snapshot, bounded correction,
+  delete/reinstate compensation, isolation, migration, responsive browser, and accessibility.
+- Later tranches: deterministic cost/intelligence rebuild.
 - Atomic multi-line Purchase success/failure/idempotency/conflict tests through the 25-line bound.
 - Cash-spend uniqueness and Purchase/Expense correction/void/reinstate reconciliation.
 - FIFO examples across changing prices, shared-cost allocation, partial quantities, remainder cents,
@@ -233,15 +281,14 @@ for every destructive rehearsal and prove the active database and attachment sto
 
 ## Schedule, roadmap, and milestone consequences
 
-This proposal establishes the M6.5-A through M6.5-D sequence documented in the M6.5 architecture
-plan. `R-070` through `R-076` remain not implemented. Work on event contracts, schema, migration,
-or product UI cannot begin until the owner accepts or amends this ADR. M7, M8, and M9 ordering and
-scope do not change.
+This decision establishes the M6.5-A through M6.5-D sequence documented in the M6.5 architecture
+plan. A1 implements `R-084` and `R-085`; `R-070` through `R-074` and `R-076` remain later work.
+`R-075`'s policy decision is accepted, but FIFO implementation remains A2. M7, M8, and M9 ordering
+and scope do not change.
 
-## Approval required
+## Approval
 
-The owner must approve the combined domain decision: bounded multi-line Purchases as the sole
-purchase cash-spend fact, capitalized shared-cost allocation, FIFO valuation, fixed-precision
-canonical quantities without conversion, enriched count events, and retained nonnegative stock.
-Until that approval is recorded, this ADR remains Proposed and the accepted architecture remains
-authoritative.
+The owner approved the combined domain decision on September 10, 2026: bounded multi-line
+Purchases as the sole purchase cash-spend fact, capitalized shared-cost allocation, FIFO valuation,
+fixed-precision canonical quantities without conversion, enriched count events, retained
+nonnegative stock, structured Inventory, and Inventory-authoritative Feeding.

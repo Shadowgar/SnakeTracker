@@ -20,7 +20,9 @@ from snaketracker.domains.animals.contracts import (
     AnimalBathRecordedV1,
     AnimalEnclosureAssignedV1,
     AnimalFeedingCorrectedV1,
+    AnimalFeedingCorrectedV2,
     AnimalFeedingRecordedV1,
+    AnimalFeedingRecordedV2,
     AnimalLengthCorrectedV1,
     AnimalLengthRecordedV1,
     AnimalMoltCorrectedV2,
@@ -36,9 +38,12 @@ from snaketracker.domains.animals.contracts import (
     AnimalWeightCorrectedV1,
     AnimalWeightRecordedV1,
 )
+from snaketracker.domains.inventory.catalog import UNIT_BY_CODE
 from snaketracker.domains.inventory.contracts import (
     InventoryConsumptionReversedV1,
+    InventoryConsumptionReversedV2,
     InventoryStockConsumedV1,
+    InventoryStockConsumedV2,
 )
 from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
 from snaketracker.platform.events.corrections import (
@@ -229,6 +234,21 @@ class RecordFeedingCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class RecordInventoryFeedingCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    animal_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    occurred_at: datetime
+    inventory_item_id: UUID
+    inventory_expected_stream_version: int
+    inventory_quantity_scaled: int
+    outcome: str
+    notes: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class AnimalEventResult:
     event: DomainEvent
 
@@ -325,6 +345,19 @@ class CorrectFeedingCommand:
     outcome: str
     notes: str | None
     inventory_quantity: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class CorrectInventoryFeedingCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    actor_role: str
+    animal_id: UUID
+    target_event_id: UUID
+    idempotency_key: str
+    occurred_at: datetime
+    outcome: str
+    notes: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -577,6 +610,7 @@ class AnimalService:
         )
 
     def record_feeding(self, command: RecordFeedingCommand) -> AnimalEventResult:
+        """Retain the version-1 compatibility command for stored-history and internal callers."""
         payload = _validated_feeding_payload(command)
         if any(
             value is not None
@@ -611,6 +645,43 @@ class AnimalService:
             },
         )
         return AnimalEventResult(event)
+
+    def record_inventory_feeding(self, command: RecordInventoryFeedingCommand) -> AnimalEventResult:
+        """Record a new inventory-authoritative Feeding and scaled consumption atomically."""
+        if command.outcome not in {"accepted", "refused", "regurgitated"}:
+            raise AnimalValidationError("Feeding outcome is invalid.")
+        inventory = self._inventory_projection
+        if inventory is None:
+            raise AnimalValidationError("Inventory integration is not available.")
+        balance = inventory.balance_for(command.household_id, command.inventory_item_id)
+        if balance is None:
+            raise AnimalValidationError("Inventory item does not exist in this household.")
+        if balance.status != "active":
+            raise AnimalValidationError("Feeding requires an active Food Inventory Item.")
+        if balance.needs_setup:
+            raise AnimalValidationError("Finish Inventory setup before recording a feeding.")
+        if balance.inventory_type != "food" or balance.food_category is None:
+            raise AnimalValidationError("Feeding requires a Food Inventory Item.")
+        unit = UNIT_BY_CODE.get(balance.unit_code or "")
+        if unit is None:
+            raise AnimalValidationError("Food Inventory unit is invalid.")
+        if command.inventory_quantity_scaled <= 0:
+            raise AnimalValidationError("Feeding amount must be positive.")
+        if not unit.allows_fractional and command.inventory_quantity_scaled % 1000:
+            raise AnimalValidationError(f"{unit.label} feeding amounts must be whole numbers.")
+        payload = AnimalFeedingRecordedV2(
+            inventory_item_id=balance.item_id,
+            item_name=balance.name,
+            inventory_type="food",
+            food_category=balance.food_category,
+            food_type=balance.food_type,
+            size_stage=balance.size_stage,
+            preparation_method=balance.preparation_method,
+            unit_code=balance.unit_code or "",
+            quantity_scaled=command.inventory_quantity_scaled,
+            outcome=command.outcome,
+        )
+        return AnimalEventResult(self._record_inventory_feeding(command, payload))
 
     def record_weight(self, command: RecordWeightCommand) -> AnimalEventResult:
         if command.weight_grams < 1 or command.weight_grams > 100_000:
@@ -819,6 +890,66 @@ class AnimalService:
                     ),
                 },
                 inventory_quantity=command.inventory_quantity,
+            )
+        )
+
+    def correct_inventory_feeding(
+        self, command: CorrectInventoryFeedingCommand
+    ) -> AnimalEventResult:
+        """Correct timing/outcome/notes while retaining the original Food and amount snapshot."""
+        key = StreamKey(command.household_id, "animal", command.animal_id)
+        target = next(
+            (
+                event
+                for event in self._event_store.load_stream(key)
+                if event.event_id == command.target_event_id
+            ),
+            None,
+        )
+        if target is None or not isinstance(target.payload, AnimalFeedingRecordedV2):
+            raise AnimalValidationError("Inventory Feeding correction target is invalid.")
+        if command.outcome not in {"accepted", "refused", "regurgitated"}:
+            raise AnimalValidationError("Feeding outcome is invalid.")
+        source = target.payload
+        payload = AnimalFeedingCorrectedV2(
+            target_event_id=target.event_id,
+            inventory_item_id=source.inventory_item_id,
+            item_name=source.item_name,
+            inventory_type=source.inventory_type,
+            food_category=source.food_category,
+            food_type=source.food_type,
+            size_stage=source.size_stage,
+            preparation_method=source.preparation_method,
+            unit_code=source.unit_code,
+            quantity_scaled=source.quantity_scaled,
+            outcome=command.outcome,
+        )
+        return AnimalEventResult(
+            self._correct_animal_event(
+                household_id=command.household_id,
+                actor_user_id=command.actor_user_id,
+                actor_role=command.actor_role,
+                animal_id=command.animal_id,
+                target_event_id=command.target_event_id,
+                idempotency_key=command.idempotency_key,
+                occurred_at=command.occurred_at,
+                event_type="animal.feeding_corrected",
+                schema_version=2,
+                title="Feeding corrected",
+                payload=payload,
+                notes=_optional_text(command.notes, "feeding notes"),
+                command_hash_fields={
+                    "target_event_id": str(target.event_id),
+                    "occurred_at": command.occurred_at.isoformat(),
+                    "outcome": command.outcome,
+                    "notes": _optional_text(command.notes, "feeding notes"),
+                    "inventory_item_id": str(source.inventory_item_id),
+                    "inventory_quantity_scaled": source.quantity_scaled,
+                },
+                inventory_quantity_scaled=source.quantity_scaled,
+                related_subjects=(
+                    EventSubject("inventory_item", source.inventory_item_id, "related", 1),
+                ),
             )
         )
 
@@ -1052,7 +1183,13 @@ class AnimalService:
         for event in self.effective_history(household_id, animal_id):
             if event.event_type not in {"animal.feeding_recorded", "animal.feeding_corrected"}:
                 continue
-            payload = cast(AnimalFeedingRecordedV1 | AnimalFeedingCorrectedV1, event.payload)
+            payload = cast(
+                AnimalFeedingRecordedV1
+                | AnimalFeedingCorrectedV1
+                | AnimalFeedingRecordedV2
+                | AnimalFeedingCorrectedV2,
+                event.payload,
+            )
             if payload.outcome == "accepted" and (accepted is None or event.occurred_at > accepted):
                 accepted = event.occurred_at
         return accepted
@@ -1173,6 +1310,108 @@ class AnimalService:
             if str(event.event_id) == stored_event_id
         )
 
+    def _record_inventory_feeding(
+        self, command: RecordInventoryFeedingCommand, payload: AnimalFeedingRecordedV2
+    ) -> DomainEvent:
+        self._require_capability(command.household_id, command.animal_id, AnimalCapability.FEEDING)
+        inventory = self._inventory_projection
+        if inventory is None:
+            raise AnimalValidationError("Inventory integration is not available.")
+        animal_key = StreamKey(command.household_id, "animal", command.animal_id)
+        animal_events = self._event_store.load_stream(animal_key)
+        if not animal_events:
+            raise AnimalValidationError("Animal does not exist in this household.")
+        inventory_key = StreamKey(command.household_id, "inventory-item", command.inventory_item_id)
+        now = datetime.now(UTC)
+        feeding_candidate = DomainEvent(
+            event_id=uuid4(),
+            household_id=command.household_id,
+            stream_type="animal",
+            stream_id=command.animal_id,
+            stream_version=len(animal_events) + 1,
+            event_type="animal.feeding_recorded",
+            schema_version=2,
+            occurred_at=command.occurred_at,
+            recorded_at=now,
+            actor_user_id=command.actor_user_id,
+            correlation_id=command.correlation_id,
+            causation_id=None,
+            idempotency_key=command.idempotency_key,
+            subjects=(
+                EventSubject("animal", command.animal_id, "primary", 0),
+                EventSubject("inventory_item", command.inventory_item_id, "related", 1),
+            ),
+            title="Feeding recorded",
+            description=None,
+            payload=payload,
+            metadata={},
+            notes=_optional_text(command.notes, "feeding notes"),
+            checksum="",
+        )
+        feeding = feeding_candidate.with_checksum(event_checksum(feeding_candidate))
+        consumption = _inventory_event(
+            inventory_key,
+            command.inventory_expected_stream_version + 1,
+            "inventory.stock_consumed",
+            InventoryStockConsumedV2(command.inventory_quantity_scaled, feeding.event_id),
+            command.actor_user_id,
+            command.correlation_id,
+            feeding.event_id,
+            command.idempotency_key,
+            now,
+            command.animal_id,
+            schema_version=2,
+        )
+        result = self._event_store.append_many(
+            AtomicAppendRequest(
+                streams=(
+                    StreamAppend(animal_key, len(animal_events), (feeding,)),
+                    StreamAppend(
+                        inventory_key,
+                        command.inventory_expected_stream_version,
+                        (consumption,),
+                    ),
+                ),
+                idempotency=IdempotencyContext(
+                    operation_id=uuid4(),
+                    household_id=command.household_id,
+                    actor_user_id=command.actor_user_id,
+                    operation_scope="animals.record_inventory_feeding",
+                    idempotency_key=command.idempotency_key,
+                    command_hash=canonical_command_hash(
+                        {
+                            "animal_id": str(command.animal_id),
+                            "occurred_at": command.occurred_at.isoformat(),
+                            "inventory_item_id": str(command.inventory_item_id),
+                            "inventory_expected_stream_version": (
+                                command.inventory_expected_stream_version
+                            ),
+                            "inventory_quantity_scaled": command.inventory_quantity_scaled,
+                            "outcome": command.outcome,
+                            "notes": _optional_text(command.notes, "feeding notes"),
+                        }
+                    ),
+                    correlation_id=command.correlation_id,
+                    stored_response={
+                        "event_id": str(feeding.event_id),
+                        "inventory_event_id": str(consumption.event_id),
+                    },
+                    stored_response_schema_version=2,
+                    created_at=now,
+                    expires_at=now + timedelta(days=90),
+                ),
+                synchronous_projections=(self._projection, inventory),
+            )
+        )
+        stored_event_id = result.stored_response.get("event_id")
+        if not isinstance(stored_event_id, str):
+            raise RuntimeError("Inventory Feeding did not retain its result.")
+        return next(
+            event
+            for event in self._event_store.load_stream(animal_key)
+            if str(event.event_id) == stored_event_id
+        )
+
     def _append_animal_event(
         self,
         *,
@@ -1266,6 +1505,8 @@ class AnimalService:
         notes: str | None,
         command_hash_fields: dict[str, object],
         inventory_quantity: int | None = None,
+        inventory_quantity_scaled: int | None = None,
+        related_subjects: tuple[EventSubject, ...] = (),
         schema_version: int = 1,
     ) -> DomainEvent:
         key = StreamKey(household_id, "animal", animal_id)
@@ -1294,7 +1535,7 @@ class AnimalService:
             correlation_id=target.correlation_id,
             causation_id=target.event_id,
             idempotency_key=idempotency_key,
-            subjects=(EventSubject("animal", animal_id, "primary", 0),),
+            subjects=(EventSubject("animal", animal_id, "primary", 0), *related_subjects),
             title=title,
             description=None,
             payload=payload,
@@ -1322,41 +1563,84 @@ class AnimalService:
         if inventory is not None:
             link = inventory.consumption_for_source(household_id, target.event_id)
             if link is not None and link.status == "active":
-                replacement_quantity = (
-                    link.quantity if inventory_quantity is None else inventory_quantity
-                )
-                if replacement_quantity < 1:
-                    raise AnimalValidationError("Inventory replacement quantity must be positive.")
                 inventory_key = StreamKey(household_id, "inventory-item", link.item_id)
                 inventory_events = self._event_store.load_stream(inventory_key)
-                reversal = _inventory_event(
-                    inventory_key,
-                    len(inventory_events) + 1,
-                    "inventory.consumption_reversed",
-                    InventoryConsumptionReversedV1(
-                        link.consumption_event_id,
-                        link.quantity,
-                        "Feeding correction replaced inventory consumption.",
-                    ),
-                    actor_user_id,
-                    target.correlation_id,
-                    event.event_id,
-                    idempotency_key,
-                    recorded_at,
-                    animal_id,
-                )
-                replacement = _inventory_event(
-                    inventory_key,
-                    len(inventory_events) + 2,
-                    "inventory.stock_consumed",
-                    InventoryStockConsumedV1(replacement_quantity, target.event_id),
-                    actor_user_id,
-                    target.correlation_id,
-                    event.event_id,
-                    idempotency_key,
-                    recorded_at,
-                    animal_id,
-                )
+                if link.schema_version == 2:
+                    replacement_scaled = (
+                        link.quantity_scaled
+                        if inventory_quantity_scaled is None
+                        else inventory_quantity_scaled
+                    )
+                    if replacement_scaled < 1:
+                        raise AnimalValidationError(
+                            "Inventory replacement quantity must be positive."
+                        )
+                    reversal = _inventory_event(
+                        inventory_key,
+                        len(inventory_events) + 1,
+                        "inventory.consumption_reversed",
+                        InventoryConsumptionReversedV2(
+                            link.consumption_event_id,
+                            link.quantity_scaled,
+                            "Feeding correction replaced inventory consumption.",
+                        ),
+                        actor_user_id,
+                        target.correlation_id,
+                        event.event_id,
+                        idempotency_key,
+                        recorded_at,
+                        animal_id,
+                        schema_version=2,
+                    )
+                    replacement = _inventory_event(
+                        inventory_key,
+                        len(inventory_events) + 2,
+                        "inventory.stock_consumed",
+                        InventoryStockConsumedV2(replacement_scaled, target.event_id),
+                        actor_user_id,
+                        target.correlation_id,
+                        event.event_id,
+                        idempotency_key,
+                        recorded_at,
+                        animal_id,
+                        schema_version=2,
+                    )
+                else:
+                    replacement_quantity = (
+                        link.quantity if inventory_quantity is None else inventory_quantity
+                    )
+                    if replacement_quantity < 1:
+                        raise AnimalValidationError(
+                            "Inventory replacement quantity must be positive."
+                        )
+                    reversal = _inventory_event(
+                        inventory_key,
+                        len(inventory_events) + 1,
+                        "inventory.consumption_reversed",
+                        InventoryConsumptionReversedV1(
+                            link.consumption_event_id,
+                            link.quantity,
+                            "Feeding correction replaced inventory consumption.",
+                        ),
+                        actor_user_id,
+                        target.correlation_id,
+                        event.event_id,
+                        idempotency_key,
+                        recorded_at,
+                        animal_id,
+                    )
+                    replacement = _inventory_event(
+                        inventory_key,
+                        len(inventory_events) + 2,
+                        "inventory.stock_consumed",
+                        InventoryStockConsumedV1(replacement_quantity, target.event_id),
+                        actor_user_id,
+                        target.correlation_id,
+                        event.event_id,
+                        idempotency_key,
+                        recorded_at,
+                        animal_id,
+                    )
                 streams.append(
                     StreamAppend(
                         inventory_key,
@@ -1471,32 +1755,46 @@ class AnimalService:
                 inventory_events = self._event_store.load_stream(inventory_key)
                 compensation: DomainEvent | None = None
                 if action is CorrectionAction.VOID and link.status == "active":
+                    reversal_payload: EventPayload = (
+                        InventoryConsumptionReversedV2(
+                            link.consumption_event_id, link.quantity_scaled, reason
+                        )
+                        if link.schema_version == 2
+                        else InventoryConsumptionReversedV1(
+                            link.consumption_event_id, link.quantity, reason
+                        )
+                    )
                     compensation = _inventory_event(
                         inventory_key,
                         len(inventory_events) + 1,
                         "inventory.consumption_reversed",
-                        InventoryConsumptionReversedV1(
-                            link.consumption_event_id, link.quantity, reason
-                        ),
+                        reversal_payload,
                         actor_user_id,
                         target.correlation_id,
                         event.event_id,
                         idempotency_key,
                         recorded_at,
                         animal_id,
+                        schema_version=link.schema_version,
                     )
                 elif action is CorrectionAction.REINSTATE and link.status == "reversed":
+                    consumption_payload: EventPayload = (
+                        InventoryStockConsumedV2(link.quantity_scaled, target.event_id)
+                        if link.schema_version == 2
+                        else InventoryStockConsumedV1(link.quantity, target.event_id)
+                    )
                     compensation = _inventory_event(
                         inventory_key,
                         len(inventory_events) + 1,
                         "inventory.stock_consumed",
-                        InventoryStockConsumedV1(link.quantity, target.event_id),
+                        consumption_payload,
                         actor_user_id,
                         target.correlation_id,
                         event.event_id,
                         idempotency_key,
                         recorded_at,
                         animal_id,
+                        schema_version=link.schema_version,
                     )
                 if compensation is not None:
                     streams.append(
@@ -1746,6 +2044,8 @@ def _inventory_event(
     idempotency_key: str,
     recorded_at: datetime,
     animal_id: UUID,
+    *,
+    schema_version: int = 1,
 ) -> DomainEvent:
     candidate = DomainEvent(
         event_id=uuid4(),
@@ -1754,7 +2054,7 @@ def _inventory_event(
         stream_id=key.stream_id,
         stream_version=stream_version,
         event_type=event_type,
-        schema_version=1,
+        schema_version=schema_version,
         occurred_at=recorded_at,
         recorded_at=recorded_at,
         actor_user_id=actor_user_id,

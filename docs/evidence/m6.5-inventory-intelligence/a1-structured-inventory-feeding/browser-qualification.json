@@ -1,0 +1,44 @@
+{
+  "status": "passed",
+  "origin": "https://tracker.theroccos.us",
+  "viewport_mobile": "390x844",
+  "viewport_desktop": "1440x900",
+  "type_aware_units": {
+    "food_each_available": true,
+    "food_bale_excluded": true
+  },
+  "feeding_form": {
+    "food_option_visible": true,
+    "amount_default": "1",
+    "no_deduct_removed": true,
+    "manual_prey_type_removed": true,
+    "manual_prey_size_removed": true,
+    "manual_prey_weight_removed": true,
+    "manual_preparation_removed": true
+  },
+  "stock": {
+    "initial": 3,
+    "after_feeding": 2,
+    "after_delete": 3,
+    "final": 3
+  },
+  "snapshot_stable_after_rename": true,
+  "equipment_filtered_from_feeding": true,
+  "legacy_setup": {
+    "needs_setup_before": true,
+    "configured_after": true,
+    "stock_before": 1,
+    "stock_after": 1
+  },
+  "responsive": {
+    "desktop_create_food_overflow": false,
+    "desktop_feeding_overflow": false
+  },
+  "axe_scans": 5,
+  "axe_violations": 0,
+  "application_console_diagnostics": 0,
+  "page_errors": 0,
+  "cloudflare_external_csp_diagnostics": 66,
+  "qualification_harness_csp_diagnostics": 0,
+  "cleanup": "tagged feedings voided and created items archived"
+}

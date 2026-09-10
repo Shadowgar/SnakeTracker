@@ -206,6 +206,27 @@ def _record_feeding(
     inventory_id: str = "",
     inventory_version: str = "",
 ) -> None:
+    form = client.get(f"/animals/{animal_id}/feedings/new")
+    options = re.findall(r'<option value="([0-9a-f-]+:\d+)"[^>]*>([^<]+)</option>', form.text)
+    if inventory_id:
+        reference = next(
+            (value for value, _ in options if value.startswith(f"{inventory_id}:")), ""
+        )
+    else:
+        keyword = next(
+            (
+                token
+                for token in ("mouse", "cricket", "roach", "mealworm", "waxworm")
+                if token in prey.lower()
+            ),
+            "",
+        )
+        reference = next(
+            (value for value, label in options if keyword and keyword in label.lower()),
+            options[0][0] if options else "",
+        )
+    if not reference:
+        raise RuntimeError("Demo feeding has no configured Food Inventory Item.")
     _post(
         client,
         f"/animals/{animal_id}/feedings",
@@ -219,9 +240,8 @@ def _record_feeding(
             "quantity": "1",
             "outcome": outcome,
             "notes": notes,
-            "inventory_item_id": inventory_id,
-            "inventory_expected_stream_version": inventory_version,
-            "inventory_quantity": "1" if inventory_id else "",
+            "inventory_item_id": reference,
+            "inventory_quantity": "1",
         },
     )
 
@@ -1025,24 +1045,87 @@ def seed_demo(
             )
 
         inventory: dict[str, str] = {}
-        for key, name, unit, quantity, threshold in (
-            ("mice", "Frozen mice — small adult", "item", 30, 5),
-            ("crickets", "Live feeder crickets", "item", 40, 8),
-            ("roaches", "Dubia roach colony", "item", 24, 6),
-            ("mealworms", "Mealworm cups", "cup", 6, 2),
-            ("substrate", "Coco fiber substrate", "bag", 5, 2),
-            ("misters", "Reptile-safe misting water", "bottle", 3, 1),
-            ("bulbs", "Basking bulbs 75W", "item", 2, 2),
-            ("waxworms", "Waxworm treat cups", "cup", 4, 1),
+        for key, name, inventory_type, unit, quantity, threshold, food_data in (
+            (
+                "mice",
+                "Frozen mice — small adult",
+                "food",
+                "each",
+                300,
+                5,
+                {
+                    "food_category": "whole_prey",
+                    "food_type": "mouse",
+                    "size_stage": "small",
+                    "preparation_method": "frozen_thawed",
+                },
+            ),
+            (
+                "crickets",
+                "Live feeder crickets",
+                "food",
+                "each",
+                400,
+                8,
+                {
+                    "food_category": "insect",
+                    "food_type": "cricket",
+                    "size_stage": "medium",
+                },
+            ),
+            (
+                "roaches",
+                "Dubia roach colony",
+                "food",
+                "each",
+                240,
+                6,
+                {
+                    "food_category": "insect",
+                    "food_type": "dubia_roach",
+                    "size_stage": "medium",
+                },
+            ),
+            (
+                "mealworms",
+                "Mealworm cups",
+                "food",
+                "package",
+                60,
+                2,
+                {
+                    "food_category": "insect",
+                    "food_type": "mealworm",
+                    "size_stage": "medium",
+                },
+            ),
+            ("substrate", "Coco fiber substrate", "substrate_bedding", "bag", 5, 2, {}),
+            ("misters", "Reptile-safe misting water", "cleaning_supply", "bottle", 3, 1, {}),
+            ("bulbs", "Basking bulbs 75W", "heating_lighting", "each", 2, 2, {}),
+            (
+                "waxworms",
+                "Waxworm treat cups",
+                "food",
+                "package",
+                40,
+                1,
+                {
+                    "food_category": "insect",
+                    "food_type": "other",
+                    "size_stage": "small",
+                },
+            ),
         ):
             location = _post(
                 client,
                 "/inventory",
                 {
                     "idempotency_key": f"demo-inventory-{key}",
+                    "inventory_type": inventory_type,
                     "name": name,
-                    "unit": unit,
+                    "unit_code": unit,
                     "reorder_threshold": str(threshold),
+                    **food_data,
                 },
             )
             item_id = location.rsplit("/", 1)[-1]
@@ -1929,7 +2012,12 @@ def seed_demo(
                 "idempotency_key": "demo-inventory-mice-edit",
                 "expected_stream_version": str(mice_version),
                 "name": "Frozen mice — small adult (18-24 g)",
-                "unit": "item",
+                "inventory_type": "food",
+                "food_category": "whole_prey",
+                "food_type": "mouse",
+                "size_stage": "small",
+                "preparation_method": "frozen_thawed",
+                "unit_code": "each",
                 "reorder_threshold": "6",
             },
         )

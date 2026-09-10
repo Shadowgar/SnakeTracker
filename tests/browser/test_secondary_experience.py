@@ -54,8 +54,9 @@ def test_secondary_destinations_use_focused_responsive_presentations(tmp_path: P
             data={
                 "csrf_token": csrf_from(inventory_form.text),
                 "idempotency_key": _command_id(inventory_form.text),
+                "inventory_type": "equipment",
                 "name": "Keeper test supply",
-                "unit": "item",
+                "unit_code": "each",
                 "reorder_threshold": "2",
             },
             follow_redirects=False,
@@ -124,8 +125,9 @@ def test_secondary_and_onboarding_routes_preserve_household_isolation(tmp_path: 
             data={
                 "csrf_token": csrf_from(inventory_form.text),
                 "idempotency_key": _command_id(inventory_form.text),
+                "inventory_type": "equipment",
                 "name": "Owner Isolation Supply",
-                "unit": "box",
+                "unit_code": "box",
                 "reorder_threshold": "1",
             },
             follow_redirects=False,

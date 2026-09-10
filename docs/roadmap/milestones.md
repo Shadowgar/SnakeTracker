@@ -244,7 +244,7 @@ qualified and presented for owner review.
 
 ## Phase 6.5 / M6.5 — Inventory intelligence and cost tracking
 
-Status: Architecture/domain proposal prepared — ADR-0042 Proposed; not implemented
+Status: ADR-0042 accepted; M6.5-A1 implemented and under final qualification; A2+ not implemented
 
 M6.5 is a substantial product milestone after final M6 acceptance and before M7. It turns Inventory
 from a list of owned objects into an explainable decision-support system. It must have its own
@@ -255,43 +255,42 @@ fast? What needs reordered? What may be overstocked? When was stock last physica
 how trustworthy is the recorded quantity? What did inventory cost? What value was consumed, what
 stock value remains, and what future spending may be required?
 
-The [M6.5 architecture/domain proposal](../plans/2026-09-04-m6.5-inventory-intelligence-architecture.md)
+The [M6.5 architecture/domain plan](../plans/2026-09-04-m6.5-inventory-intelligence-architecture.md)
 and [ADR-0042](../adr/0042-inventory-purchases-fifo-and-quantity-policy.md) provide the accepted
 architecture foundation. The owner approved the additional inventory-authoritative feeding and
 structured catalog direction for M6.5-A1 on September 10, 2026.
 
 ### Owner-approved inventory-authoritative feeding direction
 
-The owner has approved the following M6.5 direction. Recording it here does not implement it on the
-M6.2 hotfix branch. ADR-0042 on the M6.5 architecture branch must be amended to incorporate these
-decisions before the applicable M6.5 domain/schema/UI tranche; another conceptual approval of these
-same points is not required.
+M6.5-A1 implements the approved foundation on `phase6.5/inventory-intelligence`; Purchase/FIFO and
+the remaining intelligence work stay explicitly deferred.
 
-- [ ] RB Every new M6.5 Feeding references a same-household **Food** Inventory Item. The normal
+- [x] RB Every new M6.5 Feeding references a same-household **Food** Inventory Item. The normal
   workflow becomes **Date/time**, **Food from inventory**, **Quantity**, and **Outcome**; **Do not
   deduct inventory** and independently typed prey type/size are removed for new M6.5 writes.
-  Inventory use decrements the selected item automatically and supplies FIFO consumption valuation.
+  Inventory use decrements the selected item automatically and supplies the source facts for A2
+  FIFO consumption valuation.
   (`R-084`, `AT-INVINT-07`)
-- [ ] RB A Feeding snapshots the relevant human-readable food description and structured metadata
+- [x] RB A Feeding snapshots the relevant human-readable food description and structured metadata
   at recording time so later Inventory renaming or reclassification cannot rewrite historical
   meaning. (`R-084`, `AT-INVINT-07`)
-- [ ] RB Inventory Item gains an owner-selected Type: **Food**, **Equipment**, **Substrate &
+- [x] RB Inventory Item gains an owner-selected Type: **Food**, **Equipment**, **Substrate &
   Bedding**, **Cleaning Supply**, **Supplement**, **Enclosure & Habitat**, **Heating & Lighting**,
   or **Other**. Final display labels may be refined without changing this classification concept.
   (`R-085`, `AT-INVINT-08`)
-- [ ] RB Normal Unit entry becomes a controlled, type-aware selector rather than arbitrary free
+- [x] RB Normal Unit entry becomes a controlled, type-aware selector rather than arbitrary free
   text. M6.5 must audit and define the final canonical-unit catalog; illustrative choices include
   count/package and mass/volume units for Food, each/pair/pack/case/roll/container units for
   Equipment, and bag/bale/block/brick/mass/volume units for Substrate & Bedding. (`R-085`,
   `AT-INVINT-08`)
-- [ ] RB Food Items store structured classification once on Inventory, including categories such
+- [x] RB Food Items store structured classification once on Inventory, including categories such
   as whole prey, insect, prepared food, pellets/dry food, produce, and other. Where applicable,
   Food metadata includes prey/feeder type, size or stage, and preparation/storage form—for example
   Mouse / Small / Frozen-thawed or Dubia roach / Medium. Feeding does not ask the keeper to
   duplicate these fields. (`R-085`, `AT-INVINT-08`)
 
-Until M6.5 implements and qualifies these requirements, the current unlinked feeding path is a
-compatibility bridge only and must not be mistaken for the approved final product model.
+Version-1 linked and unlinked Feeding history remains a replay compatibility boundary only. Normal
+new writes use the version-2 Inventory-authoritative contract.
 
 ### Inventory levels and reorder intelligence
 
@@ -301,7 +300,7 @@ compatibility bridge only and must not be mistaken for the approved final produc
 ### Physical recount and cycle count
 
 - [ ] RB A physical-count workflow compares expected and actual stock and records any variance through immutable inventory adjustment semantics with an explicit reason such as physical count, lost/damaged, purchase/receipt, correction, consumption, or other. (`R-071`, `AT-INVINT-02`)
-- [ ] RB Last-verified and recount-due information supports full, category, and rolling/cycle-count workflows. ADR-0042 proposes an optional owner-selected per-item interval; that policy remains unaccepted while the ADR is Proposed. (`R-071`, `AT-INVINT-02`)
+- [ ] RB Last-verified and recount-due information supports full, category, and rolling/cycle-count workflows. ADR-0042 accepts an optional owner-selected per-item interval; implementation remains deferred. (`R-071`, `AT-INVINT-02`)
 
 A representative count is `Expected: 25; actual physical count: 23`; the difference becomes an
 explainable immutable adjustment rather than an in-place overwrite.
@@ -314,7 +313,7 @@ explainable immutable adjustment rather than an in-place overwrite.
 
 - [ ] RB The product represents the conceptual flow `Purchase → Inventory received → Inventory consumed → Cost of consumption` while keeping cash spending, inventory value, and consumption cost as distinct metrics. (`R-073`, `AT-INVINT-04`)
 - [ ] RB Purchase/receipt history retains purchase date, supplier/vendor, quantity, amount paid, unit cost, and resulting inventory receipt. Changing prices are represented by history/cost lots rather than one mutable item-price field. (`R-074`, `AT-INVINT-05`)
-- [ ] RB Before consumption value is implemented, architecture/domain review explicitly selects and documents a deterministic costing policy such as weighted average, FIFO, or another justified method. ADR-0042 proposes FIFO; implementation remains blocked until owner acceptance. (`R-075`, `AR-INVINT-01`)
+- [x] RB Before consumption value is implemented, architecture/domain review explicitly selects and documents FIFO as the deterministic costing policy. ADR-0042 is accepted; FIFO implementation remains M6.5-A2. (`R-075`, `AR-INVINT-01`)
 
 For example, a $65 purchase of 50 frozen mice has a $1.30 purchase unit cost. If 18 are consumed,
 the $65 cash outflow and $23.40 consumption value are different measures; remaining stock value is

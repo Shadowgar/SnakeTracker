@@ -20,9 +20,10 @@ event-sourced fictional household only in trusted local M6 review environments.
 Lizard and Scorpion profiles and preserves historical Spider-only molt/premolt v1 contracts while
 introducing capability-neutral v2 contracts.
 
-[ADR-0042](adr/0042-inventory-purchases-fifo-and-quantity-policy.md) is a Proposed M6.5 decision
-covering multi-line Inventory Purchases, cash-spend authority, FIFO valuation, canonical quantities,
-and physical counts. It is not part of the accepted baseline until owner approval is recorded.
+[ADR-0042](adr/0042-inventory-purchases-fifo-and-quantity-policy.md) is the accepted M6.5 decision
+covering structured Inventory, Inventory-authoritative Feeding, multi-line Purchases, cash-spend
+authority, FIFO valuation, canonical quantities, and physical counts. A1 implements only the
+structured Inventory and Feeding foundation; the financial/intelligence tranches remain pending.
 
 ## Document map
 

@@ -17,8 +17,9 @@ ACCEPTANCE_DATES = {
     "0039": "2026-08-11",
     "0040": "2026-08-16",
     "0041": "2026-08-24",
+    "0042": "2026-09-10",
 }
-PROPOSED_ADRS = {"0042"}
+PROPOSED_ADRS: set[str] = set()
 APPROVED_AMENDMENT_PATHS = {
     "docs/README.md",
     "docs/adr/README.md",

@@ -10,7 +10,9 @@ from snaketracker.domains.animals.contracts import (
     AnimalBathRecordedV1,
     AnimalEnclosureAssignedV1,
     AnimalFeedingCorrectedV1,
+    AnimalFeedingCorrectedV2,
     AnimalFeedingRecordedV1,
+    AnimalFeedingRecordedV2,
     AnimalLengthCorrectedV1,
     AnimalLengthRecordedV1,
     AnimalMoltCorrectedV1,
@@ -50,13 +52,20 @@ class CareEventView:
         corrected = isinstance(
             payload,
             AnimalFeedingCorrectedV1
+            | AnimalFeedingCorrectedV2
             | AnimalWeightCorrectedV1
             | AnimalLengthCorrectedV1
             | AnimalShedCorrectedV1
             | AnimalMoltCorrectedV1
             | AnimalMoltCorrectedV2,
         )
-        if isinstance(payload, AnimalFeedingRecordedV1 | AnimalFeedingCorrectedV1):
+        if isinstance(
+            payload,
+            AnimalFeedingRecordedV1
+            | AnimalFeedingCorrectedV1
+            | AnimalFeedingRecordedV2
+            | AnimalFeedingCorrectedV2,
+        ):
             title = (
                 "Fed"
                 if payload.outcome == "accepted"
@@ -113,6 +122,32 @@ def present_care_event(
         if payload.prey_weight_grams is not None:
             facts.insert(1, f"{payload.prey_weight_grams:,} g")
         description = " · ".join(facts)
+    elif isinstance(payload, AnimalFeedingRecordedV2 | AnimalFeedingCorrectedV2):
+        from snaketracker.domains.inventory.catalog import (
+            FOOD_CATEGORY_BY_CODE,
+            INSECT_BY_CODE,
+            PREPARATION_BY_CODE,
+            SIZE_STAGE_BY_CODE,
+            UNIT_BY_CODE,
+            WHOLE_PREY_BY_CODE,
+            format_quantity_scaled,
+        )
+
+        details = [
+            f"{format_quantity_scaled(payload.quantity_scaled)} "
+            f"{UNIT_BY_CODE[payload.unit_code].symbol}",
+            payload.item_name,
+            FOOD_CATEGORY_BY_CODE[payload.food_category].label,
+        ]
+        if payload.food_type:
+            source = WHOLE_PREY_BY_CODE if payload.food_category == "whole_prey" else INSECT_BY_CODE
+            details.append(source[payload.food_type].label)
+        if payload.size_stage:
+            details.append(SIZE_STAGE_BY_CODE[payload.size_stage].label)
+        if payload.preparation_method:
+            details.append(PREPARATION_BY_CODE[payload.preparation_method].label)
+        details.append(_label(payload.outcome))
+        description = " · ".join(details)
     elif isinstance(payload, AnimalWeightRecordedV1 | AnimalWeightCorrectedV1):
         description = f"{payload.weight_grams:,} g"
     elif isinstance(payload, AnimalLengthRecordedV1 | AnimalLengthCorrectedV1):

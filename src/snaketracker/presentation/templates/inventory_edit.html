@@ -2,7 +2,10 @@
 {% block title %}Edit {{ item.name }} · Inventory · Care Keeper{% endblock %}
 {% block content %}
 <section class="form-page" aria-labelledby="page-title"><header><p class="eyebrow">Inventory</p><h1 id="page-title">Edit {{ item.name }}</h1></header>
+{% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+{% if item.needs_setup %}<div class="alert-neutral"><strong>Finish setup</strong><p>Choose an honest Type and the exact controlled equivalent of the existing unit. Stock quantities will not change.</p></div>{% endif %}
 <form class="card form-stack" method="post" action="/inventory/{{ item.item_id }}/edit" novalidate><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}"><input type="hidden" name="expected_stream_version" value="{{ item.stream_version }}">
-<label>Name<input name="name" value="{{ item.name }}" required maxlength="200"></label><label>Unit<input name="unit" value="{{ item.unit }}" required maxlength="200"></label><label>Reorder threshold<input name="reorder_threshold" type="number" min="0" value="{{ item.reorder_threshold if item.reorder_threshold is not none else '' }}"></label>
+{% include "_inventory_catalog_fields.html" %}
 <div class="form-actions"><a href="/inventory/{{ item.item_id }}">Cancel</a><button type="submit">Save changes</button></div></form></section>
 {% endblock %}
+{% block scripts %}<script defer src="/static/inventory-form.js?v=m65-a1"></script>{% endblock %}

@@ -62,16 +62,18 @@ they do not change enclosure ownership or create type-specific enclosure aggrega
 
 A feeding that consumes stock uses one atomic multi-stream operation across the animal and inventory-item streams. Archived items remain replayable and visible in historical reads but cannot receive stock changes or new feeding consumption. Restoration is an explicit event. Permanent deletion is intentionally unavailable because registration itself creates immutable item history.
 
-#### Proposed M6.5 extension (not accepted or implemented)
+#### Accepted M6.5 extension (A1 implemented; later tranches deferred)
 
-ADR-0042 proposes retaining the Inventory Item boundary while adding canonical scaled quantities,
-owner categories/reorder/verification policies, purchase-linked receipt lots, enriched physical
-counts, and generic use. Physical counts and all balance-affecting facts remain on the item stream.
-FIFO lots, allocations, usage, duration, and valuation remain rebuildable read-side concepts.
-Existing v1 integer events remain valid and normalize exactly; historical cost stays unknown where
-no Purchase exists. See the [M6.5 architecture proposal](../plans/2026-09-04-m6.5-inventory-intelligence-architecture.md).
+ADR-0042 retains the Inventory Item boundary. M6.5-A1 implements structured item types,
+type-aware canonical units and scaled quantities, Food metadata, and Inventory-authoritative
+Feeding. Owner categories/reorder/verification policies, purchase-linked receipt lots, enriched
+physical counts, and generic use remain deferred. Physical counts and all balance-affecting facts
+remain on the item stream. FIFO lots, allocations, usage, duration, and valuation remain
+rebuildable read-side concepts. Existing v1 integer events remain valid and normalize exactly;
+historical cost stays unknown where no Purchase exists. See the
+[M6.5 architecture plan](../plans/2026-09-04-m6.5-inventory-intelligence-architecture.md).
 
-The proposal also permits authorized correction/void/reinstate effects against archived item
+The accepted design also permits authorized correction/void/reinstate effects against archived item
 history while continuing to reject new ordinary movements. Stock remains nonnegative and reserved
 quantity cannot exceed on hand.
 
@@ -81,7 +83,7 @@ quantity cannot exceed on hand.
 - **Stream:** `expense:{expense_uuid}`
 - **Owns:** amount, currency, category, payee/reference, subject associations, correction and void state
 
-#### Proposed M6.5 Purchase boundary (not accepted or implemented)
+#### Accepted M6.5 Purchase boundary (deferred; not implemented in A1)
 
 - **Aggregate:** Purchase
 - **Stream:** `purchase:{purchase_uuid}`

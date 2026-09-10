@@ -16,7 +16,9 @@ from snaketracker.application.suggestion_policy import (
 from snaketracker.domains.animals.capabilities import animal_capability_registry
 from snaketracker.domains.animals.contracts import (
     AnimalFeedingCorrectedV1,
+    AnimalFeedingCorrectedV2,
     AnimalFeedingRecordedV1,
+    AnimalFeedingRecordedV2,
     AnimalLengthCorrectedV1,
     AnimalLengthRecordedV1,
     AnimalMoltCorrectedV1,
@@ -126,14 +128,32 @@ class AnimalAnalyticsService:
                     "animal.feeding_corrected",
                 }
                 and ("feeding" in capability.analytics_kinds)
-                and isinstance(payload, (AnimalFeedingRecordedV1, AnimalFeedingCorrectedV1))
+                and isinstance(
+                    payload,
+                    (
+                        AnimalFeedingRecordedV1,
+                        AnimalFeedingCorrectedV1,
+                        AnimalFeedingRecordedV2,
+                        AnimalFeedingCorrectedV2,
+                    ),
+                )
             ):
+                prey_type = (
+                    payload.item_name
+                    if isinstance(payload, (AnimalFeedingRecordedV2, AnimalFeedingCorrectedV2))
+                    else payload.prey_type
+                )
+                quantity = (
+                    payload.quantity_scaled
+                    if isinstance(payload, (AnimalFeedingRecordedV2, AnimalFeedingCorrectedV2))
+                    else payload.quantity
+                )
                 feedings.append(
                     FeedingPoint(
                         event.occurred_at,
                         payload.outcome,
-                        payload.prey_type,
-                        payload.quantity,
+                        prey_type,
+                        quantity,
                     )
                 )
             elif event.event_type in {"animal.shed_recorded", "animal.shed_corrected"} and (

@@ -1,0 +1,53 @@
+{% set current = item if item is defined else none %}
+{% set selected_type = values.get('inventory_type', current.inventory_type if current else '') %}
+{% set selected_unit = values.get('unit_code', current.unit_code if current else '') %}
+{% set selected_category = values.get('food_category', current.food_category if current else '') %}
+{% set selected_food_type = values.get('food_type', current.food_type if current else '') %}
+{% set selected_size = values.get('size_stage', current.size_stage if current else '') %}
+{% set selected_preparation = values.get('preparation_method', current.preparation_method if current else '') %}
+<label>Type
+  <select name="inventory_type" data-inventory-type required>
+    <option value="">Choose a type</option>
+    {% for option in inventory_types %}<option value="{{ option.code }}"{% if selected_type == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+  </select>
+</label>
+<label>Item name<input name="name" value="{{ values.get('name', current.name if current else '') }}" required maxlength="200"></label>
+<fieldset class="form-stack" data-food-fields{% if selected_type != 'food' %} hidden{% endif %}>
+  <legend>Food details</legend>
+  <label>Food category
+    <select name="food_category" data-food-category{% if selected_type == 'food' %} required{% endif %}>
+      <option value="">Choose a category</option>
+      {% for option in food_categories %}<option value="{{ option.code }}"{% if selected_category == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+    </select>
+  </label>
+  <div class="form-stack" data-prey-fields{% if selected_category not in ('whole_prey', 'insect') %} hidden{% endif %}>
+    <label><span data-food-type-label>{% if selected_category == 'insect' %}Feeder type{% else %}Prey type{% endif %}</span>
+      <select name="food_type" data-food-type>
+        <option value="">Choose a type</option>
+        {% for option in whole_prey_types if option.code != 'other' %}<option value="{{ option.code }}" data-food-categories="whole_prey"{% if selected_food_type == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+        {% for option in insect_types if option.code != 'other' %}<option value="{{ option.code }}" data-food-categories="insect"{% if selected_food_type == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+        <option value="other" data-food-categories="whole_prey,insect"{% if selected_food_type == 'other' %} selected{% endif %}>Other</option>
+      </select>
+    </label>
+    <label>Size / stage
+      <select name="size_stage" data-size-stage>
+        <option value="">{% if selected_category == 'insect' %}Not specified{% else %}Choose a size or stage{% endif %}</option>
+        {% for option in size_stages %}<option value="{{ option.code }}"{% if selected_size == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+      </select>
+    </label>
+  </div>
+  <label data-preparation-field{% if selected_category != 'whole_prey' %} hidden{% endif %}>Preparation / form
+    <select name="preparation_method" data-preparation-method>
+      <option value="">Choose preparation</option>
+      {% for option in preparation_methods %}<option value="{{ option.code }}"{% if selected_preparation == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+    </select>
+  </label>
+</fieldset>
+<label>Unit
+  <select name="unit_code" data-inventory-unit required>
+    <option value="">Choose a unit</option>
+    {% for unit in inventory_units %}<option value="{{ unit.code }}" data-inventory-types="{{ unit.inventory_types|sort|join(',') }}" data-fractional="{{ 'true' if unit.allows_fractional else 'false' }}"{% if selected_unit == unit.code %} selected{% endif %}>{{ unit.label }}</option>{% endfor %}
+  </select>
+  {% if current and current.needs_setup and current.legacy_unit %}<small>Current legacy unit: {{ current.legacy_unit }}. Choose only its exact controlled equivalent; stock will not be converted.</small>{% endif %}
+</label>
+<label>Reorder threshold<input name="reorder_threshold" type="number" min="0" step="0.001" value="{{ values.get('reorder_threshold', current.reorder_threshold_display if current else '') }}"></label>
