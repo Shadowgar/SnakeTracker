@@ -359,6 +359,17 @@ def _inventory_reference(form: Any) -> tuple[UUID | None, int | None]:
     )
 
 
+def _feeding_inventory_reference(form: Any) -> tuple[UUID | None, int | None, int | None]:
+    item_id, expected_stream_version = _inventory_reference(form)
+    if item_id is None:
+        return None, None, None
+    return (
+        item_id,
+        expected_stream_version,
+        _optional_int(form.get("inventory_quantity", ""), "inventory quantity"),
+    )
+
+
 def _form_bool(value: object, label: str) -> bool:
     if value == "true":
         return True
@@ -3504,7 +3515,9 @@ def create_web_router(
             animal_uuid = UUID(animal_id)
             if animal_service.profile_for(principal.household_id, animal_uuid) is None:
                 raise FormValidationError("Animal not found.")
-            inventory_item_id, inventory_version = _inventory_reference(form)
+            inventory_item_id, inventory_version, inventory_quantity = _feeding_inventory_reference(
+                form
+            )
             animal_service.record_feeding(
                 RecordFeedingCommand(
                     household_id=principal.household_id,
@@ -3526,9 +3539,7 @@ def create_web_router(
                     notes=str(form.get("notes", "")),
                     inventory_item_id=inventory_item_id,
                     inventory_expected_stream_version=inventory_version,
-                    inventory_quantity=_optional_int(
-                        form.get("inventory_quantity", ""), "inventory quantity"
-                    ),
+                    inventory_quantity=inventory_quantity,
                 )
             )
         except (AnimalValidationError, FormValidationError, ValueError) as error:

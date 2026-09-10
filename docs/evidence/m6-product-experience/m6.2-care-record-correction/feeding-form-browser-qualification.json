@@ -1,0 +1,33 @@
+{
+  "status": "passed",
+  "origin": "https://tracker.theroccos.us",
+  "viewport": "390x844",
+  "noInventorySelected": true,
+  "unlinkedQuantityDisabled": true,
+  "linkedQuantityEnabled": true,
+  "linkedQuantityDefault": "1",
+  "initialBalance": 25,
+  "balanceAfterUnlinked": 25,
+  "balanceAfterLinked": 24,
+  "balanceAfterLinkedDelete": 25,
+  "finalBalance": 25,
+  "effectiveRecordsRemoved": true,
+  "immutableRecordsVisibleInAudit": true,
+  "overflow": {
+    "innerWidth": 390,
+    "scrollWidth": 390,
+    "pass": true
+  },
+  "axe": {
+    "unlinkedAxe": [],
+    "linkedAxe": [],
+    "postDeleteAxe": [],
+    "totalViolations": 0
+  },
+  "console": {
+    "applicationDiagnostics": [],
+    "pageErrors": [],
+    "externalDiagnosticCount": 38,
+    "harnessDiagnosticCount": 0
+  }
+}

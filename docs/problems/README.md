@@ -117,3 +117,9 @@ The keeper sees **Delete record** only for supported, currently effective care e
 immutable source event remains auditable while effective History, analytics, reminders, reports,
 search, replay, and linked inventory compensation converge on the deletion. It does not reopen or
 invalidate accepted M6 and does not begin M6.5 implementation.
+
+The same bounded M6.2 hotfix also corrects the current feeding form's partial inventory tuple:
+**Do not deduct inventory** must create a fully unlinked compatibility feeding even when stale
+quantity/version fields are submitted. Selected Inventory Items retain the strict all-or-nothing
+tuple and atomic deduction. This bridge is explicitly temporary; owner-approved M6.5 requirements
+`R-084` and `R-085` make structured Inventory authoritative for future Feeding writes.

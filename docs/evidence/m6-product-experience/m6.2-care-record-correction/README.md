@@ -7,6 +7,20 @@ Requirement `R-083`; acceptance procedure `AT-M62-01`. Branch:
 record without identifying the household or changing accepted event contracts. M6.5-A remains
 paused.
 
+The follow-up `AT-M62-02` covers a production feeding-form mismatch discovered before owner review:
+the form rendered inventory quantity `1` even while **Do not deduct inventory** was selected. The
+browser therefore submitted `(item=None, version=None, quantity=1)`, correctly triggering the
+unchanged domain all-or-nothing invariant. The HTTP boundary now treats an explicitly empty item as
+authoritative and normalizes all inventory fields to `None`; when an item is selected, version and
+quantity remain mandatory. The quantity control is initially disabled and omitted from submission,
+then the self-hosted feeding-form script enables it and defaults it to `1` only after item selection.
+Correctness does not depend on JavaScript because the server discards stale unlinked values.
+
+This current unlinked path is a pre-M6.5 compatibility bridge, not the final design. The owner has
+approved future inventory-authoritative Feeding and structured Inventory catalog direction under
+`R-084` and `R-085`; no M6.5 event, schema, migration, or product implementation is included here.
+ADR-0042 must be amended on the M6.5 architecture branch before that work proceeds.
+
 ## Architecture and keeper behavior
 
 **Delete record** is a compact action on supported, currently effective Animal History entries.
@@ -53,8 +67,8 @@ fixtures. It never targets the active database or customer records.
 ### Authoritative frozen quality gate
 
 The required `uv sync --frozen` followed by `./scripts/quality/check.sh` completed against the
-hotfix implementation. The gate reported 473 tests, 0 failures, and 0 errors; 94.77% statement
-coverage and 85.04% branch coverage; strict mypy, Ruff, dependency-boundary tests, coverage
+final hotfix implementation. The gate reported 474 tests, 0 failures, and 0 errors; 94.82%
+statement coverage and 85.19% branch coverage; strict mypy, Ruff, dependency-boundary tests, coverage
 validation, `pip-audit --strict`, Compose validation, and `git diff --check` all passed. The test,
 coverage, and JUnit artifacts were produced. No implementation changed after this run.
 
@@ -93,6 +107,26 @@ Screenshots:
 - [1440×900 confirmation](screenshots/desktop-1440x900-confirmation.png) and
   [post-delete History](screenshots/desktop-1440x900-after-delete.png)
 
+### Feeding-form compatibility follow-up
+
+Native ARM64 Chromium qualified the corrected deployed feeding form at the public origin at
+390×844 with an existing demo animal and Inventory Item. The default **Do not deduct inventory**
+selection had a disabled quantity control, the feeding saved successfully, and stock remained 25.
+Selecting the Inventory Item enabled quantity with default `1`; saving reduced stock from 25 to 24.
+Deleting that linked feeding through M6.2 restored stock to 25, and deleting the unlinked feeding
+left it at 25. Both Feeding sources disappeared from effective History and remained visible in the
+immutable audit. The six-event qualification delta is exactly: unlinked Feeding; linked Feeding;
+linked stock consumption; linked Feeding void; consumption reversal; unlinked Feeding void.
+
+The responsive page had no horizontal overflow. Three axe scans reported zero violations, with
+zero Care Keeper application console diagnostics, zero page errors, and zero qualification-harness
+CSP diagnostics. The 38 external diagnostics were Cloudflare Browser Insights resources blocked by
+the unchanged strict CSP. Evidence is in
+[feeding-form-browser-qualification.json](feeding-form-browser-qualification.json) and the
+[unlinked](screenshots/feeding-unlinked-390x844.png),
+[linked](screenshots/feeding-linked-390x844.png), and
+[post-delete](screenshots/feeding-post-delete-390x844.png) screenshots.
+
 ### Live-data safety, backup, and integrity
 
 The active paths were explicitly resolved before qualification:
@@ -112,6 +146,12 @@ Before deployment the supported worker-owned backup pipeline completed encrypted
 overwritten. No restore was required or performed; any future restore qualification remains bound
 to an isolated target.
 
+Before deploying the feeding-form follow-up, the same supported pipeline completed encrypted
+backup run `c2673042-d4fc-40a1-9ee5-5dd6d714b09d` for request
+`cb74b8a8-c2a7-47dd-a6bb-6c078bbc3985`. Its encrypted manifest checksum is
+`afb842b7aee77ef4718a3069b76e8814f49285fe877e7cf253fab5589b4acaf1`. It did not overwrite the
+earlier M6.2 backup, and no restore was performed.
+
 The read-only live comparison is:
 
 | Check | Before | After |
@@ -130,10 +170,20 @@ audit history. There was no unaccounted live event activity during the compariso
 attachment-tree SHA-256 is
 `0ce316009a1127871bbe3101849b76df5b898b1c0d3386ec815e570659110c73`.
 
+For the feeding follow-up, the immediate pre-deploy read-only baseline was migration
+`0013_password_recovery`, SQLite integrity `ok`, zero FK violations, event count/high-water 650,
+four households, four users, 39 attachment versions, and 40 attachment files. The final
+count/high-water is 656 solely because of the six tagged demo qualification events enumerated
+above. Final integrity remains `ok` with zero FK violations; household, user, and attachment counts
+are unchanged. The final database SHA-256 is
+`2c8013180775e050faab6d278b0dff9ba3f6c66b595bcfd91234dfedd798ec87`, WAL SHA-256 is
+`22f32c0e17dbd899970da0518a7ba636df1858761c7cc9802013240251a87eae`, and attachment-tree SHA-256
+remains `0ce316009a1127871bbe3101849b76df5b898b1c0d3386ec815e570659110c73`.
+
 ### Raspberry Pi deployment
 
-The deployed ARM64 image is `snaketracker:m62-care-record-delete`, image ID
-`sha256:513e712348b50d0241f0e6f24c73ae734bc1e91f7d5b62c3588f7de9ae89a783`. Web and worker run as
+The final deployed ARM64 image is `snaketracker:m62-feeding-form-fix`, image ID
+`sha256:9064aef098cecbe0a2307d11e0d74f9e129722664da9747f1c48580c5c903499`. Web and worker run as
 UID/GID `1001:1001`; web, worker, and pinned Nginx are healthy; Nginx remains bound only to
 `127.0.0.1:8081`; both local and public readiness endpoints return `{"status":"ready"}`; and
 exactly one `snaketracker` Compose stack is active. No migration was introduced or run for M6.2.

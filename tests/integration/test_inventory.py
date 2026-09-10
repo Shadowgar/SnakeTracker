@@ -720,6 +720,31 @@ def test_stock_linked_feeding_rolls_back_when_inventory_is_insufficient(tmp_path
             )
         )
 
+        with pytest.raises(
+            AnimalValidationError,
+            match="Inventory item, version, and quantity are required together",
+        ):
+            animals.record_feeding(
+                RecordFeedingCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    animal.animal_id,
+                    uuid4(),
+                    "partial-linked-feeding",
+                    datetime(2026, 8, 10, 11, tzinfo=UTC),
+                    "rat",
+                    "large",
+                    None,
+                    "frozen_thawed",
+                    1,
+                    "accepted",
+                    None,
+                    inventory_item_id=item.item_id,
+                    inventory_expected_stream_version=None,
+                    inventory_quantity=1,
+                )
+            )
+
         with pytest.raises(InventoryValidationError, match="Insufficient available inventory"):
             animals.record_feeding(
                 RecordFeedingCommand(
