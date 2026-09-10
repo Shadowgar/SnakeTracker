@@ -43,6 +43,7 @@ from snaketracker.domains.inventory.contracts import (
 from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
 from snaketracker.platform.events.corrections import (
     CorrectionAction,
+    effective_event_root,
     evaluate_effective_events,
     validate_correction,
 )
@@ -389,6 +390,16 @@ class VoidAnimalEventCommand:
     target_event_id: UUID
     idempotency_key: str
     reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class DeleteAnimalCareRecordCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    actor_role: str
+    animal_id: UUID
+    effective_event_id: UUID
+    idempotency_key: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -934,6 +945,26 @@ class AnimalService:
                 target_event_id=command.target_event_id,
                 idempotency_key=command.idempotency_key,
                 reason=_required_text(command.reason, "void reason"),
+                action=CorrectionAction.VOID,
+            )
+        )
+
+    def delete_care_record(self, command: DeleteAnimalCareRecordCommand) -> AnimalEventResult:
+        """Remove a current keeper record by appending a void against its root fact."""
+        key = StreamKey(command.household_id, "animal", command.animal_id)
+        existing = self._event_store.load_stream(key)
+        target = effective_event_root(existing, command.effective_event_id)
+        if target is None or target.event_type not in CONTROLLABLE_ANIMAL_EVENT_TYPES:
+            raise AnimalValidationError("Care record is not available to delete.")
+        return AnimalEventResult(
+            self._control_animal_event(
+                household_id=command.household_id,
+                actor_user_id=command.actor_user_id,
+                actor_role=command.actor_role,
+                animal_id=command.animal_id,
+                target_event_id=target.event_id,
+                idempotency_key=command.idempotency_key,
+                reason="Deleted by keeper as an incorrect record.",
                 action=CorrectionAction.VOID,
             )
         )

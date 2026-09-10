@@ -1,0 +1,400 @@
+{
+  "status": "failed",
+  "browser": "/home/rocco/.cache/ms-playwright/chromium-1208/chrome-linux/chrome",
+  "origin": "https://tracker.theroccos.us",
+  "results": [
+    {
+      "viewport": {
+        "label": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      },
+      "confirmationFocused": true,
+      "cancelReturned": true,
+      "recordRemovedFromEffectiveHistory": true,
+      "immutableRecordVisibleInAudit": false,
+      "statusVisible": true,
+      "statusFocused": false,
+      "focusReturn": true,
+      "overflow": {
+        "innerWidth": 390,
+        "scrollWidth": 390,
+        "pass": true
+      },
+      "axe": {
+        "menuViolations": [],
+        "confirmationViolations": [],
+        "postDeleteViolations": []
+      },
+      "console": {
+        "externalDiagnostics": [
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/login"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Gx5j67wdO5LsZFvrLFzVtLtDeQpCHGt5vwuZcv4nvHY='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/login"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/home"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-IhnFm05KZYhP5+QI7+A10FdVb82qXig5d1tzFH/RbaI='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/home"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-ZSC3Tkc8rIogAMOh+eo82rViiw3fgmOBCTzfM5DZBNM='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-f7DXGLlftiBOI6ewBT+T6tgxlnfWrVVQahOQwMP91K0='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/sheds/new"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/sheds/new"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-d+sbT/wAQ2mgzO9vAHbMYXLJZqDEi70aBULt1JJD4yE='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-etakA78A1SbTGqLmPVvYoyBNHkR//RJs7tB7l9FKvYs='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Bb9NVorh2pmLfr+O08S4l4vRek137ot2qrZJVLalJ8Y='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/events/04cdef8b-8b91-4768-9bd5-ef61db1aec44/delete"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/events/04cdef8b-8b91-4768-9bd5-ef61db1aec44/delete"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-3zoGNyuveV3H43d4mT44YRZsjb7AXohwMK5WxZlsGb4='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline#record-04cdef8b-8b91-4768-9bd5-ef61db1aec44"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline#record-04cdef8b-8b91-4768-9bd5-ef61db1aec44"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-p6e9ZefhpUjuDHNz1699YGo8qR9zQhe6pcnehu/mBGQ='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/events/04cdef8b-8b91-4768-9bd5-ef61db1aec44/delete"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/events/04cdef8b-8b91-4768-9bd5-ef61db1aec44/delete"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-zSYd0J1MMHTli8AL0TcAOSdCAkMHgaH/T0SFTn6vfU4='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline?record_deleted=1#effective-history"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline?record_deleted=1#effective-history"
+          }
+        ],
+        "harnessDiagnostics": [],
+        "applicationDiagnostics": [],
+        "pageErrors": []
+      }
+    },
+    {
+      "viewport": {
+        "label": "mobile-360x800",
+        "width": 360,
+        "height": 800
+      },
+      "confirmationFocused": true,
+      "cancelReturned": true,
+      "recordRemovedFromEffectiveHistory": true,
+      "immutableRecordVisibleInAudit": false,
+      "statusVisible": true,
+      "statusFocused": false,
+      "focusReturn": true,
+      "overflow": {
+        "innerWidth": 360,
+        "scrollWidth": 360,
+        "pass": true
+      },
+      "axe": {
+        "menuViolations": [],
+        "confirmationViolations": [],
+        "postDeleteViolations": []
+      },
+      "console": {
+        "externalDiagnostics": [
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/login"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-H6EOSm0yPqqkX8reol1CHYxqERSr5n41ZXqtX73xwvY='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/login"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-eb/O3IFTidCvRX2aDLXDF49UwhwfavE7vQo/cqRWBFU='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/home"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/home"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-iuuHP72W0H5l+tle6JU9HdcpNRWnWgk/yMMOhCV7kT4='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-+Rm+S00PuKha8vZLycc/iyREEGIImIYzWXIk0+fbx24='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/sheds/new"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/sheds/new"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-j4bdjAKWO/ggQMBNJGEUf12YcAErImx6L6axw5Iy6p0='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-ynG4fFa7a6AqYl/WOam6Ux7hQ5vLeP2eXZ/xo6j8TGI='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/events/9a0e885a-0a51-42c4-948e-f189ea85d487/delete"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-GWp1Oatbflb4OoT2vU+DxopH4Uim9cfH2m4PLMVdARI='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/events/9a0e885a-0a51-42c4-948e-f189ea85d487/delete"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-oHOvhj5JKrfWjwAO/UNxjpGot3oOP4oYIaqNPHUKUBo='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline#record-9a0e885a-0a51-42c4-948e-f189ea85d487"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline#record-9a0e885a-0a51-42c4-948e-f189ea85d487"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/events/9a0e885a-0a51-42c4-948e-f189ea85d487/delete"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-2JB9TciponU/vevK2kk5g2mqxYMcwzj0pDt6FaTmDts='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/events/9a0e885a-0a51-42c4-948e-f189ea85d487/delete"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-4mYNSPF3az1CSQW5ggLzLJ2f9ZzTf1lE3zrPbgzhHUY='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline?record_deleted=1#effective-history"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline?record_deleted=1#effective-history"
+          }
+        ],
+        "harnessDiagnostics": [],
+        "applicationDiagnostics": [],
+        "pageErrors": []
+      }
+    },
+    {
+      "viewport": {
+        "label": "desktop-1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "confirmationFocused": true,
+      "cancelReturned": true,
+      "recordRemovedFromEffectiveHistory": true,
+      "immutableRecordVisibleInAudit": false,
+      "statusVisible": true,
+      "statusFocused": false,
+      "focusReturn": true,
+      "overflow": {
+        "innerWidth": 1440,
+        "scrollWidth": 1440,
+        "pass": true
+      },
+      "axe": {
+        "menuViolations": [],
+        "confirmationViolations": [],
+        "postDeleteViolations": []
+      },
+      "console": {
+        "externalDiagnostics": [
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/login"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-IcF1+IOmUsY0B89ehds5i/rU3l7X0AHUKiaFrX1rN60='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/login"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/home"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-bqUPayw9wPpEaLAKt1xrsLBM5DJ12iJG3BRSk7mXFSE='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/home"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-c+lkWmg8C6TmnGN6juq91tJ5AlBQduxMZ0jOZ1AShYo='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-qlaiZfkWk/N/KHcyfC3NWz5q7TL7vy8CRZwkFCARZ6w='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/sheds/new"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/sheds/new"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-tn1iQjPKp74NTmDIxTU1e3Q1zL9PV9J871Zw3R5uz7w='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-LnHi800SGzrTxnAOGKdSwoWwn8l1T+px2nv0lMHEntA='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-slck9UG/HNWJ7AWZKsCeo2BH+vU45Hmi9jAjnBMzOBI='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/events/ec5e77a9-acc9-43bf-a09b-236c36d18e13/delete"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/events/ec5e77a9-acc9-43bf-a09b-236c36d18e13/delete"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-llTCIqEMjJEojTgpTnlXoMC+pRhkniY6z5uZTLuezdk='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline#record-ec5e77a9-acc9-43bf-a09b-236c36d18e13"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline#record-ec5e77a9-acc9-43bf-a09b-236c36d18e13"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/events/ec5e77a9-acc9-43bf-a09b-236c36d18e13/delete"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-DJeJEvP2pRomVvVV7SHs/G+7jlj6pHDBEPcadnZsLes='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/events/ec5e77a9-acc9-43bf-a09b-236c36d18e13/delete"
+          },
+          {
+            "type": "error",
+            "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-amDL3xD3tSq+EVowLEKMIHM14K+vh+A6aW3lwbYnA0Q='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline?record_deleted=1#effective-history"
+          },
+          {
+            "type": "error",
+            "text": "Loading the script 'https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495' violates the following Content Security Policy directive: \"script-src 'self'\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+            "url": "https://tracker.theroccos.us/animals/9eda4959-018a-4e68-85b8-6391f972169e/timeline?record_deleted=1#effective-history"
+          }
+        ],
+        "harnessDiagnostics": [],
+        "applicationDiagnostics": [],
+        "pageErrors": []
+      }
+    }
+  ]
+}

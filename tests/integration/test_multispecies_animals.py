@@ -15,6 +15,7 @@ from snaketracker.application.animals import (
     AnimalValidationError,
     AssignEnclosureCommand,
     CorrectMoltCommand,
+    DeleteAnimalCareRecordCommand,
     RecordBathCommand,
     RecordFeedingCommand,
     RecordLengthCommand,
@@ -28,6 +29,7 @@ from snaketracker.application.animals import (
     VoidAnimalEventCommand,
 )
 from snaketracker.application.enclosures import (
+    DeleteEnclosureCareRecordCommand,
     EnclosureService,
     EnclosureValidationError,
     RecordMistingCommand,
@@ -851,6 +853,24 @@ def test_enclosure_misting_is_neutral_but_requires_an_applicable_occupant(
         )
         assert misting_view.title == "Misting recorded"
         assert misting_view.description == "20 seconds · Light wall mist."
+        enclosures.delete_care_record(
+            DeleteEnclosureCareRecordCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                "owner",
+                habitat.enclosure_id,
+                misting.event_id,
+                "m55-delete-misting",
+            )
+        )
+        assert misting.event_id not in {
+            event.event_id
+            for event in animals.effective_history(bootstrap.household_id, spider.animal_id)
+        }
+        assert any(
+            event.event_type == "event.voided"
+            for event in animals.audit_history(bootstrap.household_id, spider.animal_id)
+        )
         unmeasured_misting = enclosures.record_misting(
             RecordMistingCommand(
                 bootstrap.household_id,
@@ -900,6 +920,75 @@ def test_enclosure_misting_is_neutral_but_requires_an_applicable_occupant(
                     None,
                 )
             )
+    finally:
+        engine.dispose()
+
+
+def test_delete_respects_species_capabilities_for_bath_molt_and_premolt(tmp_path: Path) -> None:
+    animals, _store, bootstrap, engine = _services(tmp_path)
+    try:
+        snake = _register(animals, bootstrap, "snake", "Snake care")
+        spider = _register(animals, bootstrap, "spider", "Spider care")
+        bath = animals.record_bath(
+            RecordBathCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                snake.animal_id,
+                uuid4(),
+                "delete-snake-bath",
+                NOW,
+                10,
+                "Hydration",
+                None,
+            )
+        )
+        premolt = animals.record_premolt(
+            RecordPremoltCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                spider.animal_id,
+                uuid4(),
+                "delete-spider-premolt",
+                NOW,
+                True,
+                "Darkening",
+            )
+        )
+        molt = animals.record_molt(
+            RecordMoltCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                spider.animal_id,
+                uuid4(),
+                "delete-spider-molt",
+                NOW + timedelta(days=1),
+                "complete",
+                "Complete molt",
+            )
+        )
+        for animal_id, event_id, key in (
+            (snake.animal_id, bath.event.event_id, "delete-bath"),
+            (spider.animal_id, premolt.event.event_id, "delete-premolt"),
+            (spider.animal_id, molt.event.event_id, "delete-molt"),
+        ):
+            animals.delete_care_record(
+                DeleteAnimalCareRecordCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    "owner",
+                    animal_id,
+                    event_id,
+                    key,
+                )
+            )
+        assert bath.event.event_id not in {
+            event.event_id
+            for event in animals.effective_history(bootstrap.household_id, snake.animal_id)
+        }
+        spider_effective = animals.effective_history(bootstrap.household_id, spider.animal_id)
+        assert premolt.event.event_id not in {event.event_id for event in spider_effective}
+        assert molt.event.event_id not in {event.event_id for event in spider_effective}
+        assert animals.current_premolt_state(bootstrap.household_id, spider.animal_id) is None
     finally:
         engine.dispose()
 
