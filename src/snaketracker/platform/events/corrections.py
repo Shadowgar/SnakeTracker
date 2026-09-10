@@ -134,6 +134,43 @@ def evaluate_effective_events(events: tuple[DomainEvent, ...]) -> tuple[DomainEv
     return tuple(effective)
 
 
+def effective_event_root(
+    events: tuple[DomainEvent, ...], effective_event_id: object
+) -> DomainEvent | None:
+    """Return the immutable root represented by one currently effective event."""
+    base: list[DomainEvent] = []
+    replacements: dict[object, DomainEvent] = {}
+    voided: set[object] = set()
+    for event in events:
+        payload = event.payload
+        target_id = getattr(payload, "target_event_id", None)
+        if isinstance(payload, EventVoidedV1):
+            voided.add(payload.target_event_id)
+        elif isinstance(payload, EventReinstatedV1):
+            voided.discard(payload.target_event_id)
+        elif target_id is not None:
+            replacements[target_id] = event
+        else:
+            base.append(event)
+
+    for root in base:
+        if root.event_id in voided:
+            continue
+        current = root
+        seen: set[object] = set()
+        while current.event_id in replacements:
+            if current.event_id in seen:
+                raise CorrectionPolicyError("Correction replacement chain contains a cycle.")
+            seen.add(current.event_id)
+            replacement = replacements[current.event_id]
+            if replacement.event_id in voided:
+                break
+            current = replacement
+        if current.event_id == effective_event_id:
+            return root
+    return None
+
+
 def _active_void(target_event_id: object, controls: tuple[DomainEvent, ...]) -> DomainEvent | None:
     active: DomainEvent | None = None
     for event in controls:

@@ -247,6 +247,21 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
 .timeline-list li::before { position: absolute; top: .2rem; left: -.4rem; width: .7rem; height: .7rem; border-radius: 50%; background: var(--color-primary); content: ""; }
 .timeline-list time, .timeline-list p { color: var(--color-text-muted); }
 .timeline-list p { margin: var(--space-1) 0 0; }
+.timeline-record { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: var(--space-3); }
+.record-actions { position: relative; }
+.record-actions summary { display: grid; width: 2.75rem; min-height: 2.75rem; place-items: center; border: 1px solid transparent; border-radius: var(--radius-sm); color: var(--color-text-secondary); cursor: pointer; font-size: var(--text-lg); font-weight: 900; list-style: none; }
+.record-actions summary::-webkit-details-marker { display: none; }
+.record-actions summary:hover, .record-actions[open] summary { border-color: var(--color-border); background: var(--color-surface-hover); }
+.record-actions-menu { position: absolute; z-index: 2; top: calc(100% + .25rem); right: 0; min-width: 9.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: var(--space-2); background: var(--color-surface-raised); box-shadow: var(--shadow-overlay); }
+.record-actions-menu a { display: flex; min-height: 2.75rem; align-items: center; border-radius: var(--radius-xs); padding: .55rem .7rem; color: var(--color-overdue); font-weight: 800; text-decoration: none; white-space: nowrap; }
+.record-actions-menu a:hover { background: var(--color-overdue-soft); }
+.confirmation-page { display: grid; min-height: min(34rem, 70vh); place-items: center; }
+.confirmation-dialog { display: grid; width: min(100%, 34rem); gap: var(--space-4); }
+.confirmation-dialog > * { margin-block: 0; }
+.record-summary { border-left: .25rem solid var(--color-primary); padding: var(--space-3); background: var(--color-primary-soft); }
+.danger-action { background: var(--color-overdue); color: #161117; }
+.danger-action:hover { background: #ff97a3; }
+.success-message { border: 1px solid rgba(102,214,163,.35); border-left: .3rem solid var(--color-success); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); background: var(--color-success-soft); }
 .technical-audit { border-top: 1px solid var(--color-border); padding-top: var(--space-5); }
 .technical-audit[open] > summary { margin-bottom: var(--space-6); }
 .audit-section { display: grid; gap: var(--space-4); }

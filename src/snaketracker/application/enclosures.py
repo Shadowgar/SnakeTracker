@@ -21,13 +21,20 @@ from snaketracker.domains.enclosures.contracts import (
     EnclosureStatusChangedV1,
     EnclosureWaterChangeRecordedV1,
 )
-from snaketracker.platform.events.corrections import evaluate_effective_events
+from snaketracker.platform.events.control_contracts import EventVoidedV1
+from snaketracker.platform.events.corrections import (
+    CorrectionAction,
+    effective_event_root,
+    evaluate_effective_events,
+    validate_correction,
+)
 from snaketracker.platform.events.envelope import (
     DomainEvent,
     EventPayload,
     EventSubject,
     event_checksum,
 )
+from snaketracker.platform.events.registry import production_event_registry
 from snaketracker.platform.events.store import (
     AtomicAppendRequest,
     EventStore,
@@ -36,6 +43,14 @@ from snaketracker.platform.events.store import (
     StreamKey,
     SynchronousProjection,
     canonical_command_hash,
+)
+
+DELETABLE_ENCLOSURE_CARE_EVENT_TYPES = frozenset(
+    {
+        "enclosure.cleaning_recorded",
+        "enclosure.water_change_recorded",
+        "enclosure.misting_recorded",
+    }
 )
 
 
@@ -143,6 +158,16 @@ class RecordMistingCommand:
     occurred_at: datetime
     duration_seconds: int | None
     notes: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class DeleteEnclosureCareRecordCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    actor_role: str
+    enclosure_id: UUID
+    effective_event_id: UUID
+    idempotency_key: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -304,6 +329,69 @@ class EnclosureService:
         """Return the enclosure stream with void/correction controls applied."""
         return evaluate_effective_events(
             self._event_store.load_stream(StreamKey(household_id, "enclosure", enclosure_id))
+        )
+
+    def delete_care_record(self, command: DeleteEnclosureCareRecordCommand) -> DomainEvent:
+        """Remove one effective maintenance record through the shared void contract."""
+        key = StreamKey(command.household_id, "enclosure", command.enclosure_id)
+        existing = self._event_store.load_stream(key)
+        target = effective_event_root(existing, command.effective_event_id)
+        if target is None or target.event_type not in DELETABLE_ENCLOSURE_CARE_EVENT_TYPES:
+            raise EnclosureValidationError("Care record is not available to delete.")
+        recorded_at = datetime.now(UTC)
+        reason = "Deleted by keeper as an incorrect record."
+        event = _event(
+            key=key,
+            event_id=uuid4(),
+            stream_version=len(existing) + 1,
+            event_type="event.voided",
+            occurred_at=recorded_at,
+            recorded_at=recorded_at,
+            actor_user_id=command.actor_user_id,
+            correlation_id=target.correlation_id,
+            causation_id=target.event_id,
+            idempotency_key=command.idempotency_key,
+            title="Care record voided",
+            payload=EventVoidedV1(target.event_id, reason),
+            notes=reason,
+            related_subjects=tuple(
+                subject for subject in target.subjects if subject.relationship != "primary"
+            ),
+        )
+        registration = production_event_registry.registration(
+            target.event_type, target.schema_version
+        )
+        validate_correction(
+            CorrectionAction.VOID,
+            target,
+            event,
+            registration.correction,
+            command.actor_role,
+            existing,
+        )
+        append = self._event_store.append_many(
+            AtomicAppendRequest(
+                streams=(StreamAppend(key, len(existing), (event,)),),
+                idempotency=_idempotency(
+                    household_id=command.household_id,
+                    actor_user_id=command.actor_user_id,
+                    operation_scope=f"enclosures.delete.{target.event_type}",
+                    idempotency_key=command.idempotency_key,
+                    correlation_id=target.correlation_id,
+                    stored_response={"event_id": str(event.event_id)},
+                    command={"effective_event_id": str(command.effective_event_id)},
+                    recorded_at=recorded_at,
+                ),
+                synchronous_projections=(self._projection,),
+            )
+        )
+        event_id = append.stored_response.get("event_id")
+        if not isinstance(event_id, str):
+            raise RuntimeError("Enclosure care deletion did not retain its stored response.")
+        return next(
+            stored
+            for stored in self._event_store.load_stream(key)
+            if str(stored.event_id) == event_id
         )
 
     def _record_maintenance(

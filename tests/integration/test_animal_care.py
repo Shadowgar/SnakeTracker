@@ -8,6 +8,7 @@ import pytest
 from alembic import command
 from alembic.config import Config
 
+from snaketracker.application.analytics import AnimalAnalyticsService
 from snaketracker.application.animals import (
     AnimalService,
     AnimalValidationError,
@@ -15,6 +16,7 @@ from snaketracker.application.animals import (
     CorrectLengthCommand,
     CorrectShedCommand,
     CorrectWeightCommand,
+    DeleteAnimalCareRecordCommand,
     RecordBathCommand,
     RecordFeedingCommand,
     RecordLengthCommand,
@@ -35,6 +37,7 @@ from snaketracker.infrastructure.identity.bootstrap_repository import (
     SQLAlchemyHouseholdBootstrapRepository,
 )
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
+from snaketracker.platform.events.control_contracts import EventVoidedV1
 
 ROOT = Path(__file__).parents[2]
 SECRET = b"phase4-animal-care-test-secret-32-bytes"
@@ -482,5 +485,220 @@ def test_care_corrections_and_void_reinstatement_preserve_effective_history(
         ]
         assert reinstated.event.causation_id == void.event.event_id
         assert reinstated.event.correlation_id == bath.event.correlation_id
+    finally:
+        engine.dispose()
+
+
+def test_keeper_delete_removes_only_duplicate_shed_and_preserves_immutable_replay(
+    tmp_path: Path,
+) -> None:
+    database = tmp_path / "care-record-delete.sqlite3"
+    config = Config(ROOT / "alembic.ini")
+    config.set_main_option("script_location", str(ROOT / "migrations"))
+    config.set_main_option("sqlalchemy.url", f"sqlite+pysqlite:///{database}")
+    command.upgrade(config, "head")
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    try:
+        bootstrap = HouseholdBootstrapService(
+            SQLAlchemyHouseholdBootstrapRepository(engine),
+            Argon2PasswordHasher.for_testing(),
+            command_hash_secret=SECRET,
+        ).bootstrap(
+            BootstrapCommand(
+                "Correction Home",
+                "UTC",
+                "owner@example.com",
+                "Owner",
+                "correct horse battery staple",
+                "care-delete-bootstrap",
+                uuid4(),
+            )
+        )
+        store = SQLAlchemyEventStore(engine)
+        service = AnimalService(store, SQLAlchemyAnimalCurrentProjection(engine))
+        animal = service.register(
+            RegisterAnimalCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                uuid4(),
+                "care-delete-animal",
+                "Nyx",
+                "Python regius",
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+        )
+        legitimate = service.record_shed(
+            RecordShedCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                animal.animal_id,
+                uuid4(),
+                "care-delete-legitimate-shed",
+                datetime(2026, 8, 1, 12, tzinfo=UTC),
+                False,
+                True,
+                "complete",
+                "Legitimate shed.",
+            )
+        )
+        duplicate = service.record_shed(
+            RecordShedCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                animal.animal_id,
+                uuid4(),
+                "care-delete-duplicate-shed",
+                datetime(2026, 8, 1, 12, 5, tzinfo=UTC),
+                False,
+                True,
+                "complete",
+                "Accidental duplicate.",
+            )
+        )
+        before = service.audit_history(bootstrap.household_id, animal.animal_id)
+        assert (
+            len(
+                AnimalAnalyticsService(service)
+                .for_animal(
+                    bootstrap.household_id, animal.animal_id, as_of=datetime.now(UTC).date()
+                )
+                .husbandry
+            )
+            == 2
+        )
+
+        deleted = service.delete_care_record(
+            DeleteAnimalCareRecordCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                "owner",
+                animal.animal_id,
+                duplicate.event.event_id,
+                "care-delete-duplicate",
+            )
+        )
+
+        audit = service.audit_history(bootstrap.household_id, animal.animal_id)
+        effective = service.effective_history(bootstrap.household_id, animal.animal_id)
+        assert len(audit) == len(before) + 1
+        assert deleted.event.event_type == "event.voided"
+        assert isinstance(deleted.event.payload, EventVoidedV1)
+        assert deleted.event.payload.target_event_id == duplicate.event.event_id
+        assert duplicate.event.event_id in {event.event_id for event in audit}
+        assert [
+            event.event_id for event in effective if event.event_type == "animal.shed_recorded"
+        ] == [legitimate.event.event_id]
+        assert (
+            len(
+                AnimalAnalyticsService(service)
+                .for_animal(
+                    bootstrap.household_id, animal.animal_id, as_of=datetime.now(UTC).date()
+                )
+                .husbandry
+            )
+            == 1
+        )
+        replayed = AnimalService(store, SQLAlchemyAnimalCurrentProjection(engine))
+        assert replayed.effective_history(bootstrap.household_id, animal.animal_id) == effective
+        with pytest.raises(AnimalValidationError, match="not available"):
+            service.delete_care_record(
+                DeleteAnimalCareRecordCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    "owner",
+                    animal.animal_id,
+                    duplicate.event.event_id,
+                    "care-delete-again",
+                )
+            )
+        with pytest.raises(AnimalValidationError, match="not available"):
+            service.delete_care_record(
+                DeleteAnimalCareRecordCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    "owner",
+                    animal.animal_id,
+                    uuid4(),
+                    "care-delete-fabricated",
+                )
+            )
+
+        service.record_weight(
+            RecordWeightCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                animal.animal_id,
+                uuid4(),
+                "care-delete-old-weight",
+                datetime(2026, 8, 2, 12, tzinfo=UTC),
+                500,
+                "Verified weight.",
+            )
+        )
+        duplicate_weight = service.record_weight(
+            RecordWeightCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                animal.animal_id,
+                uuid4(),
+                "care-delete-new-weight",
+                datetime(2026, 8, 3, 12, tzinfo=UTC),
+                900,
+                "Incorrect weight.",
+            )
+        )
+        service.record_length(
+            RecordLengthCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                animal.animal_id,
+                uuid4(),
+                "care-delete-old-length",
+                datetime(2026, 8, 2, 12, tzinfo=UTC),
+                900,
+                "Verified length.",
+            )
+        )
+        duplicate_length = service.record_length(
+            RecordLengthCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                animal.animal_id,
+                uuid4(),
+                "care-delete-new-length",
+                datetime(2026, 8, 3, 12, tzinfo=UTC),
+                1200,
+                "Incorrect length.",
+            )
+        )
+        for event_id, key in (
+            (duplicate_weight.event.event_id, "care-delete-weight"),
+            (duplicate_length.event.event_id, "care-delete-length"),
+        ):
+            service.delete_care_record(
+                DeleteAnimalCareRecordCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    "owner",
+                    animal.animal_id,
+                    event_id,
+                    key,
+                )
+            )
+        measurements = (
+            AnimalAnalyticsService(service)
+            .for_animal(bootstrap.household_id, animal.animal_id, as_of=datetime.now(UTC).date())
+            .measurements
+        )
+        assert [(item.kind, item.value) for item in measurements] == [
+            ("weight", 500),
+            ("length", 900),
+        ]
     finally:
         engine.dispose()

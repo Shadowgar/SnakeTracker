@@ -39,6 +39,7 @@ from snaketracker.application.animals import (
     CorrectMoltCommand,
     CorrectShedCommand,
     CorrectWeightCommand,
+    DeleteAnimalCareRecordCommand,
     RecordBathCommand,
     RecordFeedingCommand,
     RecordLengthCommand,
@@ -67,7 +68,9 @@ from snaketracker.application.backups import (
 )
 from snaketracker.application.dashboard import DashboardStatisticsService
 from snaketracker.application.enclosures import (
+    DELETABLE_ENCLOSURE_CARE_EVENT_TYPES,
     ChangeEnclosureStatusCommand,
+    DeleteEnclosureCareRecordCommand,
     EnclosureService,
     EnclosureValidationError,
     RecordCleaningCommand,
@@ -424,13 +427,26 @@ def _timeline_context(
         enclosure.enclosure_id: enclosure.name
         for enclosure in enclosure_service.list_profiles(household_id)
     }
+    effective_events = animal_service.effective_history(household_id, animal_id)
     return {
         "events": present_effective_care_events(
-            animal_service.effective_history(household_id, animal_id),
+            effective_events,
             enclosure_names=enclosure_names,
         ),
         "audit_events": present_care_events(audit_events, enclosure_names=enclosure_names),
         "errors": {},
+        "deletable_event_ids": frozenset(
+            event.event_id
+            for event in effective_events
+            if (
+                event.stream_type == "animal"
+                and event.event_type in CONTROLLABLE_ANIMAL_EVENT_TYPES
+            )
+            or (
+                event.stream_type == "enclosure"
+                and event.event_type == "enclosure.misting_recorded"
+            )
+        ),
         **_timeline_action_ids(audit_events),
     }
 
@@ -446,6 +462,47 @@ def _animal_event(
         ),
         None,
     )
+
+
+def _effective_animal_event(
+    animal_service: AnimalService, household_id: UUID, animal_id: UUID, event_id: UUID
+) -> DomainEvent | None:
+    return next(
+        (
+            event
+            for event in animal_service.effective_history(household_id, animal_id)
+            if event.event_id == event_id
+            and (
+                (
+                    event.stream_type == "animal"
+                    and event.event_type in CONTROLLABLE_ANIMAL_EVENT_TYPES
+                )
+                or (
+                    event.stream_type == "enclosure"
+                    and event.event_type == "enclosure.misting_recorded"
+                )
+            )
+        ),
+        None,
+    )
+
+
+def _care_record_kind(event_type: str) -> str:
+    return {
+        "animal.feeding_recorded": "feeding",
+        "animal.feeding_corrected": "feeding",
+        "animal.weight_recorded": "weight",
+        "animal.weight_corrected": "weight",
+        "animal.length_recorded": "length",
+        "animal.length_corrected": "length",
+        "animal.shed_recorded": "shed",
+        "animal.shed_corrected": "shed",
+        "animal.bath_recorded": "bath",
+        "animal.molt_recorded": "molt",
+        "animal.molt_corrected": "molt",
+        "animal.premolt_observed": "premolt",
+        "enclosure.misting_recorded": "misting",
+    }[event_type]
 
 
 def _correct_animal_event_from_form(
@@ -3929,6 +3986,115 @@ def create_web_router(
             )
         return RedirectResponse(f"/animals/{animal_id}/timeline", status_code=303)
 
+    @router.get("/animals/{animal_id}/events/{event_id}/delete", response_class=HTMLResponse)
+    async def animal_care_record_delete_confirmation(
+        request: Request, animal_id: str, event_id: str
+    ) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            animal_uuid = UUID(animal_id)
+            event_uuid = UUID(event_id)
+            profile = animal_service.profile_for(principal.household_id, animal_uuid)
+            target = _effective_animal_event(
+                animal_service, principal.household_id, animal_uuid, event_uuid
+            )
+        except ValueError:
+            profile = None
+            target = None
+        if profile is None or target is None:
+            return templates.TemplateResponse(
+                request,
+                "error.html",
+                {
+                    "title": "Care record not found",
+                    "message": "Return to the animal history and try again.",
+                },
+                status_code=404,
+            )
+        enclosure_names = {
+            enclosure.enclosure_id: enclosure.name
+            for enclosure in enclosure_service.list_profiles(principal.household_id)
+        }
+        target_view = present_care_events((target,), enclosure_names=enclosure_names)[0]
+        return protected_page(
+            request,
+            "animal_event_delete.html",
+            principal,
+            context={
+                "animal": profile,
+                "target": target_view,
+                "record_kind": _care_record_kind(target.event_type),
+                "errors": {},
+            },
+        )
+
+    @router.post("/animals/{animal_id}/events/{event_id}/delete", response_class=HTMLResponse)
+    async def animal_care_record_delete(
+        request: Request, animal_id: str, event_id: str
+    ) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None
+        assert form is not None
+        try:
+            animal_uuid = UUID(animal_id)
+            event_uuid = UUID(event_id)
+            profile = animal_service.profile_for(principal.household_id, animal_uuid)
+            target = _effective_animal_event(
+                animal_service, principal.household_id, animal_uuid, event_uuid
+            )
+            if profile is None or target is None:
+                raise FormValidationError("Care record is not available to delete.")
+            if target.stream_type == "animal":
+                animal_service.delete_care_record(
+                    DeleteAnimalCareRecordCommand(
+                        household_id=principal.household_id,
+                        actor_user_id=principal.user_id,
+                        actor_role=principal.role,
+                        animal_id=animal_uuid,
+                        effective_event_id=target.event_id,
+                        idempotency_key=_form_idempotency_key(form),
+                    )
+                )
+                reminder_fact_service.recalculate_subject(
+                    principal.household_id, "animal", animal_uuid, now=datetime.now(UTC)
+                )
+            elif (
+                target.stream_type == "enclosure"
+                and target.event_type in DELETABLE_ENCLOSURE_CARE_EVENT_TYPES
+            ):
+                enclosure_service.delete_care_record(
+                    DeleteEnclosureCareRecordCommand(
+                        household_id=principal.household_id,
+                        actor_user_id=principal.user_id,
+                        actor_role=principal.role,
+                        enclosure_id=target.stream_id,
+                        effective_event_id=target.event_id,
+                        idempotency_key=_form_idempotency_key(form),
+                    )
+                )
+                reminder_fact_service.recalculate_subject(
+                    principal.household_id, "enclosure", target.stream_id, now=datetime.now(UTC)
+                )
+            else:
+                raise FormValidationError("Care record is not available to delete.")
+        except (AnimalValidationError, EnclosureValidationError, FormValidationError, ValueError):
+            return templates.TemplateResponse(
+                request,
+                "error.html",
+                {
+                    "title": "Care record not available",
+                    "message": "Return to the animal history and try again.",
+                },
+                status_code=404,
+            )
+        return RedirectResponse(
+            f"/animals/{animal_id}/timeline?record_deleted=1#effective-history", status_code=303
+        )
+
     @router.get("/animals/{animal_id}/timeline", response_class=HTMLResponse)
     async def animal_timeline(request: Request, animal_id: str) -> Response:
         principal = principal_for(request, audit_denial=True)
@@ -3962,6 +4128,7 @@ def create_web_router(
                     principal.household_id,
                     animal_uuid,
                 ),
+                "record_deleted": request.query_params.get("record_deleted") == "1",
             },
         )
 

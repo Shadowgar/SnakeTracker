@@ -11,6 +11,7 @@ from snaketracker.platform.events.control_contracts import EventReinstatedV1, Ev
 from snaketracker.platform.events.corrections import (
     CorrectionAction,
     CorrectionPolicyError,
+    effective_event_root,
     evaluate_effective_events,
     validate_correction,
 )
@@ -423,3 +424,31 @@ def test_voiding_a_correction_restores_its_predecessor_until_reinstated() -> Non
 
     assert evaluate_effective_events((original, correction, void)) == (original,)
     assert evaluate_effective_events((original, correction, void, reinstate)) == (correction,)
+
+
+def test_effective_event_root_resolves_visible_correction_and_rejects_inactive_records() -> None:
+    correlation_id = uuid4()
+    original = make_event(
+        cast(EventPayload, SyntheticCounterChangedV2(5, "original")),
+        "__snaketracker_test__.counter.changed",
+        1,
+        correlation_id=correlation_id,
+    )
+    correction = make_event(
+        cast(EventPayload, SyntheticCounterCorrectedV1(original.event_id, 8)),
+        "__snaketracker_test__.counter.corrected",
+        2,
+        correlation_id=correlation_id,
+        causation_id=original.event_id,
+    )
+    void = make_event(
+        cast(EventPayload, EventVoidedV1(original.event_id, "duplicate")),
+        "event.voided",
+        3,
+        correlation_id=correlation_id,
+        causation_id=original.event_id,
+    )
+
+    assert effective_event_root((original, correction), correction.event_id) == original
+    assert effective_event_root((original, correction), original.event_id) is None
+    assert effective_event_root((original, correction, void), correction.event_id) is None

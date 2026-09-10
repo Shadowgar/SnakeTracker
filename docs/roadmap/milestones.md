@@ -222,6 +222,22 @@ Status: Technical qualification passed; explicit final owner acceptance pending
 - [x] RB PR #8 is current, review-ready, and retains the required evidence; this criterion alone does not authorize merge.
 - [ ] RB The owner explicitly accepts M6. Only then may M6 be marked accepted and PR #8 merge be separately authorized.
 
+## Phase 6.2 / M6.2 — Care Record Correction
+
+Status: Technical qualification passed; owner review pending
+
+M6.2 is a bounded post-M6 production correctness enhancement discovered through real household
+use. It does not reopen or invalidate accepted M6. M6.5-A remains paused until this correction is
+qualified and presented for owner review.
+
+- [x] RB Eligible, currently effective Animal History entries expose a compact, accessible **Delete record** action and a record-specific confirmation. (`R-083`, `AT-M62-01`)
+- [x] RB Keeper-facing deletion appends the existing typed `event.voided` control against the immutable logical root, including corrected records; it never issues a hard delete. (`R-005`, `R-083`, `AT-M62-01`)
+- [x] RB Effective History, trends/analytics, reminder calculation, reports/CSV, search, and replay ignore deleted care records, while prior legitimate measurements and records become effective again where applicable. (`R-007`, `R-020`, `R-044`, `R-045`, `R-083`, `AT-M62-01`)
+- [x] RB Stock-linked feeding deletion uses the existing atomic inventory-consumption reversal; unlinked refused feedings create no inventory adjustment. (`R-011`, `R-083`, `AT-M62-01`)
+- [x] RB Delete is limited to capability-supported feeding, weight, length, shed, bath/soak, molt, premolt, and related misting records; account, household, registration, profile, security, enclosure assignment, and other specialized/system events remain excluded. (`R-032`, `R-047`, `R-083`, `AT-M62-01`)
+- [x] RB Frozen quality, isolated browser/accessibility, verified backup, live-data baseline, safe Raspberry Pi deployment, post-deploy integrity/health, and hosted CI checks pass with evidence under [`m6.2-care-record-correction`](../evidence/m6-product-experience/m6.2-care-record-correction/README.md). (`R-083`, `AT-M62-01`)
+- [ ] RB Owner reviews and accepts M6.2 before M6.5-A implementation resumes.
+
 ## Phase 6.5 / M6.5 — Inventory intelligence and cost tracking
 
 Status: Planned — not implemented

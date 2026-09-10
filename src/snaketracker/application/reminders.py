@@ -655,6 +655,19 @@ class ReminderFactService:
         self._projection.replace_rule_facts(household_id, rule_id, facts)
         return facts
 
+    def recalculate_subject(
+        self,
+        household_id: UUID,
+        subject_type: str,
+        subject_id: UUID,
+        *,
+        now: datetime,
+    ) -> None:
+        """Refresh persisted facts for every rule affected by a subject history change."""
+        for rule in self._projection.rules_for(household_id):
+            if rule.subject_type == subject_type and rule.subject_id == subject_id:
+                self.recalculate_rule(household_id, rule.rule_id, now=now)
+
     def agenda_for(self, household_id: UUID, *, now: datetime) -> tuple[ReminderAgendaItem, ...]:
         calculated_at = _aware_utc(now, "Agenda calculation time")
         timezone = ZoneInfo(self._projection.household_timezone(household_id))

@@ -259,6 +259,167 @@ def test_authenticated_keeper_can_track_animal_care_and_enclosure_workflow(
         assert "925 mm" in invalid_photo.text
 
 
+def test_keeper_deletes_accidental_duplicate_shed_through_confirmed_effective_history(
+    tmp_path: Path,
+) -> None:
+    occurred = (datetime.now(UTC) - timedelta(days=2)).replace(microsecond=0)
+    with client_for(tmp_path) as client:
+        setup_and_sign_in(client)
+        form = client.get("/animals/new")
+        created = client.post(
+            "/animals",
+            data={
+                "csrf_token": csrf_from(form.text),
+                "idempotency_key": "delete-record-animal",
+                "name": "Nyx",
+                "species": "Python regius",
+                "sex": "female",
+            },
+            follow_redirects=False,
+        )
+        animal_url = created.headers["location"]
+        for index, note in enumerate(("Verified shed.", "Accidental duplicate shed.")):
+            page = client.get(animal_url)
+            response = client.post(
+                f"{animal_url}/sheds",
+                data={
+                    "csrf_token": csrf_from(page.text),
+                    "idempotency_key": f"delete-record-shed-{index}",
+                    "occurred_at": (occurred + timedelta(minutes=index)).strftime("%Y-%m-%dT%H:%M"),
+                    "blue_state": "false",
+                    "completed": "true",
+                    "result": "complete",
+                    "notes": note,
+                },
+                follow_redirects=False,
+            )
+            assert response.status_code == 303
+
+        animal_id = animal_url.rsplit("/", 1)[-1]
+        with client.app.state.database_engine.connect() as connection:
+            duplicate_id = connection.execute(
+                text(
+                    "SELECT event_id FROM domain_events WHERE stream_id=:animal_id "
+                    "AND event_type='animal.shed_recorded' AND notes=:notes"
+                ),
+                {"animal_id": animal_id, "notes": "Accidental duplicate shed."},
+            ).scalar_one()
+            event_count_before = connection.execute(
+                text("SELECT count(*) FROM domain_events")
+            ).scalar_one()
+
+        timeline = client.get(f"{animal_url}/timeline")
+        effective = timeline.text.split('<details class="technical-audit"', 1)[0]
+        assert effective.count("Delete record") == 2
+        assert "Verified shed." in effective
+        assert "Accidental duplicate shed." in effective
+        assert 'class="record-actions"' in effective
+        delete_url = f"{animal_url}/events/{duplicate_id}/delete"
+        confirmation = client.get(delete_url)
+        assert confirmation.status_code == 200
+        assert "Delete shed record?" in confirmation.text
+        assert "Accidental duplicate shed." in confirmation.text
+        assert "This record will be removed from your animal's history and calculations." in (
+            confirmation.text
+        )
+        assert 'role="alertdialog"' in confirmation.text
+        assert "autofocus" in confirmation.text
+        assert f'href="{animal_url}/timeline#record-{duplicate_id}"' in confirmation.text
+
+        with client.app.state.database_engine.connect() as connection:
+            assert (
+                connection.execute(text("SELECT count(*) FROM domain_events")).scalar_one()
+                == event_count_before
+            )
+        assert client.post(delete_url, data={}).status_code == 403
+        deleted = client.post(
+            delete_url,
+            data={
+                "csrf_token": csrf_from(confirmation.text),
+                "idempotency_key": "delete-record-confirmed",
+            },
+            follow_redirects=False,
+        )
+        assert deleted.status_code == 303
+        assert deleted.headers["location"].endswith("/timeline?record_deleted=1#effective-history")
+        updated = client.get(deleted.headers["location"])
+        standard_history = updated.text.split('<details class="technical-audit"', 1)[0]
+        assert "Record deleted. History and calculations are updated." in standard_history
+        assert "Verified shed." in standard_history
+        assert "Accidental duplicate shed." not in standard_history
+        assert "Accidental duplicate shed." in updated.text
+        assert "Care record voided" in updated.text
+        assert client.get(delete_url).status_code == 404
+        assert (
+            client.post(
+                delete_url,
+                data={
+                    "csrf_token": csrf_from(updated.text),
+                    "idempotency_key": "delete-record-double-void",
+                },
+            ).status_code
+            == 404
+        )
+
+        with client.app.state.database_engine.connect() as connection:
+            assert (
+                connection.execute(text("SELECT count(*) FROM domain_events")).scalar_one()
+                == event_count_before + 1
+            )
+            assert (
+                connection.execute(
+                    text(
+                        "SELECT count(*) FROM domain_events WHERE event_id=:event_id "
+                        "AND event_type='animal.shed_recorded'"
+                    ),
+                    {"event_id": duplicate_id},
+                ).scalar_one()
+                == 1
+            )
+
+        assert "Accidental duplicate shed." not in client.get("/search?q=Accidental+duplicate").text
+        assert "Accidental duplicate shed." not in client.get("/reports/care").text
+        assert "Accidental duplicate shed." not in client.get("/reports/care.csv").text
+
+        more = client.get("/more")
+        assert (
+            client.post(
+                "/logout", data={"csrf_token": csrf_from(more.text)}, follow_redirects=False
+            ).status_code
+            == 303
+        )
+        registration = client.get("/register")
+        assert (
+            client.post(
+                "/register",
+                data={
+                    "csrf_token": csrf_from(registration.text),
+                    "idempotency_key": "delete-record-other-household",
+                    "collection_name": "Other Collection",
+                    "timezone": "UTC",
+                    "display_name": "Other Keeper",
+                    "email": "other@example.com",
+                    "password": "another correct horse battery staple",
+                    "password_confirmation": "another correct horse battery staple",
+                },
+                follow_redirects=False,
+            ).status_code
+            == 303
+        )
+        assert client.get(delete_url).status_code == 404
+        other_page = client.get("/animals")
+        assert (
+            client.post(
+                delete_url,
+                data={
+                    "csrf_token": csrf_from(other_page.text),
+                    "idempotency_key": "delete-record-cross-household",
+                },
+            ).status_code
+            == 404
+        )
+
+
 def test_enclosure_reassignment_is_identified_and_only_current_occupancy_is_shown(
     tmp_path: Path,
 ) -> None:

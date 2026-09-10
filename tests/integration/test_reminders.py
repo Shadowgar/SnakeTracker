@@ -13,6 +13,7 @@ from snaketracker.application.animals import (
     AnimalService,
     CorrectFeedingCommand,
     CorrectWeightCommand,
+    DeleteAnimalCareRecordCommand,
     RecordBathCommand,
     RecordFeedingCommand,
     RecordLengthCommand,
@@ -495,6 +496,74 @@ def test_correct_void_and_reinstate_recalculate_from_effective_weight_history(
             now=datetime(2026, 8, 6, 13, 0, tzinfo=UTC),
         )
         assert after_reinstate[0].source_event_id == corrected.event.event_id
+    finally:
+        engine.dispose()
+
+
+def test_keeper_delete_reconciles_event_relative_reminder_to_previous_record(
+    tmp_path: Path,
+) -> None:
+    engine, bootstrap, animals, _enclosures, animal_id, _enclosure_id, rules, facts, _projection = (
+        _setup(tmp_path)
+    )
+    try:
+        first = animals.record_weight(
+            RecordWeightCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                animal_id,
+                uuid4(),
+                "delete-reminder-first-weight",
+                datetime(2026, 7, 1, 13, tzinfo=UTC),
+                500,
+                None,
+            )
+        )
+        duplicate = animals.record_weight(
+            RecordWeightCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                animal_id,
+                uuid4(),
+                "delete-reminder-duplicate-weight",
+                datetime(2026, 7, 5, 13, tzinfo=UTC),
+                500,
+                "Duplicate",
+            )
+        )
+        rule = rules.create(
+            _rule_command(bootstrap, animal_id, reminder_type="weight", interval_days=30)
+        )
+        initial = facts.recalculate_rule(
+            bootstrap.household_id,
+            rule.rule_id,
+            now=datetime(2026, 8, 6, 13, tzinfo=UTC),
+        )
+        assert initial[0].source_event_id == duplicate.event.event_id
+
+        animals.delete_care_record(
+            DeleteAnimalCareRecordCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                "owner",
+                animal_id,
+                duplicate.event.event_id,
+                "delete-reminder-duplicate",
+            )
+        )
+        facts.recalculate_subject(
+            bootstrap.household_id,
+            "animal",
+            animal_id,
+            now=datetime(2026, 8, 6, 13, tzinfo=UTC),
+        )
+        reconciled = facts.recalculate_rule(
+            bootstrap.household_id,
+            rule.rule_id,
+            now=datetime(2026, 8, 6, 13, tzinfo=UTC),
+        )
+        assert reconciled[0].source_event_id == first.event.event_id
+        assert reconciled[0].due_at == datetime(2026, 7, 31, 13, tzinfo=UTC)
     finally:
         engine.dispose()
 

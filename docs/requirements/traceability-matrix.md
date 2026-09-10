@@ -86,6 +86,7 @@ This matrix is authoritative for architecture acceptance. Evidence paths are rel
 | R-080 | Public media design qualifies validation, size/video processing, safe delivery, metadata privacy, retention, authorization, caching, abuse limits, storage, and Raspberry Pi capacity before enablement | RB/RD | 0017, 0024, 0028, 0036 | TM-06, TM-07, TM-18, TM-20 | 9 design/implementation | AR-PUB-01 architecture review; AT-PUB-04 adversarial media, metadata, retention, cache, rate, and capacity suite | m9-public-media/architecture-and-security | M9 |
 | R-081 | Anonymous visitors cannot access private animals/albums, household data, private care history, inventory, expenses, schedules, backups, operations, or internal attachment identifiers/routes | RD | 0015, 0017, 0029, 0032, 0035 | TM-04, TM-06, TM-07, TM-08, TM-16 | 9 | AT-PUB-05 public/private leakage matrix and independent security review | m9-public-media/security/no-leakage | M9 |
 | R-082 | Profile-photo upload accepts ordinary modern phone images, including the known 5.7 MB 3072×4080 case, by validating decoded content and producing orientation-correct, metadata-stripped web derivatives within justified file, pixel, memory, timeout, and ARM64 resource bounds without weakening attachment authorization or safe serving | RB/RD | 0017, 0024, 0034, 0036 | TM-04, TM-06, TM-07, TM-18 | 6.1 | AT-M61-06 `attachments.py`/storage/backup/Nginx; processing, attachment, browser, container, authorization, and native ARM64 resource tests | m6-product-experience/m6.1-usability-corrections#r-082--bounded-privacy-safe-profile-photo-processing | M6.1 owner-reviewed; final M6 acceptance pending |
+| R-083 | A household user can delete an incorrectly entered, currently effective care record through a keeper-facing Delete action while immutable history is preserved through the accepted void/correction mechanism; effective history, analytics, reminders, reports, search, replay, and linked side effects reconcile consistently and atomically where required | RB | 0006, 0007, 0011, 0014, 0019, 0020, 0031, 0034 | TM-04, TM-05, TM-09, TM-11, TM-18 | 6.2 | AT-M62-01 duplicate-shed, feeding/inventory, measurement, capability, correction-chain, isolation, CSRF, browser, accessibility, replay, and live-safety suite | m6-product-experience/m6.2-care-record-correction | M6.2 owner review pending |
 
 ## Coverage rule
 
@@ -109,6 +110,8 @@ A mandatory requirement is satisfied only when its governing document is accepte
   Production husbandry guidance remains unavailable pending its separate source-bundle approval.
 - **M6.5 inventory intelligence and cost tracking planned** — requirements `R-070`–`R-076`; no
   implementation or costing-policy decision has started.
+- **M6.2 care record correction in progress** — requirement `R-083`; this bounded production
+  correction follows M6 without reopening it and must be owner-reviewed before M6.5-A continues.
 - **M7 recovery and formal Raspberry Pi deployment qualification unstarted** — its existing scope
   remains mandatory and early owner-review Pi use does not satisfy it.
 - **M8 production release acceptance unstarted** — existing release/security/evidence gates remain

@@ -16,6 +16,7 @@ a strict-CSP read-only PWA shell. No production husbandry guidance is enabled.
 - [Owner-review demo and login recovery](owner-review/README.md)
 - [UX Overhaul Pass 4 owner-review evidence](owner-review/ux-pass4/README.md)
 - [M6.1 final usability/correctness corrections](m6.1-usability-corrections/README.md)
+- [M6.2 care-record correction hotfix](m6.2-care-record-correction/README.md)
 - [Final M6 qualification](final-qualification/README.md)
 - [Accessibility](accessibility/critical-journeys/README.md)
 - [Reference-content gate](references/provenance/README.md)
