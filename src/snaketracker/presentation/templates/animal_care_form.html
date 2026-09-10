@@ -31,7 +31,21 @@
           {% set preparation = values.get('preparation_method', 'frozen_thawed') %}
           <select name="preparation_method"><option value="frozen_thawed" {% if preparation == 'frozen_thawed' %}selected{% endif %}>Frozen thawed</option><option value="live" {% if preparation == 'live' %}selected{% endif %}>Live</option><option value="other" {% if preparation == 'other' %}selected{% endif %}>Other</option></select>
         </label>
-        {% if inventory_items %}<label>Use inventory<select name="inventory_item_id"><option value="">Do not deduct inventory</option>{% for item in inventory_items %}<option value="{{ item.item_id }}:{{ item.stream_version }}">{{ item.name }} · {{ item.on_hand_quantity }} {{ item.unit }} available</option>{% endfor %}</select></label><label>Inventory quantity<input name="inventory_quantity" type="number" inputmode="numeric" min="1" value="{{ values.get('inventory_quantity','1') }}"></label>{% endif %}
+        {% if inventory_items %}
+        {% set selected_inventory = values.get('inventory_item_id', '') %}
+        <label>Use inventory
+          <select name="inventory_item_id" data-feeding-inventory>
+            <option value=""{% if not selected_inventory %} selected{% endif %}>Do not deduct inventory</option>
+            {% for item in inventory_items %}
+            {% set inventory_reference = item.item_id ~ ':' ~ item.stream_version %}
+            <option value="{{ inventory_reference }}"{% if selected_inventory == inventory_reference or selected_inventory == item.item_id|string %} selected{% endif %}>{{ item.name }} · {{ item.on_hand_quantity }} {{ item.unit }} available</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Inventory quantity
+          <input name="inventory_quantity" data-feeding-inventory-quantity type="number" inputmode="numeric" min="1" value="{{ values.get('inventory_quantity', '1') }}"{% if not selected_inventory %} disabled{% else %} required{% endif %}>
+        </label>
+        {% endif %}
       </div>
     </details>
     {% elif care_kind == 'weight' %}
@@ -66,3 +80,4 @@
   </form>
 </section>
 {% endblock %}
+{% block scripts %}{% if care_kind == 'feeding' %}<script defer src="/static/feeding-form.js?v=m62-inventory-normalization"></script>{% endif %}{% endblock %}

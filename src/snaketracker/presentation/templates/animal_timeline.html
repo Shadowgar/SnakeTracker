@@ -8,14 +8,23 @@
     <div class="history-links"><a href="/animals/{{ animal.animal_id }}/feedings">Feedings</a><a href="/animals/{{ animal.animal_id }}/measurements">Measurements</a></div>
   </header>
   {% if errors and errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+  {% if record_deleted %}<div class="success-message" role="status" tabindex="-1" autofocus>Record deleted. History and calculations are updated.</div>{% endif %}
   <section id="effective-history" aria-labelledby="effective-history-title">
   <h2 id="effective-history-title" class="visually-hidden">Effective history</h2>
   {% if events %}
   <ol class="timeline-list">
     {% for item in events %}
-    <li>
+    <li id="record-{{ item.event.event_id }}">
       <time datetime="{{ item.event.occurred_at.isoformat() }}"><strong>{{ item.event.occurred_at.astimezone(household_zone).strftime('%b %-d, %Y') }}</strong><span>{{ item.event.occurred_at.astimezone(household_zone).strftime('%-I:%M %p') }}</span><span class="visually-hidden">{{ item.event.occurred_at.astimezone(household_zone).strftime('%Y-%m-%d %H:%M') }} {{ principal.household_timezone }}</span></time>
-      <div><strong>{{ item.keeper_title }}</strong><p>{{ item.description }}</p>{% if item.event.notes %}<p class="keeper-note">{{ item.event.notes }}</p>{% endif %}</div>
+      <div class="timeline-record">
+        <div><strong>{{ item.keeper_title }}</strong><p>{{ item.description }}</p>{% if item.event.notes %}<p class="keeper-note">{{ item.event.notes }}</p>{% endif %}</div>
+        {% if item.event.event_id in deletable_event_ids %}
+        <details class="record-actions">
+          <summary aria-label="Actions for {{ item.keeper_title }} on {{ item.event.occurred_at.astimezone(household_zone).strftime('%B %-d, %Y') }}"><span aria-hidden="true">•••</span></summary>
+          <div class="record-actions-menu"><a href="/animals/{{ animal.animal_id }}/events/{{ item.event.event_id }}/delete">Delete record</a></div>
+        </details>
+        {% endif %}
+      </div>
     </li>
     {% endfor %}
   </ol>

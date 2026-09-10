@@ -104,5 +104,26 @@ deliberately extend this privacy-safe boundary rather than expose raw metadata.
 ## Milestone sequence and status boundary
 
 The roadmap order is M6 UX Passes 1–4, M6.1 (six owner issues), final M6 qualification/acceptance,
-M6.5, M7, M8, then M9. M6 and PR #8 are complete. M6.5 design does not qualify M7 Raspberry Pi
-deployment/recovery, authorize M8 release qualification, or enable M9 public sharing.
+M6.2, M6.5, M7, M8, then M9. M6, PR #8, and the M6.2 correction merged through PR #9 are
+complete. M6.5 does not qualify M7 Raspberry Pi deployment/recovery, authorize M8 release
+qualification, or enable M9 public sharing.
+
+## 10. Delete an incorrectly entered care record
+
+> A household user accidentally recorded the same shed twice and had no obvious way to delete the incorrect care record without affecting the legitimate entry.
+
+- Target milestone: M6.2 — Care Record Correction
+- Requirement: `R-083`; acceptance procedure `AT-M62-01`
+- Status: **Complete and merged through PR #9**
+
+This post-M6 production correction reuses the accepted append-only void/correction architecture.
+The keeper sees **Delete record** only for supported, currently effective care entries; the
+immutable source event remains auditable while effective History, analytics, reminders, reports,
+search, replay, and linked inventory compensation converge on the deletion. It does not reopen or
+invalidate accepted M6 and does not begin M6.5 implementation.
+
+The same bounded M6.2 hotfix also corrects the current feeding form's partial inventory tuple:
+**Do not deduct inventory** must create a fully unlinked compatibility feeding even when stale
+quantity/version fields are submitted. Selected Inventory Items retain the strict all-or-nothing
+tuple and atomic deduction. This bridge is explicitly temporary; owner-approved M6.5 requirements
+`R-084` and `R-085` make structured Inventory authoritative for future Feeding writes.

@@ -16,6 +16,7 @@ from snaketracker.application.animals import (
     AnimalService,
     AnimalValidationError,
     CorrectFeedingCommand,
+    DeleteAnimalCareRecordCommand,
     RecordFeedingCommand,
     RegisterAnimalCommand,
     ReinstateAnimalEventCommand,
@@ -719,6 +720,31 @@ def test_stock_linked_feeding_rolls_back_when_inventory_is_insufficient(tmp_path
             )
         )
 
+        with pytest.raises(
+            AnimalValidationError,
+            match="Inventory item, version, and quantity are required together",
+        ):
+            animals.record_feeding(
+                RecordFeedingCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    animal.animal_id,
+                    uuid4(),
+                    "partial-linked-feeding",
+                    datetime(2026, 8, 10, 11, tzinfo=UTC),
+                    "rat",
+                    "large",
+                    None,
+                    "frozen_thawed",
+                    1,
+                    "accepted",
+                    None,
+                    inventory_item_id=item.item_id,
+                    inventory_expected_stream_version=None,
+                    inventory_quantity=1,
+                )
+            )
+
         with pytest.raises(InventoryValidationError, match="Insufficient available inventory"):
             animals.record_feeding(
                 RecordFeedingCommand(
@@ -870,15 +896,19 @@ def test_stock_linked_feeding_correction_replaces_consumption_atomically(tmp_pat
             )
         ][-2:] == ["inventory.consumption_reversed", "inventory.stock_consumed"]
 
-        animals.void_event(
-            VoidAnimalEventCommand(
+        corrected_feeding = next(
+            event
+            for event in animals.effective_history(bootstrap.household_id, animal.animal_id)
+            if event.event_type == "animal.feeding_corrected"
+        )
+        animals.delete_care_record(
+            DeleteAnimalCareRecordCommand(
                 bootstrap.household_id,
                 bootstrap.user_id,
                 "owner",
                 animal.animal_id,
-                feeding.event.event_id,
+                corrected_feeding.event_id,
                 "correct-linked-feeding-void-original",
-                "Corrected feeding was voided.",
             )
         )
         compensated = projection.balance_for(bootstrap.household_id, item.item_id)
@@ -887,6 +917,59 @@ def test_stock_linked_feeding_correction_replaces_consumption_atomically(tmp_pat
             bootstrap.household_id, feeding.event.event_id
         )
         assert compensated_link is not None and compensated_link.status == "reversed"
+        assert not any(
+            event.event_type in {"animal.feeding_recorded", "animal.feeding_corrected"}
+            for event in animals.effective_history(bootstrap.household_id, animal.animal_id)
+        )
+        animal_audit = animals.audit_history(bootstrap.household_id, animal.animal_id)
+        deleted_control = next(
+            event
+            for event in reversed(animal_audit)
+            if event.stream_type == "animal" and event.event_type == "event.voided"
+        )
+        assert deleted_control.event_type == "event.voided"
+        assert deleted_control.causation_id == feeding.event.event_id
+        inventory_key = StreamKey(bootstrap.household_id, "inventory-item", item.item_id)
+        assert (
+            len(
+                [
+                    event
+                    for event in store.load_stream(inventory_key)
+                    if event.event_type == "inventory.consumption_reversed"
+                ]
+            )
+            == 2
+        )
+
+        inventory_event_count = len(store.load_stream(inventory_key))
+        refused = animals.record_feeding(
+            RecordFeedingCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                animal.animal_id,
+                uuid4(),
+                "delete-unlinked-refused-feeding",
+                datetime(2026, 8, 11, 11, tzinfo=UTC),
+                "rat",
+                "pup",
+                None,
+                "frozen_thawed",
+                1,
+                "refused",
+                "No inventory selected.",
+            )
+        )
+        animals.delete_care_record(
+            DeleteAnimalCareRecordCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                "owner",
+                animal.animal_id,
+                refused.event.event_id,
+                "delete-unlinked-refused",
+            )
+        )
+        assert len(store.load_stream(inventory_key)) == inventory_event_count
 
         unlinked = animals.record_feeding(
             RecordFeedingCommand(

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Delete {{ record_kind }} record? · {{ animal.name }} · Care Keeper{% endblock %}
+{% block content %}
+<section class="confirmation-page" aria-label="Delete care record confirmation">
+  <div class="confirmation-dialog card" role="alertdialog" aria-modal="true" aria-labelledby="page-title" aria-describedby="delete-description" tabindex="-1" autofocus>
+    <p class="eyebrow">{{ animal.name }}</p>
+    <h1 id="page-title">Delete {{ record_kind }} record?</h1>
+    <p class="record-summary"><strong>{{ target.event.occurred_at.astimezone(household_zone).strftime('%B %-d, %Y') }} · {{ target.description }}</strong>{% if target.event.notes %}<br>{{ target.event.notes }}{% endif %}</p>
+    <p id="delete-description">This record will be removed from your animal's history and calculations.</p>
+    {% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+    <form method="post" action="/animals/{{ animal.animal_id }}/events/{{ target.event.event_id }}/delete">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="idempotency_key" value="{{ command_id }}">
+      <div class="form-actions"><a class="button-link secondary-link" href="/animals/{{ animal.animal_id }}/timeline#record-{{ target.event.event_id }}">Cancel</a><button type="submit" class="danger-action">Delete record</button></div>
+    </form>
+  </div>
+</section>
+{% endblock %}

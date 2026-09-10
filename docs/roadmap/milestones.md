@@ -225,6 +225,23 @@ Status: Accepted and merged September 4, 2026
 - [x] RB The owner explicitly accepted M6 and separately authorized PR #8's merge at
   `8b0c062a39453bd2a4e65cb6ce288eea6298137f`.
 
+## Phase 6.2 / M6.2 — Care Record Correction
+
+Status: Technical qualification passed; owner review pending
+
+M6.2 is a bounded post-M6 production correctness enhancement discovered through real household
+use. It does not reopen or invalidate accepted M6. M6.5-A remains paused until this correction is
+qualified and presented for owner review.
+
+- [x] RB Eligible, currently effective Animal History entries expose a compact, accessible **Delete record** action and a record-specific confirmation. (`R-083`, `AT-M62-01`)
+- [x] RB Keeper-facing deletion appends the existing typed `event.voided` control against the immutable logical root, including corrected records; it never issues a hard delete. (`R-005`, `R-083`, `AT-M62-01`)
+- [x] RB Effective History, trends/analytics, reminder calculation, reports/CSV, search, and replay ignore deleted care records, while prior legitimate measurements and records become effective again where applicable. (`R-007`, `R-020`, `R-044`, `R-045`, `R-083`, `AT-M62-01`)
+- [x] RB Stock-linked feeding deletion uses the existing atomic inventory-consumption reversal; unlinked refused feedings create no inventory adjustment. (`R-011`, `R-083`, `AT-M62-01`)
+- [x] RB Delete is limited to capability-supported feeding, weight, length, shed, bath/soak, molt, premolt, and related misting records; account, household, registration, profile, security, enclosure assignment, and other specialized/system events remain excluded. (`R-032`, `R-047`, `R-083`, `AT-M62-01`)
+- [x] RB The temporary pre-M6.5 feeding form submits a fully unlinked inventory tuple when **Do not deduct inventory** is selected, rejects partial selected-item tuples, and preserves existing atomic linked-feeding behavior. This compatibility correction does not define the final M6.5 feeding design. (`R-083`, `AT-M62-02`)
+- [x] RB Frozen quality, isolated browser/accessibility, verified backup, live-data baseline, safe Raspberry Pi deployment, post-deploy integrity/health, and hosted CI checks pass with evidence under [`m6.2-care-record-correction`](../evidence/m6-product-experience/m6.2-care-record-correction/README.md). (`R-083`, `AT-M62-01`)
+- [ ] RB Owner reviews and accepts M6.2 before M6.5-A implementation resumes.
+
 ## Phase 6.5 / M6.5 — Inventory intelligence and cost tracking
 
 Status: Architecture/domain proposal prepared — ADR-0042 Proposed; not implemented
@@ -239,9 +256,42 @@ how trustworthy is the recorded quantity? What did inventory cost? What value wa
 stock value remains, and what future spending may be required?
 
 The [M6.5 architecture/domain proposal](../plans/2026-09-04-m6.5-inventory-intelligence-architecture.md)
-and [ADR-0042](../adr/0042-inventory-purchases-fifo-and-quantity-policy.md) are ready for owner
-review. ADR-0042 is Proposed, not accepted. All criteria below remain unchecked and no product code
-or migration may begin until the decision is accepted or amended.
+and [ADR-0042](../adr/0042-inventory-purchases-fifo-and-quantity-policy.md) provide the accepted
+architecture foundation. The owner approved the additional inventory-authoritative feeding and
+structured catalog direction for M6.5-A1 on September 10, 2026.
+
+### Owner-approved inventory-authoritative feeding direction
+
+The owner has approved the following M6.5 direction. Recording it here does not implement it on the
+M6.2 hotfix branch. ADR-0042 on the M6.5 architecture branch must be amended to incorporate these
+decisions before the applicable M6.5 domain/schema/UI tranche; another conceptual approval of these
+same points is not required.
+
+- [ ] RB Every new M6.5 Feeding references a same-household **Food** Inventory Item. The normal
+  workflow becomes **Date/time**, **Food from inventory**, **Quantity**, and **Outcome**; **Do not
+  deduct inventory** and independently typed prey type/size are removed for new M6.5 writes.
+  Inventory use decrements the selected item automatically and supplies FIFO consumption valuation.
+  (`R-084`, `AT-INVINT-07`)
+- [ ] RB A Feeding snapshots the relevant human-readable food description and structured metadata
+  at recording time so later Inventory renaming or reclassification cannot rewrite historical
+  meaning. (`R-084`, `AT-INVINT-07`)
+- [ ] RB Inventory Item gains an owner-selected Type: **Food**, **Equipment**, **Substrate &
+  Bedding**, **Cleaning Supply**, **Supplement**, **Enclosure & Habitat**, **Heating & Lighting**,
+  or **Other**. Final display labels may be refined without changing this classification concept.
+  (`R-085`, `AT-INVINT-08`)
+- [ ] RB Normal Unit entry becomes a controlled, type-aware selector rather than arbitrary free
+  text. M6.5 must audit and define the final canonical-unit catalog; illustrative choices include
+  count/package and mass/volume units for Food, each/pair/pack/case/roll/container units for
+  Equipment, and bag/bale/block/brick/mass/volume units for Substrate & Bedding. (`R-085`,
+  `AT-INVINT-08`)
+- [ ] RB Food Items store structured classification once on Inventory, including categories such
+  as whole prey, insect, prepared food, pellets/dry food, produce, and other. Where applicable,
+  Food metadata includes prey/feeder type, size or stage, and preparation/storage form—for example
+  Mouse / Small / Frozen-thawed or Dubia roach / Medium. Feeding does not ask the keeper to
+  duplicate these fields. (`R-085`, `AT-INVINT-08`)
+
+Until M6.5 implements and qualifies these requirements, the current unlinked feeding path is a
+compatibility bridge only and must not be mistaken for the approved final product model.
 
 ### Inventory levels and reorder intelligence
 
