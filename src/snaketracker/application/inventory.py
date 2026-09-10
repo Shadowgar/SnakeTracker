@@ -103,6 +103,25 @@ class InventoryBalance:
         return UNIT_BY_CODE[self.unit_code].symbol
 
     @property
+    def on_hand_unit_display(self) -> str:
+        if self.unit_code is None or abs(self.on_hand_quantity_scaled) == 1000:
+            return self.unit_symbol
+        return {
+            "pair": "pairs",
+            "pack": "packs",
+            "package": "packages",
+            "box": "boxes",
+            "case": "cases",
+            "bag": "bags",
+            "bottle": "bottles",
+            "bucket": "buckets",
+            "roll": "rolls",
+            "bale": "bales",
+            "block": "blocks",
+            "brick": "bricks",
+        }.get(self.unit_code, self.unit_symbol)
+
+    @property
     def allows_fractional(self) -> bool:
         return self.unit_code is not None and UNIT_BY_CODE[self.unit_code].allows_fractional
 
@@ -178,6 +197,7 @@ class RegisterStructuredInventoryItemCommand:
     size_stage: str | None
     preparation_method: str | None
     reorder_threshold_scaled: int | None
+    starting_quantity_scaled: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -417,10 +437,11 @@ class InventoryService:
             command.preparation_method,
         )
         _validate_threshold(command.reorder_threshold_scaled, catalog[1])
+        _validate_starting_quantity(command.starting_quantity_scaled, catalog[1])
         item_id = uuid4()
         key = StreamKey(command.household_id, "inventory-item", item_id)
         now = datetime.now(UTC)
-        event = _event(
+        registration = _event(
             key,
             1,
             "inventory.item_registered",
@@ -437,9 +458,25 @@ class InventoryService:
             "Inventory item registered",
             schema_version=2,
         )
+        events: tuple[DomainEvent, ...] = (registration,)
+        if command.starting_quantity_scaled:
+            initial_stock = _event(
+                key,
+                2,
+                "inventory.stock_received",
+                InventoryStockReceivedV2(command.starting_quantity_scaled, "Initial stock"),
+                command.actor_user_id,
+                command.correlation_id,
+                command.idempotency_key,
+                now,
+                "Initial inventory stock established",
+                causation_id=registration.event_id,
+                schema_version=2,
+            )
+            events = (registration, initial_stock)
         result = self._event_store.append_many(
             AtomicAppendRequest(
-                streams=(StreamAppend(key, 0, (event,)),),
+                streams=(StreamAppend(key, 0, events),),
                 idempotency=_idempotency(
                     command.household_id,
                     command.actor_user_id,
@@ -447,7 +484,11 @@ class InventoryService:
                     command.idempotency_key,
                     command.correlation_id,
                     {"item_id": str(item_id)},
-                    {field: _canonical(value) for field, value in asdict(command).items()},
+                    {
+                        field: _canonical(value)
+                        for field, value in asdict(command).items()
+                        if field not in {"correlation_id", "idempotency_key"}
+                    },
                     now,
                 ),
                 synchronous_projections=(self._projection,),
@@ -942,3 +983,10 @@ def _validate_threshold(value: int | None, unit_code: str) -> None:
         raise InventoryValidationError("Reorder threshold cannot be negative.")
     if value:
         _validate_scaled(value, unit_code, "Reorder threshold")
+
+
+def _validate_starting_quantity(value: int, unit_code: str) -> None:
+    if type(value) is not int or value < 0:
+        raise InventoryValidationError("Starting quantity cannot be negative.")
+    if value:
+        _validate_scaled(value, unit_code, "Starting quantity")

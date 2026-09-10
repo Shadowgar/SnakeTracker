@@ -130,6 +130,92 @@ local and public readiness are ready; and exactly one `snaketracker` Compose pro
 Hosted checks and the final commit are reported in the owner handoff after push. This evidence does
 not mark M6.5 accepted.
 
+## Owner-review correction 2: guided creation
+
+The second owner-review correction completes Add Inventory as one guided operation. Its initial
+state contains only Type and Item name: no contextual fieldset, generic Unit picker, or Starting
+quantity is exposed before Type supplies enough context. Selecting a Type reveals only that Type's
+controlled hierarchy. Changing the hierarchy disables and clears stale descendants in the browser,
+while server normalization independently rejects invalid combinations and ignores irrelevant
+metadata.
+
+Units now come from the same domain catalog used by server validation. Discrete contexts show a
+read-only **Tracked as** value and require no unit interaction; measured contexts show only their
+applicable units with a recommended default. Whole prey and insects resolve to Each; Monitoring /
+Thermometer, Heating & Lighting / Halogen bulb or Fixture / Tank light resolve to Each; Substrate /
+Brick resolves to Brick; powders offer mass units; and liquids offer volume units. Other remains a
+controlled stock-basis escape hatch rather than restoring free-text units. Keeper-facing balance
+text uses sensible singular/plural forms.
+
+Starting quantity follows the resolved Unit and precedes the optional reorder threshold. It accepts
+zero, exact thousandth-scale measured quantities, and whole multiples for discrete units; negatives,
+excess precision, and fractional whole units are rejected without floating point. The idempotent
+registration command atomically appends Item registration plus one stock-received event when the
+quantity is positive. The latter carries deterministic reference **Initial stock**, no keeper-entered
+reason, vendor, purchase, or cost, so it is distinguishable and remains uncosted for A2. A zero
+quantity appends registration only. Transaction rollback prevents an orphan Item, and retrying the
+same operation neither duplicates the Item nor doubles stock.
+
+### Deployed browser acceptance
+
+Native ARM64 Chromium exercised the corrected public origin at both 390×844 and 1440×900. The
+required Rat path revealed Food category only after Food, then prey controls only after Whole prey;
+it resolved Small / Frozen-thawed / Rat to Each and one Add Item submission immediately displayed
+**20 each on hand**, with no Receive stock step or reason prompt. A quantity-one Feeding changed
+20→19 and deletion through R-083 compensated exactly once back to 20. Additional one-submit cases
+produced Medium Dubia Roach at 75 each, Tank Light at 1 each, Coconut Husk Brick at 6 bricks, and
+Powder Supplement at 500 g. All correction qualification Items are preserved as archived facts in
+the fictional demo household; no row was manually deleted.
+
+Final axe WCAG A/AA scans covered the initial and configured form at mobile and desktop plus the
+mobile Item detail and reported zero violations. Hidden controls are disabled and removed from the
+focus order. A normal-CSP console capture had zero page errors and zero Care Keeper JavaScript or
+resource failures. It showed only Cloudflare's appended `static.cloudflareinsights.com` beacon and
+inline challenge script being rejected by the intentional `script-src 'self'` policy. The served DOM
+separately shows Care Keeper's allowed `/static/inventory-form.js?v=m65-a1-c2` immediately before
+those injected nodes. Axe ran in a separate bypass-CSP qualification context, so its injection did
+not obscure the application-console result. Production CSP was not changed or weakened.
+
+Evidence: [correction 2 browser result](browser-qualification.json),
+[mobile initial form](screenshots/correction2-mobile-390x844-initial.png),
+[mobile guided Rat form](screenshots/correction2-mobile-390x844-rat-guided.png),
+[mobile immediate balance](screenshots/correction2-mobile-390x844-rat-balance.png),
+[desktop initial form](screenshots/correction2-desktop-1440x900-initial.png), and
+[desktop guided Rat form](screenshots/correction2-desktop-1440x900-rat-guided.png).
+
+### Correction 2 safety, gate, and runtime
+
+No schema change was needed; migration head remains `0014_structured_inventory_feeding`, and all
+legacy Inventory rows and their original quantities/units remain intact. Before deployment, the
+active database and attachment paths were explicitly resolved to the paths above. The verified,
+encrypted, non-overwriting backup request `fd4324b3-07ff-4731-9547-df23d595ecca` completed as run
+`5b975a93-3afa-4b99-9b28-0800c3c25802`; its encrypted manifest SHA-256 is
+`8fa4895cae34c03d935cd6bb1daaba8d1d36afd1386587dfe7a36f707aaf9d37`. Independent verification
+found migration 0014, event high-water 680, and 33 referenced attachment versions. No restore was
+performed.
+
+The final read-only live check reports SQLite integrity `ok`, zero FK violations, migration 0014,
+four households, four users, 42 animals, 29 enclosures, 39 attachment versions, and 40 attachment
+files. The 29-event qualification delta from high-water 680 to 709 belongs entirely to the reserved
+fictional household; the other three households remain at their baseline event counts of 116, 2,
+and 5. All 680 pre-qualification event IDs/checksums retain canonical SHA-256
+`c66dd92c01dd6101e16eb7b32764c2b8807142998bca2207bb0678478a8e2a2e`, and the attachment tree
+retains SHA-256 `0ce316009a1127871bbe3101849b76df5b898b1c0d3386ec815e570659110c73`.
+The demo remains 20 animals and 16 enclosures. The additional seven Inventory rows are archived
+qualification facts; no customer household was mutated.
+
+The exact frozen-environment path (`uv sync --frozen`, then `./scripts/quality/check.sh`) passed:
+530 tests, line coverage 94.84%, branch coverage 85.04%, combined coverage 92.96%, Ruff, strict
+mypy over 125 source files, architecture checks and the 42-ADR freeze, 205-file documentation-link
+validation, dependency audit with no known vulnerabilities, Compose validation, and diff checks.
+Coverage JSON/XML and JUnit artifacts were produced. The deployed `linux/arm64` image is
+`snaketracker:m65-a1-c2`, image ID
+`sha256:b8dffc64e5c099a85d540834c4cca81b9a377a36c5d96d85d84393ab27ce1a57`.
+Web, worker, and Nginx are healthy; web/worker run UID/GID `1001:1001`; the bind remains
+`127.0.0.1:8081`; local/public readiness are ready; and exactly one Care Keeper Compose project is
+active. Hosted checks and the correction commit are recorded in the final owner handoff after push.
+This correction remains pending owner review.
+
 ## Explicitly deferred
 
 M6.5-A2 and later retain Purchase aggregate/receipts, FIFO lots and valuation, cash-spend

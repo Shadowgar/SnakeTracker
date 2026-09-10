@@ -144,14 +144,27 @@ from snaketracker.domains.animals.capabilities import (
 from snaketracker.domains.animals.contracts import ANIMAL_STATUSES, AnimalFeedingRecordedV2
 from snaketracker.domains.enclosures.contracts import ENCLOSURE_STATUSES
 from snaketracker.domains.inventory.catalog import (
+    CLEANING_FORMS,
+    CLEANING_LIQUID_BASES,
+    EQUIPMENT_CATEGORIES,
+    EQUIPMENT_ITEMS,
     FOOD_CATEGORIES,
+    FOOD_STOCK_FORMS,
+    HABITAT_ITEMS,
+    HEATING_LIGHTING_CATEGORIES,
+    HEATING_LIGHTING_ITEMS,
     INSECT_TYPES,
     INVENTORY_TYPES,
+    OTHER_STOCK_BASES,
     PREPARATION_METHODS,
     SIZE_STAGES,
+    SUBSTRATE_FORMS,
+    SUPPLEMENT_FORMS,
     UNITS,
     WHOLE_PREY_TYPES,
     parse_quantity_scaled,
+    resolve_creation_unit_policy,
+    validate_creation_unit,
 )
 from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
 from snaketracker.platform.events.envelope import DomainEvent
@@ -397,7 +410,71 @@ def _inventory_catalog_context() -> dict[str, object]:
         "insect_types": INSECT_TYPES,
         "size_stages": SIZE_STAGES,
         "preparation_methods": PREPARATION_METHODS,
+        "food_stock_forms": FOOD_STOCK_FORMS,
+        "equipment_categories": EQUIPMENT_CATEGORIES,
+        "equipment_items": EQUIPMENT_ITEMS,
+        "heating_lighting_categories": HEATING_LIGHTING_CATEGORIES,
+        "heating_lighting_items": HEATING_LIGHTING_ITEMS,
+        "substrate_forms": SUBSTRATE_FORMS,
+        "cleaning_forms": CLEANING_FORMS,
+        "cleaning_liquid_bases": CLEANING_LIQUID_BASES,
+        "supplement_forms": SUPPLEMENT_FORMS,
+        "habitat_items": HABITAT_ITEMS,
+        "other_stock_bases": OTHER_STOCK_BASES,
     }
+
+
+@dataclass(frozen=True, slots=True)
+class _GuidedInventoryCreateValues:
+    inventory_type: str
+    unit_code: str
+    food_category: str | None
+    food_type: str | None
+    size_stage: str | None
+    preparation_method: str | None
+    starting_quantity_scaled: int
+    reorder_threshold_scaled: int | None
+
+
+def _guided_inventory_create_values(form: Any) -> _GuidedInventoryCreateValues:
+    inventory_type = str(form.get("inventory_type", "")).strip()
+    food_category = (
+        _optional_form_text(form.get("food_category", "")) if inventory_type == "food" else None
+    )
+    context_category = _optional_form_text(form.get("context_category", ""))
+    context_detail = _optional_form_text(form.get("context_detail", ""))
+    stock_basis = _optional_form_text(form.get("stock_basis", ""))
+    policy = resolve_creation_unit_policy(
+        inventory_type,
+        food_category,
+        context_category,
+        context_detail,
+        stock_basis,
+    )
+    unit_code = validate_creation_unit(str(form.get("unit_code", "")), policy)
+    starting_value = str(form.get("starting_quantity", "")).strip()
+    if not starting_value:
+        raise FormValidationError("Starting quantity is required.")
+    threshold_value = str(form.get("reorder_threshold", "")).strip()
+    prey_category = food_category in {"whole_prey", "insect"}
+    return _GuidedInventoryCreateValues(
+        inventory_type=inventory_type,
+        unit_code=unit_code,
+        food_category=food_category,
+        food_type=(_optional_form_text(form.get("food_type", "")) if prey_category else None),
+        size_stage=(_optional_form_text(form.get("size_stage", "")) if prey_category else None),
+        preparation_method=(
+            _optional_form_text(form.get("preparation_method", ""))
+            if food_category == "whole_prey"
+            else None
+        ),
+        starting_quantity_scaled=parse_quantity_scaled(starting_value, unit_code, allow_zero=True),
+        reorder_threshold_scaled=(
+            parse_quantity_scaled(threshold_value, unit_code, allow_zero=True)
+            if threshold_value
+            else None
+        ),
+    )
 
 
 def _form_bool(value: object, label: str) -> bool:
@@ -2123,7 +2200,12 @@ def create_web_router(
             request,
             "inventory_new.html",
             principal,
-            context={"errors": {}, "values": {}, **_inventory_catalog_context()},
+            context={
+                "errors": {},
+                "values": {},
+                "guided_creation": True,
+                **_inventory_catalog_context(),
+            },
         )
 
     @router.post("/inventory", response_class=HTMLResponse)
@@ -2135,8 +2217,7 @@ def create_web_router(
         if "inventory.manage" not in principal.capabilities:
             return _access_denied(request, "Inventory access denied")
         try:
-            unit_code = str(form.get("unit_code", ""))
-            threshold_value = str(form.get("reorder_threshold", "")).strip()
+            guided = _guided_inventory_create_values(form)
             result = inventory_service.register_structured(
                 RegisterStructuredInventoryItemCommand(
                     household_id=principal.household_id,
@@ -2144,17 +2225,14 @@ def create_web_router(
                     correlation_id=uuid4(),
                     idempotency_key=_form_idempotency_key(form),
                     name=str(form.get("name", "")),
-                    inventory_type=str(form.get("inventory_type", "")),
-                    unit_code=unit_code,
-                    food_category=_optional_form_text(form.get("food_category", "")),
-                    food_type=_optional_form_text(form.get("food_type", "")),
-                    size_stage=_optional_form_text(form.get("size_stage", "")),
-                    preparation_method=_optional_form_text(form.get("preparation_method", "")),
-                    reorder_threshold_scaled=(
-                        parse_quantity_scaled(threshold_value, unit_code, allow_zero=True)
-                        if threshold_value
-                        else None
-                    ),
+                    inventory_type=guided.inventory_type,
+                    unit_code=guided.unit_code,
+                    food_category=guided.food_category,
+                    food_type=guided.food_type,
+                    size_stage=guided.size_stage,
+                    preparation_method=guided.preparation_method,
+                    reorder_threshold_scaled=guided.reorder_threshold_scaled,
+                    starting_quantity_scaled=guided.starting_quantity_scaled,
                 )
             )
         except (InventoryValidationError, FormValidationError, ValueError) as error:
@@ -2166,6 +2244,7 @@ def create_web_router(
                 context={
                     "errors": {"form": str(error)},
                     "values": _form_values(form),
+                    "guided_creation": True,
                     **_inventory_catalog_context(),
                 },
             )

@@ -2,7 +2,7 @@
 {% block title %}{{ action|title }} {{ item.name }} · Care Keeper{% endblock %}
 {% block content %}
 <section class="form-page focused-stock-form" aria-labelledby="page-title">
-  <header><p class="page-kicker">{{ item.name }}</p><h1 id="page-title">{% if action == 'receive' %}Receive stock{% elif action == 'adjust' %}Adjust stock{% elif action == 'archive' %}Archive item{% else %}Restore item{% endif %}</h1><p class="lede">Current balance: {{ item.on_hand_display }} {{ item.unit_symbol }}.</p></header>
+  <header><p class="page-kicker">{{ item.name }}</p><h1 id="page-title">{% if action == 'receive' %}Receive stock{% elif action == 'adjust' %}Adjust stock{% elif action == 'archive' %}Archive item{% else %}Restore item{% endif %}</h1><p class="lede">Current balance: {{ item.on_hand_display }} {{ item.on_hand_unit_display }}.</p></header>
   <form class="card form-stack" method="post" action="/inventory/{{ item.item_id }}/{{ action }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}"><input type="hidden" name="expected_stream_version" value="{{ item.stream_version }}">
     {% if action == 'receive' %}<label>Quantity received ({{ item.unit_symbol }})<input name="quantity" type="number" min="{{ '0.001' if item.allows_fractional else '1' }}" step="{{ '0.001' if item.allows_fractional else '1' }}" inputmode="{{ 'decimal' if item.allows_fractional else 'numeric' }}" required autofocus></label><label>Reference<input name="reference" placeholder="Optional order or receipt"></label><button type="submit">Receive stock</button>

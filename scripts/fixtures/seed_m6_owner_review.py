@@ -1090,7 +1090,7 @@ def seed_demo(
                 "mealworms",
                 "Mealworm cups",
                 "food",
-                "package",
+                "each",
                 60,
                 2,
                 {
@@ -1099,14 +1099,38 @@ def seed_demo(
                     "size_stage": "medium",
                 },
             ),
-            ("substrate", "Coco fiber substrate", "substrate_bedding", "bag", 5, 2, {}),
-            ("misters", "Reptile-safe misting water", "cleaning_supply", "bottle", 3, 1, {}),
-            ("bulbs", "Basking bulbs 75W", "heating_lighting", "each", 2, 2, {}),
+            (
+                "substrate",
+                "Coco fiber substrate",
+                "substrate_bedding",
+                "bag",
+                5,
+                2,
+                {"context_category": "bagged"},
+            ),
+            (
+                "misters",
+                "Reptile-safe misting water",
+                "cleaning_supply",
+                "bottle",
+                3,
+                1,
+                {"context_category": "liquid", "stock_basis": "container"},
+            ),
+            (
+                "bulbs",
+                "Basking bulbs 75W",
+                "heating_lighting",
+                "each",
+                2,
+                2,
+                {"context_category": "heat_bulb", "context_detail": "halogen_bulb"},
+            ),
             (
                 "waxworms",
                 "Waxworm treat cups",
                 "food",
-                "package",
+                "each",
                 40,
                 1,
                 {
@@ -1124,21 +1148,12 @@ def seed_demo(
                     "inventory_type": inventory_type,
                     "name": name,
                     "unit_code": unit,
+                    "starting_quantity": str(quantity),
                     "reorder_threshold": str(threshold),
                     **food_data,
                 },
             )
             item_id = location.rsplit("/", 1)[-1]
-            _post(
-                client,
-                f"/inventory/{item_id}/receive",
-                {
-                    "idempotency_key": f"demo-inventory-receive-{key}",
-                    "expected_stream_version": "1",
-                    "quantity": str(quantity),
-                    "reference": "Fictional owner-review stock receipt",
-                },
-            )
             inventory[key] = item_id
 
         juniper_feedings = _dates_from_intervals(

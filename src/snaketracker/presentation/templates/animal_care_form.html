@@ -23,7 +23,7 @@
         <option value="">Choose food</option>
         {% for item in inventory_items %}
         {% set inventory_reference = item.item_id ~ ':' ~ item.stream_version %}
-        <option value="{{ inventory_reference }}" data-unit="{{ item.unit_symbol }}" data-fractional="{{ 'true' if item.allows_fractional else 'false' }}"{% if selected_inventory == inventory_reference or selected_inventory == item.item_id|string %} selected{% endif %}>{{ item.name }} · {{ item.on_hand_display }} {{ item.unit_symbol }} available</option>
+        <option value="{{ inventory_reference }}" data-unit="{{ item.unit_symbol }}" data-fractional="{{ 'true' if item.allows_fractional else 'false' }}"{% if selected_inventory == inventory_reference or selected_inventory == item.item_id|string %} selected{% endif %}>{{ item.name }} · {{ item.on_hand_display }} {{ item.on_hand_unit_display }} available</option>
         {% endfor %}
       </select>
     </label>

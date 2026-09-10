@@ -85,6 +85,7 @@ def test_keeper_can_use_inventory_expense_and_reminder_workflows(tmp_path: Path)
                 "size_stage": "small",
                 "preparation_method": "frozen_thawed",
                 "unit_code": "each",
+                "starting_quantity": "10",
                 "reorder_threshold": "3",
             },
             follow_redirects=False,
@@ -93,17 +94,6 @@ def test_keeper_can_use_inventory_expense_and_reminder_workflows(tmp_path: Path)
         inventory_url = created.headers["location"]
         inventory_page = client.get(inventory_url)
         assert "Small mice" in inventory_page.text
-        received = client.post(
-            f"{inventory_url}/receive",
-            data={
-                "csrf_token": _csrf(inventory_page.text),
-                "expected_stream_version": "1",
-                "quantity": "10",
-                "reference": "Order 1001",
-            },
-            follow_redirects=False,
-        )
-        assert received.status_code == 303
         assert "10 each" in client.get(inventory_url).text
         stale_inventory_page = client.get(inventory_url)
         stale_receive = client.post(
@@ -292,6 +282,7 @@ def test_feeding_form_requires_valid_food_inventory_and_rejects_invalid_links(
                 "size_stage": "small",
                 "preparation_method": "frozen_thawed",
                 "unit_code": "each",
+                "starting_quantity": "3",
                 "reorder_threshold": "1",
             },
             follow_redirects=False,
@@ -299,20 +290,7 @@ def test_feeding_form_requires_valid_food_inventory_and_rejects_invalid_links(
         assert created_item.status_code == 303
         inventory_url = created_item.headers["location"]
         item_id = inventory_url.rsplit("/", 1)[-1]
-        inventory_page = client.get(inventory_url)
-        assert (
-            client.post(
-                f"{inventory_url}/receive",
-                data={
-                    "csrf_token": _csrf(inventory_page.text),
-                    "expected_stream_version": "1",
-                    "quantity": "3",
-                    "reference": "Feeding boundary qualification",
-                },
-                follow_redirects=False,
-            ).status_code
-            == 303
-        )
+        assert "3 each" in client.get(inventory_url).text
 
         animal_form = client.get("/animals/new")
         created_animal = client.post(
@@ -517,24 +495,12 @@ def test_inventory_browser_lifecycle_excludes_archived_items_from_new_feedings(
                 "size_stage": "small",
                 "preparation_method": "frozen_thawed",
                 "unit_code": "each",
+                "starting_quantity": "6",
                 "reorder_threshold": "2",
             },
             follow_redirects=False,
         )
         item_url = created.headers["location"]
-        detail = client.get(item_url)
-        received = client.post(
-            f"{item_url}/receive",
-            data={
-                "csrf_token": _csrf(detail.text),
-                "expected_stream_version": "1",
-                "quantity": "6",
-                "reference": "Lifecycle order",
-            },
-            follow_redirects=False,
-        )
-        assert received.status_code == 303
-
         edit = client.get(f"{item_url}/edit")
         edited = client.post(
             f"{item_url}/edit",
@@ -723,7 +689,7 @@ def test_operational_routes_fail_closed_for_invalid_and_unauthorized_requests(
             data={"csrf_token": token, "name": " ", "unit": "item"},
         )
         assert invalid_inventory.status_code == 422
-        assert "Inventory name is required" in invalid_inventory.text
+        assert "Inventory type is invalid" in invalid_inventory.text
         assert client.get("/inventory/not-a-uuid").status_code == 404
         assert client.get("/inventory/not-a-uuid/edit").status_code == 404
         invalid_receipt = client.post(

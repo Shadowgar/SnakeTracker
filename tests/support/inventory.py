@@ -32,25 +32,14 @@ def create_food_inventory(
             "size_stage": "small",
             "preparation_method": "frozen_thawed",
             "unit_code": "each",
+            "starting_quantity": quantity,
             "reorder_threshold": "1",
         },
         follow_redirects=False,
     )
     assert created.status_code == 303, created.text
     item_url = created.headers["location"]
-    detail = client.get(item_url)
-    received = client.post(
-        f"{item_url}/receive",
-        data={
-            "csrf_token": _csrf(detail.text),
-            "idempotency_key": f"{idempotency_prefix}-receive",
-            "expected_stream_version": "1",
-            "quantity": quantity,
-            "reference": "Browser fixture stock",
-        },
-        follow_redirects=False,
-    )
-    assert received.status_code == 303, received.text
+    assert f">{quantity}</strong><span>each on hand" in client.get(item_url).text
     return item_url
 
 

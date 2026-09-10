@@ -145,25 +145,14 @@ def _create_stock(client: TestClient) -> str:
             "size_stage": "small",
             "preparation_method": "frozen_thawed",
             "unit_code": "each",
+            "starting_quantity": "5",
             "reorder_threshold": "1",
         },
         follow_redirects=False,
     )
     assert created.status_code == 303
     item_url = cast(str, created.headers["location"])
-    item = client.get(item_url)
-    received = client.post(
-        f"{item_url}/receive",
-        data={
-            "csrf_token": _csrf(item.text),
-            "idempotency_key": "m55-shared-prey-receive",
-            "expected_stream_version": "1",
-            "quantity": "5",
-            "reference": "Mixed fixture stock",
-        },
-        follow_redirects=False,
-    )
-    assert received.status_code == 303
+    assert "5 each" in client.get(item_url).text
     return item_url
 
 

@@ -1,44 +1,54 @@
 {
   "status": "passed",
   "origin": "https://tracker.theroccos.us",
-  "viewport_mobile": "390x844",
-  "viewport_desktop": "1440x900",
-  "type_aware_units": {
-    "food_each_available": true,
-    "food_bale_excluded": true
+  "chromium_architecture": "arm64",
+  "viewports": ["390x844", "1440x900"],
+  "initial_state": {
+    "food_details_visible": false,
+    "generic_unit_visible": false,
+    "starting_quantity_visible": false
   },
-  "feeding_form": {
-    "food_option_visible": true,
-    "amount_default": "1",
-    "no_deduct_removed": true,
-    "manual_prey_type_removed": true,
-    "manual_prey_size_removed": true,
-    "manual_prey_weight_removed": true,
-    "manual_preparation_removed": true
+  "guided_rat": {
+    "path": ["Food", "Whole prey", "Rat", "Small", "Frozen / thawed"],
+    "unit": "each",
+    "starting_quantity": 20,
+    "reorder_threshold": 5,
+    "single_submit": true,
+    "receive_stock_step": false,
+    "initial_reason_prompt": false,
+    "immediate_balance": "20 each on hand",
+    "after_feeding_one": "19 each on hand",
+    "after_delete": "20 each on hand"
   },
-  "stock": {
-    "initial": 3,
-    "after_feeding": 2,
-    "after_delete": 3,
-    "final": 3
+  "additional_cases": {
+    "medium_dubia_roach": "75 each on hand",
+    "tank_light": "1 each on hand",
+    "coconut_husk_brick": "6 bricks on hand",
+    "powder_supplement": "500 g on hand"
   },
-  "snapshot_stable_after_rename": true,
-  "equipment_filtered_from_feeding": true,
-  "legacy_setup": {
-    "needs_setup_before": true,
-    "configured_after": true,
-    "stock_before": 1,
-    "stock_after": 1
+  "axe": {
+    "scans": [
+      "mobile initial",
+      "mobile configured rat",
+      "mobile inventory detail",
+      "desktop initial",
+      "desktop configured rat"
+    ],
+    "violations": 0
   },
-  "responsive": {
-    "desktop_create_food_overflow": false,
-    "desktop_feeding_overflow": false
+  "console": {
+    "application_javascript_errors": 0,
+    "application_resource_failures": 0,
+    "page_errors": 0,
+    "http_responses_at_or_above_400": 0,
+    "expected_external_diagnostic": "Cloudflare-injected beacon and inline challenge scripts blocked by script-src self",
+    "csp_weakened": false
   },
-  "axe_scans": 5,
-  "axe_violations": 0,
-  "application_console_diagnostics": 0,
-  "page_errors": 0,
-  "cloudflare_external_csp_diagnostics": 66,
-  "qualification_harness_csp_diagnostics": 0,
-  "cleanup": "tagged feedings voided and created items archived"
+  "live_write_boundary": {
+    "household": "Care Keeper Fictional Collection",
+    "qualification_items": 7,
+    "qualification_items_archived": 7,
+    "manual_row_deletions": 0,
+    "customer_household_events": 0
+  }
 }

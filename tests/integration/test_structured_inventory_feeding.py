@@ -7,6 +7,7 @@ from uuid import uuid4
 import pytest
 from alembic import command
 from alembic.config import Config
+from sqlalchemy import text
 
 from snaketracker.application.animals import (
     AnimalService,
@@ -31,7 +32,13 @@ from snaketracker.domains.animals.contracts import (
     AnimalFeedingCorrectedV2,
     AnimalFeedingRecordedV2,
 )
-from snaketracker.domains.inventory.catalog import parse_quantity_scaled, units_for_type
+from snaketracker.domains.inventory.catalog import (
+    parse_quantity_scaled,
+    resolve_creation_unit_policy,
+    units_for_type,
+    validate_creation_unit,
+)
+from snaketracker.domains.inventory.contracts import InventoryStockReceivedV2
 from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
 from snaketracker.infrastructure.database.engine import create_sqlite_engine
 from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
@@ -125,6 +132,133 @@ def test_controlled_catalog_enforces_type_aware_and_fixed_precision_quantities()
         parse_quantity_scaled("1.250", "each")
     with pytest.raises(ValueError, match="three decimal"):
         parse_quantity_scaled("1.0001", "gram")
+
+
+@pytest.mark.parametrize(
+    ("inventory_type", "food_category", "category", "detail", "basis", "unit"),
+    (
+        ("food", "whole_prey", None, None, None, "each"),
+        ("food", "insect", None, None, None, "each"),
+        ("equipment", None, "monitoring", "thermometer", None, "each"),
+        ("heating_lighting", None, "heat_bulb", "halogen_bulb", None, "each"),
+        ("substrate_bedding", None, "brick", None, None, "brick"),
+        ("supplement", None, "powder", None, None, "gram"),
+    ),
+)
+def test_guided_catalog_resolves_fixed_and_filtered_unit_policies(
+    inventory_type: str,
+    food_category: str | None,
+    category: str | None,
+    detail: str | None,
+    basis: str | None,
+    unit: str,
+) -> None:
+    policy = resolve_creation_unit_policy(inventory_type, food_category, category, detail, basis)
+    assert validate_creation_unit("", policy) == unit
+    if inventory_type == "supplement":
+        assert policy.unit_codes == ("gram", "kilogram", "ounce", "pound")
+        with pytest.raises(ValueError, match="not available"):
+            validate_creation_unit("gallon", policy)
+
+
+def test_structured_registration_atomically_establishes_uncosted_initial_stock_and_retries(
+    tmp_path: Path,
+) -> None:
+    engine, bootstrap, store, inventory, _animals, _animal = _setup(tmp_path)
+    try:
+        command_value = RegisterStructuredInventoryItemCommand(
+            household_id=bootstrap.household_id,
+            actor_user_id=bootstrap.user_id,
+            correlation_id=uuid4(),
+            idempotency_key="initial-small-rats",
+            name="Small Frozen Rat",
+            inventory_type="food",
+            unit_code="each",
+            food_category="whole_prey",
+            food_type="rat",
+            size_stage="small",
+            preparation_method="frozen_thawed",
+            reorder_threshold_scaled=5_000,
+            starting_quantity_scaled=20_000,
+        )
+        created = inventory.register_structured(command_value)
+        assert created.balance.on_hand_quantity_scaled == 20_000
+        assert created.balance.stream_version == 2
+        events = store.load_stream(
+            StreamKey(bootstrap.household_id, "inventory-item", created.item_id)
+        )
+        assert len(events) == 2
+        assert isinstance(events[1].payload, InventoryStockReceivedV2)
+        assert events[1].payload.reference == "Initial stock"
+        assert events[1].causation_id == events[0].event_id
+
+        retried = inventory.register_structured(command_value)
+        assert retried.item_id == created.item_id
+        assert retried.balance.on_hand_quantity_scaled == 20_000
+        assert (
+            len(
+                store.load_stream(
+                    StreamKey(bootstrap.household_id, "inventory-item", created.item_id)
+                )
+            )
+            == 2
+        )
+
+        zero = inventory.register_structured(
+            RegisterStructuredInventoryItemCommand(
+                household_id=bootstrap.household_id,
+                actor_user_id=bootstrap.user_id,
+                correlation_id=uuid4(),
+                idempotency_key="zero-thermometer",
+                name="Thermometer",
+                inventory_type="equipment",
+                unit_code="each",
+                food_category=None,
+                food_type=None,
+                size_stage=None,
+                preparation_method=None,
+                reorder_threshold_scaled=None,
+                starting_quantity_scaled=0,
+            )
+        )
+        assert zero.balance.on_hand_quantity_scaled == 0
+        assert zero.balance.stream_version == 1
+    finally:
+        engine.dispose()
+
+
+def test_invalid_starting_stock_does_not_leave_an_orphan_item(tmp_path: Path) -> None:
+    engine, bootstrap, _store, inventory, _animals, _animal = _setup(tmp_path)
+    try:
+        with engine.connect() as connection:
+            before = connection.execute(
+                text("SELECT COUNT(*) FROM domain_events WHERE stream_type='inventory-item'")
+            ).scalar_one()
+        with pytest.raises(InventoryValidationError, match="whole numbers"):
+            inventory.register_structured(
+                RegisterStructuredInventoryItemCommand(
+                    household_id=bootstrap.household_id,
+                    actor_user_id=bootstrap.user_id,
+                    correlation_id=uuid4(),
+                    idempotency_key="invalid-fractional-rats",
+                    name="Fractional Rat",
+                    inventory_type="food",
+                    unit_code="each",
+                    food_category="whole_prey",
+                    food_type="rat",
+                    size_stage="small",
+                    preparation_method="frozen_thawed",
+                    reorder_threshold_scaled=None,
+                    starting_quantity_scaled=1_500,
+                )
+            )
+        with engine.connect() as connection:
+            after = connection.execute(
+                text("SELECT COUNT(*) FROM domain_events WHERE stream_type='inventory-item'")
+            ).scalar_one()
+        assert after == before
+    finally:
+        engine.dispose()
 
 
 def test_inventory_authoritative_feeding_snapshots_corrects_and_compensates(
