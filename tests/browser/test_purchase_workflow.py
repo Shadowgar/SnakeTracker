@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from datetime import date, timedelta
 from pathlib import Path
+from uuid import uuid4
 
 from sqlalchemy import text
 
@@ -56,14 +57,12 @@ def test_multiline_purchase_receives_stock_and_appears_once_in_expenses(
         complete_setup(client)
         first_id = _add_food_item(client, "Purchase Mouse")
         second_id = _add_food_item(client, "Purchase Rat")
-        page = client.get("/purchases/new")
+        page = client.get("/inventory/new")
         assert page.status_code == 200
-        assert "Post purchase &amp; receive stock" in page.text
-        assert "/static/purchase-form.js" in page.text
         purchase_script = (
             Path(__file__).parents[2] / "src/snaketracker/presentation/static/purchase-form.js"
         ).read_text()
-        assert purchase_script.count('add.addEventListener("click"') == 1
+        assert purchase_script.count('add?.addEventListener("click"') == 1
         assert purchase_script.count('list.addEventListener("click"') == 1
 
         occurred = (date.today() - timedelta(days=1)).isoformat() + "T12:00"
@@ -92,9 +91,10 @@ def test_multiline_purchase_receives_stock_and_appears_once_in_expenses(
         detail = client.get(posted.headers["location"])
         assert detail.status_code == 200
         assert "A2 Supply" in detail.text
-        assert "Allocated acquisition cost" in detail.text
+        assert "Inventory cost" in detail.text
         assert "Purchase Mouse" in detail.text
         assert "Purchase Rat" in detail.text
+        assert "/static/purchase-form.js" in client.get(f"{posted.headers['location']}/edit").text
 
         assert "50</strong><span>each on hand" in client.get(f"/inventory/{first_id}").text
         expenses = client.get("/expenses")
@@ -128,7 +128,7 @@ def test_purchase_validation_is_atomic_when_total_does_not_reconcile(tmp_path: P
     with client_for(tmp_path) as client:
         complete_setup(client)
         item_id = _add_food_item(client, "Atomic Mouse")
-        page = client.get("/purchases/new")
+        page = client.get("/inventory/new")
         response = client.post(
             "/purchases",
             data={
@@ -150,14 +150,193 @@ def test_purchase_validation_is_atomic_when_total_does_not_reconcile(tmp_path: P
         assert "must equal line subtotals" in response.text
         detail = client.get(f"/inventory/{item_id}")
         assert "0</strong><span>each on hand" in detail.text
-        assert "No purchases yet" in client.get("/purchases").text
+        assert "No purchase history yet" in client.get("/purchases").text
+
+
+def test_unified_add_inventory_covers_paid_untracked_and_legacy_cost_modes(
+    tmp_path: Path,
+) -> None:
+    with client_for(tmp_path) as client:
+        complete_setup(client)
+        page = client.get("/inventory/new")
+        assert page.status_code == 200
+        assert "What are you adding?" in page.text
+        assert "Add inventory" in page.text
+        assert "Add purchase" not in client.get("/inventory").text
+        occurred = date.today().isoformat() + "T12:00"
+        created = client.post(
+            "/inventory",
+            data={
+                "csrf_token": csrf_from(page.text),
+                "idempotency_key": _command_id(page.text),
+                "item_selection": "new",
+                "inventory_type": "food",
+                "food_category": "whole_prey",
+                "food_type": "rat",
+                "size_stage": "small",
+                "preparation_method": "frozen_thawed",
+                "unit_code": "each",
+                "name": "Small Frozen Rat",
+                "starting_quantity": "20",
+                "reorder_threshold": "5",
+                "amount_paid": "40.00",
+                "currency": "USD",
+                "occurred_at": occurred,
+                "vendor": "Unified Supply",
+            },
+            follow_redirects=False,
+        )
+        assert created.status_code == 303, created.text
+        item_path = created.headers["location"]
+        item_id = item_path.rsplit("/", 1)[1]
+        assert "20</strong><span>each on hand" in client.get(item_path).text
+
+        restock_page = client.get(f"/inventory/new?item={item_id}")
+        restocked = client.post(
+            "/inventory",
+            data={
+                "csrf_token": csrf_from(restock_page.text),
+                "idempotency_key": _command_id(restock_page.text),
+                "item_selection": "existing",
+                "recording_mode": "add_stock",
+                "inventory_item_id": f"{item_id}:2",
+                "quantity": "10",
+                "amount_paid": "25.00",
+                "currency": "USD",
+                "occurred_at": occurred,
+                "vendor": "Unified Supply",
+            },
+            follow_redirects=False,
+        )
+        assert restocked.status_code == 303, restocked.text
+        assert "30</strong><span>each on hand" in client.get(item_path).text
+
+        untracked_page = client.get(f"/inventory/new?item={item_id}")
+        untracked = client.post(
+            "/inventory",
+            data={
+                "csrf_token": csrf_from(untracked_page.text),
+                "idempotency_key": _command_id(untracked_page.text),
+                "item_selection": "existing",
+                "recording_mode": "add_stock",
+                "inventory_item_id": f"{item_id}:3",
+                "quantity": "5",
+                "amount_paid": "0",
+                "currency": "USD",
+                "occurred_at": occurred,
+            },
+            follow_redirects=False,
+        )
+        assert untracked.status_code == 303, untracked.text
+        detail = client.get(item_path)
+        assert "35</strong><span>each on hand" in detail.text
+        assert "5.0 each" in detail.text
+        assert "Cost not tracked" in detail.text
+        assert "FIFO" not in detail.text
+
+        cost_page = client.get(f"/inventory/new?item={item_id}&mode=existing_cost")
+        assigned = client.post(
+            "/inventory",
+            data={
+                "csrf_token": csrf_from(cost_page.text),
+                "idempotency_key": _command_id(cost_page.text),
+                "item_selection": "existing",
+                "recording_mode": "existing_cost",
+                "inventory_item_id": f"{item_id}:4",
+                "quantity": "5",
+                "amount_paid": "36.00",
+                "currency": "USD",
+                "occurred_at": occurred,
+                "vendor": "Remembered Supplier",
+            },
+            follow_redirects=False,
+        )
+        assert assigned.status_code == 303, assigned.text
+        final_detail = client.get(item_path)
+        assert "35</strong><span>each on hand" in final_detail.text
+        assert "$101.00" in final_detail.text
+        assert "FIFO" not in final_detail.text
+
+        engine = client.app.state.database_engine
+        manager = SQLiteProjectionGenerationManager(engine, product_projection_registry)
+        facts = manager.active_layout("cash_spend").component("cash_spend_facts", "facts")
+        with engine.connect() as connection:
+            purchase_spend = connection.execute(
+                text(
+                    f'SELECT COUNT(*),SUM(amount_minor) FROM "{facts}" '
+                    "WHERE source_kind='purchase' AND status='active'"
+                )
+            ).one()
+            assert purchase_spend == (3, 10_100)
+            assert (
+                connection.execute(
+                    text("SELECT on_hand_quantity_scaled FROM inventory_balance WHERE item_id=:id"),
+                    {"id": item_id},
+                ).scalar_one()
+                == 35_000
+            )
+
+
+def test_unified_add_inventory_rejects_incomplete_or_ambiguous_choices(tmp_path: Path) -> None:
+    with client_for(tmp_path) as client:
+        complete_setup(client)
+        item_id = _add_food_item(client, "Validation Mouse")
+        occurred = date.today().isoformat() + "T12:00"
+
+        cases = (
+            ({"item_selection": "unknown"}, "Choose what you are adding"),
+            ({"item_selection": "existing"}, "Choose an existing inventory item"),
+            (
+                {
+                    "item_selection": "existing",
+                    "inventory_item_id": f"{uuid4()}:1",
+                    "recording_mode": "add_stock",
+                    "quantity": "1",
+                },
+                "Choose an active, configured inventory item",
+            ),
+            (
+                {
+                    "item_selection": "existing",
+                    "inventory_item_id": f"{item_id}:1",
+                    "recording_mode": "existing_cost",
+                    "quantity": "1",
+                    "amount_paid": "0",
+                },
+                "Enter what you paid",
+            ),
+            (
+                {
+                    "item_selection": "existing",
+                    "inventory_item_id": f"{item_id}:1",
+                    "recording_mode": "unknown",
+                    "quantity": "1",
+                },
+                "Choose what you are recording",
+            ),
+        )
+        for index, (values, message) in enumerate(cases):
+            page = client.get("/inventory/new")
+            response = client.post(
+                "/inventory",
+                data={
+                    "csrf_token": csrf_from(page.text),
+                    "idempotency_key": f"unified-invalid-choice-{index}",
+                    "occurred_at": occurred,
+                    "amount_paid": "0",
+                    "currency": "USD",
+                    **values,
+                },
+            )
+            assert response.status_code == 422
+            assert message in response.text
 
 
 def test_purchase_correction_void_and_reinstate_browser_flow(tmp_path: Path) -> None:
     with client_for(tmp_path) as client:
         complete_setup(client)
         item_id = _add_food_item(client, "Lifecycle Mouse")
-        page = client.get("/purchases/new")
+        page = client.get("/inventory/new")
         posted = client.post(
             "/purchases",
             data={

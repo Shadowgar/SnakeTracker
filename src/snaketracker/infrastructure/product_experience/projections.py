@@ -162,7 +162,7 @@ product_projection_registry = ProjectionRegistry(
             "inventory_costing",
             strategy=InventoryCostingProjectionStrategy(),
             components=("lots", "allocations"),
-            handler_version=1,
+            handler_version=2,
         ),
         _definition(
             "cash_spend_facts",

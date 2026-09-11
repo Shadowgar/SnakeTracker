@@ -57,6 +57,9 @@ from snaketracker.domains.inventory.catalog import UNIT_BY_CODE, validate_catalo
 from snaketracker.domains.inventory.contracts import (
     InventoryConsumptionReversedV1,
     InventoryConsumptionReversedV2,
+    InventoryCostAssignedV1,
+    InventoryCostAssignmentCorrectedV1,
+    InventoryCostAssignmentPortionV1,
     InventoryItemArchivedV1,
     InventoryItemRegisteredV1,
     InventoryItemRegisteredV2,
@@ -77,8 +80,10 @@ from snaketracker.domains.inventory.contracts import (
 )
 from snaketracker.domains.purchases.contracts import (
     PurchaseCorrectedV1,
+    PurchaseCorrectedV2,
     PurchaseLineV1,
     PurchaseRecordedV1,
+    PurchaseRecordedV2,
 )
 from snaketracker.domains.reminders.contracts import (
     ReminderRuleChangedV1,
@@ -1208,6 +1213,49 @@ def _deserialize_inventory_receipt_corrected(data: Mapping[str, object]) -> Even
     )
 
 
+def _inventory_cost_portions(
+    data: Mapping[str, object], label: str
+) -> tuple[InventoryCostAssignmentPortionV1, ...]:
+    raw_portions = data["portions"]
+    if not isinstance(raw_portions, list):
+        raise ValueError(f"Stored {label} portions are invalid.")
+    portions: list[InventoryCostAssignmentPortionV1] = []
+    for raw in raw_portions:
+        if not isinstance(raw, Mapping):
+            raise ValueError(f"Stored {label} portions are invalid.")
+        _require_exact_fields(InventoryCostAssignmentPortionV1, raw)
+        portions.append(
+            InventoryCostAssignmentPortionV1(
+                _uuid_field(raw, "source_event_id", label),
+                _payload_integer(raw, "offset_scaled", label),
+                _payload_integer(raw, "quantity_scaled", label),
+            )
+        )
+    return tuple(portions)
+
+
+def _deserialize_inventory_cost_assigned(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryCostAssignedV1, data)
+    return InventoryCostAssignedV1(
+        _payload_integer(data, "quantity_scaled", "inventory cost assignment"),
+        _uuid_field(data, "purchase_id", "inventory cost assignment"),
+        _uuid_field(data, "purchase_line_id", "inventory cost assignment"),
+        _inventory_cost_portions(data, "inventory cost assignment"),
+    )
+
+
+def _deserialize_inventory_cost_assignment_corrected(
+    data: Mapping[str, object],
+) -> EventPayload:
+    _require_exact_fields(InventoryCostAssignmentCorrectedV1, data)
+    return InventoryCostAssignmentCorrectedV1(
+        _uuid_field(data, "target_event_id", "inventory cost assignment correction"),
+        _payload_integer(data, "quantity_scaled", "inventory cost assignment correction"),
+        _inventory_cost_portions(data, "inventory cost assignment correction"),
+        _required_payload_text(data, "reason", "inventory cost assignment correction"),
+    )
+
+
 def _deserialize_inventory_stock_reserved(data: Mapping[str, object]) -> EventPayload:
     _require_exact_fields(InventoryStockReservedV1, data)
     return InventoryStockReservedV1(
@@ -1389,6 +1437,35 @@ INVENTORY_CONTRACTS = (
         ),
     ),
     EventContractRegistration(
+        "inventory.cost_assigned",
+        1,
+        "inventory",
+        InventoryCostAssignedV1,
+        _deserialize_inventory_cost_assigned,
+        (
+            SubjectRequirement("inventory_item", "primary"),
+            SubjectRequirement("purchase", "related"),
+        ),
+        CorrectionCapabilities(
+            correctable=True,
+            voidable=True,
+            reinstatable=True,
+            required_role="owner",
+            correction_event_types=("inventory.cost_assignment_corrected",),
+        ),
+    ),
+    EventContractRegistration(
+        "inventory.cost_assignment_corrected",
+        1,
+        "inventory",
+        InventoryCostAssignmentCorrectedV1,
+        _deserialize_inventory_cost_assignment_corrected,
+        (
+            SubjectRequirement("inventory_item", "primary"),
+            SubjectRequirement("purchase", "related"),
+        ),
+    ),
+    EventContractRegistration(
         "inventory.stock_reserved",
         1,
         "inventory",
@@ -1516,6 +1593,25 @@ def _deserialize_purchase_corrected(data: Mapping[str, object]) -> EventPayload:
     )
 
 
+def _deserialize_purchase_recorded_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(PurchaseRecordedV2, data)
+    return PurchaseRecordedV2(
+        _uuid_field(data, "purchase_id", "purchase"),
+        *_purchase_fields(data, "purchase"),
+        _required_payload_text(data, "acquisition_mode", "purchase"),
+    )
+
+
+def _deserialize_purchase_corrected_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(PurchaseCorrectedV2, data)
+    return PurchaseCorrectedV2(
+        _uuid_field(data, "target_event_id", "purchase correction"),
+        *_purchase_fields(data, "purchase correction"),
+        _required_payload_text(data, "acquisition_mode", "purchase correction"),
+        _required_payload_text(data, "reason", "purchase correction"),
+    )
+
+
 PURCHASE_CONTRACTS = (
     EventContractRegistration(
         "purchase.recorded",
@@ -1536,11 +1632,47 @@ PURCHASE_CONTRACTS = (
         ),
     ),
     EventContractRegistration(
+        "purchase.recorded",
+        2,
+        "purchases",
+        PurchaseRecordedV2,
+        _deserialize_purchase_recorded_v2,
+        (
+            SubjectRequirement("purchase", "primary"),
+            SubjectRequirement("inventory_item", "related", 1, 25),
+        ),
+        CorrectionCapabilities(
+            correctable=True,
+            voidable=True,
+            reinstatable=True,
+            required_role="owner",
+            correction_event_types=("purchase.corrected",),
+        ),
+    ),
+    EventContractRegistration(
         "purchase.corrected",
         1,
         "purchases",
         PurchaseCorrectedV1,
         _deserialize_purchase_corrected,
+        (
+            SubjectRequirement("purchase", "primary"),
+            SubjectRequirement("inventory_item", "related", 1, 25),
+        ),
+        CorrectionCapabilities(
+            correctable=True,
+            voidable=True,
+            reinstatable=True,
+            required_role="owner",
+            correction_event_types=("purchase.corrected",),
+        ),
+    ),
+    EventContractRegistration(
+        "purchase.corrected",
+        2,
+        "purchases",
+        PurchaseCorrectedV2,
+        _deserialize_purchase_corrected_v2,
         (
             SubjectRequirement("purchase", "primary"),
             SubjectRequirement("inventory_item", "related", 1, 25),

@@ -8,15 +8,22 @@ from typing import Protocol
 from uuid import UUID, uuid4
 
 from snaketracker.application.inventory import InventoryBalanceProjection
-from snaketracker.domains.inventory.catalog import UNIT_BY_CODE
+from snaketracker.domains.inventory.catalog import UNIT_BY_CODE, validate_catalog
 from snaketracker.domains.inventory.contracts import (
+    InventoryCostAssignedV1,
+    InventoryCostAssignmentCorrectedV1,
+    InventoryCostAssignmentPortionV1,
+    InventoryItemRegisteredV2,
     InventoryReceiptCorrectedV1,
+    InventoryStockReceivedV2,
     InventoryStockReceivedV3,
 )
 from snaketracker.domains.purchases.contracts import (
     PurchaseCorrectedV1,
+    PurchaseCorrectedV2,
     PurchaseLineV1,
     PurchaseRecordedV1,
+    PurchaseRecordedV2,
 )
 from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
 from snaketracker.platform.events.corrections import CorrectionAction, validate_correction
@@ -118,6 +125,46 @@ class ControlPurchaseCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class AcquireNewInventoryCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    actor_role: str
+    correlation_id: UUID
+    idempotency_key: str
+    name: str
+    inventory_type: str
+    unit_code: str
+    food_category: str | None
+    food_type: str | None
+    size_stage: str | None
+    preparation_method: str | None
+    reorder_threshold_scaled: int | None
+    quantity_scaled: int
+    amount_paid_minor: int
+    currency: str
+    vendor: str | None
+    reference: str | None
+    occurred_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class AssignExistingStockCostCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    actor_role: str
+    correlation_id: UUID
+    idempotency_key: str
+    inventory_item_id: UUID
+    expected_inventory_version: int
+    quantity_scaled: int
+    amount_paid_minor: int
+    currency: str
+    vendor: str | None
+    reference: str | None
+    occurred_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
 class PurchaseLineCurrent:
     purchase_line_id: UUID
     inventory_item_id: UUID
@@ -148,6 +195,7 @@ class PurchaseCurrent:
     stream_version: int
     last_event_id: UUID
     lines: tuple[PurchaseLineCurrent, ...]
+    acquisition_mode: str = "stock_received"
 
 
 @dataclass(frozen=True, slots=True)
@@ -176,11 +224,21 @@ class PurchaseCurrentProjection(SynchronousProjection, Protocol):
 class InventoryCostProjection(Protocol):
     def summary_for(self, household_id: UUID, item_id: UUID) -> InventoryCostSummary: ...
 
+    def assignment_portions_for(
+        self, household_id: UUID, item_id: UUID, quantity_scaled: int
+    ) -> tuple[InventoryCostAssignmentPortionV1, ...]: ...
+
 
 @dataclass(frozen=True, slots=True)
 class PurchaseCommandResult:
     purchase_id: UUID
     current: PurchaseCurrent
+
+
+@dataclass(frozen=True, slots=True)
+class InventoryAcquisitionResult:
+    item_id: UUID
+    purchase_id: UUID | None
 
 
 class PurchaseService:
@@ -195,6 +253,286 @@ class PurchaseService:
         self._inventory = inventory
         self._purchases = purchases
         self._costing = costing
+
+    def acquire_new(self, command: AcquireNewInventoryCommand) -> InventoryAcquisitionResult:
+        """Register an item and establish its opening stock in one atomic operation."""
+        _require_manager(command.actor_role)
+        name = _required_text(command.name, "Inventory name", 200)
+        catalog = _catalog_fields(command)
+        if command.quantity_scaled < 0:
+            raise PurchaseValidationError("Inventory quantity cannot be negative.")
+        if command.quantity_scaled:
+            quantity = _quantity(command.quantity_scaled, catalog[1], name)
+        else:
+            quantity = 0
+        threshold = command.reorder_threshold_scaled
+        if threshold is not None:
+            if threshold < 0:
+                raise PurchaseValidationError("Reorder threshold cannot be negative.")
+            if threshold:
+                _quantity(threshold, catalog[1], "Reorder threshold")
+        amount = _nonnegative_money(command.amount_paid_minor, "Amount paid")
+        if amount and not quantity:
+            raise PurchaseValidationError("Paid inventory must include a positive quantity.")
+        currency = _currency(command.currency)
+        vendor = _optional_text(command.vendor, "Vendor", 200) or "Vendor not recorded"
+        reference = _optional_text(command.reference, "Reference", 300)
+        occurred_at = _utc(command.occurred_at)
+        fields = {
+            field: _canonical_acquisition(value)
+            for field, value in asdict(command).items()
+            if field not in {"correlation_id", "idempotency_key"}
+        }
+        command_hash = canonical_command_hash(fields)
+        stored = self._event_store.stored_idempotency_response(
+            command.household_id,
+            command.actor_user_id,
+            "inventory.acquire_new",
+            command.idempotency_key,
+            command_hash,
+        )
+        if stored is not None:
+            raw_item = stored.get("item_id")
+            raw_purchase = stored.get("purchase_id")
+            if not isinstance(raw_item, str) or not (
+                raw_purchase is None or isinstance(raw_purchase, str)
+            ):
+                raise RuntimeError("Inventory acquisition idempotency response is invalid.")
+            return InventoryAcquisitionResult(
+                UUID(raw_item), UUID(raw_purchase) if raw_purchase is not None else None
+            )
+
+        item_id = uuid4()
+        item_key = StreamKey(command.household_id, "inventory-item", item_id)
+        now = datetime.now(UTC)
+        registration = _event(
+            item_key,
+            1,
+            "inventory.item_registered",
+            InventoryItemRegisteredV2(item_id, name, *catalog, threshold),
+            command.actor_user_id,
+            command.correlation_id,
+            command.idempotency_key,
+            now,
+            now,
+            "Inventory item registered",
+            None,
+            (EventSubject("inventory_item", item_id, "primary"),),
+            schema_version=2,
+        )
+        purchase_id: UUID | None = None
+        streams: list[StreamAppend] = []
+        if amount:
+            purchase_id = uuid4()
+            line_id = uuid4()
+            line = PurchaseLineV1(line_id, item_id, quantity, catalog[1], amount)
+            purchase_key = StreamKey(command.household_id, "purchase", purchase_id)
+            purchase_event = _event(
+                purchase_key,
+                1,
+                "purchase.recorded",
+                PurchaseRecordedV2(
+                    purchase_id,
+                    vendor,
+                    currency,
+                    reference,
+                    0,
+                    0,
+                    0,
+                    amount,
+                    (line,),
+                    "new_item_stock",
+                ),
+                command.actor_user_id,
+                command.correlation_id,
+                command.idempotency_key,
+                occurred_at,
+                now,
+                "Inventory acquired",
+                None,
+                _purchase_subjects(purchase_id, (line,)),
+                schema_version=2,
+            )
+            receipt = _event(
+                item_key,
+                2,
+                "inventory.stock_received",
+                InventoryStockReceivedV3(
+                    quantity, reference or f"Inventory from {vendor}", purchase_id, line_id
+                ),
+                command.actor_user_id,
+                command.correlation_id,
+                command.idempotency_key,
+                occurred_at,
+                now,
+                "Inventory stock added",
+                None,
+                (
+                    EventSubject("inventory_item", item_id, "primary"),
+                    EventSubject("purchase", purchase_id, "related", 1),
+                ),
+                causation_id=purchase_event.event_id,
+                schema_version=3,
+            )
+            streams.append(StreamAppend(purchase_key, 0, (purchase_event,)))
+        elif quantity:
+            receipt = _event(
+                item_key,
+                2,
+                "inventory.stock_received",
+                InventoryStockReceivedV2(quantity, reference or "Opening stock; cost not tracked"),
+                command.actor_user_id,
+                command.correlation_id,
+                command.idempotency_key,
+                occurred_at,
+                now,
+                "Inventory stock added",
+                None,
+                (EventSubject("inventory_item", item_id, "primary"),),
+                causation_id=registration.event_id,
+                schema_version=2,
+            )
+        item_events = (registration, receipt) if quantity else (registration,)
+        streams.append(StreamAppend(item_key, 0, item_events))
+        result = self._event_store.append_many(
+            AtomicAppendRequest(
+                streams=tuple(streams),
+                idempotency=IdempotencyContext(
+                    operation_id=uuid4(),
+                    household_id=command.household_id,
+                    actor_user_id=command.actor_user_id,
+                    operation_scope="inventory.acquire_new",
+                    idempotency_key=command.idempotency_key,
+                    command_hash=command_hash,
+                    correlation_id=command.correlation_id,
+                    stored_response={
+                        "item_id": str(item_id),
+                        "purchase_id": str(purchase_id) if purchase_id is not None else None,
+                    },
+                    stored_response_schema_version=1,
+                    created_at=now,
+                    expires_at=now + timedelta(days=365),
+                ),
+                synchronous_projections=(self._purchases, self._inventory),
+            )
+        )
+        actual_item = result.stored_response.get("item_id")
+        actual_purchase = result.stored_response.get("purchase_id")
+        if not isinstance(actual_item, str) or not (
+            actual_purchase is None or isinstance(actual_purchase, str)
+        ):
+            raise RuntimeError("Inventory acquisition did not retain its result.")
+        if self._inventory.balance_for(command.household_id, UUID(actual_item)) is None:
+            raise RuntimeError("Inventory acquisition projection did not commit atomically.")
+        return InventoryAcquisitionResult(
+            UUID(actual_item), UUID(actual_purchase) if actual_purchase is not None else None
+        )
+
+    def assign_existing_stock_cost(
+        self, command: AssignExistingStockCostCommand
+    ) -> PurchaseCommandResult:
+        """Attach paid cost to current untracked stock without changing its quantity."""
+        _require_manager(command.actor_role)
+        command_fields = {
+            field: _canonical_acquisition(value)
+            for field, value in asdict(command).items()
+            if field not in {"correlation_id", "idempotency_key"}
+        }
+        command_hash = canonical_command_hash(command_fields)
+        replay = self._idempotent_purchase(
+            command.household_id,
+            command.actor_user_id,
+            "inventory.assign_existing_cost",
+            command.idempotency_key,
+            command_hash,
+        )
+        if replay is not None:
+            return replay
+        balance = self._inventory.balance_for(command.household_id, command.inventory_item_id)
+        if balance is None or balance.status != "active":
+            raise PurchaseValidationError("Inventory item is not active in this household.")
+        if balance.needs_setup or balance.unit_code is None:
+            raise PurchaseValidationError("Finish Inventory setup before adding cost information.")
+        if balance.stream_version != command.expected_inventory_version:
+            raise PurchaseValidationError("Inventory version is stale.")
+        quantity = _quantity(command.quantity_scaled, balance.unit_code, balance.name)
+        total = _positive_money(command.amount_paid_minor, "Amount paid")
+        currency = _currency(command.currency)
+        vendor = _optional_text(command.vendor, "Vendor", 200) or "Vendor not recorded"
+        reference = _optional_text(command.reference, "Reference", 300)
+        occurred_at = _utc(command.occurred_at)
+        portions = self._costing.assignment_portions_for(
+            command.household_id, command.inventory_item_id, quantity
+        )
+        purchase_id = uuid4()
+        line_id = uuid4()
+        line = PurchaseLineV1(
+            line_id, command.inventory_item_id, quantity, balance.unit_code, total
+        )
+        now = datetime.now(UTC)
+        purchase_key = StreamKey(command.household_id, "purchase", purchase_id)
+        purchase_event = _event(
+            purchase_key,
+            1,
+            "purchase.recorded",
+            PurchaseRecordedV2(
+                purchase_id,
+                vendor,
+                currency,
+                reference,
+                0,
+                0,
+                0,
+                total,
+                (line,),
+                "existing_stock_cost",
+            ),
+            command.actor_user_id,
+            command.correlation_id,
+            command.idempotency_key,
+            occurred_at,
+            now,
+            "Cost information added",
+            None,
+            _purchase_subjects(purchase_id, (line,)),
+            schema_version=2,
+        )
+        assignment = _event(
+            StreamKey(command.household_id, "inventory-item", command.inventory_item_id),
+            command.expected_inventory_version + 1,
+            "inventory.cost_assigned",
+            InventoryCostAssignedV1(quantity, purchase_id, line_id, portions),
+            command.actor_user_id,
+            command.correlation_id,
+            command.idempotency_key,
+            occurred_at,
+            now,
+            "Cost information added to existing stock",
+            None,
+            (
+                EventSubject("inventory_item", command.inventory_item_id, "primary"),
+                EventSubject("purchase", purchase_id, "related", 1),
+            ),
+            causation_id=purchase_event.event_id,
+        )
+        return self._append_lifecycle(
+            command.household_id,
+            command.actor_user_id,
+            purchase_id,
+            command.correlation_id,
+            command.idempotency_key,
+            "inventory.assign_existing_cost",
+            command_fields,
+            now,
+            (
+                StreamAppend(purchase_key, 0, (purchase_event,)),
+                StreamAppend(
+                    StreamKey(command.household_id, "inventory-item", command.inventory_item_id),
+                    command.expected_inventory_version,
+                    (assignment,),
+                ),
+            ),
+        )
 
     def post(self, command: PostPurchaseCommand) -> PurchaseCommandResult:
         _require_manager(command.actor_role)
@@ -397,6 +735,8 @@ class PurchaseService:
             raise PurchaseValidationError("A voided purchase must be reinstated before correction.")
         if command.correlation_id != existing[0].correlation_id:
             raise PurchaseValidationError("Purchase correction must retain correlation lineage.")
+        if current.acquisition_mode == "existing_stock_cost":
+            return self._correct_existing_stock_cost(command, current, existing, target)
         reason = _required_text(command.reason, "Correction reason", 1000)
         vendor = _required_text(command.vendor, "Vendor", 200)
         currency = _currency(command.currency)
@@ -469,11 +809,25 @@ class PurchaseService:
 
         now = datetime.now(UTC)
         purchase_key = StreamKey(command.household_id, "purchase", command.purchase_id)
-        purchase_event = _event(
-            purchase_key,
-            command.expected_stream_version + 1,
-            "purchase.corrected",
-            PurchaseCorrectedV1(
+        correction_payload: object
+        correction_schema_version = 1
+        if current.acquisition_mode == "new_item_stock":
+            correction_payload = PurchaseCorrectedV2(
+                target.event_id,
+                vendor,
+                currency,
+                reference,
+                tax,
+                fee,
+                discount,
+                total,
+                tuple(replacement_lines),
+                "new_item_stock",
+                reason,
+            )
+            correction_schema_version = 2
+        else:
+            correction_payload = PurchaseCorrectedV1(
                 target.event_id,
                 vendor,
                 currency,
@@ -484,7 +838,12 @@ class PurchaseService:
                 total,
                 tuple(replacement_lines),
                 reason,
-            ),
+            )
+        purchase_event = _event(
+            purchase_key,
+            command.expected_stream_version + 1,
+            "purchase.corrected",
+            correction_payload,
             command.actor_user_id,
             command.correlation_id,
             command.idempotency_key,
@@ -494,6 +853,7 @@ class PurchaseService:
             notes,
             _purchase_subjects(command.purchase_id, tuple(replacement_lines)),
             causation_id=target.event_id,
+            schema_version=correction_schema_version,
         )
         validate_correction(
             CorrectionAction.CORRECT,
@@ -627,6 +987,149 @@ class PurchaseService:
             command_fields,
             now,
             tuple(streams),
+        )
+
+    def _correct_existing_stock_cost(
+        self,
+        command: CorrectPurchaseCommand,
+        current: PurchaseCurrent,
+        existing: tuple[DomainEvent, ...],
+        target: DomainEvent,
+    ) -> PurchaseCommandResult:
+        reason = _required_text(command.reason, "Correction reason", 1000)
+        vendor = _required_text(command.vendor, "Vendor", 200)
+        currency = _currency(command.currency)
+        reference = _optional_text(command.reference, "Purchase reference", 300)
+        notes = _optional_text(command.notes, "Purchase notes", 2000)
+        occurred_at = _utc(command.occurred_at)
+        total = _positive_money(command.total_paid_minor, "Total paid")
+        if any((command.tax_minor, command.fee_minor, command.discount_minor)):
+            raise PurchaseValidationError("Existing-stock cost information uses one amount paid.")
+        if len(current.lines) != 1 or len(command.lines) != 1:
+            raise PurchaseValidationError("Existing-stock cost information must contain one item.")
+        prior = current.lines[0]
+        replacement = command.lines[0]
+        if (
+            replacement.purchase_line_id != prior.purchase_line_id
+            or replacement.inventory_item_id != prior.inventory_item_id
+            or replacement.unit_code != prior.unit_code
+        ):
+            raise PurchaseValidationError("Existing-stock cost information cannot change its item.")
+        if replacement.subtotal_minor != total:
+            raise PurchaseValidationError("Amount paid must match the item amount.")
+        balance = self._inventory.balance_for(command.household_id, prior.inventory_item_id)
+        if balance is None or balance.stream_version != replacement.expected_inventory_version:
+            raise PurchaseValidationError("Inventory version is stale.")
+        quantity = _quantity(replacement.quantity_scaled, prior.unit_code, prior.item_name)
+        item_key = StreamKey(command.household_id, "inventory-item", prior.inventory_item_id)
+        item_history = self._event_store.load_stream(item_key)
+        root = next(
+            (event for event in item_history if event.event_id == prior.receipt_event_id), None
+        )
+        if root is None or not isinstance(root.payload, InventoryCostAssignedV1):
+            raise PurchaseValidationError("Cost-assignment history is missing.")
+        effective_portions = root.payload.portions
+        for event in item_history:
+            if (
+                isinstance(event.payload, InventoryCostAssignmentCorrectedV1)
+                and event.payload.target_event_id == root.event_id
+            ):
+                effective_portions = event.payload.portions
+        portions = _resize_assignment_portions(effective_portions, quantity)
+        existing_quantity = sum(portion.quantity_scaled for portion in portions)
+        if existing_quantity < quantity:
+            portions += self._costing.assignment_portions_for(
+                command.household_id, prior.inventory_item_id, quantity - existing_quantity
+            )
+        now = datetime.now(UTC)
+        line = PurchaseLineV1(
+            prior.purchase_line_id,
+            prior.inventory_item_id,
+            quantity,
+            prior.unit_code,
+            total,
+        )
+        purchase_event = _event(
+            StreamKey(command.household_id, "purchase", command.purchase_id),
+            command.expected_stream_version + 1,
+            "purchase.corrected",
+            PurchaseCorrectedV2(
+                target.event_id,
+                vendor,
+                currency,
+                reference,
+                0,
+                0,
+                0,
+                total,
+                (line,),
+                "existing_stock_cost",
+                reason,
+            ),
+            command.actor_user_id,
+            command.correlation_id,
+            command.idempotency_key,
+            occurred_at,
+            now,
+            "Cost information corrected",
+            notes,
+            _purchase_subjects(command.purchase_id, (line,)),
+            causation_id=target.event_id,
+            schema_version=2,
+        )
+        assignment_event = _event(
+            item_key,
+            balance.stream_version + 1,
+            "inventory.cost_assignment_corrected",
+            InventoryCostAssignmentCorrectedV1(root.event_id, quantity, portions, reason),
+            command.actor_user_id,
+            command.correlation_id,
+            command.idempotency_key,
+            occurred_at,
+            now,
+            "Existing stock cost corrected",
+            reason,
+            (
+                EventSubject("inventory_item", prior.inventory_item_id, "primary"),
+                EventSubject("purchase", command.purchase_id, "related", 1),
+            ),
+            causation_id=root.event_id,
+        )
+        validate_correction(
+            CorrectionAction.CORRECT,
+            target,
+            purchase_event,
+            production_event_registry.registration(
+                target.event_type, target.schema_version
+            ).correction,
+            command.actor_role,
+            existing,
+        )
+        validate_correction(
+            CorrectionAction.CORRECT,
+            root,
+            assignment_event,
+            production_event_registry.registration(root.event_type, root.schema_version).correction,
+            command.actor_role,
+            item_history,
+        )
+        return self._append_lifecycle(
+            command.household_id,
+            command.actor_user_id,
+            command.purchase_id,
+            command.correlation_id,
+            command.idempotency_key,
+            "purchases.correct",
+            _correct_command_fields(command),
+            now,
+            (
+                StreamAppend(
+                    StreamKey(command.household_id, "purchase", command.purchase_id),
+                    command.expected_stream_version,
+                    (purchase_event,),
+                ),
+                StreamAppend(item_key, balance.stream_version, (assignment_event,)),
+            ),
         )
 
     def void(self, command: ControlPurchaseCommand) -> PurchaseCommandResult:
@@ -1065,3 +1568,53 @@ def _utc(value: datetime) -> datetime:
     if value.tzinfo is None:
         raise PurchaseValidationError("Purchase time must include a timezone.")
     return value.astimezone(UTC)
+
+
+def _catalog_fields(
+    command: AcquireNewInventoryCommand,
+) -> tuple[str, str, str | None, str | None, str | None, str | None]:
+    inventory_type = command.inventory_type.strip()
+    unit_code = command.unit_code.strip()
+    food_category = _optional_text(command.food_category, "Food category", 200)
+    food_type = _optional_text(command.food_type, "Food type", 200)
+    size_stage = _optional_text(command.size_stage, "Food size or stage", 200)
+    preparation = _optional_text(command.preparation_method, "Food preparation", 200)
+    try:
+        validate_catalog(
+            inventory_type,
+            unit_code,
+            food_category,
+            food_type,
+            size_stage,
+            preparation,
+        )
+    except ValueError as error:
+        raise PurchaseValidationError(str(error)) from error
+    return inventory_type, unit_code, food_category, food_type, size_stage, preparation
+
+
+def _canonical_acquisition(value: object) -> object:
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, datetime):
+        return _utc(value).isoformat()
+    return value
+
+
+def _resize_assignment_portions(
+    portions: tuple[InventoryCostAssignmentPortionV1, ...], quantity_scaled: int
+) -> tuple[InventoryCostAssignmentPortionV1, ...]:
+    remaining = quantity_scaled
+    resized: list[InventoryCostAssignmentPortionV1] = []
+    for portion in portions:
+        take = min(remaining, portion.quantity_scaled)
+        if take:
+            resized.append(
+                InventoryCostAssignmentPortionV1(
+                    portion.source_event_id, portion.offset_scaled, take
+                )
+            )
+            remaining -= take
+        if remaining == 0:
+            break
+    return tuple(resized)

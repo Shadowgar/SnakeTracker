@@ -116,10 +116,11 @@ from snaketracker.application.inventory import (
     InventoryValidationError,
     ReceiveScaledStockCommand,
     ReceiveStockCommand,
-    RegisterStructuredInventoryItemCommand,
     RestoreInventoryItemCommand,
 )
 from snaketracker.application.purchases import (
+    AcquireNewInventoryCommand,
+    AssignExistingStockCostCommand,
     ControlPurchaseCommand,
     CorrectPurchaseCommand,
     CorrectPurchaseLineCommand,
@@ -2231,14 +2232,32 @@ def create_web_router(
             return RedirectResponse("/login", status_code=303)
         if "inventory.manage" not in principal.capabilities:
             return _access_denied(request, "Inventory access denied")
+        selected_item = request.query_params.get("item", "")
+        selected_mode = (
+            "existing_cost" if request.query_params.get("mode") == "existing_cost" else "add_stock"
+        )
         return protected_page(
             request,
             "inventory_new.html",
             principal,
             context={
                 "errors": {},
-                "values": {},
+                "values": {
+                    "item_selection": "existing" if selected_item else "new",
+                    "inventory_item_id": selected_item,
+                    "recording_mode": selected_mode,
+                },
                 "guided_creation": True,
+                "inventory_items": tuple(
+                    item
+                    for item in inventory_service.list_balances(
+                        principal.household_id, status="active"
+                    )
+                    if not item.needs_setup and item.unit_code is not None
+                ),
+                "default_occurred_at": datetime.now(
+                    ZoneInfo(principal.household_timezone)
+                ).strftime("%Y-%m-%dT%H:%M"),
                 **_inventory_catalog_context(),
             },
         )
@@ -2251,26 +2270,131 @@ def create_web_router(
         assert principal is not None and form is not None
         if "inventory.manage" not in principal.capabilities:
             return _access_denied(request, "Inventory access denied")
+        item_selection = str(form.get("item_selection", "new"))
+        result_item_id: UUID | None = None
         try:
-            guided = _guided_inventory_create_values(form)
-            result = inventory_service.register_structured(
-                RegisterStructuredInventoryItemCommand(
-                    household_id=principal.household_id,
-                    actor_user_id=principal.user_id,
-                    correlation_id=uuid4(),
-                    idempotency_key=_form_idempotency_key(form),
-                    name=str(form.get("name", "")),
-                    inventory_type=guided.inventory_type,
-                    unit_code=guided.unit_code,
-                    food_category=guided.food_category,
-                    food_type=guided.food_type,
-                    size_stage=guided.size_stage,
-                    preparation_method=guided.preparation_method,
-                    reorder_threshold_scaled=guided.reorder_threshold_scaled,
-                    starting_quantity_scaled=guided.starting_quantity_scaled,
-                )
+            amount_paid = _nonnegative_money_minor(form.get("amount_paid", "0"), "Amount paid")
+            raw_occurred_at = str(form.get("occurred_at", "")).strip()
+            occurred_at = (
+                _form_datetime(raw_occurred_at, principal.household_timezone)
+                if raw_occurred_at
+                else datetime.now(UTC)
             )
-        except (InventoryValidationError, FormValidationError, ValueError) as error:
+            if amount_paid and "expense.manage" not in principal.capabilities:
+                return _access_denied(request, "Inventory cost access denied")
+            if item_selection == "new":
+                guided = _guided_inventory_create_values(form)
+                result = purchase_service.acquire_new(
+                    AcquireNewInventoryCommand(
+                        household_id=principal.household_id,
+                        actor_user_id=principal.user_id,
+                        actor_role=principal.role,
+                        correlation_id=uuid4(),
+                        idempotency_key=_form_idempotency_key(form),
+                        name=str(form.get("name", "")),
+                        inventory_type=guided.inventory_type,
+                        unit_code=guided.unit_code,
+                        food_category=guided.food_category,
+                        food_type=guided.food_type,
+                        size_stage=guided.size_stage,
+                        preparation_method=guided.preparation_method,
+                        reorder_threshold_scaled=guided.reorder_threshold_scaled,
+                        quantity_scaled=guided.starting_quantity_scaled,
+                        amount_paid_minor=amount_paid,
+                        currency=str(form.get("currency", "USD")),
+                        vendor=_optional_form_text(form.get("vendor", "")),
+                        reference=_optional_form_text(form.get("reference", "")),
+                        occurred_at=occurred_at,
+                    )
+                )
+                result_item_id = result.item_id
+            elif item_selection == "existing":
+                item_id, expected_version = _inventory_reference(form)
+                if item_id is None or expected_version is None:
+                    raise FormValidationError("Choose an existing inventory item.")
+                item = inventory_service.balance_for(principal.household_id, item_id)
+                if item is None or item.unit_code is None or item.needs_setup:
+                    raise FormValidationError("Choose an active, configured inventory item.")
+                quantity = parse_quantity_scaled(str(form.get("quantity", "")), item.unit_code)
+                mode = str(form.get("recording_mode", "add_stock"))
+                if mode == "existing_cost":
+                    if not amount_paid:
+                        raise FormValidationError(
+                            "Enter what you paid when adding cost information."
+                        )
+                    if projection_catch_up is not None:
+                        projection_catch_up()
+                    purchase_service.assign_existing_stock_cost(
+                        AssignExistingStockCostCommand(
+                            principal.household_id,
+                            principal.user_id,
+                            principal.role,
+                            uuid4(),
+                            _form_idempotency_key(form),
+                            item_id,
+                            expected_version,
+                            quantity,
+                            amount_paid,
+                            str(form.get("currency", "USD")),
+                            _optional_form_text(form.get("vendor", "")),
+                            _optional_form_text(form.get("reference", "")),
+                            occurred_at,
+                        )
+                    )
+                elif mode == "add_stock" and amount_paid:
+                    purchase_service.post(
+                        PostPurchaseCommand(
+                            principal.household_id,
+                            principal.user_id,
+                            principal.role,
+                            uuid4(),
+                            _form_idempotency_key(form),
+                            _optional_form_text(form.get("vendor", "")) or "Vendor not recorded",
+                            str(form.get("currency", "USD")),
+                            _optional_form_text(form.get("reference", "")),
+                            None,
+                            occurred_at,
+                            0,
+                            0,
+                            0,
+                            amount_paid,
+                            (
+                                PurchaseLineCommand(
+                                    item_id,
+                                    expected_version,
+                                    quantity,
+                                    item.unit_code,
+                                    amount_paid,
+                                ),
+                            ),
+                        )
+                    )
+                elif mode == "add_stock":
+                    inventory_service.receive_scaled(
+                        ReceiveScaledStockCommand(
+                            principal.household_id,
+                            principal.user_id,
+                            item_id,
+                            uuid4(),
+                            _form_idempotency_key(form),
+                            expected_version,
+                            quantity,
+                            _optional_form_text(form.get("reference", "")) or "Cost not tracked",
+                            occurred_at,
+                        )
+                    )
+                else:
+                    raise FormValidationError("Choose what you are recording.")
+                result_item_id = item_id
+            else:
+                raise FormValidationError("Choose what you are adding.")
+        except (
+            InventoryValidationError,
+            PurchaseAuthorizationError,
+            PurchaseValidationError,
+            FormValidationError,
+            ValueError,
+        ) as error:
             return protected_page(
                 request,
                 "inventory_new.html",
@@ -2280,10 +2404,19 @@ def create_web_router(
                     "errors": {"form": str(error)},
                     "values": _form_values(form),
                     "guided_creation": True,
+                    "inventory_items": tuple(
+                        item
+                        for item in inventory_service.list_balances(
+                            principal.household_id, status="active"
+                        )
+                        if not item.needs_setup and item.unit_code is not None
+                    ),
+                    "default_occurred_at": str(form.get("occurred_at", "")),
                     **_inventory_catalog_context(),
                 },
             )
-        return RedirectResponse(f"/inventory/{result.item_id}", status_code=303)
+        assert result_item_id is not None
+        return RedirectResponse(f"/inventory/{result_item_id}", status_code=303)
 
     @router.get("/inventory/{item_id}", response_class=HTMLResponse)
     async def inventory_detail(request: Request, item_id: str) -> Response:
@@ -2309,8 +2442,20 @@ def create_web_router(
                 "item": item,
                 "errors": {},
                 "cost_summary": cost_summary,
-                "remaining_value": _friendly_currency_values(cost_summary.known_remaining),
-                "consumed_value": _friendly_currency_values(cost_summary.known_consumed),
+                "remaining_value": (
+                    _friendly_currency_values(cost_summary.known_remaining)
+                    if cost_summary.known_remaining
+                    else (
+                        "Cost not tracked"
+                        if cost_summary.unknown_remaining_quantity_scaled
+                        else "$0.00"
+                    )
+                ),
+                "consumed_value": (
+                    _friendly_currency_values(cost_summary.known_consumed)
+                    if cost_summary.known_consumed
+                    else ("Cost not tracked" if item.consumed_quantity_scaled else "$0.00")
+                ),
             },
         )
 
@@ -2651,12 +2796,7 @@ def create_web_router(
             return RedirectResponse("/login", status_code=303)
         if not {"inventory.manage", "expense.manage"}.issubset(principal.capabilities):
             return _access_denied(request, "Purchase access denied")
-        return protected_page(
-            request,
-            "purchase_new.html",
-            principal,
-            context=purchase_form_context(principal),
-        )
+        return RedirectResponse("/inventory/new", status_code=303)
 
     @router.post("/purchases", response_class=HTMLResponse)
     async def purchase_create(request: Request) -> Response:

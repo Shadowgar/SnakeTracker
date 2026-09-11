@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -10,6 +10,12 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy import text
 
+from snaketracker.application.animals import (
+    AnimalService,
+    DeleteAnimalCareRecordCommand,
+    RecordInventoryFeedingCommand,
+    RegisterAnimalCommand,
+)
 from snaketracker.application.household_bootstrap import (
     AccountRegistrationCommand,
     AccountRegistrationService,
@@ -23,9 +29,12 @@ from snaketracker.application.inventory import (
     ExpireStockCommand,
     InventoryService,
     InventoryValidationError,
+    RegisterInventoryItemCommand,
     RegisterStructuredInventoryItemCommand,
 )
 from snaketracker.application.purchases import (
+    AcquireNewInventoryCommand,
+    AssignExistingStockCostCommand,
     ControlPurchaseCommand,
     CorrectPurchaseCommand,
     CorrectPurchaseLineCommand,
@@ -41,11 +50,20 @@ from snaketracker.application.purchases import (
     _positive_money,
     _quantity,
     _required_text,
+    _resize_assignment_portions,
     _utc,
     allocate_acquisition_costs,
 )
-from snaketracker.domains.inventory.contracts import InventoryReceiptCorrectedV1
-from snaketracker.domains.purchases.contracts import PurchaseCorrectedV1, PurchaseLineV1
+from snaketracker.domains.inventory.contracts import (
+    InventoryCostAssignmentPortionV1,
+    InventoryReceiptCorrectedV1,
+)
+from snaketracker.domains.purchases.contracts import (
+    PurchaseCorrectedV1,
+    PurchaseLineV1,
+    PurchaseRecordedV2,
+)
+from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
 from snaketracker.infrastructure.database.engine import create_sqlite_engine
 from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
 from snaketracker.infrastructure.identity.bootstrap_repository import (
@@ -61,6 +79,7 @@ from snaketracker.infrastructure.purchases.projections import (
     SQLAlchemyInventoryCostProjection,
     SQLAlchemyInventoryEffectiveReceiptProjection,
     SQLAlchemyPurchaseCurrentProjection,
+    _acquisition_mode,
     _as_int,
 )
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
@@ -170,6 +189,472 @@ def _post(
             lines,
         )
     )
+
+
+def test_unified_new_inventory_tracks_paid_or_untracked_stock_and_consumption(
+    tmp_path: Path,
+) -> None:
+    engine, owner, _store, inventory, purchases, manager = _setup(tmp_path)
+    try:
+        paid = purchases.acquire_new(
+            AcquireNewInventoryCommand(
+                owner.household_id,
+                owner.user_id,
+                "owner",
+                uuid4(),
+                "unified-paid-item",
+                "Small Frozen Rat",
+                "food",
+                "each",
+                "whole_prey",
+                "rat",
+                "small",
+                "frozen_thawed",
+                5_000,
+                20_000,
+                4_000,
+                "USD",
+                "Rat Supplier",
+                "Receipt unified",
+                datetime(2026, 9, 11, 12, tzinfo=UTC),
+            )
+        )
+        assert paid.purchase_id is not None
+        assert (
+            purchases.acquire_new(
+                replace(
+                    AcquireNewInventoryCommand(
+                        owner.household_id,
+                        owner.user_id,
+                        "owner",
+                        uuid4(),
+                        "unified-paid-item",
+                        "Small Frozen Rat",
+                        "food",
+                        "each",
+                        "whole_prey",
+                        "rat",
+                        "small",
+                        "frozen_thawed",
+                        5_000,
+                        20_000,
+                        4_000,
+                        "USD",
+                        "Rat Supplier",
+                        "Receipt unified",
+                        datetime(2026, 9, 11, 12, tzinfo=UTC),
+                    ),
+                    correlation_id=uuid4(),
+                )
+            )
+            == paid
+        )
+        paid_balance = inventory.balance_for(owner.household_id, paid.item_id)
+        assert paid_balance is not None and paid_balance.on_hand_quantity_scaled == 20_000
+        _catch_up(engine, manager)
+        paid_summary = purchases.cost_summary_for(owner.household_id, paid.item_id)
+        assert paid_summary.known_remaining == (CurrencyValue("USD", 4_000),)
+        assert paid_summary.unknown_remaining_quantity_scaled == 0
+
+        inventory.consume_scaled(
+            ConsumeScaledStockCommand(
+                owner.household_id,
+                owner.user_id,
+                paid.item_id,
+                uuid4(),
+                "unified-feed-one",
+                2,
+                1_000,
+                None,
+            )
+        )
+        _catch_up(engine, manager)
+        consumed = purchases.cost_summary_for(owner.household_id, paid.item_id)
+        assert consumed.known_remaining == (CurrencyValue("USD", 3_800),)
+        assert consumed.known_consumed == (CurrencyValue("USD", 200),)
+
+        untracked = purchases.acquire_new(
+            AcquireNewInventoryCommand(
+                owner.household_id,
+                owner.user_id,
+                "owner",
+                uuid4(),
+                "unified-untracked-item",
+                "Cost Not Tracked Rat",
+                "food",
+                "each",
+                "whole_prey",
+                "rat",
+                "small",
+                "frozen_thawed",
+                None,
+                5_000,
+                0,
+                "USD",
+                None,
+                None,
+                datetime(2026, 9, 11, 13, tzinfo=UTC),
+            )
+        )
+        assert untracked.purchase_id is None
+        assert (
+            purchases.acquire_new(
+                replace(
+                    AcquireNewInventoryCommand(
+                        owner.household_id,
+                        owner.user_id,
+                        "owner",
+                        uuid4(),
+                        "unified-untracked-item",
+                        "Cost Not Tracked Rat",
+                        "food",
+                        "each",
+                        "whole_prey",
+                        "rat",
+                        "small",
+                        "frozen_thawed",
+                        None,
+                        5_000,
+                        0,
+                        "USD",
+                        None,
+                        None,
+                        datetime(2026, 9, 11, 13, tzinfo=UTC),
+                    ),
+                    correlation_id=uuid4(),
+                )
+            )
+            == untracked
+        )
+        _catch_up(engine, manager)
+        untracked_summary = purchases.cost_summary_for(owner.household_id, untracked.item_id)
+        assert untracked_summary.known_remaining == ()
+        assert untracked_summary.unknown_remaining_quantity_scaled == 5_000
+        assert len(purchases.list_purchases(owner.household_id)) == 1
+    finally:
+        engine.dispose()
+
+
+def test_existing_stock_cost_assignment_is_partial_bounded_and_quantity_neutral(
+    tmp_path: Path,
+) -> None:
+    engine, owner, _store, inventory, purchases, manager = _setup(tmp_path)
+    try:
+        legacy = inventory.register_structured(
+            RegisterStructuredInventoryItemCommand(
+                owner.household_id,
+                owner.user_id,
+                uuid4(),
+                "legacy-cost-item",
+                "Legacy Frozen Rat",
+                "food",
+                "each",
+                "whole_prey",
+                "rat",
+                "small",
+                "frozen_thawed",
+                None,
+                30_000,
+            )
+        )
+        inventory.consume_scaled(
+            ConsumeScaledStockCommand(
+                owner.household_id,
+                owner.user_id,
+                legacy.item_id,
+                uuid4(),
+                "legacy-consumed-ten",
+                2,
+                10_000,
+                None,
+            )
+        )
+        _catch_up(engine, manager)
+        assert (
+            purchases.cost_summary_for(
+                owner.household_id, legacy.item_id
+            ).unknown_remaining_quantity_scaled
+            == 20_000
+        )
+
+        command = AssignExistingStockCostCommand(
+            owner.household_id,
+            owner.user_id,
+            "owner",
+            uuid4(),
+            "assign-partial-legacy-cost",
+            legacy.item_id,
+            3,
+            10_000,
+            1_800,
+            "USD",
+            "Remembered Supplier",
+            "Historical receipt",
+            datetime(2026, 8, 1, 12, tzinfo=UTC),
+        )
+        assigned = purchases.assign_existing_stock_cost(command)
+        assert purchases.assign_existing_stock_cost(command).purchase_id == assigned.purchase_id
+        balance = inventory.balance_for(owner.household_id, legacy.item_id)
+        assert balance is not None
+        assert balance.on_hand_quantity_scaled == 20_000
+        assert balance.stream_version == 4
+        _catch_up(engine, manager)
+        summary = purchases.cost_summary_for(owner.household_id, legacy.item_id)
+        assert summary.known_remaining == (CurrencyValue("USD", 1_800),)
+        assert summary.known_consumed == ()
+        assert summary.unknown_remaining_quantity_scaled == 10_000
+
+        with pytest.raises(PurchaseValidationError, match="10 available"):
+            purchases.assign_existing_stock_cost(
+                replace(
+                    command,
+                    correlation_id=uuid4(),
+                    idempotency_key="assign-too-much-legacy-cost",
+                    expected_inventory_version=4,
+                    quantity_scaled=11_000,
+                )
+            )
+
+        current = assigned.current
+        line = current.lines[0]
+        invalid_correction = CorrectPurchaseCommand(
+            owner.household_id,
+            owner.user_id,
+            "owner",
+            current.purchase_id,
+            current.last_event_id,
+            current.stream_version,
+            purchases.correlation_id_for(owner.household_id, current.purchase_id),
+            "invalid-existing-cost-base",
+            "Remembered Supplier",
+            "USD",
+            None,
+            None,
+            datetime(2026, 8, 1, 12, tzinfo=UTC),
+            0,
+            0,
+            0,
+            1_800,
+            (
+                CorrectPurchaseLineCommand(
+                    line.purchase_line_id,
+                    line.inventory_item_id,
+                    4,
+                    10_000,
+                    line.unit_code,
+                    1_800,
+                ),
+            ),
+            "Validate correction",
+        )
+        invalid_cases = (
+            (
+                replace(invalid_correction, idempotency_key="existing-cost-tax", tax_minor=1),
+                "one amount",
+            ),
+            (
+                replace(invalid_correction, idempotency_key="existing-cost-lines", lines=()),
+                "one item",
+            ),
+            (
+                replace(
+                    invalid_correction,
+                    idempotency_key="existing-cost-item",
+                    lines=(replace(invalid_correction.lines[0], inventory_item_id=uuid4()),),
+                ),
+                "cannot change its item",
+            ),
+            (
+                replace(
+                    invalid_correction,
+                    idempotency_key="existing-cost-subtotal",
+                    lines=(replace(invalid_correction.lines[0], subtotal_minor=1_700),),
+                ),
+                "must match",
+            ),
+            (
+                replace(
+                    invalid_correction,
+                    idempotency_key="existing-cost-version",
+                    lines=(replace(invalid_correction.lines[0], expected_inventory_version=3),),
+                ),
+                "version is stale",
+            ),
+        )
+        for invalid, message in invalid_cases:
+            with pytest.raises(PurchaseValidationError, match=message):
+                purchases.correct(invalid)
+        corrected = purchases.correct(
+            CorrectPurchaseCommand(
+                owner.household_id,
+                owner.user_id,
+                "owner",
+                current.purchase_id,
+                current.last_event_id,
+                current.stream_version,
+                purchases.correlation_id_for(owner.household_id, current.purchase_id),
+                "correct-legacy-cost",
+                "Remembered Supplier",
+                "USD",
+                "Historical receipt",
+                None,
+                datetime(2026, 8, 1, 12, tzinfo=UTC),
+                0,
+                0,
+                0,
+                2_000,
+                (
+                    CorrectPurchaseLineCommand(
+                        line.purchase_line_id,
+                        line.inventory_item_id,
+                        4,
+                        10_000,
+                        line.unit_code,
+                        2_000,
+                    ),
+                ),
+                "Correct remembered amount",
+            )
+        )
+        _catch_up(engine, manager)
+        assert purchases.cost_summary_for(owner.household_id, legacy.item_id).known_remaining == (
+            CurrencyValue("USD", 2_000),
+        )
+        assert inventory.balance_for(
+            owner.household_id, legacy.item_id
+        ).on_hand_quantity_scaled == (20_000)
+
+        voided = purchases.void(
+            ControlPurchaseCommand(
+                owner.household_id,
+                owner.user_id,
+                "owner",
+                corrected.purchase_id,
+                corrected.current.last_event_id,
+                corrected.current.stream_version,
+                purchases.correlation_id_for(owner.household_id, corrected.purchase_id),
+                "void-legacy-cost",
+                "Cost record not applicable",
+            )
+        )
+        _catch_up(engine, manager)
+        voided_summary = purchases.cost_summary_for(owner.household_id, legacy.item_id)
+        assert voided_summary.known_remaining == ()
+        assert voided_summary.unknown_remaining_quantity_scaled == 20_000
+        assert inventory.balance_for(
+            owner.household_id, legacy.item_id
+        ).on_hand_quantity_scaled == (20_000)
+
+        purchases.reinstate(
+            ControlPurchaseCommand(
+                owner.household_id,
+                owner.user_id,
+                "owner",
+                voided.purchase_id,
+                voided.current.last_event_id,
+                voided.current.stream_version,
+                purchases.correlation_id_for(owner.household_id, voided.purchase_id),
+                "reinstate-legacy-cost",
+                "Cost record confirmed",
+            )
+        )
+        _catch_up(engine, manager)
+        reinstated = purchases.cost_summary_for(owner.household_id, legacy.item_id)
+        assert reinstated.known_remaining == (CurrencyValue("USD", 2_000),)
+        assert reinstated.unknown_remaining_quantity_scaled == 10_000
+        assert inventory.balance_for(
+            owner.household_id, legacy.item_id
+        ).on_hand_quantity_scaled == (20_000)
+    finally:
+        engine.dispose()
+
+
+def test_feeding_deletion_restores_paid_stock_and_consumption_value(tmp_path: Path) -> None:
+    engine, owner, store, inventory, purchases, manager = _setup(tmp_path)
+    try:
+        animals = AnimalService(
+            store,
+            SQLAlchemyAnimalCurrentProjection(engine),
+            inventory_projection=SQLAlchemyInventoryBalanceProjection(engine),
+        )
+        animal = animals.register(
+            RegisterAnimalCommand(
+                household_id=owner.household_id,
+                actor_user_id=owner.user_id,
+                correlation_id=uuid4(),
+                idempotency_key="costed-feeding-animal",
+                name="Atlas",
+                species="Python regius",
+                morph=None,
+                genetics=None,
+                sex=None,
+                birth_hatch_date=None,
+                acquisition_date=None,
+                breeder_source=None,
+                notes=None,
+            )
+        )
+        acquired = purchases.acquire_new(
+            AcquireNewInventoryCommand(
+                owner.household_id,
+                owner.user_id,
+                "owner",
+                uuid4(),
+                "costed-feeding-stock",
+                "Small Frozen Rat",
+                "food",
+                "each",
+                "whole_prey",
+                "rat",
+                "small",
+                "frozen_thawed",
+                None,
+                20_000,
+                4_000,
+                "USD",
+                "Rat Supplier",
+                None,
+                datetime(2026, 9, 11, 12, tzinfo=UTC),
+            )
+        )
+        feeding = animals.record_inventory_feeding(
+            RecordInventoryFeedingCommand(
+                owner.household_id,
+                owner.user_id,
+                animal.animal_id,
+                uuid4(),
+                "costed-feeding",
+                datetime.now(UTC) - timedelta(minutes=1),
+                acquired.item_id,
+                2,
+                1_000,
+                "accepted",
+                None,
+            )
+        )
+        _catch_up(engine, manager)
+        after_feeding = purchases.cost_summary_for(owner.household_id, acquired.item_id)
+        assert after_feeding.known_consumed == (CurrencyValue("USD", 200),)
+        assert after_feeding.known_remaining == (CurrencyValue("USD", 3_800),)
+
+        animals.delete_care_record(
+            DeleteAnimalCareRecordCommand(
+                owner.household_id,
+                owner.user_id,
+                "owner",
+                animal.animal_id,
+                feeding.event.event_id,
+                "delete-costed-feeding",
+            )
+        )
+        _catch_up(engine, manager)
+        restored = purchases.cost_summary_for(owner.household_id, acquired.item_id)
+        assert restored.known_consumed == ()
+        assert restored.known_remaining == (CurrencyValue("USD", 4_000),)
+        balance = inventory.balance_for(owner.household_id, acquired.item_id)
+        assert balance is not None and balance.on_hand_quantity_scaled == 20_000
+    finally:
+        engine.dispose()
 
 
 def test_purchase_posts_atomic_receipts_and_one_cash_spend_fact(tmp_path: Path) -> None:
@@ -444,6 +929,133 @@ def test_purchase_value_objects_reject_invalid_boundary_values() -> None:
         _quantity(1_500, "each", "Mouse")
     with pytest.raises(PurchaseValidationError, match="include a timezone"):
         _utc(datetime(2026, 9, 10, 12))
+
+    source = uuid4()
+    portions = (
+        InventoryCostAssignmentPortionV1(source, 0, 5_000),
+        InventoryCostAssignmentPortionV1(source, 5_000, 5_000),
+    )
+    assert _resize_assignment_portions(portions, 7_000) == (
+        portions[0],
+        InventoryCostAssignmentPortionV1(source, 5_000, 2_000),
+    )
+    assert _resize_assignment_portions(portions, 0) == ()
+    assert _resize_assignment_portions((), 1_000) == ()
+    with pytest.raises(PurchaseValidationError, match="acquisition type"):
+        _acquisition_mode(
+            PurchaseRecordedV2(uuid4(), "Vendor", "USD", None, 0, 0, 0, 100, (), "invalid")
+        )
+
+
+def test_unified_acquisition_rejects_invalid_item_and_assignment_boundaries(
+    tmp_path: Path,
+) -> None:
+    engine, owner, _store, inventory, purchases, manager = _setup(tmp_path)
+    try:
+        base = AcquireNewInventoryCommand(
+            owner.household_id,
+            owner.user_id,
+            "owner",
+            uuid4(),
+            "acquisition-validation-base",
+            "Validation Mouse",
+            "food",
+            "each",
+            "whole_prey",
+            "mouse",
+            "small",
+            "frozen_thawed",
+            None,
+            1_000,
+            0,
+            "USD",
+            None,
+            None,
+            datetime(2026, 9, 11, 12, tzinfo=UTC),
+        )
+        invalid_acquisitions = (
+            (
+                replace(base, idempotency_key="negative-acquisition", quantity_scaled=-1),
+                "cannot be negative",
+            ),
+            (
+                replace(base, idempotency_key="negative-threshold", reorder_threshold_scaled=-1),
+                "threshold cannot be negative",
+            ),
+            (
+                replace(
+                    base,
+                    idempotency_key="paid-zero-acquisition",
+                    quantity_scaled=0,
+                    amount_paid_minor=100,
+                ),
+                "positive quantity",
+            ),
+            (
+                replace(base, idempotency_key="invalid-catalog", inventory_type="unknown"),
+                "Inventory type",
+            ),
+        )
+        for invalid, message in invalid_acquisitions:
+            with pytest.raises(PurchaseValidationError, match=message):
+                purchases.acquire_new(invalid)
+        zero_threshold = purchases.acquire_new(
+            replace(
+                base,
+                correlation_id=uuid4(),
+                idempotency_key="zero-threshold-acquisition",
+                reorder_threshold_scaled=0,
+            )
+        )
+        assert zero_threshold.purchase_id is None
+
+        legacy = inventory.register(
+            RegisterInventoryItemCommand(
+                owner.household_id,
+                owner.user_id,
+                uuid4(),
+                "unconfigured-cost-assignment",
+                "Unconfigured mouse",
+                "item",
+                None,
+            )
+        )
+        assignment = AssignExistingStockCostCommand(
+            owner.household_id,
+            owner.user_id,
+            "owner",
+            uuid4(),
+            "unconfigured-cost-assignment",
+            legacy.item_id,
+            1,
+            1_000,
+            100,
+            "USD",
+            None,
+            None,
+            datetime(2026, 9, 11, 12, tzinfo=UTC),
+        )
+        with pytest.raises(PurchaseValidationError, match="Finish Inventory setup"):
+            purchases.assign_existing_stock_cost(assignment)
+
+        configured = _item(inventory, owner, "Stale Assignment Mouse", "stale-assignment-item")
+        with pytest.raises(PurchaseValidationError, match="version is stale"):
+            purchases.assign_existing_stock_cost(
+                replace(
+                    assignment,
+                    idempotency_key="stale-cost-assignment",
+                    inventory_item_id=configured.item_id,
+                    expected_inventory_version=0,
+                )
+            )
+
+        cost_projection = SQLAlchemyInventoryCostProjection(engine, manager)
+        with pytest.raises(PurchaseValidationError, match="quantity must be positive"):
+            cost_projection.assignment_portions_for(owner.household_id, configured.item_id, 0)
+        with pytest.raises(PurchaseValidationError, match="is updating"):
+            cost_projection.assignment_portions_for(owner.household_id, configured.item_id, 1_000)
+    finally:
+        engine.dispose()
 
 
 def test_purchase_post_rejects_authorization_and_inventory_invariant_failures(
@@ -1375,6 +1987,24 @@ def test_purchase_reads_and_line_validation_are_household_isolated(tmp_path: Pat
                     0,
                     100,
                     (PurchaseLineCommand(mice.item_id, 1, 1_000, "each", 100),),
+                )
+            )
+        with pytest.raises(PurchaseValidationError, match="not active in this household"):
+            purchases.assign_existing_stock_cost(
+                AssignExistingStockCostCommand(
+                    other.household_id,
+                    other.user_id,
+                    "owner",
+                    uuid4(),
+                    "cross-household-cost-assignment",
+                    mice.item_id,
+                    1,
+                    1_000,
+                    100,
+                    "USD",
+                    None,
+                    None,
+                    datetime(2026, 9, 10, 12, tzinfo=UTC),
                 )
             )
     finally:

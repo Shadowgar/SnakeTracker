@@ -16,6 +16,8 @@ from snaketracker.application.inventory import (
 from snaketracker.domains.inventory.contracts import (
     InventoryConsumptionReversedV1,
     InventoryConsumptionReversedV2,
+    InventoryCostAssignedV1,
+    InventoryCostAssignmentCorrectedV1,
     InventoryItemArchivedV1,
     InventoryItemRegisteredV1,
     InventoryItemRegisteredV2,
@@ -133,8 +135,8 @@ class SQLAlchemyInventoryBalanceProjection:
                     .one_or_none()
                 )
                 if receipt is None:
-                    continue
-                if isinstance(payload, EventVoidedV1):
+                    pass
+                elif isinstance(payload, EventVoidedV1):
                     if receipt["status"] != "active":
                         raise InventoryValidationError("Purchase receipt is already inactive.")
                     on_hand_scaled -= int(receipt["quantity_scaled"])
@@ -428,6 +430,8 @@ class SQLAlchemyInventoryBalanceProjection:
                 if status != "archived":
                     raise InventoryValidationError("Inventory item is already active.")
                 status = "active"
+            elif isinstance(payload, InventoryCostAssignedV1 | InventoryCostAssignmentCorrectedV1):
+                pass
             else:
                 continue
             if on_hand < 0 or on_hand_scaled < 0:

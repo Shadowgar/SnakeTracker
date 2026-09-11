@@ -314,6 +314,12 @@ explainable immutable adjustment rather than an in-place overwrite.
 
 - [x] RB The product represents the conceptual flow `Purchase → Inventory received → Inventory consumed → Cost of consumption` while keeping cash spending, inventory value, and consumption cost as distinct metrics. A2 implementation and qualification are complete; owner review remains open. (`R-073`, `AT-INVINT-04`)
 - [x] RB Purchase/receipt history retains purchase date, supplier/vendor, quantity, amount paid, unit cost, and resulting inventory receipt. Changing prices are represented by history/cost lots rather than one mutable item-price field. A2 implementation and qualification are complete; owner review remains open. (`R-074`, `AT-INVINT-05`)
+- [x] RB One keeper-facing **Add inventory** workflow creates or restocks an Item, records paid
+  acquisitions when an amount is supplied, leaves zero-amount receipts explicitly cost-not-tracked,
+  and assigns remembered cost to bounded current untracked stock without changing quantity. The
+  internal deterministic costing policy is not exposed as required accounting jargon. A2
+  owner-review correction qualification is pending; owner review remains open. (`R-073`,
+  `R-074`, `AT-INVINT-04`, `AT-INVINT-05`)
 - [x] RB Before consumption value is implemented, architecture/domain review explicitly selects and documents FIFO as the deterministic costing policy. ADR-0042 is accepted and A2 implements FIFO. (`R-075`, `AR-INVINT-01`)
 
 For example, a $65 purchase of 50 frozen mice has a $1.30 purchase unit cost. If 18 are consumed,

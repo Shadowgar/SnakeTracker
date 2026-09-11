@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}{% if purchase is defined %}Correct purchase{% else %}Add purchase{% endif %} · Care Keeper{% endblock %}
+{% block title %}Correct purchase · Care Keeper{% endblock %}
 {% block content %}
 <section class="form-page purchase-page" aria-labelledby="page-title">
-  <header><p class="page-kicker">Inventory receipts</p><h1 id="page-title">{% if purchase is defined %}Correct purchase{% else %}Add purchase{% endif %}</h1><p class="lede">{% if purchase is defined %}Replace the effective receipt facts while preserving the original history.{% else %}Record one payment and receive every item on the receipt atomically.{% endif %}</p></header>
+  <header><p class="page-kicker">Purchase history</p><h1 id="page-title">Correct purchase</h1><p class="lede">Replace the effective purchase information while preserving the original history.</p></header>
   {% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
   {% if inventory_items %}
   <form class="card form-stack purchase-form" method="post" action="{% if purchase is defined %}/purchases/{{ purchase.purchase_id }}/correct{% else %}/purchases{% endif %}" data-purchase-form>
@@ -16,18 +16,18 @@
       <label>Receipt / reference<input name="reference" maxlength="300" value="{{ values.get('reference','') }}"></label>
     </div>
     <fieldset class="purchase-lines">
-      <legend>Receipt items</legend>
-      <p class="field-help">Choose an existing active item. Quantities use that item's configured unit.</p>
+      <legend>Inventory items</legend>
+      <p class="field-help">{% if purchase is defined and purchase.acquisition_mode == 'existing_stock_cost' %}This quantity receives cost information without changing stock on hand.{% else %}Quantities use each item's configured unit.{% endif %}</p>
       <div class="purchase-line-list" data-purchase-lines>
         {% for line in line_values %}<div class="purchase-line" data-purchase-line>
           <input type="hidden" name="purchase_line_id" value="{{ line.purchase_line_id }}" data-purchase-line-id>
           <label>Inventory item<select name="inventory_item_id" data-purchase-item required><option value="">Choose item</option>{% for item in inventory_items %}{% set item_value = item.item_id|string ~ ':' ~ item.stream_version|string %}<option value="{{ item_value }}" data-unit="{{ item.unit_symbol }}"{% if line.inventory_item_id == item_value %} selected{% endif %}>{{ item.name }} · {{ item.unit_label }}</option>{% endfor %}</select></label>
           <label>Quantity <span data-purchase-unit></span><input name="quantity" inputmode="decimal" value="{{ line.quantity }}" required></label>
-          <label>Line subtotal<input name="subtotal" inputmode="decimal" value="{{ line.subtotal }}" aria-label="Line subtotal in purchase currency" required></label>
-          <button class="compact-button secondary-button" type="button" data-remove-purchase-line aria-label="Remove purchase line">Remove</button>
+          <label>Item amount<input name="subtotal" inputmode="decimal" value="{{ line.subtotal }}" aria-label="Item amount in purchase currency" required></label>
+          {% if purchase is not defined or purchase.acquisition_mode != 'existing_stock_cost' %}<button class="compact-button secondary-button" type="button" data-remove-purchase-line aria-label="Remove purchase line">Remove</button>{% endif %}
         </div>{% endfor %}
       </div>
-      <button class="compact-button secondary-button" type="button" data-add-purchase-line>Add another item</button>
+      {% if purchase is not defined or purchase.acquisition_mode != 'existing_stock_cost' %}<button class="compact-button secondary-button" type="button" data-add-purchase-line>Add another item</button>{% endif %}
       <p class="field-help" aria-live="polite" data-purchase-line-count></p>
     </fieldset>
     <div class="form-grid purchase-total-fields">

@@ -144,6 +144,8 @@ deferred.
 | `inventory.stock_received` v2 *(A1 implemented)* | Adds positive scaled quantity with an optional reference |
 | `inventory.stock_received` v3 *(A2 implemented)* | Adds positive scaled quantity linked to one Purchase and stable line |
 | `inventory.receipt_corrected` v1 *(A2 implemented)* | Replaces effective quantity of a targeted purchase-linked receipt without relinking its source |
+| `inventory.cost_assigned` v1 *(A2 owner-review correction)* | Assigns paid cost to exact eligible portions of currently remaining unknown-cost stock without changing quantity |
+| `inventory.cost_assignment_corrected` v1 *(A2 owner-review correction)* | Replaces effective assignment quantity and source portions without rewriting its immutable root |
 | `inventory.stock_consumed` v2 *(A1 implemented)* | Removes scaled quantity with an optional linked source event |
 | `inventory.consumption_reversed` v2 *(A1 implemented)* | Restores one exact linked scaled consumption |
 | `inventory.stock_adjusted` v2 *(A1 implemented)* | Applies a scaled nonzero manual delta with reason |
@@ -164,6 +166,8 @@ duplicate adjustment event.
 | `expense.voided` | Voids expense |
 | `purchase.recorded` v1 *(A2 implemented)* | Records one specialized cash-spend receipt with bounded inventory lines |
 | `purchase.corrected` v1 *(A2 implemented)* | Replaces effective Purchase facts and coordinates receipt corrections |
+| `purchase.recorded` v2 *(A2 owner-review correction)* | Records acquisition mode for an atomic new-Item acquisition or existing-stock cost assignment |
+| `purchase.corrected` v2 *(A2 owner-review correction)* | Corrects a version-2 acquisition while retaining its acquisition mode |
 | `reminder.rule_created` | Creates rule |
 | `reminder.rule_changed` | Changes schedule or channels |
 | `reminder.rule_disabled` | Disables rule |

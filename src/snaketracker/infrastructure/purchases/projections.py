@@ -23,6 +23,9 @@ from snaketracker.application.purchases import (
     allocate_acquisition_costs,
 )
 from snaketracker.domains.inventory.contracts import (
+    InventoryCostAssignedV1,
+    InventoryCostAssignmentCorrectedV1,
+    InventoryCostAssignmentPortionV1,
     InventoryReceiptCorrectedV1,
     InventoryStockReceivedV1,
     InventoryStockReceivedV2,
@@ -30,8 +33,10 @@ from snaketracker.domains.inventory.contracts import (
 )
 from snaketracker.domains.purchases.contracts import (
     PurchaseCorrectedV1,
+    PurchaseCorrectedV2,
     PurchaseLineV1,
     PurchaseRecordedV1,
+    PurchaseRecordedV2,
 )
 from snaketracker.infrastructure.inventory.projections import SQLAlchemyInventoryBalanceProjection
 from snaketracker.infrastructure.projections.sqlite_generations import (
@@ -48,17 +53,17 @@ class SQLAlchemyPurchaseCurrentProjection:
 
     def apply(self, transaction: object, events: tuple[DomainEvent, ...]) -> None:
         connection = cast(Connection, transaction)
-        receipts = {
+        companions = {
             event.payload.purchase_line_id: event
             for event in events
-            if isinstance(event.payload, InventoryStockReceivedV3)
+            if isinstance(event.payload, InventoryStockReceivedV3 | InventoryCostAssignedV1)
         }
         for event in events:
             payload = event.payload
-            if isinstance(payload, PurchaseRecordedV1):
-                self._insert_purchase(connection, event, payload, receipts)
-            elif isinstance(payload, PurchaseCorrectedV1):
-                self._correct_purchase(connection, event, payload, receipts, events)
+            if isinstance(payload, PurchaseRecordedV1 | PurchaseRecordedV2):
+                self._insert_purchase(connection, event, payload, companions)
+            elif isinstance(payload, PurchaseCorrectedV1 | PurchaseCorrectedV2):
+                self._correct_purchase(connection, event, payload, companions, events)
             elif event.stream_type == "purchase" and isinstance(
                 payload, EventVoidedV1 | EventReinstatedV1
             ):
@@ -97,21 +102,23 @@ class SQLAlchemyPurchaseCurrentProjection:
         self,
         connection: Connection,
         event: DomainEvent,
-        payload: PurchaseRecordedV1,
-        receipts: dict[UUID, DomainEvent],
+        payload: PurchaseRecordedV1 | PurchaseRecordedV2,
+        companions: dict[UUID, DomainEvent],
     ) -> None:
         connection.execute(
             text(
                 "INSERT INTO purchase_current "
                 "(household_id,purchase_id,vendor,currency,reference,notes,occurred_at,"
                 "line_subtotal_minor,tax_minor,fee_minor,discount_minor,total_paid_minor,"
-                "status,stream_version,last_event_id,updated_at) VALUES "
+                "acquisition_mode,status,stream_version,last_event_id,updated_at) VALUES "
                 "(:household_id,:purchase_id,:vendor,:currency,:reference,:notes,:occurred_at,"
-                ":subtotal,:tax,:fee,:discount,:total,'active',:version,:event_id,:updated_at)"
+                ":subtotal,:tax,:fee,:discount,:total,:mode,'active',:version,:event_id,:updated_at)"
             ),
             self._purchase_parameters(event, payload.purchase_id, payload),
         )
-        roots = self._validate_new_receipts(payload.purchase_id, payload.lines, receipts)
+        roots = self._validate_new_companions(
+            payload.purchase_id, payload.lines, companions, _acquisition_mode(payload)
+        )
         self._replace_lines(
             connection,
             event.household_id,
@@ -126,16 +133,17 @@ class SQLAlchemyPurchaseCurrentProjection:
         self,
         connection: Connection,
         event: DomainEvent,
-        payload: PurchaseCorrectedV1,
-        receipts: dict[UUID, DomainEvent],
+        payload: PurchaseCorrectedV1 | PurchaseCorrectedV2,
+        companions: dict[UUID, DomainEvent],
         events: tuple[DomainEvent, ...],
     ) -> None:
         prior_rows = (
             connection.execute(
                 text(
-                    "SELECT purchase_line_id,inventory_item_id,receipt_event_id "
-                    "FROM purchase_line_current WHERE household_id=:household_id "
-                    "AND purchase_id=:purchase_id"
+                    "SELECT l.purchase_line_id,l.inventory_item_id,l.receipt_event_id,"
+                    "p.acquisition_mode FROM purchase_line_current l JOIN purchase_current p "
+                    "ON p.household_id=l.household_id AND p.purchase_id=l.purchase_id "
+                    "WHERE l.household_id=:household_id AND l.purchase_id=:purchase_id"
                 ),
                 {
                     "household_id": str(event.household_id),
@@ -146,10 +154,16 @@ class SQLAlchemyPurchaseCurrentProjection:
             .all()
         )
         prior = {UUID(str(row["purchase_line_id"])): row for row in prior_rows}
+        mode = _acquisition_mode(payload)
+        if any(str(row["acquisition_mode"]) != mode for row in prior_rows):
+            raise PurchaseValidationError("A Purchase correction cannot change acquisition type.")
         correction_targets = {
             companion.payload.target_event_id: companion.payload.quantity_scaled
             for companion in events
-            if isinstance(companion.payload, InventoryReceiptCorrectedV1)
+            if isinstance(
+                companion.payload,
+                InventoryReceiptCorrectedV1 | InventoryCostAssignmentCorrectedV1,
+            )
         }
         void_targets = {
             companion.payload.target_event_id
@@ -162,7 +176,9 @@ class SQLAlchemyPurchaseCurrentProjection:
         for line in payload.lines:
             old = prior.get(line.purchase_line_id)
             if old is None:
-                roots.update(self._validate_new_receipts(event.stream_id, (line,), receipts))
+                roots.update(
+                    self._validate_new_companions(event.stream_id, (line,), companions, mode)
+                )
                 continue
             if UUID(str(old["inventory_item_id"])) != line.inventory_item_id:
                 raise PurchaseValidationError("A corrected line changed its Inventory Item.")
@@ -188,6 +204,7 @@ class SQLAlchemyPurchaseCurrentProjection:
                 "reference=:reference,"
                 "notes=:notes,occurred_at=:occurred_at,line_subtotal_minor=:subtotal,"
                 "tax_minor=:tax,fee_minor=:fee,discount_minor=:discount,total_paid_minor=:total,"
+                "acquisition_mode=:mode,"
                 "status='active',stream_version=:version,last_event_id=:event_id,"
                 "updated_at=:updated_at WHERE household_id=:household_id "
                 "AND purchase_id=:purchase_id AND last_event_id=:target"
@@ -207,30 +224,59 @@ class SQLAlchemyPurchaseCurrentProjection:
         self._audit(connection, event)
 
     @staticmethod
-    def _validate_new_receipts(
+    def _validate_new_companions(
         purchase_id: UUID,
         lines: tuple[PurchaseLineV1, ...],
-        receipts: dict[UUID, DomainEvent],
+        companions: dict[UUID, DomainEvent],
+        mode: str,
     ) -> dict[UUID, UUID]:
         roots: dict[UUID, UUID] = {}
         for line in lines:
-            receipt = receipts.get(line.purchase_line_id)
-            if receipt is None or not isinstance(receipt.payload, InventoryStockReceivedV3):
-                raise PurchaseValidationError("A Purchase line is missing its atomic receipt.")
+            receipt = companions.get(line.purchase_line_id)
+            expected_type = (
+                InventoryCostAssignedV1
+                if mode == "existing_stock_cost"
+                else InventoryStockReceivedV3
+            )
+            if receipt is None or not isinstance(receipt.payload, expected_type):
+                raise PurchaseValidationError(
+                    "A Purchase line is missing its atomic inventory fact."
+                )
             if (
                 receipt.payload.purchase_id != purchase_id
                 or receipt.stream_id != line.inventory_item_id
                 or receipt.payload.quantity_scaled != line.quantity_scaled
             ):
-                raise PurchaseValidationError("A Purchase receipt does not match its line.")
+                raise PurchaseValidationError("A Purchase inventory fact does not match its line.")
             roots[line.purchase_line_id] = receipt.event_id
         return roots
+
+    @staticmethod
+    def _validate_new_receipts(
+        purchase_id: UUID,
+        lines: tuple[PurchaseLineV1, ...],
+        receipts: dict[UUID, DomainEvent],
+    ) -> dict[UUID, UUID]:
+        """Retain the A2 invariant hook for stock-receipt tests and diagnostics."""
+        try:
+            return SQLAlchemyPurchaseCurrentProjection._validate_new_companions(
+                purchase_id, lines, receipts, "stock_received"
+            )
+        except PurchaseValidationError as error:
+            if "missing its atomic inventory fact" in str(error):
+                raise PurchaseValidationError(
+                    "A Purchase line is missing its atomic receipt."
+                ) from error
+            raise
 
     @staticmethod
     def _purchase_parameters(
         event: DomainEvent,
         purchase_id: UUID,
-        payload: PurchaseRecordedV1 | PurchaseCorrectedV1,
+        payload: PurchaseRecordedV1
+        | PurchaseRecordedV2
+        | PurchaseCorrectedV1
+        | PurchaseCorrectedV2,
     ) -> dict[str, object]:
         return {
             "household_id": str(event.household_id),
@@ -245,6 +291,7 @@ class SQLAlchemyPurchaseCurrentProjection:
             "fee": payload.fee_minor,
             "discount": payload.discount_minor,
             "total": payload.total_paid_minor,
+            "mode": _acquisition_mode(payload),
             "version": event.stream_version,
             "event_id": str(event.event_id),
             "updated_at": event.recorded_at.isoformat(timespec="microseconds"),
@@ -385,6 +432,8 @@ class _Layer:
     occurred_at: str
     recorded_at: str
     position: int
+    base_event_id: str
+    base_offset: int
 
 
 class SQLAlchemyInventoryEffectiveReceiptProjection:
@@ -461,10 +510,47 @@ class SQLAlchemyInventoryEffectiveReceiptProjection:
                 )
                 if result.rowcount != 1:
                     raise PurchaseValidationError("Purchase receipt correction target is missing.")
+            elif isinstance(payload, InventoryCostAssignedV1):
+                connection.execute(
+                    text(
+                        "INSERT INTO inventory_effective_cost_assignments "
+                        "(household_id,item_id,root_assignment_event_id,effective_event_id,"
+                        "quantity_scaled,purchase_id,purchase_line_id,portions_json,occurred_at,"
+                        "recorded_at,global_position,status) VALUES "
+                        "(:household_id,:item_id,:event_id,:event_id,:quantity,:purchase_id,"
+                        ":line_id,:portions,:occurred_at,:recorded_at,:position,'active')"
+                    ),
+                    {
+                        **parameters,
+                        "quantity": payload.quantity_scaled,
+                        "purchase_id": str(payload.purchase_id),
+                        "line_id": str(payload.purchase_line_id),
+                        "portions": _portions_json(payload.portions),
+                    },
+                )
+            elif isinstance(payload, InventoryCostAssignmentCorrectedV1):
+                result = connection.execute(
+                    text(
+                        "UPDATE inventory_effective_cost_assignments SET "
+                        "effective_event_id=:event_id,quantity_scaled=:quantity,"
+                        "portions_json=:portions,occurred_at=:occurred_at,"
+                        "recorded_at=:recorded_at,global_position=:position,status='active' "
+                        "WHERE household_id=:household_id AND item_id=:item_id "
+                        "AND root_assignment_event_id=:target AND status='active'"
+                    ),
+                    {
+                        **parameters,
+                        "quantity": payload.quantity_scaled,
+                        "portions": _portions_json(payload.portions),
+                        "target": str(payload.target_event_id),
+                    },
+                )
+                if result.rowcount != 1:
+                    raise PurchaseValidationError("Cost assignment correction target is missing.")
             elif isinstance(payload, EventVoidedV1 | EventReinstatedV1):
                 status = "voided" if isinstance(payload, EventVoidedV1) else "active"
                 prior_status = "active" if status == "voided" else "voided"
-                result = connection.execute(
+                receipt_result = connection.execute(
                     text(
                         "UPDATE inventory_effective_receipts SET status=:status "
                         "WHERE household_id=:household_id AND item_id=:item_id "
@@ -477,8 +563,21 @@ class SQLAlchemyInventoryEffectiveReceiptProjection:
                         "prior_status": prior_status,
                     },
                 )
-                if result.rowcount != 1:
-                    raise PurchaseValidationError("Purchase receipt control target is missing.")
+                assignment_result = connection.execute(
+                    text(
+                        "UPDATE inventory_effective_cost_assignments SET status=:status "
+                        "WHERE household_id=:household_id AND item_id=:item_id "
+                        "AND root_assignment_event_id=:target AND status=:prior_status"
+                    ),
+                    {
+                        **parameters,
+                        "target": str(payload.target_event_id),
+                        "status": status,
+                        "prior_status": prior_status,
+                    },
+                )
+                if receipt_result.rowcount + assignment_result.rowcount != 1:
+                    raise PurchaseValidationError("Purchase inventory control target is missing.")
 
 
 class SQLAlchemyInventoryCostProjection:
@@ -534,6 +633,62 @@ class SQLAlchemyInventoryCostProjection:
             lag_events=freshness.lag_events,
         )
 
+    def assignment_portions_for(
+        self, household_id: UUID, item_id: UUID, quantity_scaled: int
+    ) -> tuple[InventoryCostAssignmentPortionV1, ...]:
+        if type(quantity_scaled) is not int or quantity_scaled <= 0:
+            raise PurchaseValidationError("Cost-assignment quantity must be positive.")
+        try:
+            layout = self._manager.active_layout("inventory_costing")
+            lots = layout.component("inventory_costing", "lots")
+            freshness = self._manager.freshness("inventory_costing", now=datetime.now(UTC))
+        except (KeyError, NoResultFound, RuntimeError) as error:
+            raise PurchaseValidationError(
+                "Cost information is still initializing. Try again shortly."
+            ) from error
+        if freshness.lag_events:
+            raise PurchaseValidationError("Cost information is updating. Try again shortly.")
+        with self._engine.connect() as connection:
+            rows = (
+                connection.execute(
+                    text(
+                        f"SELECT base_source_event_id,base_offset_scaled,"
+                        f'received_quantity_scaled,remaining_quantity_scaled FROM "{lots}" '
+                        "WHERE household_id=:household_id AND item_id=:item_id "
+                        "AND known_cost=0 AND remaining_quantity_scaled>0 "
+                        "ORDER BY occurred_at,recorded_at,global_position,base_offset_scaled"
+                    ),
+                    {"household_id": str(household_id), "item_id": str(item_id)},
+                )
+                .mappings()
+                .all()
+            )
+        needed = quantity_scaled
+        portions: list[InventoryCostAssignmentPortionV1] = []
+        for row in rows:
+            remaining = int(row["remaining_quantity_scaled"])
+            take = min(needed, remaining)
+            if take <= 0:
+                continue
+            offset = (
+                int(row["base_offset_scaled"]) + int(row["received_quantity_scaled"]) - remaining
+            )
+            portions.append(
+                InventoryCostAssignmentPortionV1(
+                    UUID(str(row["base_source_event_id"])), offset, take
+                )
+            )
+            needed -= take
+            if needed == 0:
+                break
+        if needed:
+            eligible = quantity_scaled - needed
+            raise PurchaseValidationError(
+                "Cost can only be added to stock whose cost is not tracked "
+                f"({eligible / 1000:g} available)."
+            )
+        return tuple(portions)
+
     @staticmethod
     def _currency_values(
         connection: Connection, query: str, household_id: UUID, item_id: UUID
@@ -559,6 +714,7 @@ class InventoryCostingProjectionStrategy:
             "remaining_quantity_scaled INTEGER NOT NULL,currency TEXT,"
             "acquisition_cost_minor INTEGER,known_cost INTEGER NOT NULL,occurred_at TEXT NOT NULL,"
             "recorded_at TEXT NOT NULL,global_position INTEGER NOT NULL,"
+            "base_source_event_id TEXT NOT NULL,base_offset_scaled INTEGER NOT NULL,"
             "PRIMARY KEY(household_id,item_id,source_event_id),"
             "CHECK(received_quantity_scaled>0),"
             "CHECK(remaining_quantity_scaled>=0 AND "
@@ -588,6 +744,8 @@ class InventoryCostingProjectionStrategy:
             "inventory.stock_expired",
             "inventory.stock_consumed",
             "inventory.consumption_reversed",
+            "inventory.cost_assigned",
+            "inventory.cost_assignment_corrected",
             "event.voided",
             "event.reinstated",
         }:
@@ -691,6 +849,156 @@ class CashSpendProjectionStrategy:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class _CostInterval:
+    assignment_event_id: str
+    portion_index: int
+    offset: int
+    quantity: int
+    currency: str
+    cost: int
+
+
+def _active_cost_intervals(
+    connection: Connection, parameters: dict[str, str]
+) -> dict[str, tuple[_CostInterval, ...]]:
+    rows = connection.execute(
+        text(
+            "SELECT a.root_assignment_event_id,a.portions_json,p.currency,"
+            "l.allocated_cost_minor FROM inventory_effective_cost_assignments a "
+            "JOIN purchase_current p ON p.household_id=a.household_id "
+            "AND p.purchase_id=a.purchase_id AND p.status='active' "
+            "JOIN purchase_line_current l ON l.household_id=a.household_id "
+            "AND l.purchase_id=a.purchase_id AND l.purchase_line_id=a.purchase_line_id "
+            "AND l.status='active' WHERE a.household_id=:household_id "
+            "AND a.item_id=:item_id AND a.status='active' "
+            "ORDER BY a.global_position,a.root_assignment_event_id"
+        ),
+        parameters,
+    ).mappings()
+    grouped: dict[str, list[_CostInterval]] = {}
+    for row in rows:
+        raw = json.loads(str(row["portions_json"]))
+        if not isinstance(raw, list) or not raw:
+            raise PurchaseValidationError("Stored cost assignment portions are invalid.")
+        quantities = [int(portion["quantity_scaled"]) for portion in raw]
+        total_quantity = sum(quantities)
+        total_cost = int(row["allocated_cost_minor"])
+        costs = [total_cost * quantity // total_quantity for quantity in quantities]
+        pennies = total_cost - sum(costs)
+        order = sorted(
+            range(len(raw)),
+            key=lambda index: (-(total_cost * quantities[index] % total_quantity), index),
+        )
+        for index in order[:pennies]:
+            costs[index] += 1
+        for index, portion in enumerate(raw):
+            source = str(portion["source_event_id"])
+            grouped.setdefault(source, []).append(
+                _CostInterval(
+                    str(row["root_assignment_event_id"]),
+                    index,
+                    int(portion["offset_scaled"]),
+                    quantities[index],
+                    str(row["currency"]),
+                    costs[index],
+                )
+            )
+    return {
+        source: tuple(
+            sorted(intervals, key=lambda value: (value.offset, value.assignment_event_id))
+        )
+        for source, intervals in grouped.items()
+    }
+
+
+def _split_cost_layer(
+    event_id: str,
+    quantity: int,
+    currency: str | None,
+    cost: int | None,
+    source_kind: str,
+    occurred_at: str,
+    recorded_at: str,
+    position: int,
+    intervals: tuple[_CostInterval, ...],
+) -> tuple[_Layer, ...]:
+    if not intervals:
+        return (
+            _Layer(
+                event_id,
+                quantity,
+                quantity,
+                currency,
+                cost,
+                source_kind,
+                occurred_at,
+                recorded_at,
+                position,
+                event_id,
+                0,
+            ),
+        )
+    if cost is not None:
+        raise PurchaseValidationError("Cost information overlaps stock with a known value.")
+    layers: list[_Layer] = []
+    cursor = 0
+    for interval in intervals:
+        end = interval.offset + interval.quantity
+        if interval.offset < cursor or interval.quantity <= 0 or end > quantity:
+            raise PurchaseValidationError("Cost assignment portions overlap or exceed their stock.")
+        if interval.offset > cursor:
+            segment_quantity = interval.offset - cursor
+            layers.append(
+                _Layer(
+                    f"{event_id}:unknown:{cursor}",
+                    segment_quantity,
+                    segment_quantity,
+                    None,
+                    None,
+                    source_kind,
+                    occurred_at,
+                    recorded_at,
+                    position,
+                    event_id,
+                    cursor,
+                )
+            )
+        layers.append(
+            _Layer(
+                f"{interval.assignment_event_id}:{interval.portion_index}",
+                interval.quantity,
+                interval.quantity,
+                interval.currency,
+                interval.cost,
+                "existing_stock_cost",
+                occurred_at,
+                recorded_at,
+                position,
+                event_id,
+                interval.offset,
+            )
+        )
+        cursor = end
+    if cursor < quantity:
+        layers.append(
+            _Layer(
+                f"{event_id}:unknown:{cursor}",
+                quantity - cursor,
+                quantity - cursor,
+                None,
+                None,
+                source_kind,
+                occurred_at,
+                recorded_at,
+                position,
+                event_id,
+                cursor,
+            )
+        )
+    return tuple(layers)
+
+
 def _rebuild_item(
     connection: Connection,
     household_id: UUID,
@@ -791,6 +1099,7 @@ def _rebuild_item(
         )
         facts.append((key, kind, data))
 
+    assignments = _active_cost_intervals(connection, parameters)
     layers: list[_Layer] = []
     allocations: list[dict[str, object]] = []
     for _key, kind, fact in sorted(facts, key=lambda item: item[0]):
@@ -803,10 +1112,9 @@ def _rebuild_item(
                 if fact.get("allocated_cost_minor") is not None
                 else None
             )
-            layers.append(
-                _Layer(
+            layers.extend(
+                _split_cost_layer(
                     event_id,
-                    quantity,
                     quantity,
                     currency,
                     cost,
@@ -814,6 +1122,7 @@ def _rebuild_item(
                     str(fact["occurred_at"]),
                     str(fact["recorded_at"]),
                     _as_int(fact["global_position"], "FIFO layer position"),
+                    assignments.get(event_id, ()),
                 )
             )
             continue
@@ -853,9 +1162,10 @@ def _rebuild_item(
                 f'INSERT INTO "{lots_table}" '
                 "(household_id,item_id,source_event_id,source_kind,received_quantity_scaled,"
                 "remaining_quantity_scaled,currency,acquisition_cost_minor,known_cost,"
-                "occurred_at,recorded_at,global_position) VALUES (:household_id,:item_id,"
+                "occurred_at,recorded_at,global_position,base_source_event_id,"
+                "base_offset_scaled) VALUES (:household_id,:item_id,"
                 ":event_id,:source_kind,:quantity,:remaining,:currency,:cost,:known,"
-                ":occurred_at,:recorded_at,:position)"
+                ":occurred_at,:recorded_at,:position,:base_event_id,:base_offset)"
             ),
             {
                 **parameters,
@@ -869,6 +1179,8 @@ def _rebuild_item(
                 "occurred_at": layer.occurred_at,
                 "recorded_at": layer.recorded_at,
                 "position": layer.position,
+                "base_event_id": layer.base_event_id,
+                "base_offset": layer.base_offset,
             },
         )
     for allocation in allocations:
@@ -928,6 +1240,7 @@ def _purchase(row: RowMapping, lines: tuple[PurchaseLineCurrent, ...]) -> Purcha
         stream_version=int(row["stream_version"]),
         last_event_id=UUID(str(row["last_event_id"])),
         lines=lines,
+        acquisition_mode=str(row["acquisition_mode"]),
     )
 
 
@@ -942,6 +1255,35 @@ def _purchase_line(row: RowMapping) -> PurchaseLineCurrent:
         allocated_cost_minor=int(row["allocated_cost_minor"]),
         receipt_event_id=UUID(str(row["receipt_event_id"])),
         status=str(row["status"]),
+    )
+
+
+def _acquisition_mode(
+    payload: PurchaseRecordedV1 | PurchaseRecordedV2 | PurchaseCorrectedV1 | PurchaseCorrectedV2,
+) -> str:
+    if isinstance(payload, PurchaseRecordedV2 | PurchaseCorrectedV2):
+        if payload.acquisition_mode not in {
+            "stock_received",
+            "new_item_stock",
+            "existing_stock_cost",
+        }:
+            raise PurchaseValidationError("Purchase acquisition type is invalid.")
+        return payload.acquisition_mode
+    return "stock_received"
+
+
+def _portions_json(portions: tuple[InventoryCostAssignmentPortionV1, ...]) -> str:
+    return json.dumps(
+        [
+            {
+                "source_event_id": str(portion.source_event_id),
+                "offset_scaled": portion.offset_scaled,
+                "quantity_scaled": portion.quantity_scaled,
+            }
+            for portion in portions
+        ],
+        sort_keys=True,
+        separators=(",", ":"),
     )
 
 

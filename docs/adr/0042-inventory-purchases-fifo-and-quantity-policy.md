@@ -39,14 +39,42 @@ Existing Expense streams remain authoritative for non-purchase spending. A unifi
 contains one row per `(source_kind, source_id)`, where source kind is `purchase` or `expense`, so
 the application cannot count a Purchase a second time merely to expose it in Expenses or reports.
 The generic expense workflow cannot create an inventory link or use the reserved Inventory
-Purchase source kind. The UI directs supply receipts to Add purchase and warns about a same-day,
-same-vendor, same-currency, same-amount manual expense, while allowing a keeper to confirm a
-legitimate duplicate transaction.
+Purchase source kind. The UI directs inventory acquisition to one **Add inventory** workflow and
+warns about a same-day, same-vendor, same-currency, same-amount manual expense, while allowing a
+keeper to confirm a legitimate duplicate transaction. A positive amount creates one Purchase
+cash-spend fact; a zero amount creates only the physical receipt and means that financial value is
+not tracked. It does not mean a known zero-cost acquisition and does not create a zero-dollar
+Purchase.
 
 Purchase posting atomically appends the Purchase fact and one version-3 stock-receipt fact per line
 to the affected Inventory Item streams under ADR-0011. Multiple lines for the same item share that
 item stream. The 25-line bound limits transaction and payload size; M6.5 qualification must prove
 the bound on SQLite and the supported Raspberry Pi environment.
+
+The same keeper-facing workflow can create and stock a new structured Item in one atomic append,
+or receive more stock for an existing Item. Purchase history and lifecycle controls remain
+available, but Purchase is not a competing primary data-entry workflow.
+
+### Cost information for existing stock
+
+Migration-era or deliberately non-financial receipts can leave current stock with unknown cost.
+The unified workflow therefore has a **Cost for stock already on hand** mode. It appends a typed
+cost-assignment fact and its Purchase fact atomically without appending a physical receipt or
+changing on-hand quantity. The assignment stores exact portions of eligible unknown-cost source
+layers, is bounded by the unknown-cost quantity currently remaining, and can cover only part of
+that quantity.
+
+A2 uses the explicit **current remaining quantity** semantic. A cost assignment does not
+retroactively value units already consumed before the assignment. This avoids silently claiming
+that a remembered total applied to an original receipt whose full quantity or provenance may no
+longer be known. The keeper-facing form says that the quantity is stock currently on hand; prior
+consumption remains cost-not-tracked.
+
+Assignment correction appends a replacement cost fact over the same stored portions, or
+deterministically adds/trims currently eligible portions when quantity changes. Voiding an
+assignment removes its effective cost and cash-spend fact but never changes physical quantity;
+reinstatement restores both. Original receipt, consumption, and assignment events remain
+immutable.
 
 ### Acquisition cost and FIFO
 
@@ -219,6 +247,11 @@ columns and original unit text without destructive event rewriting. Expand-only 
 `0015_purchases_fifo` adds synchronous Purchase current/line and effective-receipt state. A2 FIFO
 and unified cash-spend state use versioned asynchronous projection generations rather than fixed
 mutable accounting tables.
+
+Expand-only migration `0016_inventory_acquisition` adds the Purchase acquisition-mode discriminator
+and synchronous effective cost-assignment state. Existing Purchase rows default to
+`stock_received`; no event or balance is rewritten. The generated costing projection is versioned
+forward so replay incorporates current-stock assignments deterministically.
 
 Historical version-1 receipts become uncosted FIFO layers under A2 costing.
 Historical version-1 consumption and feeding links remain effective and normalize to scaled

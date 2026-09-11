@@ -5,6 +5,28 @@ Status: **implemented and qualified; owner review pending**
 Requirements `R-073` through `R-075`; acceptance procedures `AT-INVINT-04`, `AT-INVINT-05`,
 and `AR-INVINT-01`. Branch `phase6.5/purchases-fifo`. M6.5 is not complete or owner-accepted.
 
+## Owner-review correction: unified acquisition
+
+The A2 owner-review correction replaces competing Add Item and Add Purchase entrypoints with one
+keeper-facing **Add inventory** workflow. It creates and stocks a new structured Item in one atomic
+operation, restocks an existing Item, or records cost for stock already on hand. A positive amount
+creates one Purchase/cash-spend fact and known acquisition basis. An amount of zero creates only a
+physical receipt: quantity is tracked, cost remains explicitly not tracked, and money reports get no
+Purchase fact. Purchase detail and lifecycle controls remain available under **Purchase history**.
+
+Existing-stock assignment uses the explicit **current remaining quantity** semantic accepted by the
+correction request. A typed immutable `inventory.cost_assigned` fact identifies exact source-event
+portions and offsets from currently remaining unknown-cost stock. It cannot exceed eligible quantity,
+can be partial, and does not retroactively value stock consumed before assignment. Correction replaces
+the effective assignment and its Purchase atomically. Void/reinstate removes/restores cost and cash
+effects without changing physical quantity. No legacy receipt, Feeding, Expense, or Purchase event is
+rewritten.
+
+Keeper-facing templates and routes contain none of `FIFO`, `cost layer`, `uncosted layer`,
+`acquisition layer`, or `depletion layer`. The internal deterministic policy and technical ADR retain
+precise accounting terminology. Unknown cost remains distinct from known zero and is always displayed
+as cost not tracked.
+
 ## Implemented boundary
 
 - One Purchase aggregate represents a real receipt with one to 25 Inventory lines. Posting uses
@@ -27,9 +49,25 @@ and `AR-INVINT-01`. Branch `phase6.5/purchases-fifo`. M6.5 is not complete or ow
 ## Migration and live-data safety
 
 Expand-only migration `0015_purchases_fifo` adds `purchase_current`, `purchase_line_current`, and
-`inventory_effective_receipts`. It preserves immutable history and backfills prior receipts as
-unknown-cost layers without guessing Purchase linkage. Generated FIFO/cash tables are not fixed
-migration state.
+`inventory_effective_receipts`. Owner-review correction migration `0016_inventory_acquisition` adds
+the Purchase acquisition-mode discriminator and `inventory_effective_cost_assignments`. Existing
+Purchase rows default to `stock_received`; no event or balance is rewritten. Generated FIFO/cash
+tables remain rebuildable projection generations.
+
+The correction was exercised from zero and from an encrypted, restored copy of the active 0015
+database. The isolated upgrade target was
+`/tmp/carekeeper-a2-correction-restore.l6jhMV/162943ce50554c4f8401720a120ec563/snaketracker.sqlite3`.
+It reached 0016 with integrity `ok`, zero foreign-key violations, all 719 events/high-water 719, and
+event identity/checksum hash
+`80648271177fb19de64751de4e70739f4741074972ef97439d1e92ed1085d3ad` unchanged.
+
+Before correction deployment, the worker-owned pipeline completed non-overwriting encrypted backup
+request `48ec0532-3391-41c7-bc78-c16b32d18c90`, run
+`162943ce-5055-4c4f-8401-720a120ec563`, with encrypted manifest SHA-256
+`6c7253477d9c33e67e047acc965177f55648e66f5e0c3f860c53f001a335404e`. Restore was verified only
+under `/tmp/carekeeper-a2-correction-restore.l6jhMV`, outside the active runtime. It restored revision
+0015, 719 events/high-water 719, the exact event hash above, integrity `ok`, zero FK violations, and
+33 referenced attachments. The active database was never a restore target.
 
 The active paths were explicitly resolved as:
 
@@ -61,22 +99,54 @@ Focused A2 integration/browser and projection-worker tests cover atomic posting,
 idempotent retry, 25-line bounds, household isolation, correction/add/remove lines, refused void
 rollback, reinstate, changing prices, partial quantities, final-cent reconciliation, backdating,
 unknown cost, currency separation, cash uniqueness, projection lag, generation rebuild, and
-rollback. The focused A2 integration suite passed 21 tests. The exact authoritative command was:
+rollback, unified acquisition validation, legacy-cost assignment bounds, and feeding-deletion cost
+compensation. The exact authoritative command was:
 
 ```text
 uv sync --frozen
 ./scripts/quality/check.sh
 ```
 
-It passed formatting and Ruff across 451 files, the 42-ADR accepted architecture freeze,
-documentation links across 206 files, strict mypy across 130 source files, all 554 tests,
-dependency audit, Compose validation, and diff checks. Coverage passed at 94.69% lines and 85.01%
+It passed formatting and Ruff across 452 files, the 42-ADR accepted architecture freeze,
+documentation links across 206 files, strict mypy across 130 source files, all 561 tests,
+dependency audit, Compose validation, and diff checks. Coverage passed at 94.66% lines and 85.01%
 branches; `coverage.json`, `coverage.xml`, and `junit.xml` were generated.
 
 ## Native ARM64 browser and accessibility qualification
 
-The promoted image is `snaketracker:m65-a2`, ARM64 image
-`sha256:a483407510030b945e0d7abd7ee662566596eee307d1eb1dab3bbedbe5de049f`,
+The owner-review correction ran in existing native ARM64 Chromium 1208 against the isolated fresh
+target `/tmp/carekeeper-a2-correction-browser.JkS6PH`; the active database and attachments were not
+mounted. At both 1440×900 and 390×844, the browser completed new paid Item (20 / $40), existing paid
+restock (10 / $25), zero-amount untracked restock (5), current-stock cost assignment (20 / $36),
+Inventory-authoritative Feeding, and R-083 feeding deletion. The final representative Items returned
+to 35 on hand after deletion, with $65 known remaining value and five units cost-not-tracked. The
+legacy Items remained 20 on hand while gaining $36 known value. Each viewport produced exactly the
+expected two receipt Purchases and one quantity-neutral cost Purchase; zero-amount receipts produced
+none.
+
+Fourteen WCAG 2.2 AA axe checks reported zero violations. Both viewports had no horizontal overflow,
+Care Keeper console errors, page errors, HTTP errors, or failed requests. The Feeding consumed one
+unit and $2.00, then its typed deletion compensation restored stock and the cost allocation exactly
+once. Normal UI exposed no FIFO jargon.
+
+Correction owner-review captures:
+
+- [desktop Add inventory](screenshots/correction-desktop-1440x900-add-inventory.png)
+- [desktop tracked Item](screenshots/correction-desktop-1440x900-tracked-detail.png)
+- [desktop mixed known/unknown cost](screenshots/correction-desktop-1440x900-mixed-cost-detail.png)
+- [desktop existing-stock cost form](screenshots/correction-desktop-1440x900-legacy-cost-form.png)
+- [desktop Purchase history](screenshots/correction-desktop-1440x900-purchase-history.png)
+- [mobile Add inventory](screenshots/correction-mobile-390x844-add-inventory.png)
+- [mobile tracked Item](screenshots/correction-mobile-390x844-tracked-detail.png)
+- [mobile mixed known/unknown cost](screenshots/correction-mobile-390x844-mixed-cost-detail.png)
+- [mobile existing-stock cost form](screenshots/correction-mobile-390x844-legacy-cost-form.png)
+- [mobile Purchase history](screenshots/correction-mobile-390x844-purchase-history.png)
+
+Machine-readable correction results are in
+[`browser-qualification.json`](browser-qualification.json).
+
+The correction is promoted as `snaketracker:m65-a2-correction`, ARM64 image
+`sha256:ccafa69e4c473d61b578537fce2814451517247e55aa53c9c9094e28dc1b3ae8`,
 built for and running as UID/GID `1001:1001` on the Raspberry Pi.
 
 The write journey ran only against the isolated online snapshot target
@@ -121,16 +191,19 @@ this run. The origin and public response retained the same strict policy; no Clo
 
 ## Promoted runtime and live integrity
 
-Migration `0015_purchases_fifo` is applied on the active database. After deployment, SQLite
-integrity remained `ok`, foreign-key violations remained zero, and the database retained 717
-events at high-water 717. The ordered identity/checksum hash for those events remained exactly
-`907bf04333c2fdde614f392b8f2bb282428b4bf754e5d3acf4f4e7e3cf81c7e7`; household, user, Animal,
-Enclosure, Inventory, and attachment counts were unchanged. The 40-file attachment tree hash
-remained `d9c69298591f8d42adb9ca6a43174ac17a3925d718bf8034866e79444e375fab`.
+Migration `0016_inventory_acquisition` is applied on the active database. Immediately before and
+after deployment, SQLite integrity was `ok`, foreign-key violations were zero, and the database
+retained 719 events at high-water 719. The ordered identity/checksum hash remained exactly
+`80648271177fb19de64751de4e70739f4741074972ef97439d1e92ed1085d3ad`. Counts remained four
+households, four users, 42 Animals, 29 Enclosures, 22 Inventory Items, and 39 attachment-version
+rows. The same 40 attachment files retained content hash
+`148367657887ab26b8a8d0bf8cb3fdd5eb33389241c8ce66ef430e01dfd6e3dc`. Migration created zero
+cost assignments, as expected, and the version-2 Inventory costing projection rebuilt through
+event 719 without error.
 
-The live public smoke was read-only for domain data and covered Purchases, Add Purchase, and
-Expenses at desktop and mobile sizes. Web, worker, and Nginx remained healthy on the one active
-Compose stack, with web and worker running the promoted image.
+The live post-deployment checks were read-only for domain data. Web, worker, and Nginx remained
+healthy on the one active Care Keeper Compose stack, with web and worker running the corrected
+image as UID/GID `1001:1001`.
 
 ## Explicitly deferred
 

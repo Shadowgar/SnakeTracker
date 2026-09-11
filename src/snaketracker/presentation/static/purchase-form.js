@@ -12,10 +12,11 @@
     rows.forEach((row) => {
       const select = row.querySelector("[data-purchase-item]");
       row.querySelector("[data-purchase-unit]").textContent = select.selectedOptions[0]?.dataset.unit || "";
-      row.querySelector("[data-remove-purchase-line]").disabled = rows.length === 1;
+      const remove = row.querySelector("[data-remove-purchase-line]");
+      if (remove instanceof HTMLButtonElement) remove.disabled = rows.length === 1;
     });
     count.textContent = `${rows.length} of 25 receipt items`;
-    add.disabled = rows.length >= 25;
+    if (add instanceof HTMLButtonElement) add.disabled = rows.length >= 25;
     const subtotals = [...form.querySelectorAll('input[name="subtotal"]')]
       .reduce((sum, input) => sum + (Number.parseFloat(input.value) || 0), 0);
     const calculated = subtotals + money("tax") + money("fee") - money("discount");
@@ -24,7 +25,7 @@
       ? `Totals reconcile at ${calculated.toFixed(2)}.`
       : `Calculated total is ${calculated.toFixed(2)}. Enter the matching amount paid.`;
   };
-  add.addEventListener("click", () => {
+  add?.addEventListener("click", () => {
     const rows = list.querySelectorAll("[data-purchase-line]");
     if (!rows.length || rows.length >= 25) return;
     const row = rows[0].cloneNode(true);

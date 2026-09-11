@@ -1,10 +1,48 @@
 {% extends "base.html" %}
 {% block title %}Add inventory · Care Keeper{% endblock %}
 {% block content %}
-<section class="form-page" aria-labelledby="page-title"><header><p class="eyebrow">Inventory</p><h1 id="page-title">Add inventory item</h1></header>
-{% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
-<form class="card form-stack" method="post" action="/inventory" novalidate><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}">
-{% include "_inventory_catalog_fields.html" %}
-<div class="form-actions"><a href="/inventory">Cancel</a><button type="submit">Add item</button></div></form></section>
+<section class="form-page inventory-acquisition-page" aria-labelledby="page-title">
+  <header><p class="eyebrow">Inventory</p><h1 id="page-title">Add inventory</h1><p class="lede">Add stock and, when you want, record what you paid in the same step.</p></header>
+  {% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+  <form class="card form-stack" method="post" action="/inventory" novalidate data-inventory-acquisition>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="idempotency_key" value="{{ command_id }}">
+    {% set selected_choice = values.get('item_selection', 'new') %}
+    <fieldset class="choice-cards">
+      <legend>What are you adding?</legend>
+      <label><input type="radio" name="item_selection" value="existing"{% if selected_choice == 'existing' %} checked{% endif %}> Existing item</label>
+      <label><input type="radio" name="item_selection" value="new"{% if selected_choice != 'existing' %} checked{% endif %}> Create a new item</label>
+    </fieldset>
+    <section class="form-stack" data-acquisition-existing{% if selected_choice != 'existing' %} hidden{% endif %}>
+      <label>Item
+        <select name="inventory_item_id" data-acquisition-item{% if selected_choice != 'existing' %} disabled{% endif %} required>
+          <option value="">Choose an item</option>
+          {% for item in inventory_items %}{% set item_value = item.item_id|string ~ ':' ~ item.stream_version|string %}<option value="{{ item_value }}" data-stock="{{ item.on_hand_display }} {{ item.on_hand_unit_display }}" data-unit="{{ item.unit_symbol }}"{% if values.get('inventory_item_id','') in (item.item_id|string, item_value) %} selected{% endif %}>{{ item.name }} · {{ item.on_hand_display }} {{ item.on_hand_unit_display }} on hand</option>{% endfor %}
+        </select>
+      </label>
+      <p class="alert-neutral" data-current-stock aria-live="polite"></p>
+      <fieldset class="choice-cards">
+        <legend>What are you recording?</legend>
+        <label><input type="radio" name="recording_mode" value="add_stock"{% if values.get('recording_mode','add_stock') != 'existing_cost' %} checked{% endif %}> New stock</label>
+        <label><input type="radio" name="recording_mode" value="existing_cost"{% if values.get('recording_mode') == 'existing_cost' %} checked{% endif %}> Cost for stock already on hand</label>
+      </fieldset>
+      <label><span data-quantity-label>Quantity to add</span><input name="quantity" type="number" min="0.001" step="0.001" inputmode="decimal" value="{{ values.get('quantity','') }}"{% if selected_choice != 'existing' %} disabled{% endif %} required><small data-quantity-help></small></label>
+    </section>
+    <section class="form-stack" data-acquisition-new{% if selected_choice == 'existing' %} hidden{% endif %}>
+      {% include "_inventory_catalog_fields.html" %}
+    </section>
+    <fieldset class="form-stack acquisition-payment">
+      <legend>Cost information</legend>
+      <div class="form-grid">
+        <label>Amount paid<input name="amount_paid" inputmode="decimal" value="{{ values.get('amount_paid','0') }}" required><small>Enter $0 if you only want to track quantity and do not want this stock included in money reports.</small></label>
+        <label>Currency<input name="currency" value="{{ values.get('currency','USD') }}" maxlength="3" autocomplete="off" required></label>
+        <label>Acquisition date ({{ principal.household_timezone }})<input name="occurred_at" type="datetime-local" value="{{ values.get('occurred_at', default_occurred_at) }}" required></label>
+        <label>Vendor <span class="visually-hidden">(optional)</span><input name="vendor" maxlength="200" value="{{ values.get('vendor','') }}" autocomplete="organization"><small>Optional</small></label>
+      </div>
+      <label>Reference or note <span class="visually-hidden">(optional)</span><input name="reference" maxlength="300" value="{{ values.get('reference','') }}"><small>Optional</small></label>
+    </fieldset>
+    <div class="form-actions"><a href="/inventory">Cancel</a><button type="submit">Add inventory</button></div>
+  </form>
+</section>
 {% endblock %}
-{% block scripts %}<script defer src="/static/inventory-form.js?v=m65-a1-c2"></script>{% endblock %}
+{% block scripts %}<script defer src="/static/inventory-form.js?v=m65-a2-c1"></script><script defer src="/static/inventory-acquisition.js?v=m65-a2-c1"></script>{% endblock %}

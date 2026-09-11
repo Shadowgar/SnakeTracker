@@ -103,8 +103,9 @@ consumption links or allocations.
 Accepted ADR-0042 governs the expand-only evolution. Migration
 `0014_structured_inventory_feeding` implements A1. Expand-only migration `0015_purchases_fifo`
 implements the A2 synchronous Purchase and effective-receipt tables; FIFO and unified cash-spend
-tables are activated as rebuildable projection generations. Count and broader intelligence schema
-remains deferred.
+tables are activated as rebuildable projection generations. Expand-only migration
+`0016_inventory_acquisition` adds unified-acquisition mode and current-stock cost-assignment state.
+Count and broader intelligence schema remains deferred.
 
 ### Evolved `inventory_balance`
 
@@ -125,13 +126,23 @@ Household-scoped effective Purchase header/lifecycle with one currency, vendor, 
 reference, line/tax/fee/discount/total minor units, source versions, and bounded line count. Lines
 have stable ID, Inventory Item, scaled canonical quantity, subtotal, deterministically allocated
 acquisition cost, resulting receipt event ID, and active state. Unique Purchase/line and receipt
-links prevent duplicate projection.
+links prevent duplicate projection. Migration 0016 adds `acquisition_mode` to distinguish ordinary
+stock receipts, atomic new-Item acquisitions, and cost information assigned to existing stock.
 
 ### `inventory_effective_receipts` *(A2 implemented)*
 
 Household/item/root-receipt identity, effective receipt/correction/control event, scaled quantity,
 immutable optional Purchase/line source, status, and stream/global versions. It supports synchronous
 correction/void/reinstate validation without mutating history.
+
+### `inventory_effective_cost_assignments` *(A2 owner-review correction)*
+
+Household/item/root-assignment identity, effective assignment/correction/control event, exact
+assigned quantity, Purchase/line identity, persisted source-event portions and offsets,
+occurrence/order metadata, and active/voided state. Each assignment targets only eligible
+unknown-cost quantity currently remaining and never changes physical stock. Persisted portions make
+partial assignment, correction, void, reinstatement, and projection replay deterministic without
+rewriting legacy receipts or already-consumed history.
 
 ### `inventory_costing` lots and allocations *(A2 implemented generations)*
 

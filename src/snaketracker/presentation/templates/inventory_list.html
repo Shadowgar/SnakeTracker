@@ -4,7 +4,7 @@
 <section class="dashboard inventory-page" aria-labelledby="page-title">
   <header class="page-heading">
     <div><p class="page-kicker">Supplies</p><h1 id="page-title">Inventory</h1><p class="lede">Stock on hand for feeding, habitats, and everyday care.</p></div>
-    {% if 'inventory.manage' in principal.capabilities and status == 'active' %}<div class="heading-actions">{% if 'expense.manage' in principal.capabilities %}<a class="button-link secondary-link" href="/purchases/new">Add purchase</a>{% endif %}<a class="button-link" href="/inventory/new">Add item</a></div>{% endif %}
+    {% if 'inventory.manage' in principal.capabilities and status == 'active' %}<div class="heading-actions"><a class="button-link" href="/inventory/new">Add inventory</a></div>{% endif %}
   </header>
   <dl class="summary-strip inventory-summary" aria-label="Inventory summary">
     <div><dt>Active</dt><dd>{{ inventory_summary.active }}</dd></div>
@@ -23,6 +23,6 @@
       <dl class="supply-facts"><div><dt>Reserved</dt><dd>{{ item.reserved_display }}</dd></div><div><dt>Used</dt><dd>{{ item.consumed_display }}</dd></div>{% if item.reorder_threshold_scaled is not none %}<div><dt>Reorder at</dt><dd>{{ item.reorder_threshold_display }}</dd></div>{% endif %}</dl>
       <div class="supply-actions"><a href="/inventory/{{ item.item_id }}">View</a>{% if 'inventory.manage' in principal.capabilities and item.status == 'active' and item.needs_setup %}<a href="/inventory/{{ item.item_id }}/edit">Finish setup</a>{% elif 'inventory.manage' in principal.capabilities and item.status == 'active' %}<a href="/inventory/{{ item.item_id }}/adjust">Adjust stock</a>{% elif 'inventory.manage' in principal.capabilities %}<a href="/inventory/{{ item.item_id }}/restore">Restore</a>{% endif %}</div>
     </li>{% endfor %}
-  </ul>{% else %}<div class="empty-state"><h2>No {{ status }} inventory</h2><p>{% if status == 'active' %}Add your first supply when you are ready to track stock.{% else %}Archived items remain here with their historical identity intact.{% endif %}</p>{% if status == 'active' and 'inventory.manage' in principal.capabilities %}<a class="button-link" href="/inventory/new">Add your first item</a>{% endif %}</div>{% endif %}
+  </ul>{% else %}<div class="empty-state"><h2>No {{ status }} inventory</h2><p>{% if status == 'active' %}Add your first supply when you are ready to track stock.{% else %}Archived items remain here with their historical identity intact.{% endif %}</p>{% if status == 'active' and 'inventory.manage' in principal.capabilities %}<a class="button-link" href="/inventory/new">Add inventory</a>{% endif %}</div>{% endif %}
 </section>
 {% endblock %}

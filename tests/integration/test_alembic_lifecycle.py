@@ -24,6 +24,7 @@ from snaketracker.application.inventory import (
     InventoryService,
     ReceiveStockCommand,
     RegisterInventoryItemCommand,
+    RegisterStructuredInventoryItemCommand,
 )
 from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
 from snaketracker.infrastructure.database.engine import create_sqlite_engine
@@ -32,10 +33,14 @@ from snaketracker.infrastructure.identity.bootstrap_repository import (
     SQLAlchemyHouseholdBootstrapRepository,
 )
 from snaketracker.infrastructure.inventory.projections import SQLAlchemyInventoryBalanceProjection
+from snaketracker.infrastructure.purchases.projections import (
+    SQLAlchemyInventoryAccountingProjection,
+    SQLAlchemyInventoryEffectiveReceiptProjection,
+)
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 
 ROOT = Path(__file__).parents[2]
-REVISION = "0015_purchases_fifo"
+REVISION = "0016_inventory_acquisition"
 PHASE_FIVE_TABLES = {
     "aggregate_snapshots",
     "alembic_version",
@@ -61,6 +66,7 @@ PHASE_FIVE_TABLES = {
     "inventory_consumption_links_v2",
     "inventory_consumption_allocations_v2",
     "inventory_effective_receipts",
+    "inventory_effective_cost_assignments",
     "jobs",
     "login_rate_limits",
     "local_notification_operations",
@@ -207,6 +213,86 @@ def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -
 
     command.upgrade(config, "head")
     assert current_revision(database) == REVISION
+
+
+def test_0015_upgrade_preserves_representative_untracked_stock(tmp_path: Path) -> None:
+    database = tmp_path / "representative-0015-upgrade.sqlite3"
+    config = alembic_config(database)
+    command.upgrade(config, "0015_purchases_fifo")
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    try:
+        bootstrap = HouseholdBootstrapService(
+            SQLAlchemyHouseholdBootstrapRepository(engine),
+            Argon2PasswordHasher.for_testing(),
+            command_hash_secret=b"m65-a2-correction-upgrade-secret",
+        ).bootstrap(
+            BootstrapCommand(
+                household_name="A2 Upgrade",
+                timezone="UTC",
+                owner_email="owner@example.com",
+                owner_display_name="Owner",
+                password="correct horse battery staple",
+                idempotency_key="a2-upgrade-bootstrap",
+                correlation_id=uuid4(),
+            )
+        )
+        balance = SQLAlchemyInventoryBalanceProjection(engine)
+        inventory = InventoryService(
+            SQLAlchemyEventStore(engine),
+            SQLAlchemyInventoryAccountingProjection(
+                balance, SQLAlchemyInventoryEffectiveReceiptProjection()
+            ),
+        )
+        item = inventory.register_structured(
+            RegisterStructuredInventoryItemCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                uuid4(),
+                "a2-upgrade-stock",
+                "Legacy untracked rats",
+                "food",
+                "each",
+                "whole_prey",
+                "rat",
+                "small",
+                "frozen_thawed",
+                None,
+                20_000,
+            )
+        )
+        with engine.connect() as connection:
+            before_events = connection.execute(
+                text("SELECT count(*) FROM domain_events")
+            ).scalar_one()
+    finally:
+        engine.dispose()
+
+    command.upgrade(config, "head")
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    try:
+        with engine.connect() as connection:
+            assert current_revision(database) == REVISION
+            assert (
+                connection.execute(
+                    text("SELECT on_hand_quantity_scaled FROM inventory_balance WHERE item_id=:id"),
+                    {"id": str(item.item_id)},
+                ).scalar_one()
+                == 20_000
+            )
+            assert (
+                connection.execute(text("SELECT count(*) FROM domain_events")).scalar_one()
+                == before_events
+            )
+            assert (
+                connection.execute(
+                    text("SELECT count(*) FROM inventory_effective_cost_assignments")
+                ).scalar_one()
+                == 0
+            )
+            assert connection.exec_driver_sql("PRAGMA integrity_check").scalar_one() == "ok"
+            assert connection.exec_driver_sql("PRAGMA foreign_key_check").all() == []
+    finally:
+        engine.dispose()
 
 
 def test_inventory_lifecycle_migration_blocks_lossy_downgrade(tmp_path: Path) -> None:

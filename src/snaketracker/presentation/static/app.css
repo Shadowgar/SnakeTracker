@@ -152,6 +152,11 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
 .form-advanced[open] summary { margin-bottom: var(--space-4); }
 .checkbox-label { display: flex; width: max-content; align-items: center; gap: var(--space-3); }
 .checkbox-label input { width: 1.15rem; min-height: 1.15rem; height: 1.15rem; margin: 0; }
+.choice-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin: 0; padding: 0; border: 0; }
+.choice-cards legend { grid-column: 1 / -1; margin-bottom: var(--space-1); color: var(--color-text); font-weight: 800; }
+.choice-cards label { display: flex; min-height: var(--control-height); align-items: center; gap: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: .65rem .75rem; background: var(--color-canvas); cursor: pointer; }
+.choice-cards label:has(input:checked) { border-color: var(--color-primary); color: var(--color-text); background: var(--color-primary-soft); }
+.choice-cards input[type="radio"] { flex: 0 0 auto; width: 1.1rem; min-height: 1.1rem; height: 1.1rem; margin: 0; padding: 0; accent-color: var(--color-primary); }
 .input-with-unit { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); color: var(--color-text-muted); font-weight: 400; }
 .alert { border: 1px solid rgba(255,125,139,.4); border-left: .3rem solid var(--color-overdue); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); background: var(--color-overdue-soft); }
 .field-error { color: var(--color-overdue); font-size: var(--text-sm); }

@@ -40,3 +40,32 @@ class PurchaseCorrectedV1:
     total_paid_minor: int
     lines: tuple[PurchaseLineV1, ...]
     reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class PurchaseRecordedV2:
+    purchase_id: UUID
+    vendor: str
+    currency: str
+    reference: str | None
+    tax_minor: int
+    fee_minor: int
+    discount_minor: int
+    total_paid_minor: int
+    lines: tuple[PurchaseLineV1, ...]
+    acquisition_mode: str
+
+
+@dataclass(frozen=True, slots=True)
+class PurchaseCorrectedV2:
+    target_event_id: UUID
+    vendor: str
+    currency: str
+    reference: str | None
+    tax_minor: int
+    fee_minor: int
+    discount_minor: int
+    total_paid_minor: int
+    lines: tuple[PurchaseLineV1, ...]
+    acquisition_mode: str
+    reason: str

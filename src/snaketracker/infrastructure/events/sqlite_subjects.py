@@ -7,6 +7,7 @@ from typing import cast
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
+from snaketracker.domains.purchases.contracts import PurchaseRecordedV2
 from snaketracker.platform.events.envelope import DomainEvent
 from snaketracker.platform.events.validation import EventValidationError
 
@@ -92,6 +93,17 @@ class SQLAlchemySubjectReferenceValidator:
                     and subject.relationship == "primary"
                     and subject.subject_id == event.stream_id
                 ):
+                    exists = 1
+                elif (
+                    isinstance(event.payload, PurchaseRecordedV2)
+                    and event.payload.acquisition_mode == "new_item_stock"
+                    and any(
+                        line.inventory_item_id == subject.subject_id for line in event.payload.lines
+                    )
+                ):
+                    # The matching registration and receipt are appended atomically after this
+                    # Purchase event; their synchronous projections fail the whole transaction
+                    # if the new Inventory Item is not established.
                     exists = 1
                 else:
                     exists = connection.execute(
