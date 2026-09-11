@@ -11,6 +11,10 @@ from sqlalchemy.engine import Connection, Engine
 from snaketracker.infrastructure.projections.sqlite_generations import (
     SQLiteProjectionGenerationManager,
 )
+from snaketracker.infrastructure.purchases.projections import (
+    CashSpendProjectionStrategy,
+    InventoryCostingProjectionStrategy,
+)
 from snaketracker.infrastructure.search.fts import FTSSearchProjectionStrategy
 from snaketracker.platform.events.registry import production_event_registry
 from snaketracker.platform.projections.definitions import (
@@ -153,6 +157,20 @@ product_projection_registry = ProjectionRegistry(
         _definition("report_facts", "insights"),
         _definition("husbandry_recommendations", "insights"),
         _definition("dashboard_statistics", "dashboard"),
+        _definition(
+            "inventory_costing",
+            "inventory_costing",
+            strategy=InventoryCostingProjectionStrategy(),
+            components=("lots", "allocations"),
+            handler_version=1,
+        ),
+        _definition(
+            "cash_spend_facts",
+            "cash_spend",
+            strategy=CashSpendProjectionStrategy(),
+            components=("facts",),
+            handler_version=1,
+        ),
     )
 )
 

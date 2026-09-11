@@ -27,6 +27,7 @@ from snaketracker.application.household_bootstrap import (
 from snaketracker.application.identity import IdentityService
 from snaketracker.application.inventory import InventoryService
 from snaketracker.application.ports.readiness import ReadinessPort
+from snaketracker.application.purchases import PurchaseService
 from snaketracker.application.readiness import PlatformReadiness
 from snaketracker.application.reminders import ReminderFactService, ReminderRuleService
 from snaketracker.application.reports import ReportService
@@ -74,6 +75,12 @@ from snaketracker.infrastructure.product_experience.read_models import (
 )
 from snaketracker.infrastructure.projections.sqlite_generations import (
     SQLiteProjectionGenerationManager,
+)
+from snaketracker.infrastructure.purchases.projections import (
+    SQLAlchemyInventoryAccountingProjection,
+    SQLAlchemyInventoryCostProjection,
+    SQLAlchemyInventoryEffectiveReceiptProjection,
+    SQLAlchemyPurchaseCurrentProjection,
 )
 from snaketracker.infrastructure.reminders.projections import SQLAlchemyReminderProjection
 from snaketracker.infrastructure.search.fts import SQLAlchemyFTSSearchRepository
@@ -172,8 +179,19 @@ def build_application(settings: Settings) -> FastAPI:
         bootstrap_repository = SQLAlchemyHouseholdBootstrapRepository(engine)
         identity_repository = SQLAlchemyIdentityRepository(engine)
         event_store = SQLAlchemyEventStore(engine)
-        inventory_projection = SQLAlchemyInventoryBalanceProjection(engine)
+        projection_manager = SQLiteProjectionGenerationManager(engine, product_projection_registry)
+        inventory_balance_projection = SQLAlchemyInventoryBalanceProjection(engine)
+        inventory_cost_projection = SQLAlchemyInventoryCostProjection(engine, projection_manager)
+        inventory_projection = SQLAlchemyInventoryAccountingProjection(
+            inventory_balance_projection, SQLAlchemyInventoryEffectiveReceiptProjection()
+        )
         inventory_service = InventoryService(event_store, inventory_projection)
+        purchase_service = PurchaseService(
+            event_store,
+            inventory_projection,
+            SQLAlchemyPurchaseCurrentProjection(engine),
+            inventory_cost_projection,
+        )
         animal_service = AnimalService(
             event_store,
             SQLAlchemyAnimalCurrentProjection(engine),
@@ -191,7 +209,6 @@ def build_application(settings: Settings) -> FastAPI:
         )
         reminder_projection = SQLAlchemyReminderProjection(engine)
         expense_service = ExpenseService(event_store, SQLAlchemyExpenseCurrentProjection(engine))
-        projection_manager = SQLiteProjectionGenerationManager(engine, product_projection_registry)
         projection_catch_up: Callable[[], object] | None = None
         if settings.environment is Environment.TEST:
 
@@ -260,6 +277,7 @@ def build_application(settings: Settings) -> FastAPI:
                 backup_service=BackupService(SQLAlchemyBackupRepository(engine)),
                 enclosure_service=enclosure_service,
                 inventory_service=inventory_service,
+                purchase_service=purchase_service,
                 expense_service=expense_service,
                 analytics_service=AnimalAnalyticsService(
                     animal_service, projected_events=analytics_events

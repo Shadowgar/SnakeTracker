@@ -1,6 +1,6 @@
 # M6.5-A1 Structured Inventory and Inventory-authoritative Feeding
 
-Status: **technical qualification passed; owner review pending**
+Status: **owner accepted September 11, 2026**
 
 Requirements `R-084` and `R-085`; acceptance procedures `AT-INVINT-07` and `AT-INVINT-08`.
 Branch `phase6.5/inventory-intelligence`. M6.5 is not complete or owner-accepted.
@@ -214,11 +214,13 @@ Coverage JSON/XML and JUnit artifacts were produced. The deployed `linux/arm64` 
 Web, worker, and Nginx are healthy; web/worker run UID/GID `1001:1001`; the bind remains
 `127.0.0.1:8081`; local/public readiness are ready; and exactly one Care Keeper Compose project is
 active. Hosted checks and the correction commit are recorded in the final owner handoff after push.
-This correction remains pending owner review.
+The owner accepted M6.5-A1 as complete on September 11, 2026. This acceptance closes only the A1
+structured Inventory and Inventory-authoritative Feeding tranche; it does not accept M6.5 as a
+whole.
 
 ## Explicitly deferred
 
-M6.5-A2 and later retain Purchase aggregate/receipts, FIFO lots and valuation, cash-spend
-integration, physical/cycle counting, forecasting, estimated duration, advanced Inventory
-Overview, and cost/expense reporting. The requested future administrator/operator login/activity
-audit console is also deferred outside A1.
+A2 separately implements the Purchase aggregate/receipts, FIFO lots and valuation, and unified
+cash-spend facts. Physical/cycle counting, forecasting, estimated duration, advanced Inventory
+Overview, and expanded cost/expense reporting remain later work. The requested future
+administrator/operator login/activity audit console is also deferred outside A1.

@@ -778,6 +778,14 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
 .expense-copy span { overflow: hidden; color: var(--color-text-muted); font-size: var(--text-sm); text-overflow: ellipsis; white-space: nowrap; }
 .expense-amount { justify-items: end; font-weight: 900; }
 .expense-amount small { color: var(--color-overdue); font-size: var(--text-xs); }
+.heading-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.purchase-lines { display: grid; gap: var(--space-3); margin: 0; padding: 0; border: 0; }
+.purchase-lines legend { margin-bottom: var(--space-1); font-size: var(--text-lg); font-weight: 800; }
+.purchase-line-list { display: grid; gap: var(--space-2); }
+.purchase-line { display: grid; grid-template-columns: minmax(12rem, 2fr) minmax(8rem, 1fr) minmax(8rem, 1fr) auto; gap: var(--space-2); align-items: end; padding: var(--space-3); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-surface-raised); }
+.purchase-line .compact-button { min-height: 2.75rem; }
+.purchase-total-check { margin: 0; }
+.inline-facts { padding: 0; box-shadow: none; }
 
 .report-dashboard { display: grid; gap: var(--space-4); }
 .report-overview { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; min-height: 9rem; align-items: center; gap: var(--space-5); color: inherit; text-decoration: none; }
@@ -863,6 +871,9 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
   .supply-card { gap: var(--space-3); padding: var(--space-3); }
   .supply-balance strong { font-size: 2rem; }
   .expense-row { grid-template-columns: 2.25rem minmax(0, 1fr) auto; gap: var(--space-2); }
+  .purchase-line { grid-template-columns: 1fr 1fr; }
+  .purchase-line label:first-child { grid-column: 1 / -1; }
+  .purchase-line .compact-button { grid-column: 1 / -1; justify-self: start; }
   .expense-layout > .category-card { order: 2; }
   .expense-icon { width: 2.25rem; height: 2.25rem; }
   .expense-copy span { font-size: .7rem; }

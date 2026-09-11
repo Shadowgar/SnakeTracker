@@ -69,6 +69,21 @@ class InventoryStockReceivedV2:
 
 
 @dataclass(frozen=True, slots=True)
+class InventoryStockReceivedV3:
+    quantity_scaled: int
+    reference: str | None
+    purchase_id: UUID
+    purchase_line_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class InventoryReceiptCorrectedV1:
+    target_event_id: UUID
+    quantity_scaled: int
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
 class InventoryStockReservedV1:
     quantity: int
     reservation_key: str

@@ -1,0 +1,71 @@
+{
+  "qualified_at": "2026-09-11",
+  "host_architecture": "aarch64",
+  "browser_architecture": "arm64",
+  "browser": "Chromium 1208",
+  "promoted_image": "snaketracker:m65-a2",
+  "image_sha256": "a483407510030b945e0d7abd7ee662566596eee307d1eb1dab3bbedbe5de049f",
+  "protected_live_paths": {
+    "database": "/home/rocco/SnakeTracker/runtime/phase2/snaketracker.sqlite3",
+    "attachments": "/home/rocco/SnakeTracker/runtime/phase2/attachments"
+  },
+  "isolated_write_target": "/tmp/carekeeper-a2-browser.kqgOum",
+  "isolated_write_journey": {
+    "purchase_posted_atomically": true,
+    "one_add_click_produced_two_total_rows": true,
+    "total_reconciled": true,
+    "line_count": 2,
+    "cash_spend_fact_count": 1,
+    "fifo_lot_count": 2,
+    "correction_void_reinstate": true,
+    "final_purchase_status": "active",
+    "final_purchase_stream_version": 4,
+    "final_total_paid_minor": 2200,
+    "final_active_receipts": 2,
+    "sqlite_integrity": "ok",
+    "foreign_key_violations": 0,
+    "expense_list_purchase_occurrences": 1,
+    "desktop_viewport": "1440x900",
+    "mobile_viewport": "390x844",
+    "mobile_horizontal_overflow": false,
+    "axe_checks": 7,
+    "axe_violations": 0,
+    "application_console_errors_after_complete_attachment_snapshot": 0,
+    "page_errors_after_complete_attachment_snapshot": 0,
+    "http_errors_after_complete_attachment_snapshot": 0,
+    "failed_requests_after_complete_attachment_snapshot": 0,
+    "initial_fixture_artifact": "The first snapshot omitted attachment binaries and produced eight expected attachment 404s; copying the same live attachments read-only into the isolated target removed every diagnostic without an application change."
+  },
+  "live_read_only_smoke": {
+    "origin": "https://tracker.theroccos.us",
+    "routes": [
+      "/purchases",
+      "/purchases/new",
+      "/expenses"
+    ],
+    "successful_statuses": 3,
+    "domain_writes": 0,
+    "desktop_viewport": "1440x900",
+    "mobile_viewport": "390x844",
+    "mobile_horizontal_overflow": false,
+    "axe_checks": 4,
+    "axe_violations": 0,
+    "application_javascript_errors": 0,
+    "application_owned_csp_violations": 0,
+    "cloudflare_external_beacon_csp_blocks": 7,
+    "cloudflare_injected_inline_loader_csp_blocks": 7,
+    "axe_instrumentation_csp_diagnostics": 0,
+    "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+  },
+  "screenshots": {
+    "desktop_purchase_form": "screenshots/desktop-1440x900-purchase-form.png",
+    "desktop_purchase_detail": "screenshots/desktop-1440x900-purchase-detail.png",
+    "desktop_inventory_fifo": "screenshots/desktop-1440x900-inventory-fifo.png",
+    "desktop_expenses": "screenshots/desktop-1440x900-expenses.png",
+    "mobile_purchase_form": "screenshots/mobile-390x844-purchase-form.png",
+    "mobile_purchase_detail": "screenshots/mobile-390x844-purchase-detail.png",
+    "mobile_inventory_fifo": "screenshots/mobile-390x844-inventory-fifo.png",
+    "live_desktop_purchase_form": "screenshots/live-desktop-1440x900-purchase-form.png",
+    "live_mobile_purchase_form": "screenshots/live-mobile-390x844-purchase-form.png"
+  }
+}

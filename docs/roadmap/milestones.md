@@ -244,7 +244,7 @@ qualified and presented for owner review.
 
 ## Phase 6.5 / M6.5 — Inventory intelligence and cost tracking
 
-Status: ADR-0042 accepted; M6.5-A1 implemented and under final qualification; A2+ not implemented
+Status: ADR-0042 and M6.5-A1 owner-accepted; M6.5-A2 Purchase/FIFO owner review pending
 
 M6.5 is a substantial product milestone after final M6 acceptance and before M7. It turns Inventory
 from a list of owned objects into an explainable decision-support system. It must have its own
@@ -262,8 +262,9 @@ structured catalog direction for M6.5-A1 on September 10, 2026.
 
 ### Owner-approved inventory-authoritative feeding direction
 
-M6.5-A1 implements the approved foundation on `phase6.5/inventory-intelligence`; Purchase/FIFO and
-the remaining intelligence work stay explicitly deferred.
+M6.5-A1 implements the approved foundation and was owner-accepted September 11, 2026. M6.5-A2 now
+implements Purchase/FIFO; the remaining count, intelligence, and reporting work stays explicitly
+deferred.
 
 - [x] RB Every new M6.5 Feeding references a same-household **Food** Inventory Item. The normal
   workflow becomes **Date/time**, **Food from inventory**, **Quantity**, and **Outcome**; **Do not
@@ -311,9 +312,9 @@ explainable immutable adjustment rather than an in-place overwrite.
 
 ### Inventory, purchases, expenses, and costing
 
-- [ ] RB The product represents the conceptual flow `Purchase → Inventory received → Inventory consumed → Cost of consumption` while keeping cash spending, inventory value, and consumption cost as distinct metrics. (`R-073`, `AT-INVINT-04`)
-- [ ] RB Purchase/receipt history retains purchase date, supplier/vendor, quantity, amount paid, unit cost, and resulting inventory receipt. Changing prices are represented by history/cost lots rather than one mutable item-price field. (`R-074`, `AT-INVINT-05`)
-- [x] RB Before consumption value is implemented, architecture/domain review explicitly selects and documents FIFO as the deterministic costing policy. ADR-0042 is accepted; FIFO implementation remains M6.5-A2. (`R-075`, `AR-INVINT-01`)
+- [x] RB The product represents the conceptual flow `Purchase → Inventory received → Inventory consumed → Cost of consumption` while keeping cash spending, inventory value, and consumption cost as distinct metrics. A2 implementation and qualification are complete; owner review remains open. (`R-073`, `AT-INVINT-04`)
+- [x] RB Purchase/receipt history retains purchase date, supplier/vendor, quantity, amount paid, unit cost, and resulting inventory receipt. Changing prices are represented by history/cost lots rather than one mutable item-price field. A2 implementation and qualification are complete; owner review remains open. (`R-074`, `AT-INVINT-05`)
+- [x] RB Before consumption value is implemented, architecture/domain review explicitly selects and documents FIFO as the deterministic costing policy. ADR-0042 is accepted and A2 implements FIFO. (`R-075`, `AR-INVINT-01`)
 
 For example, a $65 purchase of 50 frozen mice has a $1.30 purchase unit cost. If 18 are consumed,
 the $65 cash outflow and $23.40 consumption value are different measures; remaining stock value is

@@ -26,6 +26,7 @@ from snaketracker.domains.inventory.contracts import (
     InventoryStockAdjustedV1,
     InventoryStockAdjustedV2,
     InventoryStockConsumedV1,
+    InventoryStockConsumedV2,
     InventoryStockExpiredV1,
     InventoryStockReceivedV1,
     InventoryStockReceivedV2,
@@ -233,6 +234,18 @@ class ConsumeStockCommand:
     idempotency_key: str
     expected_stream_version: int
     quantity: int
+    source_event_id: UUID | None
+
+
+@dataclass(frozen=True, slots=True)
+class ConsumeScaledStockCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    item_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    expected_stream_version: int
+    quantity_scaled: int
     source_event_id: UUID | None
 
 
@@ -542,6 +555,18 @@ class InventoryService:
             "Inventory stock consumed",
         )
 
+    def consume_scaled(self, command: ConsumeScaledStockCommand) -> InventoryCommandResult:
+        balance = self._require_structured_item(command.household_id, command.item_id)
+        _validate_scaled(command.quantity_scaled, balance.unit_code, "Consumed quantity")
+        return self._append(
+            command,
+            "inventory.stock_consumed",
+            InventoryStockConsumedV2(command.quantity_scaled, command.source_event_id),
+            "inventory.consume_scaled",
+            "Inventory stock consumed",
+            schema_version=2,
+        )
+
     def reserve(self, command: ReserveStockCommand) -> InventoryCommandResult:
         return self._append(
             command,
@@ -740,6 +765,7 @@ class InventoryService:
         command: ReceiveStockCommand
         | ReceiveScaledStockCommand
         | ConsumeStockCommand
+        | ConsumeScaledStockCommand
         | ReserveStockCommand
         | ReverseConsumptionCommand
         | AdjustStockCommand

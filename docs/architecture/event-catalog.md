@@ -133,15 +133,17 @@ remain shared where the active profile permits them.
 
 #### M6.5 contracts
 
-ADR-0042 is accepted. The A1 versions marked implemented are registered while version-1 Inventory
-history remains registered unchanged. Purchase/FIFO/count/intelligence contracts remain deferred.
+ADR-0042 is accepted. The A1 and A2 versions marked implemented are registered while version-1
+Inventory history remains registered unchanged. Count and broader intelligence contracts remain
+deferred.
 
 | Event contract | Meaning |
 |---|---|
 | `inventory.item_registered` v2 *(A1 implemented)* | Adds controlled Type, unit, Food metadata, and scaled threshold |
 | `inventory.item_updated` v2 *(A1 implemented)* | Changes name/metadata and safely establishes or retains canonical unit |
 | `inventory.stock_received` v2 *(A1 implemented)* | Adds positive scaled quantity with an optional reference |
-| `inventory.receipt_corrected` v1 | Replaces effective quantity of a targeted v2 receipt without relinking its source |
+| `inventory.stock_received` v3 *(A2 implemented)* | Adds positive scaled quantity linked to one Purchase and stable line |
+| `inventory.receipt_corrected` v1 *(A2 implemented)* | Replaces effective quantity of a targeted purchase-linked receipt without relinking its source |
 | `inventory.stock_consumed` v2 *(A1 implemented)* | Removes scaled quantity with an optional linked source event |
 | `inventory.consumption_reversed` v2 *(A1 implemented)* | Restores one exact linked scaled consumption |
 | `inventory.stock_adjusted` v2 *(A1 implemented)* | Applies a scaled nonzero manual delta with reason |
@@ -160,8 +162,8 @@ duplicate adjustment event.
 | `expense.recorded` | Creates expense |
 | `expense.corrected` | Replaces effective financial facts |
 | `expense.voided` | Voids expense |
-| `purchase.recorded` v1 *(Proposed M6.5)* | Records one specialized cash-spend receipt with bounded inventory lines |
-| `purchase.corrected` v1 *(Proposed M6.5)* | Replaces effective Purchase facts and coordinates receipt corrections |
+| `purchase.recorded` v1 *(A2 implemented)* | Records one specialized cash-spend receipt with bounded inventory lines |
+| `purchase.corrected` v1 *(A2 implemented)* | Replaces effective Purchase facts and coordinates receipt corrections |
 | `reminder.rule_created` | Creates rule |
 | `reminder.rule_changed` | Changes schedule or channels |
 | `reminder.rule_disabled` | Disables rule |

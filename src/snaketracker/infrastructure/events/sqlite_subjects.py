@@ -125,6 +125,26 @@ class SQLAlchemySubjectReferenceValidator:
                             "household_id": str(event.household_id),
                         },
                     ).scalar_one_or_none()
+            elif subject.subject_type == "purchase":
+                if (
+                    event.event_type == "purchase.recorded"
+                    and subject.relationship == "primary"
+                    and subject.subject_id == event.stream_id
+                ):
+                    exists = 1
+                else:
+                    exists = connection.execute(
+                        text(
+                            "SELECT 1 FROM purchase_current WHERE household_id=:household_id "
+                            "AND purchase_id=:subject_id UNION ALL SELECT 1 FROM domain_events "
+                            "WHERE household_id=:household_id AND stream_type='purchase' "
+                            "AND stream_id=:subject_id AND event_type='purchase.recorded' LIMIT 1"
+                        ),
+                        {
+                            "subject_id": str(subject.subject_id),
+                            "household_id": str(event.household_id),
+                        },
+                    ).scalar_one_or_none()
             elif subject.subject_type == "reminder_rule":
                 if (
                     event.event_type == "reminder.rule_created"

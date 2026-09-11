@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Purchases · Care Keeper{% endblock %}
+{% block content %}
+<section class="dashboard purchase-page" aria-labelledby="page-title">
+  <header class="page-heading"><div><p class="page-kicker">Inventory receipts</p><h1 id="page-title">Purchases</h1><p class="lede">Payments that received stock, with exact lot costs retained.</p></div>{% if 'inventory.manage' in principal.capabilities and 'expense.manage' in principal.capabilities %}<a class="button-link" href="/purchases/new">Add purchase</a>{% endif %}</header>
+  {% if purchases %}<ol class="expense-list purchase-list">{% for purchase in purchases %}<li><a class="card expense-row" href="/purchases/{{ purchase.purchase_id }}"><span class="expense-icon" aria-hidden="true">P</span><span class="expense-copy"><strong>{{ purchase.vendor }}</strong><span>{{ purchase.lines|length }} item{% if purchase.lines|length != 1 %}s{% endif %} · {{ purchase.occurred_at.astimezone(household_zone).strftime('%b %-d, %Y') }}{% if purchase.reference %} · {{ purchase.reference }}{% endif %}</span></span><span class="expense-amount">{% if purchase.currency == 'USD' %}${% else %}{{ purchase.currency }} {% endif %}{{ '%.2f'|format(purchase.total_paid_minor / 100) }}{% if purchase.status != 'active' %}<small>{{ purchase.status|title }}</small>{% endif %}</span></a></li>{% endfor %}</ol>
+  {% else %}<div class="empty-state"><h2>No purchases yet</h2><p>Add a receipt to record spending and receive inventory in one step.</p>{% if 'inventory.manage' in principal.capabilities and 'expense.manage' in principal.capabilities %}<a class="button-link" href="/purchases/new">Add first purchase</a>{% endif %}</div>{% endif %}
+</section>
+{% endblock %}

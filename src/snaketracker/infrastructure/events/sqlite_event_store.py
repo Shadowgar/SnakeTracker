@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import timedelta
+from typing import cast
 from uuid import UUID, uuid5
 
 from sqlalchemy import text
@@ -49,6 +50,44 @@ class SQLAlchemyEventStore:
         self._engine = engine
         self._registry = registry
         self._subject_validator = subject_validator or SQLAlchemySubjectReferenceValidator()
+
+    def stored_idempotency_response(
+        self,
+        household_id: UUID,
+        actor_user_id: UUID,
+        operation_scope: str,
+        idempotency_key: str,
+        command_hash: str,
+    ) -> dict[str, object] | None:
+        with self._engine.connect() as connection:
+            row = (
+                connection.execute(
+                    text(
+                        "SELECT command_hash,stored_result_json FROM idempotency_operations "
+                        "WHERE household_id=:household_id AND actor_user_id=:actor_user_id "
+                        "AND operation_scope=:operation_scope AND idempotency_key=:idempotency_key "
+                        "AND status='completed'"
+                    ),
+                    {
+                        "household_id": str(household_id),
+                        "actor_user_id": str(actor_user_id),
+                        "operation_scope": operation_scope,
+                        "idempotency_key": idempotency_key,
+                    },
+                )
+                .mappings()
+                .one_or_none()
+            )
+        if row is None:
+            return None
+        if row["command_hash"] != command_hash:
+            raise IdempotencyConflictError(
+                "Idempotency key conflicts with a different canonical command."
+            )
+        stored = json.loads(str(row["stored_result_json"]))
+        if not isinstance(stored, dict):
+            raise EventStreamIntegrityError("Stored idempotency response is invalid.")
+        return cast(dict[str, object], stored)
 
     def load_stream(
         self,
@@ -197,7 +236,17 @@ class SQLAlchemyEventStore:
             or context.expires_at < context.created_at + timedelta(days=90)
         ):
             raise ValueError("Atomic append idempotency context is invalid.")
-        ordered = tuple(sorted(request.streams, key=lambda item: item.key))
+        ordered = tuple(
+            sorted(
+                request.streams,
+                key=lambda item: (
+                    item.key.household_id,
+                    0 if item.key.stream_type == "purchase" else 1,
+                    item.key.stream_type,
+                    item.key.stream_id,
+                ),
+            )
+        )
         if not ordered or len({item.key for item in ordered}) != len(ordered):
             raise ValueError("Atomic append requires unique stream expectations.")
         if any(item.key.household_id != request.idempotency.household_id for item in ordered):

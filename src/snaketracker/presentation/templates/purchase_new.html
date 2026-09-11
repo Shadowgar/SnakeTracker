@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{% if purchase is defined %}Correct purchase{% else %}Add purchase{% endif %} · Care Keeper{% endblock %}
+{% block content %}
+<section class="form-page purchase-page" aria-labelledby="page-title">
+  <header><p class="page-kicker">Inventory receipts</p><h1 id="page-title">{% if purchase is defined %}Correct purchase{% else %}Add purchase{% endif %}</h1><p class="lede">{% if purchase is defined %}Replace the effective receipt facts while preserving the original history.{% else %}Record one payment and receive every item on the receipt atomically.{% endif %}</p></header>
+  {% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+  {% if inventory_items %}
+  <form class="card form-stack purchase-form" method="post" action="{% if purchase is defined %}/purchases/{{ purchase.purchase_id }}/correct{% else %}/purchases{% endif %}" data-purchase-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="idempotency_key" value="{{ command_id }}">
+    {% if purchase is defined %}<input type="hidden" name="target_event_id" value="{{ purchase.last_event_id }}"><input type="hidden" name="expected_stream_version" value="{{ purchase.stream_version }}">{% endif %}
+    <div class="form-grid purchase-header-fields">
+      <label>Vendor<input name="vendor" maxlength="200" value="{{ values.get('vendor','') }}" autocomplete="organization" required></label>
+      <label>When ({{ principal.household_timezone }})<input name="occurred_at" type="datetime-local" value="{{ values.get('occurred_at', default_occurred_at) }}" required></label>
+      <label>Currency<input name="currency" value="{{ values.get('currency','USD') }}" maxlength="3" autocomplete="off" required></label>
+      <label>Receipt / reference<input name="reference" maxlength="300" value="{{ values.get('reference','') }}"></label>
+    </div>
+    <fieldset class="purchase-lines">
+      <legend>Receipt items</legend>
+      <p class="field-help">Choose an existing active item. Quantities use that item's configured unit.</p>
+      <div class="purchase-line-list" data-purchase-lines>
+        {% for line in line_values %}<div class="purchase-line" data-purchase-line>
+          <input type="hidden" name="purchase_line_id" value="{{ line.purchase_line_id }}" data-purchase-line-id>
+          <label>Inventory item<select name="inventory_item_id" data-purchase-item required><option value="">Choose item</option>{% for item in inventory_items %}{% set item_value = item.item_id|string ~ ':' ~ item.stream_version|string %}<option value="{{ item_value }}" data-unit="{{ item.unit_symbol }}"{% if line.inventory_item_id == item_value %} selected{% endif %}>{{ item.name }} · {{ item.unit_label }}</option>{% endfor %}</select></label>
+          <label>Quantity <span data-purchase-unit></span><input name="quantity" inputmode="decimal" value="{{ line.quantity }}" required></label>
+          <label>Line subtotal<input name="subtotal" inputmode="decimal" value="{{ line.subtotal }}" aria-label="Line subtotal in purchase currency" required></label>
+          <button class="compact-button secondary-button" type="button" data-remove-purchase-line aria-label="Remove purchase line">Remove</button>
+        </div>{% endfor %}
+      </div>
+      <button class="compact-button secondary-button" type="button" data-add-purchase-line>Add another item</button>
+      <p class="field-help" aria-live="polite" data-purchase-line-count></p>
+    </fieldset>
+    <div class="form-grid purchase-total-fields">
+      <label>Tax<input name="tax" inputmode="decimal" value="{{ values.get('tax','0.00') }}"></label>
+      <label>Fees<input name="fee" inputmode="decimal" value="{{ values.get('fee','0.00') }}"></label>
+      <label>Discount<input name="discount" inputmode="decimal" value="{{ values.get('discount','0.00') }}"></label>
+      <label>Total paid<input name="total_paid" inputmode="decimal" value="{{ values.get('total_paid','') }}" required></label>
+    </div>
+    <p class="alert-neutral purchase-total-check" data-purchase-total-check aria-live="polite">Line subtotals plus tax and fees, less discount, must equal Total paid.</p>
+    <label>Notes<textarea name="notes" maxlength="2000">{{ values.get('notes','') }}</textarea></label>
+    {% if purchase is defined %}<label>Correction reason<textarea name="reason" maxlength="1000" required>{{ values.get('reason','') }}</textarea></label>{% endif %}
+    <div class="form-actions"><a href="{% if purchase is defined %}/purchases/{{ purchase.purchase_id }}{% else %}/purchases{% endif %}">Cancel</a><button type="submit">{% if purchase is defined %}Save correction{% else %}Post purchase &amp; receive stock{% endif %}</button></div>
+  </form>
+  {% else %}<div class="empty-state"><h2>Add an inventory item first</h2><p>Purchases receive stock into configured Inventory items.</p><a class="button-link" href="/inventory/new">Add inventory item</a></div>{% endif %}
+</section>
+{% endblock %}
+{% block scripts %}<script defer src="/static/purchase-form.js"></script>{% endblock %}

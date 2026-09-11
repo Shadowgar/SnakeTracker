@@ -31,17 +31,18 @@ Moving a projection into the synchronous command transaction requires a measured
 ## M6.5 projection groups
 
 ADR-0042 is accepted. A1 evolves the synchronous balance and adds version-2 consumption
-link/allocation compatibility; the remaining Purchase/FIFO/intelligence read models are deferred:
+link/allocation compatibility. A2 adds the marked Purchase/FIFO/cash-spend projections; count and
+broader intelligence read models remain deferred:
 
 | Projection/group | Purpose | Consistency |
 |---|---|---|
 | `inventory_balance` A1 evolution *(implemented)* | Scaled balance, controlled Type/unit, Food metadata, lifecycle, and legacy setup state | Synchronous |
 | `inventory_consumption_links_v2` / `inventory_consumption_allocations_v2` *(implemented)* | Exact scaled Feeding linkage, reversal, and reserved-allocation state | Synchronous |
-| `inventory_effective_receipts` | Effective receipt roots/corrections/controls and Purchase-line linkage needed for invariants | Synchronous |
-| `purchase_current` / `purchase_line_current` | Effective Purchase lifecycle, totals, lines, and resulting receipt IDs | Synchronous |
-| `inventory_costing` | FIFO cost layers/allocations, known/unknown quantity, consumed/current/variance value per currency | Asynchronous generation |
+| `inventory_effective_receipts` *(A2 implemented)* | Effective receipt roots/corrections/controls and Purchase-line linkage needed for invariants | Synchronous |
+| `purchase_current` / `purchase_line_current` *(A2 implemented)* | Effective Purchase lifecycle, totals, lines, and resulting receipt IDs | Synchronous |
+| `inventory_costing` *(A2 implemented)* | FIFO cost layers/allocations, known/unknown quantity, consumed/current/variance value per currency | Asynchronous generation |
 | `inventory_intelligence` | Usage windows, rate/duration, verification/reorder state, and unused/excess observations | Asynchronous generation |
-| `cash_spend_facts` | Exactly one effective cash fact per typed Expense or Purchase source | Asynchronous generation |
+| `cash_spend_facts` *(A2 implemented)* | Exactly one effective cash fact per typed Expense or Purchase source | Asynchronous generation |
 | `inventory_report_facts` | Periodized item/category quantity, value, estimate provenance, and export facts | Asynchronous generation |
 
 The synchronous group validates stock, receipt, Purchase, correction, and multi-stream invariants.

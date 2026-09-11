@@ -35,7 +35,7 @@ from snaketracker.infrastructure.inventory.projections import SQLAlchemyInventor
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 
 ROOT = Path(__file__).parents[2]
-REVISION = "0014_structured_inventory_feeding"
+REVISION = "0015_purchases_fifo"
 PHASE_FIVE_TABLES = {
     "aggregate_snapshots",
     "alembic_version",
@@ -60,12 +60,15 @@ PHASE_FIVE_TABLES = {
     "inventory_consumption_allocations",
     "inventory_consumption_links_v2",
     "inventory_consumption_allocations_v2",
+    "inventory_effective_receipts",
     "jobs",
     "login_rate_limits",
     "local_notification_operations",
     "notification_intents",
     "outbox_items",
     "password_reset_credentials",
+    "purchase_current",
+    "purchase_line_current",
     "projection_checkpoints",
     "projection_definitions",
     "projection_generations",
