@@ -5,6 +5,76 @@ Status: **implemented and qualified; owner review pending**
 Requirements `R-073` through `R-075`; acceptance procedures `AT-INVINT-04`, `AT-INVINT-05`,
 and `AR-INVINT-01`. Branch `phase6.5/purchases-fifo`. M6.5 is not complete or owner-accepted.
 
+## Owner-review correction 2: guided Add inventory
+
+The public defect was a stale-asset delivery failure. The source had gained a compact
+`.choice-cards input[type="radio"]` override after the deployed page and stylesheet URL were already
+using the unchanged `app.css?v=m65-a2` cache key. Cloudflare/browser caching (`max-age=14400`) could
+therefore retain the earlier stylesheet, where the global full-width `input` rule rendered the
+radios as giant controls. Direct-origin and public stylesheet SHA-256 were later identical at
+`f7c0d55a37d7475d5381d69fb0b5d53837e94d5d6b83e9fc32e2603ef6021db5`; native public computed
+style at diagnosis was a two-column grid with 359-pixel-wide, 46.78-pixel-high labels and normal
+17.59-pixel radios. The correction removes dependence on that fragile visible-radio treatment and
+bumps every affected asset URL to `m65-a2-owner-c2`.
+
+The rebuilt page is one progressive task. Its initial state contains only **Existing item** and
+**New item** segmented choices. Existing item reveals the Item selector; choosing an Item adds a
+compact on-hand/value summary and only then reveals **Add stock** and **Add cost information**.
+Add stock exposes quantity, dollar-prefixed Amount paid, and Date. Add cost information changes the
+labels to quantity being assigned and amount originally paid, explains that stock quantity will not
+change, and ends with **Save cost information**. New item opens the accepted A1 guided catalog flow
+directly. Vendor, reference, default-USD Currency, and optional reorder threshold are under **More
+details**. Semantic radios remain for native grouping and arrow-key behavior, but are visually
+hidden; checked choices gain both a check mark and accent treatment, and focus remains visible.
+
+Fresh public-runtime screenshots were captured and inspected at 390×844 and 1440×900 for all six
+required states. Mobile keeps two 165.19×44.75-pixel choices in one useful row and the form within
+372.39 pixels. Desktop keeps the form at exactly 672 pixels (42rem), with 311×47.75-pixel choices.
+At both sizes the semantic input computes to an absolute, transparent 1×1-pixel box. There was no
+horizontal overflow; every hidden branch had zero enabled controls; native arrow-key selection
+worked. Twelve WCAG 2.2 AA axe scans reported zero violations. There were zero Care Keeper console,
+page, HTTP, failed-request, or CSP errors. The only diagnostics were Cloudflare-injected inline
+analytics loaders and `static.cloudflareinsights.com` beacon requests being correctly blocked by
+Care Keeper's unchanged `script-src 'self'` policy.
+
+Owner-review captures:
+
+- [mobile initial](screenshots/owner-c2-mobile-390x844-initial.png)
+- [mobile Existing before Item](screenshots/owner-c2-mobile-390x844-existing-before-item.png)
+- [mobile Existing selected](screenshots/owner-c2-mobile-390x844-existing-selected.png)
+- [mobile Add stock](screenshots/owner-c2-mobile-390x844-add-stock.png)
+- [mobile Add cost](screenshots/owner-c2-mobile-390x844-add-cost.png)
+- [mobile New item](screenshots/owner-c2-mobile-390x844-new-item.png)
+- [desktop initial](screenshots/owner-c2-desktop-1440x900-initial.png)
+- [desktop Existing before Item](screenshots/owner-c2-desktop-1440x900-existing-before-item.png)
+- [desktop Existing selected](screenshots/owner-c2-desktop-1440x900-existing-selected.png)
+- [desktop Add stock](screenshots/owner-c2-desktop-1440x900-add-stock.png)
+- [desktop Add cost](screenshots/owner-c2-desktop-1440x900-add-cost.png)
+- [desktop New item](screenshots/owner-c2-desktop-1440x900-new-item.png)
+
+Machine-readable computed-style, progressive-disclosure, console, accessibility, and artifact
+results are in [`owner-c2-browser-qualification.json`](owner-c2-browser-qualification.json).
+
+The exact authoritative quality path (`uv sync --frozen`, then `./scripts/quality/check.sh`) passed:
+formatting and Ruff across 452 files, the 42-ADR accepted architecture freeze, documentation links
+across 206 files, strict mypy across 130 source files, all 563 tests, dependency audit, Compose
+validation, and diff checks. Coverage was 94.66% lines and 85.01% branches. The promoted native
+ARM64 image is `snaketracker:m65-a2-owner-c2`, SHA-256
+`013f289d52491e26e060a969a7ad0930016a2b59bc856e57e53aa066a4c3d710`, running as `1001:1001`.
+Web, worker, and Nginx are healthy; local and public readiness are ready; exactly one Care Keeper
+Compose project is active.
+
+No browser form was submitted against the live runtime. Before and after deployment the protected
+database remained at migration `0016_inventory_acquisition`, integrity `ok`, zero foreign-key
+violations, 724 events/high-water 724, and ordered event identity/checksum hash
+`aad16abef4ddd1a6ea4d25565fc0e834369a8e4f577bac2a091680636963131a`. Counts remained four
+households, four users, 42 Animals, 29 Enclosures, 23 Inventory Items, and 39 attachment versions.
+The pre-deployment encrypted, non-overwriting backup was request
+`685f7e7e-9911-4c48-a823-a21e32b26613`, run `4b249b13-fc42-418a-b571-9621c1eed88b`, with encrypted
+manifest SHA-256 `b254dee5da247a3030442a93de178ed309fb10f8f80f72711bc083cfec0763a7` independently verified.
+The active database and attachments were never reset, reseeded, replaced, restored over, or used
+for destructive qualification.
+
 ## Owner-review correction: unified acquisition
 
 The A2 owner-review correction replaces competing Add Item and Add Purchase entrypoints with one

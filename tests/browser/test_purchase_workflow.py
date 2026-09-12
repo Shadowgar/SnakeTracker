@@ -3,16 +3,19 @@ from __future__ import annotations
 import re
 from datetime import date, timedelta
 from pathlib import Path
+from types import SimpleNamespace
 from uuid import uuid4
 
 from sqlalchemy import text
 
+from snaketracker.application.purchases import CurrencyValue
 from snaketracker.infrastructure.product_experience.projections import (
     product_projection_registry,
 )
 from snaketracker.infrastructure.projections.sqlite_generations import (
     SQLiteProjectionGenerationManager,
 )
+from snaketracker.presentation.web import _inventory_cost_status
 from tests.browser.test_identity_flow import client_for, complete_setup, csrf_from
 
 
@@ -48,6 +51,37 @@ def _add_food_item(client, name: str) -> str:  # type: ignore[no-untyped-def]
     )
     assert created.status_code == 303
     return created.headers["location"].rsplit("/", 1)[1]
+
+
+def test_inventory_acquisition_cost_statuses_are_plain_and_complete() -> None:
+    item = SimpleNamespace(unit_symbol="each")
+
+    def summary(**values: object) -> SimpleNamespace:
+        defaults = {
+            "available": True,
+            "known_remaining": (),
+            "unknown_remaining_quantity_scaled": 0,
+        }
+        defaults.update(values)
+        return SimpleNamespace(**defaults)
+
+    assert _inventory_cost_status(summary(available=False), item) == (
+        "Cost information is updating"
+    )
+    assert _inventory_cost_status(summary(), item) == "$0.00 tracked value"
+    assert _inventory_cost_status(summary(unknown_remaining_quantity_scaled=5000), item) == (
+        "Cost not tracked"
+    )
+    assert (
+        _inventory_cost_status(
+            summary(
+                known_remaining=(CurrencyValue("USD", 6500),),
+                unknown_remaining_quantity_scaled=5000,
+            ),
+            item,
+        )
+        == "$65.00 tracked value · 5 each cost not tracked"
+    )
 
 
 def test_multiline_purchase_receives_stock_and_appears_once_in_expenses(
@@ -163,7 +197,7 @@ def test_unified_add_inventory_covers_paid_untracked_and_legacy_cost_modes(
         assert "What are you adding?" in page.text
         assert "Add inventory" in page.text
         assert "Add purchase" not in client.get("/inventory").text
-        occurred = date.today().isoformat() + "T12:00"
+        occurred = (date.today() - timedelta(days=1)).isoformat() + "T12:00"
         created = client.post(
             "/inventory",
             data={
@@ -277,11 +311,41 @@ def test_unified_add_inventory_covers_paid_untracked_and_legacy_cost_modes(
             )
 
 
+def test_add_inventory_uses_progressive_segmented_controls(tmp_path: Path) -> None:
+    with client_for(tmp_path) as client:
+        complete_setup(client)
+        page = client.get("/inventory/new")
+        assert page.status_code == 200
+        assert "app.css?v=m65-a2-owner-c2" in page.text
+        assert 'name="item_selection" value="existing" required' in page.text
+        assert 'name="item_selection" value="new" required' in page.text
+        assert not re.search(r'name="item_selection"[^>]* checked', page.text)
+        assert re.search(r"data-acquisition-existing[^>]* hidden", page.text)
+        assert re.search(r"data-acquisition-new[^>]* hidden", page.text)
+        assert re.search(r"data-acquisition-action hidden", page.text)
+        assert re.search(r"data-acquisition-payment hidden", page.text)
+        assert "New stock" not in page.text
+        assert "Cost for stock already on hand" not in page.text
+        assert "Add stock" in page.text
+        assert "Add cost information" in page.text
+
+        stylesheet = client.get("/static/app.css").text
+        assert ".segment-input { position: absolute !important" in stylesheet
+        assert "width: 1px !important" in stylesheet
+        assert "min-height: 1px !important" in stylesheet
+        assert ".segment-choice:has(.segment-input:focus-visible)" in stylesheet
+
+        script = client.get("/static/inventory-acquisition.js").text
+        assert "setSection(actionField, hasItem)" in script
+        assert "setSection(payment, useNew || hasExistingAction)" in script
+        assert 'submitLabel.textContent = assignCost ? "Save cost information"' in script
+
+
 def test_unified_add_inventory_rejects_incomplete_or_ambiguous_choices(tmp_path: Path) -> None:
     with client_for(tmp_path) as client:
         complete_setup(client)
         item_id = _add_food_item(client, "Validation Mouse")
-        occurred = date.today().isoformat() + "T12:00"
+        occurred = (date.today() - timedelta(days=1)).isoformat() + "T12:00"
 
         cases = (
             ({"item_selection": "unknown"}, "Choose what you are adding"),

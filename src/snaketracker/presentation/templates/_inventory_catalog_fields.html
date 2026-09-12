@@ -97,7 +97,6 @@
   <label data-filtered-unit-field hidden>Unit<select name="unit_code" data-inventory-unit disabled required>{% for unit in inventory_units %}<option value="{{ unit.code }}" data-label="{{ unit.label }}" data-fractional="{{ 'true' if unit.allows_fractional else 'false' }}">{{ unit.label }}</option>{% endfor %}</select></label>
 </section>
 <label data-starting-quantity-field hidden>Starting quantity<input name="starting_quantity" type="number" min="0" step="1" inputmode="numeric" value="{{ values.get('starting_quantity', '') }}" disabled required><small data-starting-quantity-help></small></label>
-<label data-reorder-field hidden>Reorder when stock reaches <span class="visually-hidden">(optional)</span><input name="reorder_threshold" type="number" min="0" step="1" inputmode="numeric" value="{{ values.get('reorder_threshold', '') }}" disabled><small>Optional</small></label>
 {% else %}
 <label>Item name<input name="name" value="{{ values.get('name', current.name if current else '') }}" required maxlength="200"></label>
 <fieldset class="form-stack" data-food-fields{% if selected_type != 'food' %} hidden{% endif %}>

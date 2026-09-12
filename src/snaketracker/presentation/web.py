@@ -384,6 +384,23 @@ def _friendly_currency_values(values: tuple[Any, ...]) -> str:
     return " + ".join(_friendly_money(value.amount_minor, value.currency) for value in values)
 
 
+def _inventory_cost_status(cost_summary: Any, item: Any) -> str:
+    if not cost_summary.available:
+        return "Cost information is updating"
+    if cost_summary.known_remaining:
+        tracked_value = _friendly_currency_values(cost_summary.known_remaining)
+        status = f"{tracked_value} tracked value"
+        if cost_summary.unknown_remaining_quantity_scaled:
+            unknown_quantity = format_quantity_scaled(
+                cost_summary.unknown_remaining_quantity_scaled
+            )
+            status += f" · {unknown_quantity} {item.unit_symbol} cost not tracked"
+        return status
+    if cost_summary.unknown_remaining_quantity_scaled:
+        return "Cost not tracked"
+    return "$0.00 tracked value"
+
+
 def _friendly_report_value(column: str, value: str) -> str:
     if column == "Occurred":
         try:
@@ -957,6 +974,18 @@ def create_web_router(
         if issued is not None:
             _set_session_cookies(response, issued, secure_cookie)
         return response
+
+    def inventory_acquisition_items(household_id: UUID) -> tuple[dict[str, Any], ...]:
+        if projection_catch_up is not None:
+            projection_catch_up()
+        rows = []
+        for item in inventory_service.list_balances(household_id, status="active"):
+            if item.needs_setup or item.unit_code is None:
+                continue
+            cost_summary = purchase_service.cost_summary_for(household_id, item.item_id)
+            cost_status = _inventory_cost_status(cost_summary, item)
+            rows.append({"item": item, "cost_status": cost_status})
+        return tuple(rows)
 
     async def protected_form(
         request: Request,
@@ -2234,7 +2263,7 @@ def create_web_router(
             return _access_denied(request, "Inventory access denied")
         selected_item = request.query_params.get("item", "")
         selected_mode = (
-            "existing_cost" if request.query_params.get("mode") == "existing_cost" else "add_stock"
+            "existing_cost" if request.query_params.get("mode") == "existing_cost" else ""
         )
         return protected_page(
             request,
@@ -2243,18 +2272,12 @@ def create_web_router(
             context={
                 "errors": {},
                 "values": {
-                    "item_selection": "existing" if selected_item else "new",
+                    "item_selection": "existing" if selected_item else "",
                     "inventory_item_id": selected_item,
                     "recording_mode": selected_mode,
                 },
                 "guided_creation": True,
-                "inventory_items": tuple(
-                    item
-                    for item in inventory_service.list_balances(
-                        principal.household_id, status="active"
-                    )
-                    if not item.needs_setup and item.unit_code is not None
-                ),
+                "inventory_items": inventory_acquisition_items(principal.household_id),
                 "default_occurred_at": datetime.now(
                     ZoneInfo(principal.household_timezone)
                 ).strftime("%Y-%m-%dT%H:%M"),
@@ -2404,13 +2427,7 @@ def create_web_router(
                     "errors": {"form": str(error)},
                     "values": _form_values(form),
                     "guided_creation": True,
-                    "inventory_items": tuple(
-                        item
-                        for item in inventory_service.list_balances(
-                            principal.household_id, status="active"
-                        )
-                        if not item.needs_setup and item.unit_code is not None
-                    ),
+                    "inventory_items": inventory_acquisition_items(principal.household_id),
                     "default_occurred_at": str(form.get("occurred_at", "")),
                     **_inventory_catalog_context(),
                 },
