@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Count stock · Care Keeper{% endblock %}
+{% block content %}
+<section class="form-page inventory-count-start" aria-labelledby="page-title"><header><p class="page-kicker">Inventory verification</p><h1 id="page-title">Count stock</h1><p class="lede">Compare Care Keeper with what is physically on hand. Each saved item becomes an immutable verification.</p></header>
+<div class="count-scope-grid"><a class="card" href="/inventory/count?scope=cycle"><strong>Items due</strong><span>Count items not yet verified or overdue.</span></a><a class="card" href="/inventory/count?scope=full"><strong>Full inventory</strong><span>Work through every active configured item.</span></a></div>
+<form class="card form-stack" method="get" action="/inventory/count"><input type="hidden" name="scope" value="category"><label>One category<select name="category" required><option value="">Choose a category</option>{% for type in inventory_types %}<option value="{{ type.code }}">{{ type.label }}</option>{% endfor %}</select></label><button type="submit">Start category count</button></form>
+<form class="card form-stack" method="get" action="/inventory/count"><input type="hidden" name="scope" value="single"><label>One item<select name="item" required><option value="">Choose an item</option>{% for item in items %}<option value="{{ item.item_id }}">{{ item.name }} · {{ item.on_hand_display }} {{ item.unit_symbol }}</option>{% endfor %}</select></label><button type="submit">Count one item</button></form><p><a href="/inventory">← Back to inventory</a></p></section>
+{% endblock %}

@@ -40,7 +40,7 @@ from snaketracker.infrastructure.purchases.projections import (
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 
 ROOT = Path(__file__).parents[2]
-REVISION = "0016_inventory_acquisition"
+REVISION = "0017_inventory_intelligence"
 PHASE_FIVE_TABLES = {
     "aggregate_snapshots",
     "alembic_version",
@@ -61,6 +61,7 @@ PHASE_FIVE_TABLES = {
     "household_summaries",
     "idempotency_operations",
     "inventory_balance",
+    "inventory_count_history",
     "inventory_consumption_links",
     "inventory_consumption_allocations",
     "inventory_consumption_links_v2",
@@ -215,10 +216,10 @@ def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -
     assert current_revision(database) == REVISION
 
 
-def test_0015_upgrade_preserves_representative_untracked_stock(tmp_path: Path) -> None:
-    database = tmp_path / "representative-0015-upgrade.sqlite3"
+def test_0017_upgrade_preserves_representative_untracked_stock(tmp_path: Path) -> None:
+    database = tmp_path / "representative-0017-upgrade.sqlite3"
     config = alembic_config(database)
-    command.upgrade(config, "0015_purchases_fifo")
+    command.upgrade(config, "head")
     engine = create_sqlite_engine(database, require_local_storage=False)
     try:
         bootstrap = HouseholdBootstrapService(
@@ -267,6 +268,7 @@ def test_0015_upgrade_preserves_representative_untracked_stock(tmp_path: Path) -
     finally:
         engine.dispose()
 
+    command.downgrade(config, "0016_inventory_acquisition")
     command.upgrade(config, "head")
     engine = create_sqlite_engine(database, require_local_storage=False)
     try:

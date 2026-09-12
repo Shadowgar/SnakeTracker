@@ -13,7 +13,11 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine, RowMapping
 from sqlalchemy.exc import NoResultFound
 
-from snaketracker.application.inventory import InventoryBalance, InventoryConsumptionLink
+from snaketracker.application.inventory import (
+    InventoryBalance,
+    InventoryConsumptionLink,
+    InventoryCount,
+)
 from snaketracker.application.purchases import (
     CurrencyValue,
     InventoryCostSummary,
@@ -548,6 +552,16 @@ class SQLAlchemyInventoryEffectiveReceiptProjection:
                 if result.rowcount != 1:
                     raise PurchaseValidationError("Cost assignment correction target is missing.")
             elif isinstance(payload, EventVoidedV1 | EventReinstatedV1):
+                target_type = connection.execute(
+                    text(
+                        "SELECT event_type FROM domain_events WHERE household_id=:household_id "
+                        "AND stream_type='inventory-item' AND stream_id=:item_id "
+                        "AND event_id=:target"
+                    ),
+                    {**parameters, "target": str(payload.target_event_id)},
+                ).scalar_one_or_none()
+                if target_type == "inventory.stock_counted":
+                    continue
                 status = "voided" if isinstance(payload, EventVoidedV1) else "active"
                 prior_status = "active" if status == "voided" else "voided"
                 receipt_result = connection.execute(
@@ -743,6 +757,7 @@ class InventoryCostingProjectionStrategy:
             "inventory.stock_adjusted",
             "inventory.stock_expired",
             "inventory.stock_consumed",
+            "inventory.stock_counted",
             "inventory.consumption_reversed",
             "inventory.cost_assigned",
             "inventory.cost_assignment_corrected",
@@ -1099,6 +1114,32 @@ def _rebuild_item(
         )
         facts.append((key, kind, data))
 
+    count_rows = connection.execute(
+        text(
+            "SELECT c.root_count_event_id event_id,c.variance_quantity_scaled,"
+            "c.occurred_at,e.recorded_at,e.global_position FROM inventory_count_history c "
+            "JOIN domain_events e ON e.household_id=c.household_id "
+            "AND e.event_id=c.root_count_event_id WHERE c.household_id=:household_id "
+            "AND c.item_id=:item_id AND c.status='active' AND c.variance_quantity_scaled!=0"
+        ),
+        parameters,
+    ).mappings()
+    for row in count_rows:
+        quantity = int(row["variance_quantity_scaled"])
+        data = {
+            **dict(row),
+            "quantity_scaled": abs(quantity),
+            "classification": "variance",
+            "source_kind": "count_variance",
+        }
+        key = (
+            str(row["occurred_at"]),
+            str(row["recorded_at"]),
+            int(row["global_position"]),
+            str(row["event_id"]),
+        )
+        facts.append((key, "layer" if quantity > 0 else "depletion", data))
+
     assignments = _active_cost_intervals(connection, parameters)
     layers: list[_Layer] = []
     allocations: list[dict[str, object]] = []
@@ -1220,6 +1261,19 @@ class SQLAlchemyInventoryAccountingProjection:
         self, household_id: UUID, source_event_id: UUID
     ) -> InventoryConsumptionLink | None:
         return self._balance.consumption_for_source(household_id, source_event_id)
+
+    def count_for_event(
+        self, household_id: UUID, item_id: UUID, event_id: UUID
+    ) -> InventoryCount | None:
+        return self._balance.count_for_event(household_id, item_id, event_id)
+
+    def list_counts(
+        self,
+        household_id: UUID,
+        item_id: UUID | None = None,
+        workflow_id: UUID | None = None,
+    ) -> tuple[InventoryCount, ...]:
+        return self._balance.list_counts(household_id, item_id, workflow_id)
 
 
 def _purchase(row: RowMapping, lines: tuple[PurchaseLineCurrent, ...]) -> PurchaseCurrent:

@@ -1,28 +1,18 @@
 {% extends "base.html" %}
 {% block title %}Inventory · Care Keeper{% endblock %}
 {% block content %}
-<section class="dashboard inventory-page" aria-labelledby="page-title">
+<section class="dashboard inventory-page inventory-intelligence" aria-labelledby="page-title">
   <header class="page-heading">
-    <div><p class="page-kicker">Supplies</p><h1 id="page-title">Inventory</h1><p class="lede">Stock on hand for feeding, habitats, and everyday care.</p></div>
-    {% if 'inventory.manage' in principal.capabilities and status == 'active' %}<div class="heading-actions"><a class="button-link" href="/inventory/new">Add inventory</a></div>{% endif %}
+    <div><p class="page-kicker">Supplies</p><h1 id="page-title">Inventory</h1><p class="lede">Know what is left, what needs attention, and when stock was last checked.</p></div>
+    {% if 'inventory.manage' in principal.capabilities and status == 'active' %}<div class="heading-actions"><a class="button-link secondary-link" href="/inventory/count">Count stock</a><a class="button-link" href="/inventory/new">Add inventory</a></div>{% endif %}
   </header>
-  <dl class="summary-strip inventory-summary" aria-label="Inventory summary">
-    <div><dt>Active</dt><dd>{{ inventory_summary.active }}</dd></div>
-    <div><dt>Needs attention</dt><dd>{{ inventory_summary.attention }}</dd></div>
-    <div><dt>Tracked</dt><dd>{{ inventory_summary.tracked }}</dd></div>
-    <div><dt>Archived</dt><dd>{{ inventory_summary.archived }}</dd></div>
-  </dl>
-  <nav class="view-switcher inventory-switcher" aria-label="Inventory status">
-    <a href="/inventory"{% if status == 'active' %} aria-current="page"{% endif %}>Active</a>
-    <a href="/inventory?status=archived"{% if status == 'archived' %} aria-current="page"{% endif %}>Archived</a>
-  </nav>
-  {% if items %}<ul class="supply-grid" aria-label="{{ status|title }} inventory">
-    {% for item in items %}<li class="card supply-card{% if item.reorder_threshold is not none and item.on_hand_quantity <= item.reorder_threshold and item.status == 'active' %} supply-attention{% endif %}">
-      <div class="supply-heading"><div><p class="page-kicker">{{ item.type_label }} · {{ item.unit_label }}</p><h2><a href="/inventory/{{ item.item_id }}">{{ item.name }}</a></h2></div><span class="status-badge {% if item.needs_setup %}status-warning{% elif item.status == 'active' %}status-completed{% else %}status-disabled{% endif %}">{% if item.needs_setup %}Needs setup{% else %}{{ item.status|title }}{% endif %}</span></div>
-      <p class="supply-balance"><strong>{{ item.on_hand_display }}</strong><span>{{ item.on_hand_unit_display }} remaining</span></p>
-      <dl class="supply-facts"><div><dt>Reserved</dt><dd>{{ item.reserved_display }}</dd></div><div><dt>Used</dt><dd>{{ item.consumed_display }}</dd></div>{% if item.reorder_threshold_scaled is not none %}<div><dt>Reorder at</dt><dd>{{ item.reorder_threshold_display }}</dd></div>{% endif %}</dl>
-      <div class="supply-actions"><a href="/inventory/{{ item.item_id }}">View</a>{% if 'inventory.manage' in principal.capabilities and item.status == 'active' and item.needs_setup %}<a href="/inventory/{{ item.item_id }}/edit">Finish setup</a>{% elif 'inventory.manage' in principal.capabilities and item.status == 'active' %}<a href="/inventory/{{ item.item_id }}/adjust">Adjust stock</a>{% elif 'inventory.manage' in principal.capabilities %}<a href="/inventory/{{ item.item_id }}/restore">Restore</a>{% endif %}</div>
-    </li>{% endfor %}
-  </ul>{% else %}<div class="empty-state"><h2>No {{ status }} inventory</h2><p>{% if status == 'active' %}Add your first supply when you are ready to track stock.{% else %}Archived items remain here with their historical identity intact.{% endif %}</p>{% if status == 'active' and 'inventory.manage' in principal.capabilities %}<a class="button-link" href="/inventory/new">Add inventory</a>{% endif %}</div>{% endif %}
+  {% if status == 'active' %}
+  <section class="inventory-attention card" aria-labelledby="attention-heading"><div><p class="page-kicker">Needs attention</p><h2 id="attention-heading">{{ inventory_summary.attention }} item{% if inventory_summary.attention != 1 %}s{% endif %} to review</h2><p>{{ inventory_summary.reorder }} reorder · {{ inventory_summary.count_due }} need a stock check</p></div>{% if 'inventory.manage' in principal.capabilities %}<a class="button-link secondary-link" href="/inventory/count?scope=cycle">Review counts</a>{% endif %}</section>
+  <dl class="summary-strip inventory-summary" aria-label="Inventory snapshot"><div><dt>Available items</dt><dd>{{ inventory_summary.active }}</dd></div><div><dt>Reorder</dt><dd>{{ inventory_summary.reorder }}</dd></div><div><dt>Verify stock</dt><dd>{{ inventory_summary.count_due }}</dd></div><div><dt>Archived</dt><dd>{{ inventory_summary.archived }}</dd></div></dl>
+  {% endif %}
+  <nav class="view-switcher inventory-switcher" aria-label="Inventory status"><a href="/inventory"{% if status == 'active' %} aria-current="page"{% endif %}>Overview</a><a href="/inventory?status=archived"{% if status == 'archived' %} aria-current="page"{% endif %}>Archived</a></nav>
+  {% if item_views %}<div class="inventory-table-card card"><div class="inventory-table-heading"><div><p class="page-kicker">All items</p><h2>{{ status|title }} inventory</h2></div><span>{{ item_views|length }} item{% if item_views|length != 1 %}s{% endif %}</span></div><ul class="inventory-decision-list" aria-label="{{ status|title }} inventory">
+    {% for row in item_views %}{% set item = row.item %}{% set insight = row.insight %}<li class="inventory-decision-row{% if insight.attention and item.status == 'active' %} needs-attention{% endif %}"><div class="inventory-item-name"><p class="page-kicker">{{ item.type_label }}</p><h3><a href="/inventory/{{ item.item_id }}">{{ item.name }}</a></h3><span>{{ insight.verification }}</span></div><div class="inventory-level"><strong>{{ item.available_display }}</strong><span>{{ item.on_hand_unit_display }} available</span></div><div class="inventory-signal"><strong>{{ insight.reorder }}</strong><span>{{ insight.duration }}{% if insight.raw.estimated_days_remaining is not none %} at recorded use{% endif %}</span></div><div class="inventory-signal"><strong>{{ insight.usage }}</strong><span>{{ insight.last_received }}</span></div><a class="row-link" href="/inventory/{{ item.item_id }}" aria-label="View {{ item.name }}">View</a></li>{% endfor %}
+  </ul></div>{% else %}<div class="empty-state"><h2>No {{ status }} inventory</h2><p>{% if status == 'active' %}Add your first supply when you are ready to track stock.{% else %}Archived items remain here with their historical identity intact.{% endif %}</p>{% if status == 'active' and 'inventory.manage' in principal.capabilities %}<a class="button-link" href="/inventory/new">Add inventory</a>{% endif %}</div>{% endif %}
 </section>
 {% endblock %}

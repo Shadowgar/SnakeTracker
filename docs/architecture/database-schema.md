@@ -105,6 +105,8 @@ Accepted ADR-0042 governs the expand-only evolution. Migration
 implements the A2 synchronous Purchase and effective-receipt tables; FIFO and unified cash-spend
 tables are activated as rebuildable projection generations. Expand-only migration
 `0016_inventory_acquisition` adds unified-acquisition mode and current-stock cost-assignment state.
+`0017_inventory_intelligence` adds owner stock/recount policy fields and immutable physical-count
+history. Its downgrade refuses to discard persisted M6.5-B event history.
 Count and broader intelligence schema remains deferred.
 
 ### Evolved `inventory_balance`

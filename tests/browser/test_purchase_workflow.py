@@ -130,7 +130,7 @@ def test_multiline_purchase_receives_stock_and_appears_once_in_expenses(
         assert "Purchase Rat" in detail.text
         assert "/static/purchase-form.js" in client.get(f"{posted.headers['location']}/edit").text
 
-        assert "50</strong><span>each on hand" in client.get(f"/inventory/{first_id}").text
+        assert "50</strong><span>each" in client.get(f"/inventory/{first_id}").text
         expenses = client.get("/expenses")
         assert expenses.status_code == 200
         assert expenses.text.count("A2 Supply") == 1
@@ -183,7 +183,7 @@ def test_purchase_validation_is_atomic_when_total_does_not_reconcile(tmp_path: P
         assert response.status_code == 422
         assert "must equal line subtotals" in response.text
         detail = client.get(f"/inventory/{item_id}")
-        assert "0</strong><span>each on hand" in detail.text
+        assert "0</strong><span>each" in detail.text
         assert "No purchase history yet" in client.get("/purchases").text
 
 
@@ -223,7 +223,7 @@ def test_unified_add_inventory_covers_paid_untracked_and_legacy_cost_modes(
         assert created.status_code == 303, created.text
         item_path = created.headers["location"]
         item_id = item_path.rsplit("/", 1)[1]
-        assert "20</strong><span>each on hand" in client.get(item_path).text
+        assert "20</strong><span>each" in client.get(item_path).text
 
         restock_page = client.get(f"/inventory/new?item={item_id}")
         restocked = client.post(
@@ -243,7 +243,7 @@ def test_unified_add_inventory_covers_paid_untracked_and_legacy_cost_modes(
             follow_redirects=False,
         )
         assert restocked.status_code == 303, restocked.text
-        assert "30</strong><span>each on hand" in client.get(item_path).text
+        assert "30</strong><span>each" in client.get(item_path).text
 
         untracked_page = client.get(f"/inventory/new?item={item_id}")
         untracked = client.post(
@@ -263,8 +263,8 @@ def test_unified_add_inventory_covers_paid_untracked_and_legacy_cost_modes(
         )
         assert untracked.status_code == 303, untracked.text
         detail = client.get(item_path)
-        assert "35</strong><span>each on hand" in detail.text
-        assert "5.0 each" in detail.text
+        assert "35</strong><span>each" in detail.text
+        assert "5 each" in detail.text
         assert "Cost not tracked" in detail.text
         assert "FIFO" not in detail.text
 
@@ -287,7 +287,7 @@ def test_unified_add_inventory_covers_paid_untracked_and_legacy_cost_modes(
         )
         assert assigned.status_code == 303, assigned.text
         final_detail = client.get(item_path)
-        assert "35</strong><span>each on hand" in final_detail.text
+        assert "35</strong><span>each" in final_detail.text
         assert "$101.00" in final_detail.text
         assert "FIFO" not in final_detail.text
 
@@ -316,7 +316,7 @@ def test_add_inventory_uses_progressive_segmented_controls(tmp_path: Path) -> No
         complete_setup(client)
         page = client.get("/inventory/new")
         assert page.status_code == 200
-        assert "app.css?v=m65-a2-owner-c2" in page.text
+        assert "app.css?v=m65-b2" in page.text
         assert 'name="item_selection" value="existing" required' in page.text
         assert 'name="item_selection" value="new" required' in page.text
         assert not re.search(r'name="item_selection"[^>]* checked', page.text)
@@ -445,7 +445,7 @@ def test_purchase_correction_void_and_reinstate_browser_flow(tmp_path: Path) -> 
         detail = client.get(purchase_path)
         assert "Corrected Supply" in detail.text
         assert "4.00" in detail.text
-        assert "4</strong><span>each on hand" in client.get(f"/inventory/{item_id}").text
+        assert "4</strong><span>each" in client.get(f"/inventory/{item_id}").text
 
         voided = client.post(
             f"{purchase_path}/void",
@@ -461,7 +461,7 @@ def test_purchase_correction_void_and_reinstate_browser_flow(tmp_path: Path) -> 
         assert voided.status_code == 303, voided.text
         voided_detail = client.get(purchase_path)
         assert "currently voided" in voided_detail.text
-        assert "0</strong><span>each on hand" in client.get(f"/inventory/{item_id}").text
+        assert "0</strong><span>each" in client.get(f"/inventory/{item_id}").text
 
         reinstated = client.post(
             f"{purchase_path}/reinstate",
@@ -475,4 +475,4 @@ def test_purchase_correction_void_and_reinstate_browser_flow(tmp_path: Path) -> 
             follow_redirects=False,
         )
         assert reinstated.status_code == 303, reinstated.text
-        assert "4</strong><span>each on hand" in client.get(f"/inventory/{item_id}").text
+        assert "4</strong><span>each" in client.get(f"/inventory/{item_id}").text

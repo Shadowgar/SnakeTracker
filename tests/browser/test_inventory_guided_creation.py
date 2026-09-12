@@ -58,13 +58,13 @@ def test_counted_food_creation_resolves_each_and_sets_initial_stock(
         created = client.post("/inventory", data=data, follow_redirects=False)
         assert created.status_code == 303, created.text
         detail = client.get(created.headers["location"])
-        assert ">20</strong><span>each on hand" in detail.text
+        assert ">20</strong><span>each" in detail.text
         assert "Add inventory" in detail.text
 
         retried = client.post("/inventory", data=data, follow_redirects=False)
         assert retried.status_code == 303, retried.text
         assert retried.headers["location"] == created.headers["location"]
-        assert ">20</strong><span>each on hand" in client.get(created.headers["location"]).text
+        assert ">20</strong><span>each" in client.get(created.headers["location"]).text
 
 
 @pytest.mark.parametrize(
@@ -134,7 +134,8 @@ def test_nonfood_guidance_resolves_narrow_units_and_ignores_stale_food_metadata(
         created = client.post("/inventory", data=data, follow_redirects=False)
         assert created.status_code == 303, created.text
         detail_page = client.get(created.headers["location"])
-        assert display in detail_page.text
+        plain_text = " ".join(re.sub(r"<[^>]+>", " ", detail_page.text).split())
+        assert display in plain_text
         assert "Food category" not in detail_page.text
 
 

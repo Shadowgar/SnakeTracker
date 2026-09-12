@@ -23,15 +23,20 @@ from snaketracker.domains.inventory.contracts import (
     InventoryItemUpdatedV1,
     InventoryItemUpdatedV2,
     InventoryReorderPolicyChangedV1,
+    InventoryReorderPolicyChangedV2,
     InventoryStockAdjustedV1,
     InventoryStockAdjustedV2,
     InventoryStockConsumedV1,
     InventoryStockConsumedV2,
+    InventoryStockConsumedV3,
+    InventoryStockCountedV1,
     InventoryStockExpiredV1,
     InventoryStockReceivedV1,
     InventoryStockReceivedV2,
     InventoryStockReservedV1,
+    InventoryVerificationPolicyChangedV1,
 )
+from snaketracker.platform.events.control_contracts import EventVoidedV1
 from snaketracker.platform.events.envelope import (
     DomainEvent,
     EventPayload,
@@ -78,6 +83,14 @@ class InventoryBalance:
     consumed_quantity_scaled: int
     expired_quantity_scaled: int
     reorder_threshold_scaled: int | None
+    target_quantity_scaled: int | None
+    maximum_quantity_scaled: int | None
+    supplier_lead_time_days: int | None
+    recount_interval_days: int | None
+    last_count_event_id: UUID | None
+    last_counted_at: datetime | None
+    last_count_expected_scaled: int | None
+    last_count_actual_scaled: int | None
 
     @property
     def needs_setup(self) -> bool:
@@ -150,6 +163,31 @@ class InventoryBalance:
             else format_quantity_scaled(self.reorder_threshold_scaled)
         )
 
+    @property
+    def available_quantity_scaled(self) -> int:
+        return self.on_hand_quantity_scaled - self.reserved_quantity_scaled
+
+    @property
+    def available_display(self) -> str:
+        return format_quantity_scaled(self.available_quantity_scaled)
+
+
+@dataclass(frozen=True, slots=True)
+class InventoryCount:
+    household_id: UUID
+    item_id: UUID
+    root_count_event_id: UUID
+    effective_event_id: UUID
+    workflow_id: UUID
+    expected_quantity_scaled: int
+    actual_quantity_scaled: int
+    variance_quantity_scaled: int
+    count_context: str
+    note: str | None
+    actor_user_id: UUID
+    occurred_at: datetime
+    status: str
+
 
 @dataclass(frozen=True, slots=True)
 class InventoryConsumptionLink:
@@ -171,6 +209,14 @@ class InventoryBalanceProjection(SynchronousProjection, Protocol):
     def consumption_for_source(
         self, household_id: UUID, source_event_id: UUID
     ) -> InventoryConsumptionLink | None: ...
+
+    def count_for_event(
+        self, household_id: UUID, item_id: UUID, event_id: UUID
+    ) -> InventoryCount | None: ...
+
+    def list_counts(
+        self, household_id: UUID, item_id: UUID | None = None, workflow_id: UUID | None = None
+    ) -> tuple[InventoryCount, ...]: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -251,6 +297,20 @@ class ConsumeScaledStockCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class UseInventoryCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    item_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    expected_stream_version: int
+    quantity_scaled: int
+    use_kind: str
+    note: str | None
+    occurred_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
 class ReserveStockCommand:
     household_id: UUID
     actor_user_id: UUID
@@ -320,6 +380,50 @@ class ChangeReorderPolicyCommand:
     idempotency_key: str
     expected_stream_version: int
     reorder_threshold: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class ChangeInventoryPolicyCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    item_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    expected_stream_version: int
+    reorder_minimum_scaled: int | None
+    target_quantity_scaled: int | None
+    maximum_quantity_scaled: int | None
+    supplier_lead_time_days: int | None
+    recount_interval_days: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class CountStockCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    item_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    expected_stream_version: int
+    actual_quantity_scaled: int
+    count_context: str
+    workflow_id: UUID
+    note: str | None
+    occurred_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class CorrectStockCountCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    item_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    expected_stream_version: int
+    target_event_id: UUID
+    actual_quantity_scaled: int
+    note: str | None
+    occurred_at: datetime
 
 
 @dataclass(frozen=True, slots=True)
@@ -570,6 +674,29 @@ class InventoryService:
             schema_version=2,
         )
 
+    def use_inventory(self, command: UseInventoryCommand) -> InventoryCommandResult:
+        balance = self._require_structured_item(command.household_id, command.item_id)
+        _validate_scaled(command.quantity_scaled, balance.unit_code, "Used quantity")
+        if command.use_kind not in {"care", "maintenance", "discarded", "other"}:
+            raise InventoryValidationError("Choose a valid inventory use.")
+        if command.occurred_at.tzinfo is None:
+            raise InventoryValidationError("Inventory use time must include a timezone.")
+        return self._append(
+            command,
+            "inventory.stock_consumed",
+            InventoryStockConsumedV3(
+                command.quantity_scaled,
+                None,
+                command.use_kind,
+                None,
+                None,
+                _optional_text(command.note, "Inventory use note"),
+            ),
+            "inventory.use",
+            "Inventory used",
+            schema_version=3,
+        )
+
     def reserve(self, command: ReserveStockCommand) -> InventoryCommandResult:
         return self._append(
             command,
@@ -668,6 +795,128 @@ class InventoryService:
             "Inventory reorder policy changed",
         )
 
+    def change_policy(self, command: ChangeInventoryPolicyCommand) -> InventoryCommandResult:
+        balance = self._require_structured_item(command.household_id, command.item_id)
+        values = (
+            command.reorder_minimum_scaled,
+            command.target_quantity_scaled,
+            command.maximum_quantity_scaled,
+        )
+        for label, value in zip(
+            ("Reorder minimum", "Target quantity", "Maximum quantity"), values, strict=True
+        ):
+            if value is not None:
+                if value < 0:
+                    raise InventoryValidationError(f"{label} cannot be negative.")
+                if value:
+                    _validate_scaled(value, balance.unit_code, label)
+        minimum, target, maximum = values
+        if target is not None and minimum is not None and target < minimum:
+            raise InventoryValidationError("Target quantity cannot be below the reorder minimum.")
+        if maximum is not None and target is not None and maximum < target:
+            raise InventoryValidationError("Maximum quantity cannot be below the target quantity.")
+        if maximum is not None and target is None and minimum is not None and maximum < minimum:
+            raise InventoryValidationError("Maximum quantity cannot be below the reorder minimum.")
+        for label, value, upper in (
+            ("Supplier lead time", command.supplier_lead_time_days, 3650),
+            ("Recount interval", command.recount_interval_days, 3650),
+        ):
+            if value is not None and (type(value) is not int or value < 1 or value > upper):
+                raise InventoryValidationError(f"{label} must be between 1 and {upper} days.")
+        return self._append_events(
+            command,
+            (
+                (
+                    "inventory.reorder_policy_changed",
+                    InventoryReorderPolicyChangedV2(
+                        minimum,
+                        target,
+                        maximum,
+                        command.supplier_lead_time_days,
+                    ),
+                    "Inventory stock policy changed",
+                    2,
+                    None,
+                ),
+                (
+                    "inventory.verification_policy_changed",
+                    InventoryVerificationPolicyChangedV1(command.recount_interval_days),
+                    "Inventory verification policy changed",
+                    1,
+                    None,
+                ),
+            ),
+            "inventory.change_policy",
+        )
+
+    def count_stock(self, command: CountStockCommand) -> InventoryCommandResult:
+        balance = self._require_structured_item(command.household_id, command.item_id)
+        if command.actual_quantity_scaled < 0:
+            raise InventoryValidationError("Actual quantity cannot be negative.")
+        if command.actual_quantity_scaled:
+            _validate_scaled(command.actual_quantity_scaled, balance.unit_code, "Actual quantity")
+        if command.count_context not in {"single", "full", "category", "cycle"}:
+            raise InventoryValidationError("Count context is invalid.")
+        if command.occurred_at.tzinfo is None:
+            raise InventoryValidationError("Count time must include a timezone.")
+        expected = balance.on_hand_quantity_scaled
+        return self._append(
+            command,
+            "inventory.stock_counted",
+            InventoryStockCountedV1(
+                expected,
+                command.actual_quantity_scaled,
+                command.actual_quantity_scaled - expected,
+                command.count_context,
+                command.workflow_id,
+                _optional_text(command.note, "Count note"),
+            ),
+            "inventory.count",
+            "Inventory physically counted",
+        )
+
+    def correct_count(self, command: CorrectStockCountCommand) -> InventoryCommandResult:
+        balance = self._require_structured_item(command.household_id, command.item_id)
+        target = self._projection.count_for_event(
+            command.household_id, command.item_id, command.target_event_id
+        )
+        if target is None or target.status != "active":
+            raise InventoryValidationError("Inventory count is missing or already corrected.")
+        if command.actual_quantity_scaled < 0:
+            raise InventoryValidationError("Actual quantity cannot be negative.")
+        if command.actual_quantity_scaled:
+            _validate_scaled(command.actual_quantity_scaled, balance.unit_code, "Actual quantity")
+        if command.occurred_at.tzinfo is None:
+            raise InventoryValidationError("Count time must include a timezone.")
+        expected_after_void = balance.on_hand_quantity_scaled - target.variance_quantity_scaled
+        return self._append_events(
+            command,
+            (
+                (
+                    "event.voided",
+                    EventVoidedV1(target.root_count_event_id, "Count corrected"),
+                    "Inventory count corrected",
+                    1,
+                    target.root_count_event_id,
+                ),
+                (
+                    "inventory.stock_counted",
+                    InventoryStockCountedV1(
+                        expected_after_void,
+                        command.actual_quantity_scaled,
+                        command.actual_quantity_scaled - expected_after_void,
+                        target.count_context,
+                        target.workflow_id,
+                        _optional_text(command.note, "Count correction note"),
+                    ),
+                    "Replacement inventory count recorded",
+                    1,
+                    target.root_count_event_id,
+                ),
+            ),
+            "inventory.correct_count",
+        )
+
     def update_item(self, command: UpdateInventoryItemCommand) -> InventoryCommandResult:
         self._require_legacy_item(command.household_id, command.item_id)
         threshold = command.reorder_threshold
@@ -763,18 +1012,32 @@ class InventoryService:
     ) -> InventoryConsumptionLink | None:
         return self._projection.consumption_for_source(household_id, source_event_id)
 
+    def list_counts(
+        self, household_id: UUID, *, item_id: UUID | None = None, workflow_id: UUID | None = None
+    ) -> tuple[InventoryCount, ...]:
+        return self._projection.list_counts(household_id, item_id, workflow_id)
+
+    def count_for_event(
+        self, household_id: UUID, item_id: UUID, event_id: UUID
+    ) -> InventoryCount | None:
+        return self._projection.count_for_event(household_id, item_id, event_id)
+
     def _append(
         self,
         command: ReceiveStockCommand
         | ReceiveScaledStockCommand
         | ConsumeStockCommand
         | ConsumeScaledStockCommand
+        | UseInventoryCommand
         | ReserveStockCommand
         | ReverseConsumptionCommand
         | AdjustStockCommand
         | AdjustScaledStockCommand
         | ExpireStockCommand
         | ChangeReorderPolicyCommand
+        | ChangeInventoryPolicyCommand
+        | CountStockCommand
+        | CorrectStockCountCommand
         | UpdateInventoryItemCommand
         | ConfigureInventoryItemCommand
         | ArchiveInventoryItemCommand
@@ -787,6 +1050,35 @@ class InventoryService:
         causation_id: UUID | None = None,
         schema_version: int = 1,
     ) -> InventoryCommandResult:
+        return self._append_events(
+            command,
+            ((event_type, payload, title, schema_version, causation_id),),
+            scope,
+        )
+
+    def _append_events(
+        self,
+        command: ReceiveStockCommand
+        | ReceiveScaledStockCommand
+        | ConsumeStockCommand
+        | ConsumeScaledStockCommand
+        | UseInventoryCommand
+        | ReserveStockCommand
+        | ReverseConsumptionCommand
+        | AdjustStockCommand
+        | AdjustScaledStockCommand
+        | ExpireStockCommand
+        | ChangeReorderPolicyCommand
+        | ChangeInventoryPolicyCommand
+        | CountStockCommand
+        | CorrectStockCountCommand
+        | UpdateInventoryItemCommand
+        | ConfigureInventoryItemCommand
+        | ArchiveInventoryItemCommand
+        | RestoreInventoryItemCommand,
+        entries: tuple[tuple[str, EventPayload, str, int, UUID | None], ...],
+        scope: str,
+    ) -> InventoryCommandResult:
         self._existing(command.household_id, command.item_id)
         self._require_status(
             command.household_id,
@@ -796,40 +1088,44 @@ class InventoryService:
         if command.expected_stream_version < 1:
             raise InventoryValidationError("Expected inventory stream version is invalid.")
         key = StreamKey(command.household_id, "inventory-item", command.item_id)
-        now = datetime.now(UTC)
+        recorded_at = datetime.now(UTC)
+        supplied_time = getattr(command, "occurred_at", None)
         occurred_at = (
-            command.occurred_at.astimezone(UTC)
-            if isinstance(command, ReceiveScaledStockCommand)
-            and command.occurred_at is not None
-            and command.occurred_at.tzinfo is not None
-            else now
+            supplied_time.astimezone(UTC)
+            if isinstance(supplied_time, datetime) and supplied_time.tzinfo is not None
+            else recorded_at
         )
-        event = _event(
-            key,
-            command.expected_stream_version + 1,
-            event_type,
-            payload,
-            command.actor_user_id,
-            command.correlation_id,
-            command.idempotency_key,
-            occurred_at,
-            title,
-            causation_id,
-            schema_version,
-            recorded_at=now,
+        events = tuple(
+            _event(
+                key,
+                command.expected_stream_version + index,
+                event_type,
+                payload,
+                command.actor_user_id,
+                command.correlation_id,
+                command.idempotency_key,
+                occurred_at,
+                title,
+                causation_id,
+                schema_version,
+                recorded_at=recorded_at,
+            )
+            for index, (event_type, payload, title, schema_version, causation_id) in enumerate(
+                entries, start=1
+            )
         )
         result = self._event_store.append_many(
             AtomicAppendRequest(
-                streams=(StreamAppend(key, command.expected_stream_version, events=(event,)),),
+                streams=(StreamAppend(key, command.expected_stream_version, events=events),),
                 idempotency=_idempotency(
                     command.household_id,
                     command.actor_user_id,
                     scope,
                     command.idempotency_key,
                     command.correlation_id,
-                    {"event_id": str(event.event_id)},
+                    {"event_id": str(events[-1].event_id)},
                     {field: _canonical(value) for field, value in asdict(command).items()},
-                    now,
+                    recorded_at,
                 ),
                 synchronous_projections=(self._projection,),
             )

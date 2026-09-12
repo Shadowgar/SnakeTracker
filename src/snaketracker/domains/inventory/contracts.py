@@ -125,6 +125,16 @@ class InventoryStockConsumedV2:
 
 
 @dataclass(frozen=True, slots=True)
+class InventoryStockConsumedV3:
+    quantity_scaled: int
+    source_event_id: UUID | None
+    use_kind: str
+    related_animal_id: UUID | None
+    related_enclosure_id: UUID | None
+    note: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class InventoryConsumptionReversedV1:
     target_event_id: UUID
     quantity: int
@@ -151,6 +161,16 @@ class InventoryStockAdjustedV2:
 
 
 @dataclass(frozen=True, slots=True)
+class InventoryStockCountedV1:
+    expected_quantity_scaled: int
+    actual_quantity_scaled: int
+    variance_quantity_scaled: int
+    count_context: str
+    workflow_id: UUID
+    note: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class InventoryStockExpiredV1:
     quantity: int
     reason: str
@@ -159,3 +179,16 @@ class InventoryStockExpiredV1:
 @dataclass(frozen=True, slots=True)
 class InventoryReorderPolicyChangedV1:
     reorder_threshold: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class InventoryReorderPolicyChangedV2:
+    reorder_minimum_scaled: int | None
+    target_quantity_scaled: int | None
+    maximum_quantity_scaled: int | None
+    supplier_lead_time_days: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class InventoryVerificationPolicyChangedV1:
+    recount_interval_days: int | None

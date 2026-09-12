@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block title %}Stock count complete · Care Keeper{% endblock %}
+{% block content %}
+<section class="form-page inventory-count-complete" aria-labelledby="page-title"><header><p class="page-kicker">Inventory verification</p><h1 id="page-title">{% if empty %}Nothing is due{% else %}Count complete{% endif %}</h1><p class="lede">{% if empty %}There are no configured items in this count.{% else %}{{ counts|length }} item{% if counts|length != 1 %}s{% endif %} saved independently.{% endif %}</p></header>{% if counts %}<ul class="card count-review">{% for count in counts %}<li><a href="/inventory/{{ count.item_id }}">View item</a><span>Expected {{ format_quantity(count.expected_quantity_scaled) }} · actual {{ format_quantity(count.actual_quantity_scaled) }} · variance {{ format_quantity(count.variance_quantity_scaled) }}</span></li>{% endfor %}</ul>{% endif %}<div class="form-actions"><a class="button-link secondary-link" href="/inventory/count">Start another count</a><a class="button-link" href="/inventory">Inventory overview</a></div></section>
+{% endblock %}
