@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
 
@@ -35,7 +34,7 @@ def _create_item(client, name: str = "Intelligence Mouse") -> str:  # type: igno
             "reorder_threshold": "5",
             "amount_paid": "0",
             "currency": "USD",
-            "occurred_at": datetime.now().strftime("%Y-%m-%dT%H:%M"),
+            "occurred_at": _hidden(page.text, "occurred_at"),
         },
         follow_redirects=False,
     )

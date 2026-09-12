@@ -65,7 +65,7 @@ not the active Care Keeper runtime database or Attachment store. Focused suites 
 
 ## Automated qualification
 
-The exact authoritative path was run after the final accessibility correction:
+The exact authoritative path was run after the final accessibility and CI-timezone corrections:
 
 ```text
 uv sync --frozen
@@ -77,6 +77,14 @@ documentation links across 207 files, strict mypy across 132 source files, all 5
 dependency audit, Compose validation, and diff checks. Coverage artifacts report 94.62% lines,
 85.06% branches, and 92.71% combined coverage. `coverage.json`, `coverage.xml`, and `junit.xml`
 were produced; JUnit reports zero failures, zero errors, and zero skipped tests.
+
+The initial GitHub run exposed a browser-test fixture defect rather than an application defect:
+the Inventory intelligence helper supplied the CI host's naive UTC wall time to a
+household-local `datetime-local` field, so the correctly validated acquisition appeared to be in
+the future. The helper now submits the household-local default rendered by the application, which
+is the same contract used by the real browser form. The four affected tests pass under an explicit
+`TZ=UTC` runner environment and in the complete frozen authoritative gate; production date
+validation was not relaxed.
 
 The focused browser journey used native ARM64 Chromium 1208 against the disposable restored
 database at
