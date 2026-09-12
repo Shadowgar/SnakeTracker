@@ -133,7 +133,9 @@ tree hash `5e77a73f0304f3cedc4c8646f2f43eb41e12b7ed77767c9a489bcab70da78cd2`.
 
 Migration `0017_inventory_intelligence` is applied. The promoted native ARM64 image is
 `snaketracker:m65-b-owner-review`, SHA-256
-`b531449342ee7c78d97621c1819d9c1d52bdb7225252d603ac09a751419dcb29`. Web and worker run as
+`bbb634e811928889628896c2172a61c9fa62a58600b96218c2bd6711c2f32276`. The image refreshes
+Debian security packages during its reproducible build; `libpcre2-8-0` is the fixed
+`10.42-1+deb12u1` release. Web and worker run as
 UID/GID `1001:1001`; web, worker, and Nginx are healthy; local and public readiness return
 `ready`; nine product projection definitions are active; and exactly one Care Keeper Compose
 project is running. The active database and Attachment store were never wiped, reset, reseeded,

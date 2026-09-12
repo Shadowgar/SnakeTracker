@@ -8,7 +8,10 @@ ENV PATH="/app/.venv/bin:$PATH" \
     UV_LINK_MODE=copy
 
 ARG SNAKETRACKER_UID=1000
-RUN groupadd --gid $SNAKETRACKER_UID snaketracker \
+RUN apt-get update \
+    && apt-get upgrade --yes \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid $SNAKETRACKER_UID snaketracker \
     && useradd --uid $SNAKETRACKER_UID --gid $SNAKETRACKER_UID --create-home --shell /usr/sbin/nologin snaketracker
 
 WORKDIR /app
