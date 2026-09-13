@@ -10,6 +10,8 @@ from snaketracker.domains.animals.contracts import (
     AnimalRegisteredV2,
     AnimalShedCorrectedV1,
     AnimalWeightCorrectedV1,
+    AnimalWeightCorrectedV2,
+    AnimalWeightRecordedV2,
 )
 from snaketracker.platform.events.registry import production_event_registry
 
@@ -169,6 +171,26 @@ def test_animal_correction_contracts_are_typed_and_replayable() -> None:
         assert (
             production_event_registry.deserialize(event_type, 1, stored_payloads[event_type])
             == payload
+        )
+
+
+def test_decimal_weight_contracts_are_versioned_and_exact() -> None:
+    target_event_id = uuid4()
+
+    assert production_event_registry.deserialize(
+        "animal.weight_recorded", 2, {"weight_grams_scaled": 875}
+    ) == AnimalWeightRecordedV2(875)
+    assert production_event_registry.deserialize(
+        "animal.weight_corrected",
+        2,
+        {"target_event_id": str(target_event_id), "weight_grams_scaled": 8_175},
+    ) == AnimalWeightCorrectedV2(target_event_id, 8_175)
+    assert production_event_registry.registration(
+        "animal.weight_recorded", 2
+    ).correction.reinstatable
+    with pytest.raises(ValueError, match="scaled animal weight"):
+        production_event_registry.deserialize(
+            "animal.weight_recorded", 2, {"weight_grams_scaled": 0}
         )
 
 

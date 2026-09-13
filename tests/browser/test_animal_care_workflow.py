@@ -1047,6 +1047,141 @@ def test_authenticated_keeper_can_correct_void_and_reinstate_a_care_entry(tmp_pa
         assert "Weight corrected" in timeline.text
 
 
+def test_decimal_weight_survives_forms_history_analytics_and_effective_state(
+    tmp_path: Path,
+) -> None:
+    occurred_at = (datetime.now(UTC) - timedelta(days=2)).replace(microsecond=0)
+    occurred_value = occurred_at.strftime("%Y-%m-%dT%H:%M")
+    with client_for(tmp_path) as client:
+        setup_and_sign_in(client)
+        new_animal = client.get("/animals/new")
+        created = client.post(
+            "/animals",
+            data={
+                "csrf_token": csrf_from(new_animal.text),
+                "idempotency_key": "decimal-weight-animal",
+                "name": "Onyx",
+                "species": "Pandinus imperator",
+                "sex": "unknown",
+            },
+            follow_redirects=False,
+        )
+        assert created.status_code == 303
+        profile_url = created.headers["location"]
+
+        weight_form = client.get(f"{profile_url}/weights/new")
+        assert 'name="weight_grams" type="number" inputmode="decimal"' in weight_form.text
+        assert 'min="0.001" step="0.001"' in weight_form.text
+        csrf = csrf_from(weight_form.text)
+        weight_data = {
+            "csrf_token": csrf,
+            "idempotency_key": "record-decimal-weight",
+            "occurred_at": occurred_value,
+            "weight_grams": "42.5",
+            "notes": "Exact decimal reading.",
+        }
+        first = client.post(f"{profile_url}/weights", data=weight_data, follow_redirects=False)
+        retry = client.post(f"{profile_url}/weights", data=weight_data, follow_redirects=False)
+        assert first.status_code == retry.status_code == 303
+
+        timeline_url = f"{profile_url}/timeline"
+        timeline = client.get(timeline_url)
+        effective = timeline.text.split('<details class="technical-audit"', 1)[0]
+        assert "Recorded weight" in effective
+        assert "42.5 g" in effective
+        correction_match = re.search(
+            r'href="([^"]+/events/([0-9a-f-]{36})/correct)"', timeline.text
+        )
+        assert correction_match is not None
+        correction_url, target_event_id = correction_match.groups()
+        correction_form = client.get(correction_url)
+        assert 'value="42.5"' in correction_form.text
+        assert 'inputmode="decimal"' in correction_form.text
+        corrected = client.post(
+            correction_url,
+            data={
+                "csrf_token": csrf_from(correction_form.text),
+                "idempotency_key": "correct-decimal-weight",
+                "occurred_at": occurred_value,
+                "weight_grams": "8.175",
+                "notes": "Corrected exact reading.",
+            },
+            follow_redirects=False,
+        )
+        assert corrected.status_code == 303
+
+        excess_precision_form = client.get(f"{profile_url}/weights/new")
+        rejected = client.post(
+            f"{profile_url}/weights",
+            data={
+                "csrf_token": csrf_from(excess_precision_form.text),
+                "idempotency_key": "reject-overprecise-weight",
+                "occurred_at": occurred_value,
+                "weight_grams": "8.2579",
+            },
+        )
+        assert rejected.status_code == 422
+        assert "no more than 3 decimal places" in rejected.text
+
+        second_form = client.get(f"{profile_url}/weights/new")
+        second = client.post(
+            f"{profile_url}/weights",
+            data={
+                "csrf_token": csrf_from(second_form.text),
+                "idempotency_key": "record-subgram-weight",
+                "occurred_at": (occurred_at + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M"),
+                "weight_grams": "0.875",
+            },
+            follow_redirects=False,
+        )
+        assert second.status_code == 303
+
+        timeline = client.get(timeline_url)
+        effective = timeline.text.split('<details class="technical-audit"', 1)[0]
+        assert "8.175 g" in effective
+        assert "0.875 g" in effective
+        measurements = client.get(
+            f"/api/v1/animals/{profile_url.rsplit('/', 1)[-1]}/analytics/measurements"
+        )
+        assert measurements.status_code == 200
+        assert [point["value"] for point in measurements.json()["points"]] == [8.175, 0.875]
+
+        voided = client.post(
+            f"{profile_url}/events/{target_event_id}/void",
+            data={
+                "csrf_token": csrf_from(timeline.text),
+                "idempotency_key": "void-decimal-weight",
+                "reason": "Temporarily exclude measurement.",
+            },
+            follow_redirects=False,
+        )
+        assert voided.status_code == 303
+        assert [
+            point["value"]
+            for point in client.get(
+                f"/api/v1/animals/{profile_url.rsplit('/', 1)[-1]}/analytics/measurements"
+            ).json()["points"]
+        ] == [0.875]
+
+        timeline = client.get(timeline_url)
+        reinstated = client.post(
+            f"{profile_url}/events/{target_event_id}/reinstate",
+            data={
+                "csrf_token": csrf_from(timeline.text),
+                "idempotency_key": "reinstate-decimal-weight",
+                "reason": "Measurement verified.",
+            },
+            follow_redirects=False,
+        )
+        assert reinstated.status_code == 303
+        assert [
+            point["value"]
+            for point in client.get(
+                f"/api/v1/animals/{profile_url.rsplit('/', 1)[-1]}/analytics/measurements"
+            ).json()["points"]
+        ] == [8.175, 0.875]
+
+
 def test_browser_corrections_cover_each_supported_care_contract(tmp_path: Path) -> None:
     occurred_value = (datetime.now(UTC) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
     with client_for(tmp_path) as client:

@@ -166,6 +166,10 @@ from snaketracker.application.search import (
     SearchValidationError,
 )
 from snaketracker.application.suggestion_policy import CareWindowEstimate
+from snaketracker.application.weight_measurements import (
+    format_weight_payload,
+    parse_weight_grams_scaled,
+)
 from snaketracker.domains.animals.capabilities import (
     AnimalCapability,
     animal_capability_registry,
@@ -218,6 +222,7 @@ PACKAGE_DIR = Path(__file__).parent
 templates = Jinja2Templates(directory=PACKAGE_DIR / "templates")
 templates.env.globals["current_year"] = datetime.now(UTC).year
 templates.env.globals["format_quantity"] = format_quantity_scaled
+templates.env.globals["format_weight"] = format_weight_payload
 
 CARE_FORM_DETAILS: dict[str, tuple[str, str, str]] = {
     "feeding": ("Record feeding", "Choose food from Inventory and record the outcome.", "feedings"),
@@ -889,7 +894,7 @@ def _correct_animal_event_from_form(
                 idempotency_key=idempotency_key,
                 occurred_at=occurred_at,
                 notes=notes,
-                weight_grams=_required_int(form.get("weight_grams", ""), "weight"),
+                weight_grams_scaled=parse_weight_grams_scaled(form.get("weight_grams", "")),
             )
         )
         return
@@ -2397,7 +2402,7 @@ def create_web_router(
                 {
                     "kind": item.kind,
                     "occurred_at": item.occurred_at.isoformat(),
-                    "value": item.value,
+                    "value": float(item.value) if isinstance(item.value, Decimal) else item.value,
                     "unit": item.unit,
                 }
                 for item in analytics.measurements
@@ -5258,7 +5263,7 @@ def create_web_router(
                     occurred_at=_form_datetime(
                         form.get("occurred_at", ""), principal.household_timezone
                     ),
-                    weight_grams=_required_int(form.get("weight_grams", ""), "weight"),
+                    weight_grams_scaled=parse_weight_grams_scaled(form.get("weight_grams", "")),
                     notes=str(form.get("notes", "")),
                 )
             )

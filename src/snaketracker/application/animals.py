@@ -35,8 +35,8 @@ from snaketracker.domains.animals.contracts import (
     AnimalShedCorrectedV1,
     AnimalShedRecordedV1,
     AnimalStatusChangedV1,
-    AnimalWeightCorrectedV1,
-    AnimalWeightRecordedV1,
+    AnimalWeightCorrectedV2,
+    AnimalWeightRecordedV2,
 )
 from snaketracker.domains.inventory.catalog import UNIT_BY_CODE
 from snaketracker.domains.inventory.contracts import (
@@ -261,7 +261,7 @@ class RecordWeightCommand:
     correlation_id: UUID
     idempotency_key: str
     occurred_at: datetime
-    weight_grams: int
+    weight_grams_scaled: int
     notes: str | None
 
 
@@ -369,7 +369,7 @@ class CorrectWeightCommand:
     target_event_id: UUID
     idempotency_key: str
     occurred_at: datetime
-    weight_grams: int
+    weight_grams_scaled: int
     notes: str | None
 
 
@@ -684,8 +684,8 @@ class AnimalService:
         return AnimalEventResult(self._record_inventory_feeding(command, payload))
 
     def record_weight(self, command: RecordWeightCommand) -> AnimalEventResult:
-        if command.weight_grams < 1 or command.weight_grams > 100_000:
-            raise AnimalValidationError("Weight must be between 1 and 100000 grams.")
+        if command.weight_grams_scaled < 1 or command.weight_grams_scaled > 100_000_000:
+            raise AnimalValidationError("Weight must be between 0.001 and 100000 grams.")
         return AnimalEventResult(
             self._append_animal_event(
                 household_id=command.household_id,
@@ -696,12 +696,13 @@ class AnimalService:
                 operation_scope="animals.record_weight",
                 occurred_at=command.occurred_at,
                 event_type="animal.weight_recorded",
+                schema_version=2,
                 title="Weight recorded",
-                payload=AnimalWeightRecordedV1(command.weight_grams),
+                payload=AnimalWeightRecordedV2(command.weight_grams_scaled),
                 notes=_optional_text(command.notes, "measurement notes"),
                 command_hash_fields={
                     "occurred_at": command.occurred_at.isoformat(),
-                    "weight_grams": command.weight_grams,
+                    "weight_grams_scaled": command.weight_grams_scaled,
                     "notes": _optional_text(command.notes, "measurement notes"),
                 },
             )
@@ -954,8 +955,8 @@ class AnimalService:
         )
 
     def correct_weight(self, command: CorrectWeightCommand) -> AnimalEventResult:
-        if command.weight_grams < 1 or command.weight_grams > 100_000:
-            raise AnimalValidationError("Weight must be between 1 and 100000 grams.")
+        if command.weight_grams_scaled < 1 or command.weight_grams_scaled > 100_000_000:
+            raise AnimalValidationError("Weight must be between 0.001 and 100000 grams.")
         return AnimalEventResult(
             self._correct_animal_event(
                 household_id=command.household_id,
@@ -966,13 +967,16 @@ class AnimalService:
                 idempotency_key=command.idempotency_key,
                 occurred_at=command.occurred_at,
                 event_type="animal.weight_corrected",
+                schema_version=2,
                 title="Weight corrected",
-                payload=AnimalWeightCorrectedV1(command.target_event_id, command.weight_grams),
+                payload=AnimalWeightCorrectedV2(
+                    command.target_event_id, command.weight_grams_scaled
+                ),
                 notes=_optional_text(command.notes, "measurement notes"),
                 command_hash_fields={
                     "target_event_id": str(command.target_event_id),
                     "occurred_at": command.occurred_at.isoformat(),
-                    "weight_grams": command.weight_grams,
+                    "weight_grams_scaled": command.weight_grams_scaled,
                     "notes": _optional_text(command.notes, "measurement notes"),
                 },
             )

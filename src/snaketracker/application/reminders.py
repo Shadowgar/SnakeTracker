@@ -28,7 +28,9 @@ from snaketracker.domains.animals.contracts import (
     AnimalMoltRecordedV1,
     AnimalMoltRecordedV2,
     AnimalWeightCorrectedV1,
+    AnimalWeightCorrectedV2,
     AnimalWeightRecordedV1,
+    AnimalWeightRecordedV2,
 )
 from snaketracker.domains.enclosures.contracts import (
     EnclosureCleaningRecordedV1,
@@ -777,7 +779,15 @@ def _qualifies(reminder_type: str, event: DomainEvent) -> bool:
     return (
         (
             reminder_type == "weight"
-            and isinstance(payload, (AnimalWeightRecordedV1, AnimalWeightCorrectedV1))
+            and isinstance(
+                payload,
+                (
+                    AnimalWeightRecordedV1,
+                    AnimalWeightCorrectedV1,
+                    AnimalWeightRecordedV2,
+                    AnimalWeightCorrectedV2,
+                ),
+            )
         )
         or (
             reminder_type == "length"

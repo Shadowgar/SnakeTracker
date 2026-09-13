@@ -36,7 +36,9 @@ from snaketracker.domains.animals.contracts import (
     AnimalShedRecordedV1,
     AnimalStatusChangedV1,
     AnimalWeightCorrectedV1,
+    AnimalWeightCorrectedV2,
     AnimalWeightRecordedV1,
+    AnimalWeightRecordedV2,
 )
 from snaketracker.domains.enclosures.contracts import (
     ENCLOSURE_STATUSES,
@@ -610,6 +612,26 @@ def _weight_grams(data: Mapping[str, object]) -> int:
     return weight_grams
 
 
+def _deserialize_animal_weight_recorded_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalWeightRecordedV2, data)
+    return AnimalWeightRecordedV2(weight_grams_scaled=_weight_grams_scaled(data))
+
+
+def _deserialize_animal_weight_corrected_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalWeightCorrectedV2, data)
+    return AnimalWeightCorrectedV2(
+        target_event_id=_uuid_field(data, "target_event_id", "weight correction"),
+        weight_grams_scaled=_weight_grams_scaled(data),
+    )
+
+
+def _weight_grams_scaled(data: Mapping[str, object]) -> int:
+    value = data["weight_grams_scaled"]
+    if type(value) is not int or value <= 0 or value > 100_000_000:
+        raise ValueError("Stored scaled animal weight payload is invalid.")
+    return value
+
+
 def _deserialize_animal_length_recorded(data: Mapping[str, object]) -> EventPayload:
     _require_exact_fields(AnimalLengthRecordedV1, data)
     return AnimalLengthRecordedV1(length_mm=_length_mm(data))
@@ -820,11 +842,35 @@ ANIMAL_HUSBANDRY_CONTRACTS = (
         ),
     ),
     EventContractRegistration(
+        event_type="animal.weight_recorded",
+        schema_version=2,
+        owner="animals.husbandry",
+        payload_type=AnimalWeightRecordedV2,
+        deserialize_payload=_deserialize_animal_weight_recorded_v2,
+        subject_requirements=(SubjectRequirement("animal", "primary"),),
+        correction=CorrectionCapabilities(
+            correctable=True,
+            voidable=True,
+            reinstatable=True,
+            required_role="owner",
+            correction_event_types=("animal.weight_corrected",),
+        ),
+    ),
+    EventContractRegistration(
         event_type="animal.weight_corrected",
         schema_version=1,
         owner="animals.husbandry",
         payload_type=AnimalWeightCorrectedV1,
         deserialize_payload=_deserialize_animal_weight_corrected,
+        subject_requirements=(SubjectRequirement("animal", "primary"),),
+        correction=CorrectionCapabilities(voidable=True, reinstatable=True, required_role="owner"),
+    ),
+    EventContractRegistration(
+        event_type="animal.weight_corrected",
+        schema_version=2,
+        owner="animals.husbandry",
+        payload_type=AnimalWeightCorrectedV2,
+        deserialize_payload=_deserialize_animal_weight_corrected_v2,
         subject_requirements=(SubjectRequirement("animal", "primary"),),
         correction=CorrectionCapabilities(voidable=True, reinstatable=True, required_role="owner"),
     ),

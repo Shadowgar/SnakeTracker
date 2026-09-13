@@ -1082,7 +1082,7 @@ def test_m6_read_boundary_exposes_only_applicable_effective_facts(tmp_path: Path
                     uuid4(),
                     f"m55-read-weight-{animal.animal_id}",
                     NOW,
-                    100,
+                    100_000,
                     None,
                 )
             )

@@ -30,6 +30,10 @@ from snaketracker.application.household_bootstrap import (
     BootstrapCommand,
     HouseholdBootstrapService,
 )
+from snaketracker.domains.animals.contracts import (
+    AnimalWeightCorrectedV2,
+    AnimalWeightRecordedV1,
+)
 from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
 from snaketracker.infrastructure.database.engine import create_sqlite_engine
 from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
@@ -38,9 +42,126 @@ from snaketracker.infrastructure.identity.bootstrap_repository import (
 )
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 from snaketracker.platform.events.control_contracts import EventVoidedV1
+from snaketracker.platform.events.envelope import DomainEvent, EventSubject, event_checksum
+from snaketracker.platform.events.store import StreamKey
 
 ROOT = Path(__file__).parents[2]
 SECRET = b"phase4-animal-care-test-secret-32-bytes"
+
+
+def test_decimal_weight_corrects_legacy_v1_and_replays_mixed_history(tmp_path: Path) -> None:
+    database = tmp_path / "decimal-weight-compatibility.sqlite3"
+    config = Config(ROOT / "alembic.ini")
+    config.set_main_option("script_location", str(ROOT / "migrations"))
+    config.set_main_option("sqlalchemy.url", f"sqlite+pysqlite:///{database}")
+    command.upgrade(config, "head")
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    try:
+        bootstrap = HouseholdBootstrapService(
+            SQLAlchemyHouseholdBootstrapRepository(engine),
+            Argon2PasswordHasher.for_testing(),
+            command_hash_secret=SECRET,
+        ).bootstrap(
+            BootstrapCommand(
+                "Weight Compatibility Home",
+                "UTC",
+                "owner@example.com",
+                "Owner",
+                "correct horse battery staple",
+                "decimal-weight-bootstrap",
+                uuid4(),
+            )
+        )
+        store = SQLAlchemyEventStore(engine)
+        service = AnimalService(store, SQLAlchemyAnimalCurrentProjection(engine))
+        animal = service.register(
+            RegisterAnimalCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                uuid4(),
+                "decimal-weight-animal",
+                "Onyx",
+                "Pandinus imperator",
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+        )
+        occurred_at = datetime(2026, 8, 1, 12, tzinfo=UTC)
+        candidate = DomainEvent(
+            event_id=uuid4(),
+            household_id=bootstrap.household_id,
+            stream_type="animal",
+            stream_id=animal.animal_id,
+            stream_version=2,
+            event_type="animal.weight_recorded",
+            schema_version=1,
+            occurred_at=occurred_at,
+            recorded_at=occurred_at,
+            actor_user_id=bootstrap.user_id,
+            correlation_id=uuid4(),
+            causation_id=None,
+            idempotency_key="legacy-v1-weight",
+            subjects=(EventSubject("animal", animal.animal_id, "primary", 0),),
+            title="Weight recorded",
+            description=None,
+            payload=AnimalWeightRecordedV1(525),
+            metadata={},
+            notes="Stored before decimal weights.",
+            checksum="",
+        )
+        legacy = candidate.with_checksum(event_checksum(candidate))
+        key = StreamKey(bootstrap.household_id, "animal", animal.animal_id)
+        store.append(key, expected_version=1, events=(legacy,))
+
+        correction = service.correct_weight(
+            CorrectWeightCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                "owner",
+                animal.animal_id,
+                legacy.event_id,
+                "correct-legacy-weight-with-decimal",
+                occurred_at,
+                8_175,
+                "Exact scale reading.",
+            )
+        )
+        service.record_weight(
+            RecordWeightCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                animal.animal_id,
+                uuid4(),
+                "new-decimal-weight",
+                datetime(2026, 8, 2, 12, tzinfo=UTC),
+                875,
+                None,
+            )
+        )
+
+        assert correction.event.schema_version == 2
+        assert correction.event.payload == AnimalWeightCorrectedV2(legacy.event_id, 8_175)
+        replayed = AnimalService(store, SQLAlchemyAnimalCurrentProjection(engine))
+        analytics = AnimalAnalyticsService(replayed).for_animal(
+            bootstrap.household_id, animal.animal_id, as_of=datetime.now(UTC).date()
+        )
+        assert [point.display_value for point in analytics.measurements] == ["8.175", "0.875"]
+        assert [
+            event.schema_version
+            for event in replayed.audit_history(key.household_id, key.stream_id)
+        ] == [
+            2,
+            1,
+            2,
+            2,
+        ]
+    finally:
+        engine.dispose()
 
 
 def test_feeding_records_effective_history_and_last_accepted_date(tmp_path: Path) -> None:
@@ -193,7 +314,7 @@ def test_measurements_shed_bath_and_feeding_correction_share_effective_history(
                 correlation_id=uuid4(),
                 idempotency_key="phase4-history-weight",
                 occurred_at=base_time,
-                weight_grams=512,
+                weight_grams_scaled=512_000,
                 notes="Post meal.",
             )
         )
@@ -339,7 +460,7 @@ def test_care_corrections_and_void_reinstatement_preserve_effective_history(
                 correlation_id=uuid4(),
                 idempotency_key="phase4-control-weight",
                 occurred_at=occurred_at,
-                weight_grams=510,
+                weight_grams_scaled=510_000,
                 notes=None,
             )
         )
@@ -409,7 +530,7 @@ def test_care_corrections_and_void_reinstatement_preserve_effective_history(
                 target_event_id=weight.event.event_id,
                 idempotency_key="phase4-control-weight-corrected",
                 occurred_at=occurred_at,
-                weight_grams=525,
+                weight_grams_scaled=525_000,
                 notes="Scale rechecked.",
             )
         )
@@ -460,7 +581,7 @@ def test_care_corrections_and_void_reinstatement_preserve_effective_history(
             "animal.length_corrected",
             "animal.shed_corrected",
         ]
-        assert effective[1].payload.weight_grams == 525
+        assert effective[1].payload.weight_grams_scaled == 525_000
         assert corrected_weight.event.causation_id == weight.event.event_id
         assert corrected_weight.event.correlation_id == weight.event.correlation_id
 
@@ -637,7 +758,7 @@ def test_keeper_delete_removes_only_duplicate_shed_and_preserves_immutable_repla
                 uuid4(),
                 "care-delete-old-weight",
                 datetime(2026, 8, 2, 12, tzinfo=UTC),
-                500,
+                500_000,
                 "Verified weight.",
             )
         )
@@ -649,7 +770,7 @@ def test_keeper_delete_removes_only_duplicate_shed_and_preserves_immutable_repla
                 uuid4(),
                 "care-delete-new-weight",
                 datetime(2026, 8, 3, 12, tzinfo=UTC),
-                900,
+                900_000,
                 "Incorrect weight.",
             )
         )
