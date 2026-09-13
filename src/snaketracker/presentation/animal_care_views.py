@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from uuid import UUID
 
+from snaketracker.application.weight_measurements import format_weight_payload
 from snaketracker.domains.animals.contracts import (
     AnimalBathRecordedV1,
     AnimalEnclosureAssignedV1,
@@ -29,7 +30,9 @@ from snaketracker.domains.animals.contracts import (
     AnimalShedRecordedV1,
     AnimalStatusChangedV1,
     AnimalWeightCorrectedV1,
+    AnimalWeightCorrectedV2,
     AnimalWeightRecordedV1,
+    AnimalWeightRecordedV2,
 )
 from snaketracker.domains.enclosures.contracts import EnclosureMistingRecordedV1
 from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
@@ -54,6 +57,7 @@ class CareEventView:
             AnimalFeedingCorrectedV1
             | AnimalFeedingCorrectedV2
             | AnimalWeightCorrectedV1
+            | AnimalWeightCorrectedV2
             | AnimalLengthCorrectedV1
             | AnimalShedCorrectedV1
             | AnimalMoltCorrectedV1
@@ -73,8 +77,14 @@ class CareEventView:
                 if payload.outcome == "refused"
                 else "Feeding regurgitated"
             )
-        elif isinstance(payload, AnimalWeightRecordedV1 | AnimalWeightCorrectedV1):
-            title = "Weight"
+        elif isinstance(
+            payload,
+            AnimalWeightRecordedV1
+            | AnimalWeightCorrectedV1
+            | AnimalWeightRecordedV2
+            | AnimalWeightCorrectedV2,
+        ):
+            title = "Recorded weight"
         elif isinstance(payload, AnimalLengthRecordedV1 | AnimalLengthCorrectedV1):
             title = "Length"
         elif isinstance(payload, AnimalShedRecordedV1 | AnimalShedCorrectedV1):
@@ -148,8 +158,14 @@ def present_care_event(
             details.append(PREPARATION_BY_CODE[payload.preparation_method].label)
         details.append(_label(payload.outcome))
         description = " · ".join(details)
-    elif isinstance(payload, AnimalWeightRecordedV1 | AnimalWeightCorrectedV1):
-        description = f"{payload.weight_grams:,} g"
+    elif isinstance(
+        payload,
+        AnimalWeightRecordedV1
+        | AnimalWeightCorrectedV1
+        | AnimalWeightRecordedV2
+        | AnimalWeightCorrectedV2,
+    ):
+        description = f"{format_weight_payload(payload)} g"
     elif isinstance(payload, AnimalLengthRecordedV1 | AnimalLengthCorrectedV1):
         description = f"{payload.length_mm:,} mm"
     elif isinstance(payload, AnimalShedRecordedV1 | AnimalShedCorrectedV1):

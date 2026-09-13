@@ -1,0 +1,32 @@
+{
+  "status": "passed",
+  "classification": "M6.5 isolated restored-snapshot projection replay and performance qualification",
+  "database": "/tmp/carekeeper-m65-d-restore.65Ouqo/0263b1a869c14c23b7bf75cd874f2c32/snaketracker.sqlite3",
+  "event_count": 810,
+  "event_hash_before": "9c9104d103d4a2bba99c2394cff953fe9fa554f5c7c381d5dec94d808031e76c",
+  "event_hash_after": "9c9104d103d4a2bba99c2394cff953fe9fa554f5c7c381d5dec94d808031e76c",
+  "integrity": "ok",
+  "foreign_key_violations": 0,
+  "all_rebuilds_at_high_water": true,
+  "rebuilds": [
+    {"state": "cold", "group": "cash_spend", "seconds": 0.060670},
+    {"state": "cold", "group": "dashboard", "seconds": 0.414421},
+    {"state": "cold", "group": "insights", "seconds": 1.886982},
+    {"state": "cold", "group": "inventory_costing", "seconds": 0.166233},
+    {"state": "cold", "group": "inventory_intelligence", "seconds": 0.216322},
+    {"state": "cold", "group": "search", "seconds": 0.241799},
+    {"state": "warm", "group": "cash_spend", "seconds": 0.036558},
+    {"state": "warm", "group": "dashboard", "seconds": 0.395885},
+    {"state": "warm", "group": "insights", "seconds": 1.805924},
+    {"state": "warm", "group": "inventory_costing", "seconds": 0.171406},
+    {"state": "warm", "group": "inventory_intelligence", "seconds": 0.218264},
+    {"state": "warm", "group": "search", "seconds": 0.233728}
+  ],
+  "maximum_rebuild_seconds": 1.886982,
+  "peak_rss_mib": 45.98,
+  "targets": {
+    "all_rebuilds_under_30_seconds": true,
+    "memory_under_512_mib": true,
+    "event_store_unchanged_by_rebuild": true
+  }
+}

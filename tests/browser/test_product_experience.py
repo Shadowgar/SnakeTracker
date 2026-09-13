@@ -51,6 +51,21 @@ def test_today_reports_search_and_read_only_pwa_shell_are_browser_visible(tmp_pa
         assert client.get("/reports/care.csv").status_code == 200
         assert client.get("/reports/expenses").status_code == 200
         assert client.get("/reports/expenses.csv").status_code == 200
+        inventory_report = client.get("/reports/inventory")
+        assert inventory_report.status_code == 200
+        assert "See what you paid, what was used" in inventory_report.text
+        assert "Spending over time" in inventory_report.text
+        assert "Not enough history for a spending trend yet." in inventory_report.text
+        assert (
+            "Cost is not tracked for enough stock to build this chart." not in inventory_report.text
+        )
+        assert "FIFO" not in inventory_report.text
+        inventory_csv = client.get("/reports/inventory.csv")
+        assert inventory_csv.status_code == 200
+        assert inventory_csv.headers["content-type"].startswith("text/csv")
+        assert "household_id" not in inventory_csv.text
+        assert client.get("/reports/inventory?period=31").status_code == 422
+        assert client.get("/reports/inventory?currency=XYZ").status_code == 422
         assert client.get("/search").status_code == 200
         assert client.get(f"/animals/{uuid4()}/analytics").status_code == 404
         assert client.get(f"/api/v1/animals/{uuid4()}/analytics/measurements").status_code == 404

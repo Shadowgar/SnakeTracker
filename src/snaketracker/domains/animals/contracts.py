@@ -140,6 +140,21 @@ class AnimalWeightCorrectedV1:
 
 
 @dataclass(frozen=True, slots=True)
+class AnimalWeightRecordedV2:
+    """Exact thousandth-of-a-gram measurement owned by an Animal stream."""
+
+    weight_grams_scaled: int
+
+
+@dataclass(frozen=True, slots=True)
+class AnimalWeightCorrectedV2:
+    """Exact thousandth-of-a-gram replacement facts for one weight measurement."""
+
+    target_event_id: UUID
+    weight_grams_scaled: int
+
+
+@dataclass(frozen=True, slots=True)
 class AnimalLengthRecordedV1:
     """Normalized millimetre measurement owned by an Animal stream."""
 

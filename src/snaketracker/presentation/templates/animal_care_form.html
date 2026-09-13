@@ -38,7 +38,7 @@
     <div class="empty-state"><h2>Add food to Inventory first</h2><p>New feedings use an active, configured Food Inventory Item so stock stays accurate.</p><a class="button-link" href="/inventory/new">Add food to inventory</a><a href="/inventory">Set up inventory</a></div>
     {% endif %}
     {% elif care_kind == 'weight' %}
-    <label>Weight (g)<input name="weight_grams" type="number" min="1" value="{{ values.get('weight_grams', '') }}" required></label>
+    <label>Weight (g)<input name="weight_grams" type="number" inputmode="decimal" min="0.001" step="0.001" value="{{ values.get('weight_grams', '') }}" required></label>
     {% elif care_kind == 'length' %}
     <label>Length (mm)<input name="length_mm" type="number" min="1" value="{{ values.get('length_mm', '') }}" required></label>
     {% elif care_kind == 'shed' %}

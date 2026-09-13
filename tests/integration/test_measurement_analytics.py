@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
 from uuid import uuid4
 
 from snaketracker.application.analytics import AnimalAnalyticsService
@@ -30,7 +31,7 @@ def test_four_group_analytics_use_only_capability_appropriate_effective_facts(tm
                 uuid4(),
                 "m6-snake-weight",
                 start,
-                500,
+                500_000,
                 None,
             )
         )
@@ -54,7 +55,7 @@ def test_four_group_analytics_use_only_capability_appropriate_effective_facts(tm
                 uuid4(),
                 "m6-spider-weight",
                 start,
-                22,
+                22_875,
                 None,
             )
         )
@@ -66,7 +67,7 @@ def test_four_group_analytics_use_only_capability_appropriate_effective_facts(tm
                 uuid4(),
                 "m6-lizard-weight",
                 start,
-                180,
+                180_000,
                 None,
             )
         )
@@ -90,7 +91,7 @@ def test_four_group_analytics_use_only_capability_appropriate_effective_facts(tm
                 uuid4(),
                 "m6-scorpion-weight",
                 start,
-                18,
+                18_000,
                 None,
             )
         )
@@ -177,8 +178,9 @@ def test_four_group_analytics_use_only_capability_appropriate_effective_facts(tm
             ("length", 900, "mm"),
         }
         assert {(point.kind, point.value, point.unit) for point in spider_result.measurements} == {
-            ("weight", 22, "g")
+            ("weight", Decimal("22.875"), "g")
         }
+        assert spider_result.measurements[0].display_value == "22.875"
         assert {(point.kind, point.value, point.unit) for point in lizard_result.measurements} == {
             ("weight", 180, "g"),
             ("length", 420, "mm"),

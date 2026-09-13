@@ -25,7 +25,7 @@
     <label>Outcome<select name="outcome">{% for option in ("accepted", "refused", "regurgitated") %}<option value="{{ option }}" {% if target.payload.outcome == option %}selected{% endif %}>{{ option|capitalize }}</option>{% endfor %}</select></label>
     {% endif %}
     {% elif target.event_type == "animal.weight_recorded" %}
-    <label>Weight (g)<input name="weight_grams" type="number" min="1" value="{{ target.payload.weight_grams }}" required></label>
+    <label>Weight (g)<input name="weight_grams" type="number" inputmode="decimal" min="0.001" step="0.001" value="{{ format_weight(target.payload) }}" required></label>
     {% elif target.event_type == "animal.length_recorded" %}
     <label>Length (mm)<input name="length_mm" type="number" min="1" value="{{ target.payload.length_mm }}" required></label>
     {% elif target.event_type == "animal.shed_recorded" %}

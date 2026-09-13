@@ -1,0 +1,52 @@
+{
+  "status": "passed",
+  "browser": "Chromium 1208 native ARM64",
+  "origin": "http://127.0.0.1:8094",
+  "qualification_database": "/tmp/carekeeper-m65-d-restore.65Ouqo/0263b1a869c14c23b7bf75cd874f2c32/snaketracker.sqlite3",
+  "active_database": "/home/rocco/SnakeTracker/runtime/phase2/snaketracker.sqlite3",
+  "active_database_mutated_by_qualification": false,
+  "viewports": ["390x844", "1440x900"],
+  "pages_per_viewport": [
+    "Care Stock",
+    "Add inventory",
+    "Check stock",
+    "Expenses",
+    "Inventory & spending",
+    "Item inventory report",
+    "Inventory-authoritative Feeding"
+  ],
+  "assertions": {
+    "all_14_pages_http_200": true,
+    "care_stock_semantics": true,
+    "unified_acquisition": true,
+    "physical_count": true,
+    "purchase_and_other_expense_integration": true,
+    "visual_first_report": true,
+    "all_8_report_charts_sensibly_sized": true,
+    "item_reconciliation": true,
+    "inventory_authoritative_feeding": true,
+    "keeper_accounting_jargon_absent": true,
+    "zero_axe_violations": true,
+    "no_horizontal_overflow": true,
+    "navigation_p95_under_2000_ms": true,
+    "no_console_diagnostics": true,
+    "no_page_errors": true,
+    "no_failed_requests": true,
+    "no_http_errors": true
+  },
+  "navigation": {
+    "samples": 14,
+    "p95_ms": 753.059,
+    "max_ms": 753.464
+  },
+  "chart_dimensions": {
+    "mobile_width_px": 346,
+    "mobile_height_range_px": [240, 256],
+    "desktop_width_range_px": [498, 1054],
+    "desktop_height_range_px": [240, 368]
+  },
+  "axe": {
+    "scans": 14,
+    "total_violations": 0
+  }
+}

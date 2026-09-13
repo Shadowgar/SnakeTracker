@@ -427,7 +427,7 @@ def test_correct_void_and_reinstate_recalculate_from_effective_weight_history(
                 uuid4(),
                 "weight-first",
                 datetime(2026, 7, 1, 13, 0, tzinfo=UTC),
-                500,
+                500_000,
                 None,
             )
         )
@@ -440,7 +440,7 @@ def test_correct_void_and_reinstate_recalculate_from_effective_weight_history(
                 first_weight.event.event_id,
                 "weight-corrected",
                 datetime(2026, 7, 5, 13, 0, tzinfo=UTC),
-                510,
+                510_000,
                 "Measurement date corrected.",
             )
         )
@@ -515,7 +515,7 @@ def test_keeper_delete_reconciles_event_relative_reminder_to_previous_record(
                 uuid4(),
                 "delete-reminder-first-weight",
                 datetime(2026, 7, 1, 13, tzinfo=UTC),
-                500,
+                500_000,
                 None,
             )
         )
@@ -527,7 +527,7 @@ def test_keeper_delete_reconciles_event_relative_reminder_to_previous_record(
                 uuid4(),
                 "delete-reminder-duplicate-weight",
                 datetime(2026, 7, 5, 13, tzinfo=UTC),
-                500,
+                500_000,
                 "Duplicate",
             )
         )

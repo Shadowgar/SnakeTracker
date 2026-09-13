@@ -86,6 +86,11 @@ def test_secondary_destinations_use_focused_responsive_presentations(tmp_path: P
         collection = client.get("/reports/collection")
         assert "Download CSV" in collection.text
         assert "No report records yet." in collection.text
+        item_id = item_url.rsplit("/", 1)[-1]
+        item_report = client.get(f"/reports/inventory/items/{item_id}")
+        assert item_report.status_code == 200
+        assert "Known acquisition value" in item_report.text
+        assert client.get(f"/reports/inventory/items/{item_id}.csv").status_code == 200
 
         search = client.get("/search?q=keeper")
         assert search.status_code == 200
@@ -185,6 +190,9 @@ def test_secondary_and_onboarding_routes_preserve_household_isolation(tmp_path: 
             assert "Owner Isolation Cost" not in page.text
             if path.startswith("/search"):
                 assert "No matches" in page.text
+        owner_item_id = inventory.headers["location"].rsplit("/", 1)[-1]
+        assert client.get(f"/reports/inventory/items/{owner_item_id}").status_code == 404
+        assert client.get(f"/reports/inventory/items/{owner_item_id}.csv").status_code == 404
         account = client.get("/more")
         assert "Second Keeper" in account.text
         assert "Quiet Household" in account.text

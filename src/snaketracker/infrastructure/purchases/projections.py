@@ -20,6 +20,8 @@ from snaketracker.application.inventory import (
 )
 from snaketracker.application.purchases import (
     CurrencyValue,
+    InventoryCostActivity,
+    InventoryCostActivityPoint,
     InventoryCostSummary,
     PurchaseCurrent,
     PurchaseLineCurrent,
@@ -645,6 +647,108 @@ class SQLAlchemyInventoryCostProjection:
             int(unknown),
             available=True,
             lag_events=freshness.lag_events,
+        )
+
+    def activity_for(
+        self,
+        household_id: UUID,
+        item_id: UUID,
+        start_at: datetime,
+        end_at: datetime,
+    ) -> InventoryCostActivity:
+        try:
+            layout = self._manager.active_layout("inventory_costing")
+            allocations = layout.component("inventory_costing", "allocations")
+            freshness = self._manager.freshness("inventory_costing", now=datetime.now(UTC))
+        except (KeyError, NoResultFound, RuntimeError):
+            return InventoryCostActivity(household_id, item_id, (), (), (), available=False)
+        with self._engine.connect() as connection:
+            rows = (
+                connection.execute(
+                    text(
+                        f"SELECT a.classification,a.currency,COALESCE(SUM(a.cost_minor),0) amount "
+                        f'FROM "{allocations}" a JOIN domain_events e '
+                        "ON e.household_id=a.household_id AND e.event_id=a.depletion_event_id "
+                        "WHERE a.household_id=:household_id AND a.item_id=:item_id "
+                        "AND a.cost_minor IS NOT NULL AND e.occurred_at>=:start_at "
+                        "AND e.occurred_at<:end_at GROUP BY a.classification,a.currency "
+                        "ORDER BY a.classification,a.currency"
+                    ),
+                    {
+                        "household_id": str(household_id),
+                        "item_id": str(item_id),
+                        "start_at": start_at.astimezone(UTC).isoformat(),
+                        "end_at": end_at.astimezone(UTC).isoformat(),
+                    },
+                )
+                .mappings()
+                .all()
+            )
+        grouped: dict[str, list[CurrencyValue]] = {
+            "consumption": [],
+            "expiry": [],
+            "variance": [],
+        }
+        for row in rows:
+            grouped[str(row["classification"])].append(
+                CurrencyValue(str(row["currency"]), int(row["amount"]))
+            )
+        return InventoryCostActivity(
+            household_id,
+            item_id,
+            tuple(grouped["consumption"]),
+            tuple(grouped["expiry"]),
+            tuple(grouped["variance"]),
+            available=True,
+            lag_events=freshness.lag_events,
+        )
+
+    def activity_points_for(
+        self,
+        household_id: UUID,
+        item_id: UUID,
+        start_at: datetime,
+        end_at: datetime,
+    ) -> tuple[InventoryCostActivityPoint, ...]:
+        try:
+            layout = self._manager.active_layout("inventory_costing")
+            allocations = layout.component("inventory_costing", "allocations")
+        except (KeyError, NoResultFound, RuntimeError):
+            return ()
+        with self._engine.connect() as connection:
+            rows = (
+                connection.execute(
+                    text(
+                        f"SELECT e.occurred_at,a.classification,a.currency,"
+                        f'COALESCE(SUM(a.cost_minor),0) amount FROM "{allocations}" a '
+                        "JOIN domain_events e ON e.household_id=a.household_id "
+                        "AND e.event_id=a.depletion_event_id WHERE "
+                        "a.household_id=:household_id AND a.item_id=:item_id "
+                        "AND a.cost_minor IS NOT NULL AND e.occurred_at>=:start_at "
+                        "AND e.occurred_at<:end_at GROUP BY e.event_id,e.occurred_at,"
+                        "a.classification,a.currency ORDER BY e.occurred_at,e.event_id,"
+                        "a.classification,a.currency"
+                    ),
+                    {
+                        "household_id": str(household_id),
+                        "item_id": str(item_id),
+                        "start_at": start_at.astimezone(UTC).isoformat(),
+                        "end_at": end_at.astimezone(UTC).isoformat(),
+                    },
+                )
+                .mappings()
+                .all()
+            )
+        return tuple(
+            InventoryCostActivityPoint(
+                household_id,
+                item_id,
+                datetime.fromisoformat(str(row["occurred_at"])).astimezone(UTC),
+                str(row["classification"]),
+                str(row["currency"]),
+                int(row["amount"]),
+            )
+            for row in rows
         )
 
     def assignment_portions_for(

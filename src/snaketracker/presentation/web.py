@@ -153,7 +153,12 @@ from snaketracker.application.reminders import (
     ReminderValidationError,
     SaveSubjectScheduleCommand,
 )
-from snaketracker.application.reports import KeeperReport, ReportService
+from snaketracker.application.reports import (
+    InventoryCollectionReport,
+    InventoryItemReport,
+    KeeperReport,
+    ReportService,
+)
 from snaketracker.application.search import (
     SearchResult,
     SearchService,
@@ -161,6 +166,10 @@ from snaketracker.application.search import (
     SearchValidationError,
 )
 from snaketracker.application.suggestion_policy import CareWindowEstimate
+from snaketracker.application.weight_measurements import (
+    format_weight_payload,
+    parse_weight_grams_scaled,
+)
 from snaketracker.domains.animals.capabilities import (
     AnimalCapability,
     animal_capability_registry,
@@ -213,6 +222,7 @@ PACKAGE_DIR = Path(__file__).parent
 templates = Jinja2Templates(directory=PACKAGE_DIR / "templates")
 templates.env.globals["current_year"] = datetime.now(UTC).year
 templates.env.globals["format_quantity"] = format_quantity_scaled
+templates.env.globals["format_weight"] = format_weight_payload
 
 CARE_FORM_DETAILS: dict[str, tuple[str, str, str]] = {
     "feeding": ("Record feeding", "Choose food from Inventory and record the outcome.", "feedings"),
@@ -379,6 +389,55 @@ def _nonnegative_money_minor(value: object, label: str) -> int:
 def _friendly_money(amount_minor: int, currency: str) -> str:
     amount = amount_minor / 100
     return f"${amount:,.2f}" if currency.upper() == "USD" else f"{currency.upper()} {amount:,.2f}"
+
+
+def _inventory_collection_chart_payload(report: InventoryCollectionReport) -> dict[str, object]:
+    return {
+        "currency": report.currency,
+        "period_days": report.period_days,
+        "buckets": [
+            {
+                "date": bucket.day.isoformat(),
+                "label": bucket.day.strftime("%b %d").replace(" 0", " "),
+                "inventory_purchase_cash_minor": bucket.inventory_purchase_cash_minor,
+                "other_expense_cash_minor": bucket.other_expense_cash_minor,
+                "known_consumption_value_minor": bucket.known_consumption_value_minor,
+            }
+            for bucket in report.period_buckets
+        ],
+        "spending_categories": [
+            {"label": category.label, "amount_minor": category.amount_minor}
+            for category in report.spending_categories
+        ],
+        "stock_categories": [
+            {"label": category.label, "amount_minor": category.current_known_value_minor}
+            for category in report.categories
+            if category.current_known_value_minor > 0
+        ],
+        "bought_vs_used": {
+            "cash_spent_minor": report.supply_purchase_cash_minor,
+            "known_value_used_minor": report.consumption_value_minor,
+        },
+    }
+
+
+def _inventory_item_chart_payload(report: InventoryItemReport) -> dict[str, object]:
+    return {
+        "currency": report.currency,
+        "period_days": report.period_days,
+        "buckets": [
+            {
+                "date": bucket.day.isoformat(),
+                "label": bucket.day.strftime("%b %d").replace(" 0", " "),
+                "inventory_purchase_cash_minor": bucket.inventory_purchase_cash_minor,
+                "known_consumption_value_minor": bucket.known_consumption_value_minor,
+            }
+            for bucket in report.period_buckets
+        ],
+    }
+
+
+templates.env.globals["format_money"] = _friendly_money
 
 
 def _friendly_expense_total(expenses: tuple[Any, ...]) -> str:
@@ -835,7 +894,7 @@ def _correct_animal_event_from_form(
                 idempotency_key=idempotency_key,
                 occurred_at=occurred_at,
                 notes=notes,
-                weight_grams=_required_int(form.get("weight_grams", ""), "weight"),
+                weight_grams_scaled=parse_weight_grams_scaled(form.get("weight_grams", "")),
             )
         )
         return
@@ -2036,6 +2095,11 @@ def create_web_router(
             for item in expense_service.list_expenses(principal.household_id)
             if item.status == "active"
         )
+        purchases = tuple(
+            item
+            for item in purchase_service.list_purchases(principal.household_id)
+            if item.status == "active"
+        )
         group_counts: dict[str, int] = {}
         for animal in animals:
             group_counts[animal.type_label] = group_counts.get(animal.type_label, 0) + 1
@@ -2062,9 +2126,159 @@ def create_web_router(
                         )
                         for animal in animals
                     ),
-                    "expense_total": _friendly_expense_total(expenses),
-                    "expense_count": len(expenses),
+                    "expense_total": _friendly_expense_total(expenses + purchases),
+                    "expense_count": len(expenses) + len(purchases),
                 },
+            },
+        )
+
+    def inventory_report_options(request: Request) -> tuple[int, str | None]:
+        raw_period = request.query_params.get("period", "30")
+        try:
+            period = int(raw_period)
+        except ValueError as error:
+            raise ValueError("Choose a 30-day or 90-day reporting period.") from error
+        if period not in {30, 90}:
+            raise ValueError("Choose a 30-day or 90-day reporting period.")
+        currency = request.query_params.get("currency")
+        if currency is not None:
+            currency = currency.strip().upper()
+            if len(currency) != 3 or not currency.isalpha() or not currency.isascii():
+                raise ValueError("Choose an available three-letter currency.")
+        return period, currency
+
+    def inventory_report_error(request: Request, principal: Principal, message: str) -> Response:
+        return protected_page(
+            request,
+            "error.html",
+            principal,
+            status_code=422,
+            context={"title": "Report options are invalid", "message": message},
+        )
+
+    @router.get("/reports/inventory.csv", response_class=PlainTextResponse)
+    async def inventory_report_csv(request: Request) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if not {"inventory.view", "expense.view"}.issubset(principal.capabilities):
+            return _access_denied(request, "Inventory report access denied")
+        if projection_catch_up is not None:
+            projection_catch_up()
+        try:
+            period, currency = inventory_report_options(request)
+            report = report_service.inventory_collection(
+                principal.household_id,
+                household_timezone=principal.household_timezone,
+                generated_at=datetime.now(UTC),
+                period_days=period,
+                currency=currency,
+            )
+        except ValueError as error:
+            return PlainTextResponse(str(error), status_code=422)
+        except RuntimeError:
+            return PlainTextResponse("Report is catching up.", status_code=503)
+        return PlainTextResponse(
+            report_service.csv(report_service.inventory_collection_csv(report)),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": 'attachment; filename="care-keeper-inventory.csv"'},
+        )
+
+    @router.get("/reports/inventory/items/{item_id}.csv", response_class=PlainTextResponse)
+    async def inventory_item_report_csv(request: Request, item_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if not {"inventory.view", "expense.view"}.issubset(principal.capabilities):
+            return _access_denied(request, "Inventory report access denied")
+        if projection_catch_up is not None:
+            projection_catch_up()
+        try:
+            period, currency = inventory_report_options(request)
+            report = report_service.inventory_item(
+                principal.household_id,
+                UUID(item_id),
+                household_timezone=principal.household_timezone,
+                generated_at=datetime.now(UTC),
+                period_days=period,
+                currency=currency,
+            )
+        except ValueError as error:
+            return PlainTextResponse(str(error), status_code=422)
+        except RuntimeError:
+            return PlainTextResponse("Report is catching up.", status_code=503)
+        if report is None:
+            return _not_found(request, "Inventory report not found")
+        return PlainTextResponse(
+            report_service.csv(report_service.inventory_item_csv(report)),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": 'attachment; filename="care-keeper-item-report.csv"'},
+        )
+
+    @router.get("/reports/inventory/items/{item_id}", response_class=HTMLResponse)
+    async def inventory_item_report(request: Request, item_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if not {"inventory.view", "expense.view"}.issubset(principal.capabilities):
+            return _access_denied(request, "Inventory report access denied")
+        if projection_catch_up is not None:
+            projection_catch_up()
+        try:
+            period, currency = inventory_report_options(request)
+            report = report_service.inventory_item(
+                principal.household_id,
+                UUID(item_id),
+                household_timezone=principal.household_timezone,
+                generated_at=datetime.now(UTC),
+                period_days=period,
+                currency=currency,
+            )
+        except ValueError as error:
+            return inventory_report_error(request, principal, str(error))
+        except RuntimeError:
+            return inventory_report_error(request, principal, "Report data is catching up.")
+        if report is None:
+            return _not_found(request, "Inventory report not found")
+        return protected_page(
+            request,
+            "inventory_item_report.html",
+            principal,
+            context={
+                "report": report,
+                "chart_payload": _inventory_item_chart_payload(report),
+            },
+        )
+
+    @router.get("/reports/inventory", response_class=HTMLResponse)
+    async def inventory_report(request: Request) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if not {"inventory.view", "expense.view"}.issubset(principal.capabilities):
+            return _access_denied(request, "Inventory report access denied")
+        if projection_catch_up is not None:
+            projection_catch_up()
+        try:
+            period, currency = inventory_report_options(request)
+            report = report_service.inventory_collection(
+                principal.household_id,
+                household_timezone=principal.household_timezone,
+                generated_at=datetime.now(UTC),
+                period_days=period,
+                currency=currency,
+            )
+        except ValueError as error:
+            return inventory_report_error(request, principal, str(error))
+        except RuntimeError:
+            return inventory_report_error(request, principal, "Report data is catching up.")
+        return protected_page(
+            request,
+            "inventory_report.html",
+            principal,
+            context={
+                "report": report,
+                "chart_payload": _inventory_collection_chart_payload(report),
             },
         )
 
@@ -2188,7 +2402,7 @@ def create_web_router(
                 {
                     "kind": item.kind,
                     "occurred_at": item.occurred_at.isoformat(),
-                    "value": item.value,
+                    "value": float(item.value) if isinstance(item.value, Decimal) else item.value,
                     "unit": item.unit,
                 }
                 for item in analytics.measurements
@@ -5049,7 +5263,7 @@ def create_web_router(
                     occurred_at=_form_datetime(
                         form.get("occurred_at", ""), principal.household_timezone
                     ),
-                    weight_grams=_required_int(form.get("weight_grams", ""), "weight"),
+                    weight_grams_scaled=parse_weight_grams_scaled(form.get("weight_grams", "")),
                     notes=str(form.get("notes", "")),
                 )
             )

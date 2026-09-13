@@ -220,6 +220,27 @@ class InventoryCostSummary:
     lag_events: int = 0
 
 
+@dataclass(frozen=True, slots=True)
+class InventoryCostActivity:
+    household_id: UUID
+    item_id: UUID
+    known_consumed: tuple[CurrencyValue, ...]
+    known_expired: tuple[CurrencyValue, ...]
+    known_variance: tuple[CurrencyValue, ...]
+    available: bool = True
+    lag_events: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class InventoryCostActivityPoint:
+    household_id: UUID
+    item_id: UUID
+    occurred_at: datetime
+    classification: str
+    currency: str
+    amount_minor: int
+
+
 class PurchaseCurrentProjection(SynchronousProjection, Protocol):
     def purchase_for(self, household_id: UUID, purchase_id: UUID) -> PurchaseCurrent | None: ...
 
@@ -228,6 +249,22 @@ class PurchaseCurrentProjection(SynchronousProjection, Protocol):
 
 class InventoryCostProjection(Protocol):
     def summary_for(self, household_id: UUID, item_id: UUID) -> InventoryCostSummary: ...
+
+    def activity_for(
+        self,
+        household_id: UUID,
+        item_id: UUID,
+        start_at: datetime,
+        end_at: datetime,
+    ) -> InventoryCostActivity: ...
+
+    def activity_points_for(
+        self,
+        household_id: UUID,
+        item_id: UUID,
+        start_at: datetime,
+        end_at: datetime,
+    ) -> tuple[InventoryCostActivityPoint, ...]: ...
 
     def assignment_portions_for(
         self, household_id: UUID, item_id: UUID, quantity_scaled: int
@@ -1392,6 +1429,24 @@ class PurchaseService:
 
     def cost_summary_for(self, household_id: UUID, item_id: UUID) -> InventoryCostSummary:
         return self._costing.summary_for(household_id, item_id)
+
+    def cost_activity_for(
+        self,
+        household_id: UUID,
+        item_id: UUID,
+        start_at: datetime,
+        end_at: datetime,
+    ) -> InventoryCostActivity:
+        return self._costing.activity_for(household_id, item_id, start_at, end_at)
+
+    def cost_activity_points_for(
+        self,
+        household_id: UUID,
+        item_id: UUID,
+        start_at: datetime,
+        end_at: datetime,
+    ) -> tuple[InventoryCostActivityPoint, ...]:
+        return self._costing.activity_points_for(household_id, item_id, start_at, end_at)
 
 
 def allocate_acquisition_costs(

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
+from decimal import Decimal
 from itertools import pairwise
 from uuid import UUID
 
@@ -12,6 +13,10 @@ from snaketracker.application.projected_events import ProjectedEventReader
 from snaketracker.application.suggestion_policy import (
     CareWindowEstimate,
     DeterministicSuggestionPolicy,
+)
+from snaketracker.application.weight_measurements import (
+    format_weight_payload,
+    weight_grams_decimal,
 )
 from snaketracker.domains.animals.capabilities import animal_capability_registry
 from snaketracker.domains.animals.contracts import (
@@ -28,7 +33,9 @@ from snaketracker.domains.animals.contracts import (
     AnimalShedCorrectedV1,
     AnimalShedRecordedV1,
     AnimalWeightCorrectedV1,
+    AnimalWeightCorrectedV2,
     AnimalWeightRecordedV1,
+    AnimalWeightRecordedV2,
 )
 from snaketracker.platform.events.corrections import evaluate_effective_events
 
@@ -41,8 +48,9 @@ class AnalyticsNotAvailableError(RuntimeError):
 class MeasurementPoint:
     kind: str
     occurred_at: datetime
-    value: int
+    value: Decimal | int
     unit: str
+    display_value: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,10 +112,24 @@ class AnimalAnalyticsService:
             if (
                 event.event_type in {"animal.weight_recorded", "animal.weight_corrected"}
                 and ("weight" in capability.analytics_kinds)
-                and isinstance(payload, (AnimalWeightRecordedV1, AnimalWeightCorrectedV1))
+                and isinstance(
+                    payload,
+                    (
+                        AnimalWeightRecordedV1,
+                        AnimalWeightCorrectedV1,
+                        AnimalWeightRecordedV2,
+                        AnimalWeightCorrectedV2,
+                    ),
+                )
             ):
                 measurements.append(
-                    MeasurementPoint("weight", event.occurred_at, payload.weight_grams, "g")
+                    MeasurementPoint(
+                        "weight",
+                        event.occurred_at,
+                        weight_grams_decimal(payload),
+                        "g",
+                        format_weight_payload(payload),
+                    )
                 )
             elif (
                 event.event_type
@@ -119,7 +141,9 @@ class AnimalAnalyticsService:
                 and isinstance(payload, (AnimalLengthRecordedV1, AnimalLengthCorrectedV1))
             ):
                 measurements.append(
-                    MeasurementPoint("length", event.occurred_at, payload.length_mm, "mm")
+                    MeasurementPoint(
+                        "length", event.occurred_at, payload.length_mm, "mm", str(payload.length_mm)
+                    )
                 )
             elif (
                 event.event_type

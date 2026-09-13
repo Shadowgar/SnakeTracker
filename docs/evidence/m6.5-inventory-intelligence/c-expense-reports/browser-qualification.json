@@ -1,0 +1,103 @@
+{
+  "status": "passed",
+  "browser": "Chromium 1208 native ARM64",
+  "origin": "http://127.0.0.1:8093",
+  "qualificationDatabase": "/tmp/carekeeper-m65-c-restore-host-325c741a/verified/325c741a2378454c97f5200530272f56/snaketracker.sqlite3",
+  "activeDatabase": "/home/rocco/SnakeTracker/runtime/phase2/snaketracker.sqlite3",
+  "activeDatabaseMutatedByBrowserQualification": false,
+  "selectedItemPath": "/reports/inventory/items/97a4839c-07a1-4d60-a312-135c1ab30d20?period=90&currency=USD",
+  "required": {
+    "collectionExplainsCash": true,
+    "collectionExplainsConsumption": true,
+    "collectionExplainsStock": true,
+    "unknownCostHonest": true,
+    "estimateQualified": true,
+    "categoryReportPresent": true,
+    "itemReconciliationPresent": true,
+    "itemProvenancePresent": true,
+    "itemEstimateQualified": true,
+    "expenseSourcesSeparated": true,
+    "csvFormulaSafePipeline": true,
+    "csvNoInternalIds": true,
+    "exactCaptureCount": true,
+    "zeroAxeViolations": true,
+    "noHorizontalOverflow": true,
+    "noConsoleDiagnostics": true,
+    "noPageErrors": true,
+    "noFailedRequests": true,
+    "noHttpErrors": true
+  },
+  "captures": [
+    {
+      "label": "inventory-spending-collection",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/c-expense-reports/screenshots/mobile-390x844-inventory-spending-collection.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "inventory-spending-collection",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/c-expense-reports/screenshots/desktop-1440x900-inventory-spending-collection.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "inventory-item-reconciliation",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/c-expense-reports/screenshots/mobile-390x844-inventory-item-reconciliation.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "inventory-item-reconciliation",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/c-expense-reports/screenshots/desktop-1440x900-inventory-item-reconciliation.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "expenses-integrated-spending",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/c-expense-reports/screenshots/mobile-390x844-expenses-integrated-spending.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "expenses-integrated-spending",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/c-expense-reports/screenshots/desktop-1440x900-expenses-integrated-spending.png",
+      "noHorizontalOverflow": true
+    }
+  ],
+  "axe": {
+    "scans": [
+      {
+        "label": "mobile-390x844-inventory-spending-collection",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-inventory-spending-collection",
+        "violations": []
+      },
+      {
+        "label": "mobile-390x844-inventory-item-reconciliation",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-inventory-item-reconciliation",
+        "violations": []
+      },
+      {
+        "label": "mobile-390x844-expenses-integrated-spending",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-expenses-integrated-spending",
+        "violations": []
+      }
+    ],
+    "totalViolations": 0
+  },
+  "console": {
+    "diagnostics": [],
+    "pageErrors": [],
+    "failedRequests": [],
+    "httpErrors": []
+  }
+}

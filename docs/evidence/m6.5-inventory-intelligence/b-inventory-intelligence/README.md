@@ -1,10 +1,10 @@
 # M6.5-B Inventory Intelligence and Physical Counts
 
-Status: **implemented and qualified; owner review pending**
+Status: **owner-accepted September 13, 2026**
 
 Requirements `R-070` through `R-072`; acceptance procedures `AT-INVINT-01` through
-`AT-INVINT-03`. Branch `phase6.5/inventory-intelligence-ux`. M6.5 is not complete or
-owner-accepted.
+`AT-INVINT-03`. Branch `phase6.5/inventory-intelligence-ux`. This tranche was accepted before the
+complete M6.5 milestone was owner-accepted September 13, 2026.
 
 ## Implemented boundary
 
@@ -233,5 +233,5 @@ blocked at the public origin by `script-src 'self'` is an expected external-plat
 and diagnostics created solely by axe script injection are test-harness artifacts; neither is an
 application-owned runtime failure or a reason to weaken CSP.
 
-M6.5-C reports/CSV and spending estimates are explicitly out of scope, as are M6.5 final owner
-acceptance and M7.
+M6.5-C reports/CSV and spending estimates were explicitly out of this tranche's scope. M6.5 final
+owner acceptance and M7 remain separate.
