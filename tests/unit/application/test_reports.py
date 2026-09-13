@@ -11,6 +11,7 @@ import pytest
 from snaketracker.application.purchases import (
     CurrencyValue,
     InventoryCostActivity,
+    InventoryCostActivityPoint,
     InventoryCostSummary,
     PurchaseCurrent,
     PurchaseLineCurrent,
@@ -230,6 +231,18 @@ def test_inventory_report_separates_cash_consumption_value_and_currency() -> Non
                 (),
             )
 
+        def cost_activity_points_for(self, _household_id, _item_id, _start, _end):
+            return (
+                InventoryCostActivityPoint(
+                    household_id,
+                    item_id,
+                    datetime(2026, 9, 5, tzinfo=UTC),
+                    "consumption",
+                    "USD",
+                    2_340,
+                ),
+            )
+
     class Intelligence:
         def insight_for(self, _household_id, _item_id, _timezone, _as_of):
             return SimpleNamespace(
@@ -250,6 +263,7 @@ def test_inventory_report_separates_cash_consumption_value_and_currency() -> Non
                     occurred_at=datetime(2026, 9, 3, tzinfo=UTC),
                     amount_minor=1_200,
                     currency="USD",
+                    category="vet_care",
                     status="active",
                 ),
             )
@@ -275,6 +289,10 @@ def test_inventory_report_separates_cash_consumption_value_and_currency() -> Non
     assert report.consumption_value_minor == 2_340
     assert report.current_known_value_minor == 4_160
     assert report.items[0].known_value_reconciles is True
+    assert report.spending_trend_supported is True
+    assert report.spending_trend_direction == "increased"
+    assert sum(bucket.known_consumption_value_minor for bucket in report.period_buckets) == 2_340
+    assert report.spending_categories[-1].label == "Other expenses · Vet Care"
     assert activity_ends[-1] == now
     assert report.items[0].estimate is not None
     assert report.items[0].estimate.quantity_scaled == 26_000

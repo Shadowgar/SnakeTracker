@@ -153,7 +153,12 @@ from snaketracker.application.reminders import (
     ReminderValidationError,
     SaveSubjectScheduleCommand,
 )
-from snaketracker.application.reports import KeeperReport, ReportService
+from snaketracker.application.reports import (
+    InventoryCollectionReport,
+    InventoryItemReport,
+    KeeperReport,
+    ReportService,
+)
 from snaketracker.application.search import (
     SearchResult,
     SearchService,
@@ -379,6 +384,52 @@ def _nonnegative_money_minor(value: object, label: str) -> int:
 def _friendly_money(amount_minor: int, currency: str) -> str:
     amount = amount_minor / 100
     return f"${amount:,.2f}" if currency.upper() == "USD" else f"{currency.upper()} {amount:,.2f}"
+
+
+def _inventory_collection_chart_payload(report: InventoryCollectionReport) -> dict[str, object]:
+    return {
+        "currency": report.currency,
+        "period_days": report.period_days,
+        "buckets": [
+            {
+                "date": bucket.day.isoformat(),
+                "label": bucket.day.strftime("%b %d").replace(" 0", " "),
+                "inventory_purchase_cash_minor": bucket.inventory_purchase_cash_minor,
+                "other_expense_cash_minor": bucket.other_expense_cash_minor,
+                "known_consumption_value_minor": bucket.known_consumption_value_minor,
+            }
+            for bucket in report.period_buckets
+        ],
+        "spending_categories": [
+            {"label": category.label, "amount_minor": category.amount_minor}
+            for category in report.spending_categories
+        ],
+        "stock_categories": [
+            {"label": category.label, "amount_minor": category.current_known_value_minor}
+            for category in report.categories
+            if category.current_known_value_minor > 0
+        ],
+        "bought_vs_used": {
+            "cash_spent_minor": report.supply_purchase_cash_minor,
+            "known_value_used_minor": report.consumption_value_minor,
+        },
+    }
+
+
+def _inventory_item_chart_payload(report: InventoryItemReport) -> dict[str, object]:
+    return {
+        "currency": report.currency,
+        "period_days": report.period_days,
+        "buckets": [
+            {
+                "date": bucket.day.isoformat(),
+                "label": bucket.day.strftime("%b %d").replace(" 0", " "),
+                "inventory_purchase_cash_minor": bucket.inventory_purchase_cash_minor,
+                "known_consumption_value_minor": bucket.known_consumption_value_minor,
+            }
+            for bucket in report.period_buckets
+        ],
+    }
 
 
 templates.env.globals["format_money"] = _friendly_money
@@ -2188,7 +2239,10 @@ def create_web_router(
             request,
             "inventory_item_report.html",
             principal,
-            context={"report": report},
+            context={
+                "report": report,
+                "chart_payload": _inventory_item_chart_payload(report),
+            },
         )
 
     @router.get("/reports/inventory", response_class=HTMLResponse)
@@ -2217,7 +2271,10 @@ def create_web_router(
             request,
             "inventory_report.html",
             principal,
-            context={"report": report},
+            context={
+                "report": report,
+                "chart_payload": _inventory_collection_chart_payload(report),
+            },
         )
 
     @router.get("/reports/{kind}.csv", response_class=PlainTextResponse)

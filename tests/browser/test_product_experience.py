@@ -53,10 +53,13 @@ def test_today_reports_search_and_read_only_pwa_shell_are_browser_visible(tmp_pa
         assert client.get("/reports/expenses.csv").status_code == 200
         inventory_report = client.get("/reports/inventory")
         assert inventory_report.status_code == 200
+        assert "See what you paid, what was used" in inventory_report.text
+        assert "Spending over time" in inventory_report.text
+        assert "Not enough history for a spending trend yet." in inventory_report.text
         assert (
-            "Cash paid, supplies used, and value still on hand are separate measures."
-            in inventory_report.text
+            "Cost is not tracked for enough stock to build this chart." not in inventory_report.text
         )
+        assert "FIFO" not in inventory_report.text
         inventory_csv = client.get("/reports/inventory.csv")
         assert inventory_csv.status_code == 200
         assert inventory_csv.headers["content-type"].startswith("text/csv")

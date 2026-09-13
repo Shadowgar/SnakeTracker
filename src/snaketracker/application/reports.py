@@ -5,13 +5,13 @@ from __future__ import annotations
 import csv
 import io
 from dataclasses import dataclass
-from datetime import UTC, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import ROUND_CEILING, Decimal
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from snaketracker.application.animals import AnimalService
-from snaketracker.application.expenses import ExpenseService
+from snaketracker.application.expenses import ExpenseCurrent, ExpenseService
 from snaketracker.application.inventory import InventoryBalance, InventoryService
 from snaketracker.application.inventory_intelligence import (
     InventoryInsight,
@@ -22,6 +22,7 @@ from snaketracker.application.projected_events import ProjectedEventReader
 from snaketracker.application.purchases import (
     CurrencyValue,
     InventoryCostActivity,
+    InventoryCostActivityPoint,
     InventoryCostSummary,
     PurchaseCurrent,
     PurchaseLineCurrent,
@@ -56,6 +57,20 @@ class SpendingEstimate:
 
 
 @dataclass(frozen=True, slots=True)
+class SpendingPeriodBucket:
+    day: date
+    inventory_purchase_cash_minor: int
+    other_expense_cash_minor: int
+    known_consumption_value_minor: int
+
+
+@dataclass(frozen=True, slots=True)
+class SpendingCategoryReport:
+    label: str
+    amount_minor: int
+
+
+@dataclass(frozen=True, slots=True)
 class InventoryItemReport:
     item: InventoryBalance
     insight: InventoryInsight
@@ -81,6 +96,7 @@ class InventoryItemReport:
     current_known_value_minor: int
     latest_purchase: PurchaseCurrent | None
     estimate: SpendingEstimate | None
+    period_buckets: tuple[SpendingPeriodBucket, ...]
     available: bool
     lag_events: int
 
@@ -91,6 +107,16 @@ class InventoryItemReport:
             + self.lifetime_expiry_value_minor
             + self.lifetime_variance_value_minor
             + self.current_known_value_minor
+        )
+
+    @property
+    def spending_trend_supported(self) -> bool:
+        return (
+            sum(
+                bucket.inventory_purchase_cash_minor > 0 or bucket.known_consumption_value_minor > 0
+                for bucket in self.period_buckets
+            )
+            >= 2
         )
 
 
@@ -115,6 +141,8 @@ class InventoryCollectionReport:
     currencies: tuple[str, ...]
     items: tuple[InventoryItemReport, ...]
     categories: tuple[InventoryCategoryReport, ...]
+    spending_categories: tuple[SpendingCategoryReport, ...]
+    period_buckets: tuple[SpendingPeriodBucket, ...]
     supply_purchase_cash_minor: int
     other_expense_cash_minor: int
     consumption_value_minor: int
@@ -128,6 +156,33 @@ class InventoryCollectionReport:
     check_due_items: int
     available: bool
     lag_events: int
+
+    @property
+    def spending_trend_supported(self) -> bool:
+        return (
+            sum(
+                bucket.inventory_purchase_cash_minor > 0 or bucket.other_expense_cash_minor > 0
+                for bucket in self.period_buckets
+            )
+            >= 2
+        )
+
+    @property
+    def spending_trend_direction(self) -> str:
+        midpoint = len(self.period_buckets) // 2
+        first = sum(
+            bucket.inventory_purchase_cash_minor + bucket.other_expense_cash_minor
+            for bucket in self.period_buckets[:midpoint]
+        )
+        second = sum(
+            bucket.inventory_purchase_cash_minor + bucket.other_expense_cash_minor
+            for bucket in self.period_buckets[midpoint:]
+        )
+        if second > first:
+            return "increased"
+        if second < first:
+            return "decreased"
+        return "held steady"
 
 
 class ReportService:
@@ -291,6 +346,15 @@ class ReportService:
             if expense.currency == selected_currency
             and period_start <= expense.occurred_at.astimezone(UTC) < period_end
         )
+        period_buckets = _collection_period_buckets(
+            period_start,
+            period_days,
+            household_timezone,
+            purchase_rows,
+            other_expenses,
+            reports,
+            selected_currency,
+        )
         return InventoryCollectionReport(
             generated_at=generated_at,
             period_days=period_days,
@@ -300,6 +364,14 @@ class ReportService:
             currencies=currencies,
             items=reports,
             categories=categories,
+            spending_categories=_spending_categories(
+                categories,
+                other_expenses,
+                period_start,
+                period_end,
+                selected_currency,
+            ),
+            period_buckets=period_buckets,
             supply_purchase_cash_minor=sum(
                 purchase.total_paid_minor
                 for purchase in purchase_rows
@@ -493,6 +565,9 @@ class ReportService:
         period_activity = purchases.cost_activity_for(
             household_id, item.item_id, period_start, period_end
         )
+        period_activity_points = purchases.cost_activity_points_for(
+            household_id, item.item_id, period_start, period_end
+        )
         lifetime_activity = purchases.cost_activity_for(
             household_id,
             item.item_id,
@@ -553,6 +628,14 @@ class ReportService:
             current_known_value_minor=_currency_amount(cost_summary.known_remaining, currency),
             latest_purchase=latest,
             estimate=estimate,
+            period_buckets=_item_period_buckets(
+                period_start,
+                period_days,
+                household_timezone,
+                period_purchases,
+                period_activity_points,
+                currency,
+            ),
             available=(
                 insight.available
                 and cost_summary.available
@@ -613,6 +696,90 @@ def _selected_currency(requested: str | None, currencies: tuple[str, ...]) -> st
 
 def _currency_amount(values: tuple[CurrencyValue, ...], currency: str) -> int:
     return next((value.amount_minor for value in values if value.currency == currency), 0)
+
+
+def _blank_period_buckets(
+    period_start: datetime, period_days: int, household_timezone: str
+) -> dict[date, list[int]]:
+    first_day = period_start.astimezone(ZoneInfo(household_timezone)).date()
+    return {first_day + timedelta(days=offset): [0, 0, 0] for offset in range(period_days)}
+
+
+def _item_period_buckets(
+    period_start: datetime,
+    period_days: int,
+    household_timezone: str,
+    purchases: tuple[tuple[PurchaseCurrent, PurchaseLineCurrent], ...],
+    activity_points: tuple[InventoryCostActivityPoint, ...],
+    currency: str,
+) -> tuple[SpendingPeriodBucket, ...]:
+    zone = ZoneInfo(household_timezone)
+    values = _blank_period_buckets(period_start, period_days, household_timezone)
+    for purchase, line in purchases:
+        bucket = values.get(purchase.occurred_at.astimezone(zone).date())
+        if bucket is not None and purchase.currency == currency:
+            bucket[0] += line.allocated_cost_minor
+    for point in activity_points:
+        bucket = values.get(point.occurred_at.astimezone(zone).date())
+        if (
+            bucket is not None
+            and point.currency == currency
+            and point.classification == "consumption"
+        ):
+            bucket[2] += point.amount_minor
+    return tuple(SpendingPeriodBucket(day, *amounts) for day, amounts in values.items())
+
+
+def _collection_period_buckets(
+    period_start: datetime,
+    period_days: int,
+    household_timezone: str,
+    purchases: tuple[PurchaseCurrent, ...],
+    expenses: tuple[ExpenseCurrent, ...],
+    item_reports: tuple[InventoryItemReport, ...],
+    currency: str,
+) -> tuple[SpendingPeriodBucket, ...]:
+    zone = ZoneInfo(household_timezone)
+    values = _blank_period_buckets(period_start, period_days, household_timezone)
+    for purchase in purchases:
+        bucket = values.get(purchase.occurred_at.astimezone(zone).date())
+        if bucket is not None and purchase.currency == currency:
+            bucket[0] += purchase.total_paid_minor
+    for expense in expenses:
+        bucket = values.get(expense.occurred_at.astimezone(zone).date())
+        if bucket is not None and expense.currency == currency:
+            bucket[1] += expense.amount_minor
+    for report in item_reports:
+        for point in report.period_buckets:
+            values[point.day][2] += point.known_consumption_value_minor
+    return tuple(SpendingPeriodBucket(day, *amounts) for day, amounts in values.items())
+
+
+def _spending_categories(
+    inventory_categories: tuple[InventoryCategoryReport, ...],
+    expenses: tuple[ExpenseCurrent, ...],
+    period_start: datetime,
+    period_end: datetime,
+    currency: str,
+) -> tuple[SpendingCategoryReport, ...]:
+    totals = {
+        category.label: category.purchase_cash_minor
+        for category in inventory_categories
+        if category.purchase_cash_minor > 0
+    }
+    for expense in expenses:
+        if (
+            expense.currency != currency
+            or not period_start <= expense.occurred_at.astimezone(UTC) < period_end
+        ):
+            continue
+        category = expense.category.replace("_", " ").strip().title() or "Other"
+        label = f"Other expenses · {category}"
+        totals[label] = totals.get(label, 0) + expense.amount_minor
+    return tuple(
+        SpendingCategoryReport(label, amount)
+        for label, amount in sorted(totals.items(), key=lambda value: (-value[1], value[0]))
+    )
 
 
 def _format_scaled(value: int) -> str:

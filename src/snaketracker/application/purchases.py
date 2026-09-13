@@ -231,6 +231,16 @@ class InventoryCostActivity:
     lag_events: int = 0
 
 
+@dataclass(frozen=True, slots=True)
+class InventoryCostActivityPoint:
+    household_id: UUID
+    item_id: UUID
+    occurred_at: datetime
+    classification: str
+    currency: str
+    amount_minor: int
+
+
 class PurchaseCurrentProjection(SynchronousProjection, Protocol):
     def purchase_for(self, household_id: UUID, purchase_id: UUID) -> PurchaseCurrent | None: ...
 
@@ -247,6 +257,14 @@ class InventoryCostProjection(Protocol):
         start_at: datetime,
         end_at: datetime,
     ) -> InventoryCostActivity: ...
+
+    def activity_points_for(
+        self,
+        household_id: UUID,
+        item_id: UUID,
+        start_at: datetime,
+        end_at: datetime,
+    ) -> tuple[InventoryCostActivityPoint, ...]: ...
 
     def assignment_portions_for(
         self, household_id: UUID, item_id: UUID, quantity_scaled: int
@@ -1420,6 +1438,15 @@ class PurchaseService:
         end_at: datetime,
     ) -> InventoryCostActivity:
         return self._costing.activity_for(household_id, item_id, start_at, end_at)
+
+    def cost_activity_points_for(
+        self,
+        household_id: UUID,
+        item_id: UUID,
+        start_at: datetime,
+        end_at: datetime,
+    ) -> tuple[InventoryCostActivityPoint, ...]:
+        return self._costing.activity_points_for(household_id, item_id, start_at, end_at)
 
 
 def allocate_acquisition_costs(

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import html
+import json
 import re
 from datetime import date, timedelta
 from pathlib import Path
@@ -29,6 +31,28 @@ def _hidden(text: str, name: str) -> str:
     match = re.search(rf'name="{re.escape(name)}" value="([^"]*)"', text)
     assert match is not None
     return match.group(1)
+
+
+def _report_chart_payload(text: str) -> dict[str, object]:
+    match = re.search(r"data-report-payload='([^']+)'", text)
+    assert match is not None
+    value = json.loads(html.unescape(match.group(1)))
+    assert isinstance(value, dict)
+    return value
+
+
+def _purchase_chart_total(client) -> int:  # type: ignore[no-untyped-def]
+    payload = _report_chart_payload(client.get("/reports/inventory?period=30&currency=USD").text)
+    buckets = payload["buckets"]
+    assert isinstance(buckets, list)
+    return sum(int(bucket["inventory_purchase_cash_minor"]) for bucket in buckets)
+
+
+def _other_expense_chart_total(client) -> int:  # type: ignore[no-untyped-def]
+    payload = _report_chart_payload(client.get("/reports/inventory?period=30&currency=USD").text)
+    buckets = payload["buckets"]
+    assert isinstance(buckets, list)
+    return sum(int(bucket["other_expense_cash_minor"]) for bucket in buckets)
 
 
 def _add_food_item(client, name: str) -> str:  # type: ignore[no-untyped-def]
@@ -141,9 +165,14 @@ def test_multiline_purchase_receives_stock_and_appears_once_in_expenses(
         assert spending_report.text.count("Supply purchase") == 1
         inventory_report = client.get("/reports/inventory?period=30&currency=USD")
         assert inventory_report.status_code == 200
-        assert "Cash paid for supplies" in inventory_report.text
+        assert "Cash spent on supplies" in inventory_report.text
         assert "$90.00" in inventory_report.text
-        assert "Acquisition cost assigned to recorded use" in inventory_report.text
+        assert "Known purchase value used during care" in inventory_report.text
+        assert "Spending by category" in inventory_report.text
+        assert "Bought vs used" in inventory_report.text
+        assert "Known stock value" in inventory_report.text
+        assert "/static/report-charts.js?v=m65-c1" in inventory_report.text
+        assert "FIFO" not in inventory_report.text
         item_report = client.get(f"/reports/inventory/items/{first_id}?period=30&currency=USD")
         assert item_report.status_code == 200
         assert "Known acquisition value" in item_report.text
@@ -330,7 +359,7 @@ def test_add_inventory_uses_progressive_segmented_controls(tmp_path: Path) -> No
         complete_setup(client)
         page = client.get("/inventory/new")
         assert page.status_code == 200
-        assert "app.css?v=m65-b2" in page.text
+        assert "app.css?v=m65-c1" in page.text
         assert 'name="item_selection" value="existing" required' in page.text
         assert 'name="item_selection" value="new" required' in page.text
         assert not re.search(r'name="item_selection"[^>]* checked', page.text)
@@ -431,6 +460,7 @@ def test_purchase_correction_void_and_reinstate_browser_flow(tmp_path: Path) -> 
             follow_redirects=False,
         )
         purchase_path = posted.headers["location"]
+        assert _purchase_chart_total(client) == 500
         edit = client.get(f"{purchase_path}/edit")
         assert edit.status_code == 200
         corrected = client.post(
@@ -460,6 +490,7 @@ def test_purchase_correction_void_and_reinstate_browser_flow(tmp_path: Path) -> 
         assert "Corrected Supply" in detail.text
         assert "4.00" in detail.text
         assert "4</strong><span>each" in client.get(f"/inventory/{item_id}").text
+        assert _purchase_chart_total(client) == 400
 
         voided = client.post(
             f"{purchase_path}/void",
@@ -476,6 +507,7 @@ def test_purchase_correction_void_and_reinstate_browser_flow(tmp_path: Path) -> 
         voided_detail = client.get(purchase_path)
         assert "currently voided" in voided_detail.text
         assert "0</strong><span>each" in client.get(f"/inventory/{item_id}").text
+        assert _purchase_chart_total(client) == 0
 
         reinstated = client.post(
             f"{purchase_path}/reinstate",
@@ -490,3 +522,62 @@ def test_purchase_correction_void_and_reinstate_browser_flow(tmp_path: Path) -> 
         )
         assert reinstated.status_code == 303, reinstated.text
         assert "4</strong><span>each" in client.get(f"/inventory/{item_id}").text
+        assert _purchase_chart_total(client) == 400
+
+
+def test_other_expense_correction_and_void_change_report_chart_data(tmp_path: Path) -> None:
+    with client_for(tmp_path) as client:
+        complete_setup(client)
+        form = client.get("/expenses/new")
+        recorded = client.post(
+            "/expenses",
+            data={
+                "csrf_token": csrf_from(form.text),
+                "idempotency_key": _command_id(form.text),
+                "amount": "24.50",
+                "currency": "USD",
+                "category": "Veterinary",
+                "payee": "Care Clinic",
+                "reference": "VISIT-1",
+                "occurred_at": (date.today() - timedelta(days=2)).isoformat() + "T12:00",
+            },
+            follow_redirects=False,
+        )
+        assert recorded.status_code == 303
+        expense_path = recorded.headers["location"]
+        assert _other_expense_chart_total(client) == 2_450
+
+        detail = client.get(expense_path)
+        corrected = client.post(
+            f"{expense_path}/correct",
+            data={
+                "csrf_token": csrf_from(detail.text),
+                "idempotency_key": _command_id(detail.text),
+                "target_event_id": _hidden(detail.text, "target_event_id"),
+                "expected_stream_version": _hidden(detail.text, "expected_stream_version"),
+                "amount": "31.25",
+                "currency": "USD",
+                "category": "Veterinary",
+                "payee": "Care Clinic",
+                "reference": "VISIT-1",
+                "reason": "Corrected receipt total.",
+            },
+            follow_redirects=False,
+        )
+        assert corrected.status_code == 303
+        assert _other_expense_chart_total(client) == 3_125
+
+        detail = client.get(expense_path)
+        voided = client.post(
+            f"{expense_path}/void",
+            data={
+                "csrf_token": csrf_from(detail.text),
+                "idempotency_key": f"{_command_id(detail.text)}-void-chart",
+                "target_event_id": _hidden(detail.text, "target_event_id"),
+                "expected_stream_version": _hidden(detail.text, "expected_stream_version"),
+                "reason": "Duplicate expense.",
+            },
+            follow_redirects=False,
+        )
+        assert voided.status_code == 303
+        assert _other_expense_chart_total(client) == 0

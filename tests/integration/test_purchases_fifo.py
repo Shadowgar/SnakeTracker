@@ -857,6 +857,15 @@ def test_fifo_classifies_count_variance_and_expiry_without_inventing_cost(tmp_pa
         assert activity.known_consumed == ()
         assert activity.known_expired == (CurrencyValue("USD", 100),)
         assert activity.known_variance == (CurrencyValue("USD", 100),)
+        points = purchases.cost_activity_points_for(
+            owner.household_id,
+            mice.item_id,
+            datetime(1970, 1, 1, tzinfo=UTC),
+            datetime(2100, 1, 1, tzinfo=UTC),
+        )
+        assert sorted(
+            (point.classification, point.currency, point.amount_minor) for point in points
+        ) == [("expiry", "USD", 100), ("variance", "USD", 100)]
         with engine.connect() as connection:
             allocation_table = manager.active_layout("inventory_costing").component(
                 "inventory_costing", "allocations"
