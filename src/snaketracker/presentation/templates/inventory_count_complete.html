@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Stock check complete · Care Keeper{% endblock %}
+{% block content %}
+<section class="form-page inventory-count-complete" aria-labelledby="page-title">
+  <header><p class="page-kicker">Inventory</p><h1 id="page-title">{% if empty and not count_rows %}Stock is up to date{% else %}Stock check complete{% endif %}</h1><p class="lede">{% if empty and not count_rows %}No items with a scheduled stock check are due right now.{% elif updated %}{{ updated }} item{% if updated != 1 %}s{% endif %} updated · {{ matched }} matched.{% else %}Everything matched.{% endif %}</p></header>
+  {% if updated %}<section class="card" aria-labelledby="changes-heading"><h2 id="changes-heading">Changes</h2><ul class="count-review">{% for row in count_rows if row.count.variance_quantity_scaled %}<li><div><strong>{% if row.item %}{{ row.item.name }}{% else %}Inventory item{% endif %}</strong><span>Updated from {{ format_quantity(row.count.expected_quantity_scaled) }} to {{ format_quantity(row.count.actual_quantity_scaled) }}{% if row.item %} {{ row.item.unit_symbol }}{% endif %}</span></div><a href="/inventory/{{ row.count.item_id }}">View item</a></li>{% endfor %}</ul></section>{% endif %}
+  <div class="form-actions"><a class="button-link secondary-link" href="/inventory/count">Check more stock</a><a class="button-link" href="/inventory">Care stock</a></div>
+</section>
+{% endblock %}

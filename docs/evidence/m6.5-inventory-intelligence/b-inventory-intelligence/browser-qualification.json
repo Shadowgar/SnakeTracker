@@ -1,0 +1,91 @@
+{
+  "browser": "Chromium 1208 native ARM64",
+  "origin": "http://127.0.0.1:8092",
+  "qualification_database": "/tmp/carekeeper-m65-b-browser.9Phd5D/a3c0637bd810434abdba8023159413ef/snaketracker.sqlite3",
+  "active_database": "/home/rocco/SnakeTracker/runtime/phase2/snaketracker.sqlite3",
+  "active_database_mutated_by_browser_qualification": false,
+  "item_id": "f3b17cdd-98fd-42f4-b3de-9070200700f0",
+  "setup": {
+    "viewport": "1440x900",
+    "axe": [
+      {
+        "label": "desktop-1440x900-stock-policy",
+        "violations": 0
+      },
+      {
+        "label": "desktop-1440x900-count-stock",
+        "violations": 0
+      }
+    ],
+    "console_errors": [],
+    "page_errors": [],
+    "http_errors": [],
+    "failed_requests": []
+  },
+  "desktop": {
+    "viewport": "1440x900",
+    "axe": [
+      {
+        "label": "desktop-1440x900-inventory-overview",
+        "violations": 0
+      },
+      {
+        "label": "desktop-1440x900-inventory-detail",
+        "violations": 0
+      },
+      {
+        "label": "desktop-1440x900-stock-policy",
+        "violations": 0
+      },
+      {
+        "label": "desktop-1440x900-count-start",
+        "violations": 0
+      },
+      {
+        "label": "desktop-1440x900-count-complete",
+        "violations": 0
+      },
+      {
+        "label": "desktop-1440x900-count-correction",
+        "violations": 0
+      }
+    ],
+    "console_errors": [],
+    "page_errors": [],
+    "http_errors": [],
+    "failed_requests": []
+  },
+  "mobile": {
+    "viewport": "390x844",
+    "axe": [
+      {
+        "label": "mobile-390x844-inventory-overview",
+        "violations": 0
+      },
+      {
+        "label": "mobile-390x844-inventory-detail",
+        "violations": 0
+      },
+      {
+        "label": "mobile-390x844-stock-policy",
+        "violations": 0
+      },
+      {
+        "label": "mobile-390x844-count-start",
+        "violations": 0
+      },
+      {
+        "label": "mobile-390x844-count-complete",
+        "violations": 0
+      },
+      {
+        "label": "mobile-390x844-count-correction",
+        "violations": 0
+      }
+    ],
+    "console_errors": [],
+    "page_errors": [],
+    "http_errors": [],
+    "failed_requests": []
+  }
+}

@@ -14,6 +14,13 @@ class InventoryTypeDefinition:
 
 
 @dataclass(frozen=True, slots=True)
+class StockRoleDefinition:
+    code: str
+    label: str
+    description: str
+
+
+@dataclass(frozen=True, slots=True)
 class UnitDefinition:
     code: str
     label: str
@@ -49,6 +56,7 @@ class UnitPolicy:
 
 INVENTORY_TYPES = (
     InventoryTypeDefinition("food", "Food"),
+    InventoryTypeDefinition("water_hydration", "Water & Hydration"),
     InventoryTypeDefinition("equipment", "Equipment"),
     InventoryTypeDefinition("substrate_bedding", "Substrate & Bedding"),
     InventoryTypeDefinition("cleaning_supply", "Cleaning Supply"),
@@ -58,11 +66,39 @@ INVENTORY_TYPES = (
     InventoryTypeDefinition("other", "Other"),
 )
 
+STOCK_ROLES = (
+    StockRoleDefinition(
+        "care_supply",
+        "Care supply",
+        "Used routinely to care for animals and kept visible in Care stock.",
+    ),
+    StockRoleDefinition(
+        "replacement_spare",
+        "Replacement / spare",
+        "Kept on hand as a backup or replacement rather than routinely consumed.",
+    ),
+    StockRoleDefinition(
+        "durable_asset",
+        "Equipment",
+        "Durable equipment or habitat items that are owned rather than consumed.",
+    ),
+)
+
 _FOOD = frozenset({"food", "supplement", "other"})
 _EQUIPMENT = frozenset(
-    {"equipment", "cleaning_supply", "supplement", "enclosure_habitat", "heating_lighting", "other"}
+    {
+        "equipment",
+        "cleaning_supply",
+        "supplement",
+        "enclosure_habitat",
+        "heating_lighting",
+        "water_hydration",
+        "other",
+    }
 )
-_BULK = frozenset({"food", "substrate_bedding", "cleaning_supply", "supplement", "other"})
+_BULK = frozenset(
+    {"food", "substrate_bedding", "cleaning_supply", "supplement", "water_hydration", "other"}
+)
 _ALL = frozenset(item.code for item in INVENTORY_TYPES)
 
 UNITS = (
@@ -74,6 +110,13 @@ UNITS = (
     UnitDefinition("case", "Case", "case", False, _EQUIPMENT),
     UnitDefinition("bag", "Bag", "bag", False, _ALL),
     UnitDefinition("bottle", "Bottle", "bottle", False, _EQUIPMENT),
+    UnitDefinition(
+        "jug",
+        "Jug",
+        "jug",
+        False,
+        frozenset({"water_hydration", "cleaning_supply", "other"}),
+    ),
     UnitDefinition("bucket", "Bucket", "bucket", False, _EQUIPMENT),
     UnitDefinition("roll", "Roll", "roll", False, _EQUIPMENT),
     UnitDefinition("bale", "Bale", "bale", False, frozenset({"substrate_bedding", "other"})),
@@ -91,7 +134,7 @@ UNITS = (
         "Quart",
         "qt",
         True,
-        frozenset({"substrate_bedding", "cleaning_supply", "other"}),
+        frozenset({"substrate_bedding", "cleaning_supply", "water_hydration", "other"}),
     ),
     UnitDefinition("gallon", "Gallon", "gal", True, _BULK),
 )
@@ -285,7 +328,13 @@ OTHER_STOCK_BASES = (
     GuidedCatalogOption("volume", "Volume", VOLUME_UNITS, "milliliter"),
 )
 
+WATER_STOCK_BASES = (
+    GuidedCatalogOption("volume", "By volume", VOLUME_UNITS, "gallon"),
+    GuidedCatalogOption("container", "By container", ("bottle", "jug", "case"), "bottle"),
+)
+
 TYPE_BY_CODE = {item.code: item for item in INVENTORY_TYPES}
+STOCK_ROLE_BY_CODE = {item.code: item for item in STOCK_ROLES}
 UNIT_BY_CODE = {item.code: item for item in UNITS}
 FOOD_CATEGORY_BY_CODE = {item.code: item for item in FOOD_CATEGORIES}
 WHOLE_PREY_BY_CODE = {item.code: item for item in WHOLE_PREY_TYPES}
@@ -354,7 +403,59 @@ def resolve_creation_unit_policy(
         return _guided_policy(HABITAT_ITEMS, context_category, "Choose a habitat item.")
     if inventory_type == "other":
         return _guided_policy(OTHER_STOCK_BASES, stock_basis, "Choose a stock basis.")
+    if inventory_type == "water_hydration":
+        return _guided_policy(WATER_STOCK_BASES, stock_basis, "Choose how water is stocked.")
     raise ValueError("Inventory type is invalid.")
+
+
+def derive_stock_role(
+    inventory_type: str | None,
+    *,
+    name: str = "",
+    context_category: str | None = None,
+) -> str:
+    """Derive a conservative care role without changing stored Inventory history."""
+    if inventory_type in {
+        "food",
+        "supplement",
+        "substrate_bedding",
+        "cleaning_supply",
+        "water_hydration",
+    }:
+        return "care_supply"
+    if inventory_type in {"equipment", "enclosure_habitat"}:
+        return "durable_asset"
+    if inventory_type == "heating_lighting":
+        replacement_categories = {"heat_bulb", "ceramic_heat_emitter", "uvb_tube"}
+        replacement_words = ("bulb", "emitter", "tube", "replacement", "spare")
+        if context_category in replacement_categories or any(
+            word in name.casefold() for word in replacement_words
+        ):
+            return "replacement_spare"
+        return "durable_asset"
+    return "durable_asset"
+
+
+def resolve_stock_role(
+    value: str | None,
+    inventory_type: str | None,
+    *,
+    name: str = "",
+    context_category: str | None = None,
+) -> str:
+    """Validate an explicit role or return the deterministic catalog default."""
+    normalized = (value or "").strip()
+    if normalized:
+        if normalized not in STOCK_ROLE_BY_CODE:
+            raise ValueError("Choose how this inventory item is used.")
+        return normalized
+    if inventory_type == "other":
+        raise ValueError("Choose how this inventory item is used.")
+    return derive_stock_role(
+        inventory_type,
+        name=name,
+        context_category=context_category,
+    )
 
 
 def validate_creation_unit(unit_code: str, policy: UnitPolicy) -> str:

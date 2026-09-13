@@ -1,6 +1,6 @@
 # M6.5-A2 Purchases, FIFO Valuation, and Cash-spend Facts
 
-Status: **implemented and qualified; owner review pending**
+Status: **owner-accepted September 12, 2026**
 
 Requirements `R-073` through `R-075`; acceptance procedures `AT-INVINT-04`, `AT-INVINT-05`,
 and `AR-INVINT-01`. Branch `phase6.5/purchases-fifo`. M6.5 is not complete or owner-accepted.
@@ -277,6 +277,6 @@ image as UID/GID `1001:1001`.
 
 ## Explicitly deferred
 
-Physical/cycle counts, usage forecasting, remaining-duration/excess signals, advanced Inventory
-Overview, expanded reports/CSV, and spending estimates remain M6.5-B/C work. This evidence does not
-accept A2, M6.5, or any later milestone.
+Physical/cycle counts, usage forecasting, remaining-duration/excess signals, and the advanced
+Inventory Overview are M6.5-B work. Expanded reports/CSV and spending estimates remain M6.5-C.
+This evidence records the owner's A2 acceptance but does not accept B, M6.5, or a later milestone.

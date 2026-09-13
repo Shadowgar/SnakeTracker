@@ -244,7 +244,7 @@ qualified and presented for owner review.
 
 ## Phase 6.5 / M6.5 — Inventory intelligence and cost tracking
 
-Status: ADR-0042 and M6.5-A1 owner-accepted; M6.5-A2 Purchase/FIFO owner review pending
+Status: ADR-0042 and M6.5-A1/A2 owner-accepted; M6.5-B implemented and qualified, owner review pending
 
 M6.5 is a substantial product milestone after final M6 acceptance and before M7. It turns Inventory
 from a list of owned objects into an explainable decision-support system. It must have its own
@@ -262,9 +262,10 @@ structured catalog direction for M6.5-A1 on September 10, 2026.
 
 ### Owner-approved inventory-authoritative feeding direction
 
-M6.5-A1 implements the approved foundation and was owner-accepted September 11, 2026. M6.5-A2 now
-implements Purchase/FIFO; the remaining count, intelligence, and reporting work stays explicitly
-deferred.
+M6.5-A1 implements the approved foundation and was owner-accepted September 11, 2026. M6.5-A2
+Purchase/FIFO and its unified-acquisition corrections were owner-accepted September 12, 2026.
+M6.5-B now implements the bounded Inventory intelligence and physical-count experience; expanded
+reporting remains M6.5-C work.
 
 - [x] RB Every new M6.5 Feeding references a same-household **Food** Inventory Item. The normal
   workflow becomes **Date/time**, **Food from inventory**, **Quantity**, and **Outcome**; **Do not
@@ -295,30 +296,30 @@ new writes use the version-2 Inventory-authoritative contract.
 
 ### Inventory levels and reorder intelligence
 
-- [ ] RB Items support decision-useful quantity on hand, unit, owner-controlled reorder minimum, optional target/maximum where appropriate, active/archive state, usage history, recent consumption rate, estimated remaining duration where supportable, last purchase/restock, and last physical verification. (`R-070`, `AT-INVINT-01`)
-- [ ] RB Keeper-facing views identify items approaching the owner's reorder level, stable stock, and potential excess/unused stock using honest labels and deterministic evidence. Care Keeper must not invent husbandry thresholds or present estimates as guarantees. (`R-070`, `AT-INVINT-01`)
+- [x] RB Items support decision-useful quantity on hand, unit, owner-controlled reorder minimum, optional target/maximum where appropriate, active/archive state, usage history, recent consumption rate, estimated remaining duration where supportable, last purchase/restock, and last physical verification. M6.5-B implementation and isolated qualification complete; owner review remains open. (`R-070`, `AT-INVINT-01`)
+- [x] RB Keeper-facing views identify items approaching the owner's reorder level, stable stock, and potential excess/unused stock using honest labels and deterministic evidence. Care Keeper does not invent husbandry thresholds or present estimates as guarantees. M6.5-B owner review remains open. (`R-070`, `AT-INVINT-01`)
 
 ### Physical recount and cycle count
 
-- [ ] RB A physical-count workflow compares expected and actual stock and records any variance through immutable inventory adjustment semantics with an explicit reason such as physical count, lost/damaged, purchase/receipt, correction, consumption, or other. (`R-071`, `AT-INVINT-02`)
-- [ ] RB Last-verified and recount-due information supports full, category, and rolling/cycle-count workflows. ADR-0042 accepts an optional owner-selected per-item interval; implementation remains deferred. (`R-071`, `AT-INVINT-02`)
+- [x] RB A physical-count workflow compares expected and actual stock and records the exact variance through an immutable enriched count event; correction atomically voids the original effect and appends a replacement. M6.5-B owner review remains open. (`R-071`, `AT-INVINT-02`)
+- [x] RB Last-verified and recount-due information supports full, category, rolling/cycle, and single-item count workflows using the optional owner-selected per-item interval. M6.5-B owner review remains open. (`R-071`, `AT-INVINT-02`)
 
 A representative count is `Expected: 25; actual physical count: 23`; the difference becomes an
 explainable immutable adjustment rather than an in-place overwrite.
 
 ### Usage intelligence
 
-- [ ] RB Deterministic, explainable calculations report average consumption by useful period, estimated stock remaining, high-consumption items, items no longer being used, and potential excess stock without introducing opaque predictive algorithms. (`R-072`, `AT-INVINT-03`)
+- [x] RB Deterministic, explainable calculations report 30/90-day consumption, supported usage pace and prior-period comparison, estimated stock remaining, fixed-window disuse, and owner-maximum excess without opaque prediction. M6.5-B owner review remains open. (`R-072`, `AT-INVINT-03`)
 
 ### Inventory, purchases, expenses, and costing
 
-- [x] RB The product represents the conceptual flow `Purchase → Inventory received → Inventory consumed → Cost of consumption` while keeping cash spending, inventory value, and consumption cost as distinct metrics. A2 implementation and qualification are complete; owner review remains open. (`R-073`, `AT-INVINT-04`)
-- [x] RB Purchase/receipt history retains purchase date, supplier/vendor, quantity, amount paid, unit cost, and resulting inventory receipt. Changing prices are represented by history/cost lots rather than one mutable item-price field. A2 implementation and qualification are complete; owner review remains open. (`R-074`, `AT-INVINT-05`)
+- [x] RB The product represents the conceptual flow `Purchase → Inventory received → Inventory consumed → Cost of consumption` while keeping cash spending, inventory value, and consumption cost as distinct metrics. A2 was owner-accepted September 12, 2026. (`R-073`, `AT-INVINT-04`)
+- [x] RB Purchase/receipt history retains purchase date, supplier/vendor, quantity, amount paid, unit cost, and resulting inventory receipt. Changing prices are represented by history/cost lots rather than one mutable item-price field. A2 was owner-accepted September 12, 2026. (`R-074`, `AT-INVINT-05`)
 - [x] RB One keeper-facing **Add inventory** workflow creates or restocks an Item, records paid
   acquisitions when an amount is supplied, leaves zero-amount receipts explicitly cost-not-tracked,
   and assigns remembered cost to bounded current untracked stock without changing quantity. The
-  internal deterministic costing policy is not exposed as required accounting jargon. A2
-  owner-review correction qualification is pending; owner review remains open. (`R-073`,
+  internal deterministic costing policy is not exposed as required accounting jargon. A2 and its
+  owner-review corrections were accepted September 12, 2026. (`R-073`,
   `R-074`, `AT-INVINT-04`, `AT-INVINT-05`)
 - [x] RB Before consumption value is implemented, architecture/domain review explicitly selects and documents FIFO as the deterministic costing policy. ADR-0042 is accepted and A2 implements FIFO. (`R-075`, `AR-INVINT-01`)
 

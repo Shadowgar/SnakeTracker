@@ -39,7 +39,7 @@ def create_food_inventory(
     )
     assert created.status_code == 303, created.text
     item_url = created.headers["location"]
-    assert f">{quantity}</strong><span>each on hand" in client.get(item_url).text
+    assert f">{quantity}</strong><span>each" in client.get(item_url).text
     return item_url
 
 

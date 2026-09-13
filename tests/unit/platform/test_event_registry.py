@@ -18,7 +18,14 @@ from snaketracker.domains.animals.contracts import (
     AnimalRegisteredV1,
 )
 from snaketracker.domains.households.replay import replay_household
-from snaketracker.domains.inventory.contracts import InventoryItemRegisteredV2
+from snaketracker.domains.inventory.contracts import (
+    InventoryItemRegisteredV2,
+    InventoryItemRegisteredV3,
+    InventoryReorderPolicyChangedV2,
+    InventoryStockConsumedV3,
+    InventoryStockCountedV1,
+    InventoryVerificationPolicyChangedV1,
+)
 from snaketracker.platform.events import registry as registry_module
 from snaketracker.platform.events.envelope import canonical_event_data, event_checksum
 from tests.support.synthetic_events import (
@@ -270,6 +277,14 @@ def test_structured_inventory_registry_validates_catalog_and_scaled_quantities()
     assert isinstance(
         registry.deserialize("inventory.item_registered", 2, valid), InventoryItemRegisteredV2
     )
+    assert isinstance(
+        registry.deserialize(
+            "inventory.item_registered", 3, {**valid, "stock_role": "care_supply"}
+        ),
+        InventoryItemRegisteredV3,
+    )
+    with pytest.raises(ValueError, match="role is invalid"):
+        registry.deserialize("inventory.item_registered", 3, {**valid, "stock_role": "warehouse"})
 
     invalid_payloads = (
         {**valid, "name": ""},
@@ -393,6 +408,109 @@ def test_registry_rejects_malformed_inventory_consumption_source_uuid(version: i
             version,
             {quantity_field: 1_000, "source_event_id": "not-a-uuid"},
         )
+
+
+def test_inventory_intelligence_contracts_deserialize_exact_typed_payloads() -> None:
+    registry = registry_module.production_event_registry
+    workflow_id = "2cf4208c-e18a-4d97-93a9-ecb4317d2c14"
+
+    use = registry.deserialize(
+        "inventory.stock_consumed",
+        3,
+        {
+            "quantity_scaled": 1_000,
+            "source_event_id": None,
+            "use_kind": "maintenance",
+            "related_animal_id": None,
+            "related_enclosure_id": None,
+            "note": "Enclosure preparation",
+        },
+    )
+    count = registry.deserialize(
+        "inventory.stock_counted",
+        1,
+        {
+            "expected_quantity_scaled": 10_000,
+            "actual_quantity_scaled": 8_000,
+            "variance_quantity_scaled": -2_000,
+            "count_context": "cycle",
+            "workflow_id": workflow_id,
+            "note": None,
+        },
+    )
+    policy = registry.deserialize(
+        "inventory.reorder_policy_changed",
+        2,
+        {
+            "reorder_minimum_scaled": 5_000,
+            "target_quantity_scaled": 10_000,
+            "maximum_quantity_scaled": 15_000,
+            "supplier_lead_time_days": 7,
+        },
+    )
+    verification = registry.deserialize(
+        "inventory.verification_policy_changed", 1, {"recount_interval_days": 30}
+    )
+
+    assert isinstance(use, InventoryStockConsumedV3)
+    assert isinstance(count, InventoryStockCountedV1)
+    assert isinstance(policy, InventoryReorderPolicyChangedV2)
+    assert isinstance(verification, InventoryVerificationPolicyChangedV1)
+    assert use.quantity_scaled == 1_000
+    assert count.workflow_id.hex == workflow_id.replace("-", "")
+    assert policy.maximum_quantity_scaled == 15_000
+    assert verification.recount_interval_days == 30
+
+
+@pytest.mark.parametrize(
+    ("event_type", "version", "payload"),
+    (
+        (
+            "inventory.stock_consumed",
+            3,
+            {
+                "quantity_scaled": 0,
+                "source_event_id": None,
+                "use_kind": "maintenance",
+                "related_animal_id": None,
+                "related_enclosure_id": None,
+                "note": None,
+            },
+        ),
+        (
+            "inventory.stock_counted",
+            1,
+            {
+                "expected_quantity_scaled": 10_000,
+                "actual_quantity_scaled": 8_000,
+                "variance_quantity_scaled": -1_000,
+                "count_context": "cycle",
+                "workflow_id": "2cf4208c-e18a-4d97-93a9-ecb4317d2c14",
+                "note": None,
+            },
+        ),
+        (
+            "inventory.reorder_policy_changed",
+            2,
+            {
+                "reorder_minimum_scaled": 10_000,
+                "target_quantity_scaled": 5_000,
+                "maximum_quantity_scaled": None,
+                "supplier_lead_time_days": 7,
+            },
+        ),
+        (
+            "inventory.verification_policy_changed",
+            1,
+            {"recount_interval_days": 0},
+        ),
+    ),
+)
+def test_inventory_intelligence_registry_rejects_invalid_semantics(
+    event_type: str, version: int, payload: dict[str, object]
+) -> None:
+    with pytest.raises(ValueError, match=r"payload is invalid|policy payload|verification policy"):
+        registry_module.production_event_registry.deserialize(event_type, version, payload)
 
 
 def test_registry_rejects_non_boolean_reminder_enabled() -> None:

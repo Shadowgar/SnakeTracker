@@ -58,13 +58,13 @@ def test_counted_food_creation_resolves_each_and_sets_initial_stock(
         created = client.post("/inventory", data=data, follow_redirects=False)
         assert created.status_code == 303, created.text
         detail = client.get(created.headers["location"])
-        assert ">20</strong><span>each on hand" in detail.text
+        assert ">20</strong><span>each" in detail.text
         assert "Add inventory" in detail.text
 
         retried = client.post("/inventory", data=data, follow_redirects=False)
         assert retried.status_code == 303, retried.text
         assert retried.headers["location"] == created.headers["location"]
-        assert ">20</strong><span>each on hand" in client.get(created.headers["location"]).text
+        assert ">20</strong><span>each" in client.get(created.headers["location"]).text
 
 
 @pytest.mark.parametrize(
@@ -134,7 +134,8 @@ def test_nonfood_guidance_resolves_narrow_units_and_ignores_stale_food_metadata(
         created = client.post("/inventory", data=data, follow_redirects=False)
         assert created.status_code == 303, created.text
         detail_page = client.get(created.headers["location"])
-        assert display in detail_page.text
+        plain_text = " ".join(re.sub(r"<[^>]+>", " ", detail_page.text).split())
+        assert display in plain_text
         assert "Food category" not in detail_page.text
 
 
@@ -220,3 +221,86 @@ def test_zero_start_and_filtered_liquid_and_mass_units(tmp_path: Path) -> None:
             created = client.post("/inventory", data=data, follow_redirects=False)
             assert created.status_code == 303, created.text
             assert expected in client.get(created.headers["location"]).text
+
+
+def test_care_stock_equipment_and_grouped_all_views_use_derived_roles(
+    tmp_path: Path,
+) -> None:
+    with client_for(tmp_path) as client:
+        complete_setup(client)
+
+        def create(name: str, **values: str) -> str:
+            form = client.get("/inventory/new")
+            created = client.post(
+                "/inventory",
+                data={
+                    "csrf_token": csrf_from(form.text),
+                    "idempotency_key": _command_id(form.text),
+                    "name": name,
+                    "starting_quantity": "2",
+                    "reorder_threshold": "",
+                    **values,
+                },
+                follow_redirects=False,
+            )
+            assert created.status_code == 303, created.text
+            return created.headers["location"]
+
+        water_url = create(
+            "Distilled water",
+            inventory_type="water_hydration",
+            stock_basis="volume",
+            unit_code="gallon",
+        )
+        bulb_url = create(
+            "Spare halogen bulb",
+            inventory_type="heating_lighting",
+            context_category="heat_bulb",
+            context_detail="halogen_bulb",
+        )
+        equipment_url = create(
+            "Tank thermometer",
+            inventory_type="equipment",
+            context_category="monitoring",
+            context_detail="thermometer",
+        )
+        override_url = create(
+            "Disposable care gloves",
+            inventory_type="equipment",
+            context_category="ppe",
+            context_detail="gloves",
+            stock_role="care_supply",
+        )
+
+        care = client.get("/inventory")
+        assert "Distilled water" in care.text
+        assert "Water &amp; Hydration" in care.text
+        assert "Spare halogen bulb" not in care.text
+        assert "Tank thermometer" not in care.text
+        assert "Disposable care gloves" in care.text
+
+        equipment = client.get("/inventory?view=equipment")
+        assert "Replacement / spare" in equipment.text
+        assert "Equipment" in equipment.text
+        assert "Spare halogen bulb" in equipment.text
+        assert "Tank thermometer" in equipment.text
+        assert "Distilled water" not in equipment.text
+        assert "Disposable care gloves" not in equipment.text
+
+        all_inventory = client.get("/inventory?view=all")
+        assert "Water &amp; Hydration" in all_inventory.text
+        assert "Heating &amp; Lighting" in all_inventory.text
+        assert "Equipment" in all_inventory.text
+        assert 'id="inventory-group-heating_lighting"' in all_inventory.text
+        assert 'id="inventory-group-equipment"' in all_inventory.text
+        assert "Distilled water" in client.get("/inventory?view=all&q=distilled").text
+        assert "Tank thermometer" not in client.get("/inventory?view=all&q=distilled").text
+
+        assert "Care supply" in client.get(water_url).text
+        assert "Replacement / spare" in client.get(bulb_url).text
+        assert "Care supply" in client.get(override_url).text
+        equipment_detail = client.get(equipment_url)
+        assert "Equipment" in equipment_detail.text
+        assert "Record use" not in equipment_detail.text
+        assert "No recorded use" not in equipment_detail.text
+        assert "Used in 90 days" not in equipment_detail.text

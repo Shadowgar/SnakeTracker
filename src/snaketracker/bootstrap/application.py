@@ -55,6 +55,9 @@ from snaketracker.infrastructure.identity.identity_repository import SQLAlchemyI
 from snaketracker.infrastructure.identity.password_reset_delivery import (
     LocalFilePasswordResetDelivery,
 )
+from snaketracker.infrastructure.inventory.intelligence import (
+    SQLAlchemyInventoryIntelligenceProjection,
+)
 from snaketracker.infrastructure.inventory.projections import SQLAlchemyInventoryBalanceProjection
 from snaketracker.infrastructure.jobs.repository import SQLAlchemyJobRepository
 from snaketracker.infrastructure.notifications.repository import (
@@ -186,6 +189,9 @@ def build_application(settings: Settings) -> FastAPI:
             inventory_balance_projection, SQLAlchemyInventoryEffectiveReceiptProjection()
         )
         inventory_service = InventoryService(event_store, inventory_projection)
+        inventory_intelligence = SQLAlchemyInventoryIntelligenceProjection(
+            engine, projection_manager
+        )
         purchase_service = PurchaseService(
             event_store,
             inventory_projection,
@@ -277,6 +283,7 @@ def build_application(settings: Settings) -> FastAPI:
                 backup_service=BackupService(SQLAlchemyBackupRepository(engine)),
                 enclosure_service=enclosure_service,
                 inventory_service=inventory_service,
+                inventory_intelligence=inventory_intelligence,
                 purchase_service=purchase_service,
                 expense_service=expense_service,
                 analytics_service=AnimalAnalyticsService(

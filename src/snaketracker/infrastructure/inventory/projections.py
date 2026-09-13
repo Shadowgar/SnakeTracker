@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import cast
 from uuid import UUID
 
@@ -11,6 +12,7 @@ from sqlalchemy.engine import Connection, Engine, RowMapping
 from snaketracker.application.inventory import (
     InventoryBalance,
     InventoryConsumptionLink,
+    InventoryCount,
     InventoryValidationError,
 )
 from snaketracker.domains.inventory.contracts import (
@@ -21,20 +23,26 @@ from snaketracker.domains.inventory.contracts import (
     InventoryItemArchivedV1,
     InventoryItemRegisteredV1,
     InventoryItemRegisteredV2,
+    InventoryItemRegisteredV3,
     InventoryItemRestoredV1,
     InventoryItemUpdatedV1,
     InventoryItemUpdatedV2,
+    InventoryItemUpdatedV3,
     InventoryReceiptCorrectedV1,
     InventoryReorderPolicyChangedV1,
+    InventoryReorderPolicyChangedV2,
     InventoryStockAdjustedV1,
     InventoryStockAdjustedV2,
     InventoryStockConsumedV1,
     InventoryStockConsumedV2,
+    InventoryStockConsumedV3,
+    InventoryStockCountedV1,
     InventoryStockExpiredV1,
     InventoryStockReceivedV1,
     InventoryStockReceivedV2,
     InventoryStockReceivedV3,
     InventoryStockReservedV1,
+    InventoryVerificationPolicyChangedV1,
 )
 from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
 from snaketracker.platform.events.envelope import DomainEvent
@@ -49,7 +57,10 @@ class SQLAlchemyInventoryBalanceProjection:
         for event in events:
             if event.stream_type != "inventory-item":
                 continue
-            if isinstance(event.payload, InventoryItemRegisteredV1 | InventoryItemRegisteredV2):
+            if isinstance(
+                event.payload,
+                InventoryItemRegisteredV1 | InventoryItemRegisteredV2 | InventoryItemRegisteredV3,
+            ):
                 self._register(connection, event, event.payload)
                 continue
             row = self._row(connection, event.household_id, event.stream_id)
@@ -77,9 +88,44 @@ class SQLAlchemyInventoryBalanceProjection:
             preparation_method = (
                 str(row["preparation_method"]) if row["preparation_method"] else None
             )
+            stock_role = str(row["stock_role"]) if row["stock_role"] else None
             reorder_scaled = (
                 int(row["reorder_threshold_scaled"])
                 if row["reorder_threshold_scaled"] is not None
+                else None
+            )
+            target_scaled = (
+                int(row["target_quantity_scaled"])
+                if row["target_quantity_scaled"] is not None
+                else None
+            )
+            maximum_scaled = (
+                int(row["maximum_quantity_scaled"])
+                if row["maximum_quantity_scaled"] is not None
+                else None
+            )
+            lead_days = (
+                int(row["supplier_lead_time_days"])
+                if row["supplier_lead_time_days"] is not None
+                else None
+            )
+            recount_days = (
+                int(row["recount_interval_days"])
+                if row["recount_interval_days"] is not None
+                else None
+            )
+            last_count_event_id = (
+                str(row["last_count_event_id"]) if row["last_count_event_id"] else None
+            )
+            last_counted_at = str(row["last_counted_at"]) if row["last_counted_at"] else None
+            last_count_expected = (
+                int(row["last_count_expected_scaled"])
+                if row["last_count_expected_scaled"] is not None
+                else None
+            )
+            last_count_actual = (
+                int(row["last_count_actual_scaled"])
+                if row["last_count_actual_scaled"] is not None
                 else None
             )
             status = str(row["status"])
@@ -135,7 +181,55 @@ class SQLAlchemyInventoryBalanceProjection:
                     .one_or_none()
                 )
                 if receipt is None:
-                    pass
+                    count = (
+                        connection.execute(
+                            text(
+                                "SELECT variance_quantity_scaled,status "
+                                "FROM inventory_count_history "
+                                "WHERE household_id=:household_id AND item_id=:item_id "
+                                "AND root_count_event_id=:target"
+                            ),
+                            {
+                                "household_id": str(event.household_id),
+                                "item_id": str(event.stream_id),
+                                "target": str(payload.target_event_id),
+                            },
+                        )
+                        .mappings()
+                        .one_or_none()
+                    )
+                    if count is not None:
+                        desired = "voided" if isinstance(payload, EventVoidedV1) else "active"
+                        prior = "active" if desired == "voided" else "voided"
+                        if count["status"] != prior:
+                            raise InventoryValidationError("Inventory count control is invalid.")
+                        variance = int(count["variance_quantity_scaled"])
+                        on_hand_scaled += -variance if desired == "voided" else variance
+                        if on_hand_scaled < reserved_scaled:
+                            raise InventoryValidationError(
+                                "Inventory count control conflicts with reserved stock."
+                            )
+                        on_hand = on_hand_scaled // 1000
+                        connection.execute(
+                            text(
+                                "UPDATE inventory_count_history SET status=:status,"
+                                "control_event_id=:control WHERE household_id=:household_id "
+                                "AND item_id=:item_id AND root_count_event_id=:target"
+                            ),
+                            {
+                                "status": desired,
+                                "control": str(event.event_id),
+                                "household_id": str(event.household_id),
+                                "item_id": str(event.stream_id),
+                                "target": str(payload.target_event_id),
+                            },
+                        )
+                        (
+                            last_count_event_id,
+                            last_counted_at,
+                            last_count_expected,
+                            last_count_actual,
+                        ) = self._latest_count(connection, event.household_id, event.stream_id)
                 elif isinstance(payload, EventVoidedV1):
                     if receipt["status"] != "active":
                         raise InventoryValidationError("Purchase receipt is already inactive.")
@@ -200,7 +294,7 @@ class SQLAlchemyInventoryBalanceProjection:
                             "quantity": payload.quantity,
                         },
                     )
-            elif isinstance(payload, InventoryStockConsumedV2):
+            elif isinstance(payload, InventoryStockConsumedV2 | InventoryStockConsumedV3):
                 reserved_consumption_scaled = min(reserved_scaled, payload.quantity_scaled)
                 unreserved_scaled = payload.quantity_scaled - reserved_consumption_scaled
                 if on_hand_scaled - reserved_scaled < unreserved_scaled:
@@ -387,6 +481,49 @@ class SQLAlchemyInventoryBalanceProjection:
                         "Inventory adjustment conflicts with reservations."
                     )
                 on_hand = on_hand_scaled // 1000
+            elif isinstance(payload, InventoryStockCountedV1):
+                if payload.expected_quantity_scaled != on_hand_scaled:
+                    raise InventoryValidationError(
+                        "Expected stock changed while the physical count was being saved."
+                    )
+                if payload.variance_quantity_scaled != (
+                    payload.actual_quantity_scaled - payload.expected_quantity_scaled
+                ):
+                    raise InventoryValidationError("Inventory count variance is inconsistent.")
+                if payload.actual_quantity_scaled < reserved_scaled:
+                    raise InventoryValidationError(
+                        "Physical count cannot be below stock currently reserved."
+                    )
+                on_hand_scaled = payload.actual_quantity_scaled
+                on_hand = on_hand_scaled // 1000
+                connection.execute(
+                    text(
+                        "INSERT INTO inventory_count_history "
+                        "(household_id,item_id,root_count_event_id,effective_event_id,workflow_id,"
+                        "expected_quantity_scaled,actual_quantity_scaled,variance_quantity_scaled,"
+                        "count_context,note,actor_user_id,occurred_at,status,control_event_id) "
+                        "VALUES "
+                        "(:household_id,:item_id,:event_id,:event_id,:workflow_id,:expected,:actual,"
+                        ":variance,:context,:note,:actor,:occurred_at,'active',NULL)"
+                    ),
+                    {
+                        "household_id": str(event.household_id),
+                        "item_id": str(event.stream_id),
+                        "event_id": str(event.event_id),
+                        "workflow_id": str(payload.workflow_id),
+                        "expected": payload.expected_quantity_scaled,
+                        "actual": payload.actual_quantity_scaled,
+                        "variance": payload.variance_quantity_scaled,
+                        "context": payload.count_context,
+                        "note": payload.note,
+                        "actor": str(event.actor_user_id),
+                        "occurred_at": event.occurred_at.isoformat(timespec="microseconds"),
+                    },
+                )
+                last_count_event_id = str(event.event_id)
+                last_counted_at = event.occurred_at.isoformat(timespec="microseconds")
+                last_count_expected = payload.expected_quantity_scaled
+                last_count_actual = payload.actual_quantity_scaled
             elif isinstance(payload, InventoryStockExpiredV1):
                 if on_hand - reserved < payload.quantity:
                     raise InventoryValidationError("Insufficient available inventory to expire.")
@@ -399,6 +536,17 @@ class SQLAlchemyInventoryBalanceProjection:
                 reorder_scaled = (
                     payload.reorder_threshold * 1000 if payload.reorder_threshold else None
                 )
+                target_scaled = None
+                maximum_scaled = None
+                lead_days = None
+            elif isinstance(payload, InventoryReorderPolicyChangedV2):
+                reorder_scaled = payload.reorder_minimum_scaled
+                reorder = reorder_scaled // 1000 if reorder_scaled is not None else None
+                target_scaled = payload.target_quantity_scaled
+                maximum_scaled = payload.maximum_quantity_scaled
+                lead_days = payload.supplier_lead_time_days
+            elif isinstance(payload, InventoryVerificationPolicyChangedV1):
+                recount_days = payload.recount_interval_days
             elif isinstance(payload, InventoryItemUpdatedV1):
                 name = payload.name
                 unit = payload.unit
@@ -422,6 +570,22 @@ class SQLAlchemyInventoryBalanceProjection:
                     if payload.reorder_threshold_scaled is not None
                     else None
                 )
+            elif isinstance(payload, InventoryItemUpdatedV3):
+                name = payload.name
+                unit = payload.unit_code
+                inventory_type = payload.inventory_type
+                unit_code = payload.unit_code
+                food_category = payload.food_category
+                food_type = payload.food_type
+                size_stage = payload.size_stage
+                preparation_method = payload.preparation_method
+                reorder_scaled = payload.reorder_threshold_scaled
+                reorder = (
+                    payload.reorder_threshold_scaled // 1000
+                    if payload.reorder_threshold_scaled is not None
+                    else None
+                )
+                stock_role = payload.stock_role
             elif isinstance(payload, InventoryItemArchivedV1):
                 if status != "active":
                     raise InventoryValidationError("Inventory item is already archived.")
@@ -449,6 +613,15 @@ class SQLAlchemyInventoryBalanceProjection:
                     "consumed_quantity_scaled=:consumed_scaled,"
                     "expired_quantity_scaled=:expired_scaled,"
                     "reorder_threshold_scaled=:reorder_scaled,"
+                    "target_quantity_scaled=:target_scaled,"
+                    "maximum_quantity_scaled=:maximum_scaled,"
+                    "supplier_lead_time_days=:lead_days,"
+                    "recount_interval_days=:recount_days,"
+                    "last_count_event_id=:last_count_event_id,"
+                    "last_counted_at=:last_counted_at,"
+                    "last_count_expected_scaled=:last_count_expected,"
+                    "last_count_actual_scaled=:last_count_actual,"
+                    "stock_role=:stock_role,"
                     "stream_version=:version,last_event_id=:event_id,updated_at=:updated_at "
                     "WHERE household_id=:household_id AND item_id=:item_id"
                 ),
@@ -473,6 +646,15 @@ class SQLAlchemyInventoryBalanceProjection:
                     "consumed_scaled": consumed_scaled,
                     "expired_scaled": expired_scaled,
                     "reorder_scaled": reorder_scaled,
+                    "target_scaled": target_scaled,
+                    "maximum_scaled": maximum_scaled,
+                    "lead_days": lead_days,
+                    "recount_days": recount_days,
+                    "last_count_event_id": last_count_event_id,
+                    "last_counted_at": last_counted_at,
+                    "last_count_expected": last_count_expected,
+                    "last_count_actual": last_count_actual,
+                    "stock_role": stock_role,
                     "version": event.stream_version,
                     "event_id": str(event.event_id),
                     "updated_at": event.recorded_at.isoformat(timespec="microseconds"),
@@ -558,6 +740,53 @@ class SQLAlchemyInventoryBalanceProjection:
             schema_version=1,
         )
 
+    def count_for_event(
+        self, household_id: UUID, item_id: UUID, event_id: UUID
+    ) -> InventoryCount | None:
+        with self._engine.connect() as connection:
+            row = (
+                connection.execute(
+                    text(
+                        "SELECT * FROM inventory_count_history WHERE household_id=:household_id "
+                        "AND item_id=:item_id AND root_count_event_id=:event_id"
+                    ),
+                    {
+                        "household_id": str(household_id),
+                        "item_id": str(item_id),
+                        "event_id": str(event_id),
+                    },
+                )
+                .mappings()
+                .one_or_none()
+            )
+        return _count(row) if row is not None else None
+
+    def list_counts(
+        self, household_id: UUID, item_id: UUID | None = None, workflow_id: UUID | None = None
+    ) -> tuple[InventoryCount, ...]:
+        clauses = ["household_id=:household_id"]
+        parameters: dict[str, str] = {"household_id": str(household_id)}
+        if item_id is not None:
+            clauses.append("item_id=:item_id")
+            parameters["item_id"] = str(item_id)
+        if workflow_id is not None:
+            clauses.append("workflow_id=:workflow_id")
+            parameters["workflow_id"] = str(workflow_id)
+        with self._engine.connect() as connection:
+            rows = (
+                connection.execute(
+                    text(
+                        "SELECT * FROM inventory_count_history WHERE "
+                        + " AND ".join(clauses)
+                        + " ORDER BY occurred_at DESC,root_count_event_id DESC"
+                    ),
+                    parameters,
+                )
+                .mappings()
+                .all()
+            )
+        return tuple(_count(row) for row in rows)
+
     @staticmethod
     def _row(connection: Connection, household_id: UUID, item_id: UUID) -> RowMapping | None:
         return (
@@ -573,12 +802,38 @@ class SQLAlchemyInventoryBalanceProjection:
         )
 
     @staticmethod
+    def _latest_count(
+        connection: Connection, household_id: UUID, item_id: UUID
+    ) -> tuple[str | None, str | None, int | None, int | None]:
+        row = (
+            connection.execute(
+                text(
+                    "SELECT root_count_event_id,occurred_at,expected_quantity_scaled,"
+                    "actual_quantity_scaled FROM inventory_count_history "
+                    "WHERE household_id=:household_id AND item_id=:item_id AND status='active' "
+                    "ORDER BY occurred_at DESC,root_count_event_id DESC LIMIT 1"
+                ),
+                {"household_id": str(household_id), "item_id": str(item_id)},
+            )
+            .mappings()
+            .one_or_none()
+        )
+        if row is None:
+            return None, None, None, None
+        return (
+            str(row["root_count_event_id"]),
+            str(row["occurred_at"]),
+            int(row["expected_quantity_scaled"]),
+            int(row["actual_quantity_scaled"]),
+        )
+
+    @staticmethod
     def _register(
         connection: Connection,
         event: DomainEvent,
-        payload: InventoryItemRegisteredV1 | InventoryItemRegisteredV2,
+        payload: InventoryItemRegisteredV1 | InventoryItemRegisteredV2 | InventoryItemRegisteredV3,
     ) -> None:
-        if isinstance(payload, InventoryItemRegisteredV2):
+        if isinstance(payload, InventoryItemRegisteredV2 | InventoryItemRegisteredV3):
             unit = payload.unit_code
             reorder = (
                 payload.reorder_threshold_scaled // 1000
@@ -593,6 +848,9 @@ class SQLAlchemyInventoryBalanceProjection:
             size_stage = payload.size_stage
             preparation_method = payload.preparation_method
             reorder_scaled = payload.reorder_threshold_scaled
+            stock_role = (
+                payload.stock_role if isinstance(payload, InventoryItemRegisteredV3) else None
+            )
         else:
             unit = payload.unit
             reorder = payload.reorder_threshold
@@ -606,6 +864,7 @@ class SQLAlchemyInventoryBalanceProjection:
             reorder_scaled = (
                 payload.reorder_threshold * 1000 if payload.reorder_threshold is not None else None
             )
+            stock_role = None
         connection.execute(
             text(
                 "INSERT INTO inventory_balance "
@@ -614,10 +873,10 @@ class SQLAlchemyInventoryBalanceProjection:
                 "status,last_event_id,updated_at,inventory_type,unit_code,legacy_unit,"
                 "food_category,food_type,size_stage,preparation_method,on_hand_quantity_scaled,"
                 "reserved_quantity_scaled,consumed_quantity_scaled,expired_quantity_scaled,"
-                "reorder_threshold_scaled) VALUES "
+                "reorder_threshold_scaled,stock_role) VALUES "
                 "(:household_id,:item_id,:name,:unit,0,0,0,0,:reorder,1,'active',"
                 ":event_id,:updated_at,:inventory_type,:unit_code,:legacy_unit,:food_category,"
-                ":food_type,:size_stage,:preparation_method,0,0,0,0,:reorder_scaled)"
+                ":food_type,:size_stage,:preparation_method,0,0,0,0,:reorder_scaled,:stock_role)"
             ),
             {
                 "household_id": str(event.household_id),
@@ -633,6 +892,7 @@ class SQLAlchemyInventoryBalanceProjection:
                 "size_stage": size_stage,
                 "preparation_method": preparation_method,
                 "reorder_scaled": reorder_scaled,
+                "stock_role": stock_role,
                 "event_id": str(event.event_id),
                 "updated_at": event.recorded_at.isoformat(timespec="microseconds"),
             },
@@ -670,4 +930,57 @@ def _balance(row: RowMapping) -> InventoryBalance:
             if row["reorder_threshold_scaled"] is not None
             else None
         ),
+        target_quantity_scaled=(
+            int(row["target_quantity_scaled"])
+            if row["target_quantity_scaled"] is not None
+            else None
+        ),
+        maximum_quantity_scaled=(
+            int(row["maximum_quantity_scaled"])
+            if row["maximum_quantity_scaled"] is not None
+            else None
+        ),
+        supplier_lead_time_days=(
+            int(row["supplier_lead_time_days"])
+            if row["supplier_lead_time_days"] is not None
+            else None
+        ),
+        recount_interval_days=(
+            int(row["recount_interval_days"]) if row["recount_interval_days"] is not None else None
+        ),
+        last_count_event_id=(
+            UUID(str(row["last_count_event_id"])) if row["last_count_event_id"] else None
+        ),
+        last_counted_at=(
+            datetime.fromisoformat(str(row["last_counted_at"])) if row["last_counted_at"] else None
+        ),
+        last_count_expected_scaled=(
+            int(row["last_count_expected_scaled"])
+            if row["last_count_expected_scaled"] is not None
+            else None
+        ),
+        last_count_actual_scaled=(
+            int(row["last_count_actual_scaled"])
+            if row["last_count_actual_scaled"] is not None
+            else None
+        ),
+        stock_role_override=(str(row["stock_role"]) if row["stock_role"] else None),
+    )
+
+
+def _count(row: RowMapping) -> InventoryCount:
+    return InventoryCount(
+        household_id=UUID(str(row["household_id"])),
+        item_id=UUID(str(row["item_id"])),
+        root_count_event_id=UUID(str(row["root_count_event_id"])),
+        effective_event_id=UUID(str(row["effective_event_id"])),
+        workflow_id=UUID(str(row["workflow_id"])),
+        expected_quantity_scaled=int(row["expected_quantity_scaled"]),
+        actual_quantity_scaled=int(row["actual_quantity_scaled"]),
+        variance_quantity_scaled=int(row["variance_quantity_scaled"]),
+        count_context=str(row["count_context"]),
+        note=str(row["note"]) if row["note"] else None,
+        actor_user_id=UUID(str(row["actor_user_id"])),
+        occurred_at=datetime.fromisoformat(str(row["occurred_at"])),
+        status=str(row["status"]),
     )

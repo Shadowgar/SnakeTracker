@@ -8,12 +8,16 @@ from typing import Protocol
 from uuid import UUID, uuid4
 
 from snaketracker.application.inventory import InventoryBalanceProjection
-from snaketracker.domains.inventory.catalog import UNIT_BY_CODE, validate_catalog
+from snaketracker.domains.inventory.catalog import (
+    UNIT_BY_CODE,
+    resolve_stock_role,
+    validate_catalog,
+)
 from snaketracker.domains.inventory.contracts import (
     InventoryCostAssignedV1,
     InventoryCostAssignmentCorrectedV1,
     InventoryCostAssignmentPortionV1,
-    InventoryItemRegisteredV2,
+    InventoryItemRegisteredV3,
     InventoryReceiptCorrectedV1,
     InventoryStockReceivedV2,
     InventoryStockReceivedV3,
@@ -145,6 +149,7 @@ class AcquireNewInventoryCommand:
     vendor: str | None
     reference: str | None
     occurred_at: datetime
+    stock_role: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -259,6 +264,11 @@ class PurchaseService:
         _require_manager(command.actor_role)
         name = _required_text(command.name, "Inventory name", 200)
         catalog = _catalog_fields(command)
+        stock_role = resolve_stock_role(
+            command.stock_role,
+            command.inventory_type,
+            name=name,
+        )
         if command.quantity_scaled < 0:
             raise PurchaseValidationError("Inventory quantity cannot be negative.")
         if command.quantity_scaled:
@@ -309,7 +319,7 @@ class PurchaseService:
             item_key,
             1,
             "inventory.item_registered",
-            InventoryItemRegisteredV2(item_id, name, *catalog, threshold),
+            InventoryItemRegisteredV3(item_id, name, *catalog, threshold, stock_role),
             command.actor_user_id,
             command.correlation_id,
             command.idempotency_key,
@@ -318,7 +328,7 @@ class PurchaseService:
             "Inventory item registered",
             None,
             (EventSubject("inventory_item", item_id, "primary"),),
-            schema_version=2,
+            schema_version=3,
         )
         purchase_id: UUID | None = None
         streams: list[StreamAppend] = []

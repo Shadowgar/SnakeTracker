@@ -1,0 +1,292 @@
+{
+  "status": "passed",
+  "browser": "Chromium 1208 native ARM64",
+  "origin": "http://127.0.0.1:8092",
+  "qualificationDatabase": "/tmp/carekeeper-m65-b-correction-browser.0nRmwz/e3b6e0f5ee164f25bac7e13336c1002c/snaketracker.sqlite3",
+  "activeDatabase": "/home/rocco/SnakeTracker/runtime/phase2/snaketracker.sqlite3",
+  "activeDatabaseMutatedByBrowserQualification": false,
+  "screenshotDimensionsVerified": true,
+  "visualReview": {
+    "status": "passed",
+    "reviewedStates": 22,
+    "mobileViewport": "390x844",
+    "desktopViewport": "1440x900",
+    "languageAssessment": "Keeper-facing stock roles, attention, check-stock choices, quantity confirmation, progress, and completion are understandable without warehouse terminology.",
+    "postReviewCorrection": "Separated the changed item name and quantity summary on the completion row; affected axe, overflow, and console checks passed after correction."
+  },
+  "createdItemIds": {
+    "lowId": "0c77f62f-f82b-4a64-88ed-a8f9a478cd95",
+    "changeId": "ffb808cb-83d5-494c-85c3-ba852f74096e",
+    "matchId": "b1331eb1-da52-4f63-a5a3-4340b91676de",
+    "waterId": "e3fe2d84-b9d1-4b96-a832-1c31a73b4104",
+    "spareId": "ffc56b82-a4bf-4532-b0dc-9a1d067310ae",
+    "equipmentId": "04320d18-1bda-4446-afe5-55e079f96f4f"
+  },
+  "required": {
+    "calm": true,
+    "attentionHasLow": true,
+    "attentionHasTwoDue": true,
+    "directRoleScoped": true,
+    "equipmentHasSpareGroup": true,
+    "equipmentHasEquipmentGroup": true,
+    "equipmentHasNoDisuseWarning": true,
+    "allGrouped": true,
+    "recommendedTwo": true,
+    "directProgressExact": true,
+    "secondProgressExact": true,
+    "completionUpdated": true,
+    "completionDifference": true,
+    "exactCaptureCount": true,
+    "zeroAxeViolations": true,
+    "noOverflow": true,
+    "noConsoleDiagnostics": true,
+    "noPageErrors": true,
+    "noFailedRequests": true,
+    "noHttpErrors": true
+  },
+  "attentionText": "NEEDS ATTENTION\n\n3 care items to review\n\n1 low or nearing reorder · 2 stock checks due\n\nCheck 2 items",
+  "recommendedText": "RECOMMENDED\n\nCheck 2 items due now\n\nThese are the items with a stock-check reminder that is due.\n\nStart",
+  "directProgress": "1 OF 2",
+  "secondProgress": "2 OF 2",
+  "completionText": "INVENTORY\n\nStock check complete\n\n1 item updated · 1 matched.\n\nChanges\nQualification Match MouseUpdated from 20 to 18 each\nView item\nCheck more stock\nCare stock",
+  "groupedTypes": [
+    "Food",
+    "Water & Hydration",
+    "Equipment",
+    "Heating & Lighting",
+    "Needs setup"
+  ],
+  "captures": [
+    {
+      "label": "no-attention-calm-state",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-mobile-390x844-no-attention-calm-state.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "no-attention-calm-state",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-desktop-1440x900-no-attention-calm-state.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "care-stock-default-overview",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-mobile-390x844-care-stock-default-overview.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "care-stock-default-overview",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-desktop-1440x900-care-stock-default-overview.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "food-section",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-mobile-390x844-food-section.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "food-section",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-desktop-1440x900-food-section.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "attention-actionable-items",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-mobile-390x844-attention-actionable-items.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "attention-actionable-items",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-desktop-1440x900-attention-actionable-items.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "equipment-and-spares",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-mobile-390x844-equipment-and-spares.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "equipment-and-spares",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-desktop-1440x900-equipment-and-spares.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "all-inventory-grouped",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-mobile-390x844-all-inventory-grouped.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "all-inventory-grouped",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-desktop-1440x900-all-inventory-grouped.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "check-stock-start",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-mobile-390x844-check-stock-start.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "check-stock-start",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-desktop-1440x900-check-stock-start.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "direct-due-items-workflow",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-mobile-390x844-direct-due-items-workflow.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "direct-due-items-workflow",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-desktop-1440x900-direct-due-items-workflow.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "quick-yes-matches-stock-check",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-mobile-390x844-quick-yes-matches-stock-check.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "quick-yes-matches-stock-check",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-desktop-1440x900-quick-yes-matches-stock-check.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "changed-quantity-stock-check",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-mobile-390x844-changed-quantity-stock-check.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "changed-quantity-stock-check",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-desktop-1440x900-changed-quantity-stock-check.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "completion-summary",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-mobile-390x844-completion-summary.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "completion-summary",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/b-inventory-intelligence/screenshots/owner-correction-desktop-1440x900-completion-summary.png",
+      "noHorizontalOverflow": true
+    }
+  ],
+  "axe": {
+    "scans": [
+      {
+        "label": "mobile-390x844-no-attention-calm-state",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-no-attention-calm-state",
+        "violations": []
+      },
+      {
+        "label": "mobile-390x844-care-stock-default-overview",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-care-stock-default-overview",
+        "violations": []
+      },
+      {
+        "label": "mobile-390x844-food-section",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-food-section",
+        "violations": []
+      },
+      {
+        "label": "mobile-390x844-attention-actionable-items",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-attention-actionable-items",
+        "violations": []
+      },
+      {
+        "label": "mobile-390x844-equipment-and-spares",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-equipment-and-spares",
+        "violations": []
+      },
+      {
+        "label": "mobile-390x844-all-inventory-grouped",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-all-inventory-grouped",
+        "violations": []
+      },
+      {
+        "label": "mobile-390x844-check-stock-start",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-check-stock-start",
+        "violations": []
+      },
+      {
+        "label": "mobile-390x844-direct-due-items-workflow",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-direct-due-items-workflow",
+        "violations": []
+      },
+      {
+        "label": "mobile-390x844-quick-yes-matches-stock-check",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-quick-yes-matches-stock-check",
+        "violations": []
+      },
+      {
+        "label": "mobile-390x844-changed-quantity-stock-check",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-changed-quantity-stock-check",
+        "violations": []
+      },
+      {
+        "label": "mobile-390x844-completion-summary",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-completion-summary",
+        "violations": []
+      }
+    ],
+    "totalViolations": 0
+  },
+  "console": {
+    "diagnostics": [],
+    "pageErrors": [],
+    "failedRequests": [],
+    "httpErrors": []
+  }
+}

@@ -53,7 +53,11 @@ from snaketracker.domains.expenses.contracts import (
     ExpenseVoidedV1,
 )
 from snaketracker.domains.households.contracts import HouseholdCreatedV1, HouseholdOwnerAddedV1
-from snaketracker.domains.inventory.catalog import UNIT_BY_CODE, validate_catalog
+from snaketracker.domains.inventory.catalog import (
+    STOCK_ROLE_BY_CODE,
+    UNIT_BY_CODE,
+    validate_catalog,
+)
 from snaketracker.domains.inventory.contracts import (
     InventoryConsumptionReversedV1,
     InventoryConsumptionReversedV2,
@@ -63,20 +67,26 @@ from snaketracker.domains.inventory.contracts import (
     InventoryItemArchivedV1,
     InventoryItemRegisteredV1,
     InventoryItemRegisteredV2,
+    InventoryItemRegisteredV3,
     InventoryItemRestoredV1,
     InventoryItemUpdatedV1,
     InventoryItemUpdatedV2,
+    InventoryItemUpdatedV3,
     InventoryReceiptCorrectedV1,
     InventoryReorderPolicyChangedV1,
+    InventoryReorderPolicyChangedV2,
     InventoryStockAdjustedV1,
     InventoryStockAdjustedV2,
     InventoryStockConsumedV1,
     InventoryStockConsumedV2,
+    InventoryStockConsumedV3,
+    InventoryStockCountedV1,
     InventoryStockExpiredV1,
     InventoryStockReceivedV1,
     InventoryStockReceivedV2,
     InventoryStockReceivedV3,
     InventoryStockReservedV1,
+    InventoryVerificationPolicyChangedV1,
 )
 from snaketracker.domains.purchases.contracts import (
     PurchaseCorrectedV1,
@@ -1148,6 +1158,23 @@ def _deserialize_inventory_item_registered_v2(data: Mapping[str, object]) -> Eve
     )
 
 
+def _inventory_stock_role(data: Mapping[str, object], label: str) -> str:
+    role = _required_payload_text(data, "stock_role", label)
+    if role not in STOCK_ROLE_BY_CODE:
+        raise ValueError(f"Stored {label} role is invalid.")
+    return role
+
+
+def _deserialize_inventory_item_registered_v3(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryItemRegisteredV3, data)
+    return InventoryItemRegisteredV3(
+        _uuid_field(data, "item_id", "role-aware inventory registration"),
+        _required_payload_text(data, "name", "role-aware inventory registration"),
+        *_inventory_catalog_fields(data, "role-aware inventory registration"),
+        _inventory_stock_role(data, "role-aware inventory registration"),
+    )
+
+
 def _deserialize_inventory_item_updated(data: Mapping[str, object]) -> EventPayload:
     _require_exact_fields(InventoryItemUpdatedV1, data)
     threshold = data["reorder_threshold"]
@@ -1165,6 +1192,15 @@ def _deserialize_inventory_item_updated_v2(data: Mapping[str, object]) -> EventP
     return InventoryItemUpdatedV2(
         _required_payload_text(data, "name", "structured inventory update"),
         *_inventory_catalog_fields(data, "structured inventory update"),
+    )
+
+
+def _deserialize_inventory_item_updated_v3(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryItemUpdatedV3, data)
+    return InventoryItemUpdatedV3(
+        _required_payload_text(data, "name", "role-aware inventory update"),
+        *_inventory_catalog_fields(data, "role-aware inventory update"),
+        _inventory_stock_role(data, "role-aware inventory update"),
     )
 
 
@@ -1292,6 +1328,30 @@ def _deserialize_inventory_stock_consumed_v2(data: Mapping[str, object]) -> Even
     )
 
 
+def _deserialize_inventory_stock_consumed_v3(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryStockConsumedV3, data)
+
+    def optional_uuid(field: str) -> UUID | None:
+        value = data[field]
+        if value is None:
+            return None
+        return _uuid_field(data, field, "inventory use")
+
+    source = optional_uuid("source_event_id")
+    quantity = _payload_integer(data, "quantity_scaled", "inventory use")
+    use_kind = _required_payload_text(data, "use_kind", "inventory use")
+    if quantity <= 0 or use_kind not in {"care", "maintenance", "discarded", "other"}:
+        raise ValueError("Stored inventory use payload is invalid.")
+    return InventoryStockConsumedV3(
+        quantity,
+        source,
+        use_kind,
+        optional_uuid("related_animal_id"),
+        optional_uuid("related_enclosure_id"),
+        _optional_payload_text(data, "note", "inventory use"),
+    )
+
+
 def _deserialize_inventory_consumption_reversed(data: Mapping[str, object]) -> EventPayload:
     _require_exact_fields(InventoryConsumptionReversedV1, data)
     return InventoryConsumptionReversedV1(
@@ -1326,6 +1386,29 @@ def _deserialize_inventory_stock_adjusted_v2(data: Mapping[str, object]) -> Even
     )
 
 
+def _deserialize_inventory_stock_counted(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryStockCountedV1, data)
+    expected = _payload_integer(data, "expected_quantity_scaled", "inventory count")
+    actual = _payload_integer(data, "actual_quantity_scaled", "inventory count")
+    variance = _payload_integer(data, "variance_quantity_scaled", "inventory count")
+    context = _required_payload_text(data, "count_context", "inventory count")
+    if (
+        expected < 0
+        or actual < 0
+        or variance != actual - expected
+        or context not in {"single", "full", "category", "cycle"}
+    ):
+        raise ValueError("Stored inventory count payload is invalid.")
+    return InventoryStockCountedV1(
+        expected,
+        actual,
+        variance,
+        context,
+        _uuid_field(data, "workflow_id", "inventory count"),
+        _optional_payload_text(data, "note", "inventory count"),
+    )
+
+
 def _deserialize_inventory_stock_expired(data: Mapping[str, object]) -> EventPayload:
     _require_exact_fields(InventoryStockExpiredV1, data)
     return InventoryStockExpiredV1(
@@ -1340,6 +1423,41 @@ def _deserialize_inventory_reorder_changed(data: Mapping[str, object]) -> EventP
     if threshold is not None and type(threshold) is not int:
         raise ValueError("Stored inventory reorder payload is invalid.")
     return InventoryReorderPolicyChangedV1(threshold)
+
+
+def _deserialize_inventory_reorder_changed_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryReorderPolicyChangedV2, data)
+
+    def optional_integer(field: str) -> int | None:
+        value = data[field]
+        if value is not None and type(value) is not int:
+            raise ValueError("Stored inventory policy payload is invalid.")
+        return value
+
+    minimum = optional_integer("reorder_minimum_scaled")
+    target = optional_integer("target_quantity_scaled")
+    maximum = optional_integer("maximum_quantity_scaled")
+    lead = optional_integer("supplier_lead_time_days")
+    quantities = tuple(value for value in (minimum, target, maximum) if value is not None)
+    if (
+        any(value < 0 for value in quantities)
+        or (minimum is not None and target is not None and minimum > target)
+        or (target is not None and maximum is not None and target > maximum)
+        or (target is None and minimum is not None and maximum is not None and minimum > maximum)
+        or (lead is not None and not 1 <= lead <= 3650)
+    ):
+        raise ValueError("Stored inventory policy payload is invalid.")
+    return InventoryReorderPolicyChangedV2(minimum, target, maximum, lead)
+
+
+def _deserialize_inventory_verification_changed(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryVerificationPolicyChangedV1, data)
+    value = data["recount_interval_days"]
+    if value is not None and type(value) is not int:
+        raise ValueError("Stored inventory verification policy is invalid.")
+    if value is not None and not 1 <= value <= 3650:
+        raise ValueError("Stored inventory verification policy is invalid.")
+    return InventoryVerificationPolicyChangedV1(value)
 
 
 INVENTORY_CONTRACTS = (
@@ -1360,6 +1478,14 @@ INVENTORY_CONTRACTS = (
         (SubjectRequirement("inventory_item", "primary"),),
     ),
     EventContractRegistration(
+        "inventory.item_registered",
+        3,
+        "inventory",
+        InventoryItemRegisteredV3,
+        _deserialize_inventory_item_registered_v3,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
         "inventory.item_updated",
         1,
         "inventory",
@@ -1373,6 +1499,14 @@ INVENTORY_CONTRACTS = (
         "inventory",
         InventoryItemUpdatedV2,
         _deserialize_inventory_item_updated_v2,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
+        "inventory.item_updated",
+        3,
+        "inventory",
+        InventoryItemUpdatedV3,
+        _deserialize_inventory_item_updated_v3,
         (SubjectRequirement("inventory_item", "primary"),),
     ),
     EventContractRegistration(
@@ -1490,6 +1624,18 @@ INVENTORY_CONTRACTS = (
         (SubjectRequirement("inventory_item", "primary"),),
     ),
     EventContractRegistration(
+        "inventory.stock_consumed",
+        3,
+        "inventory",
+        InventoryStockConsumedV3,
+        _deserialize_inventory_stock_consumed_v3,
+        (
+            SubjectRequirement("inventory_item", "primary"),
+            SubjectRequirement("animal", "related", minimum_count=0),
+            SubjectRequirement("enclosure", "related", minimum_count=0),
+        ),
+    ),
+    EventContractRegistration(
         "inventory.consumption_reversed",
         1,
         "inventory",
@@ -1514,6 +1660,20 @@ INVENTORY_CONTRACTS = (
         (SubjectRequirement("inventory_item", "primary"),),
     ),
     EventContractRegistration(
+        "inventory.stock_counted",
+        1,
+        "inventory",
+        InventoryStockCountedV1,
+        _deserialize_inventory_stock_counted,
+        (SubjectRequirement("inventory_item", "primary"),),
+        CorrectionCapabilities(
+            correctable=True,
+            voidable=True,
+            reinstatable=True,
+            required_role="owner",
+        ),
+    ),
+    EventContractRegistration(
         "inventory.stock_adjusted",
         2,
         "inventory",
@@ -1535,6 +1695,22 @@ INVENTORY_CONTRACTS = (
         "inventory",
         InventoryReorderPolicyChangedV1,
         _deserialize_inventory_reorder_changed,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
+        "inventory.reorder_policy_changed",
+        2,
+        "inventory",
+        InventoryReorderPolicyChangedV2,
+        _deserialize_inventory_reorder_changed_v2,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
+        "inventory.verification_policy_changed",
+        1,
+        "inventory",
+        InventoryVerificationPolicyChangedV1,
+        _deserialize_inventory_verification_changed,
         (SubjectRequirement("inventory_item", "primary"),),
     ),
 )

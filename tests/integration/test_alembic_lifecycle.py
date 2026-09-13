@@ -33,14 +33,10 @@ from snaketracker.infrastructure.identity.bootstrap_repository import (
     SQLAlchemyHouseholdBootstrapRepository,
 )
 from snaketracker.infrastructure.inventory.projections import SQLAlchemyInventoryBalanceProjection
-from snaketracker.infrastructure.purchases.projections import (
-    SQLAlchemyInventoryAccountingProjection,
-    SQLAlchemyInventoryEffectiveReceiptProjection,
-)
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 
 ROOT = Path(__file__).parents[2]
-REVISION = "0016_inventory_acquisition"
+REVISION = "0018_inventory_stock_roles"
 PHASE_FIVE_TABLES = {
     "aggregate_snapshots",
     "alembic_version",
@@ -61,6 +57,7 @@ PHASE_FIVE_TABLES = {
     "household_summaries",
     "idempotency_operations",
     "inventory_balance",
+    "inventory_count_history",
     "inventory_consumption_links",
     "inventory_consumption_allocations",
     "inventory_consumption_links_v2",
@@ -192,6 +189,7 @@ def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -
             "size_stage",
             "preparation_method",
             "on_hand_quantity_scaled",
+            "stock_role",
         } <= inventory_columns
         reset_columns = {
             column["name"] for column in inspector.get_columns("password_reset_credentials")
@@ -215,52 +213,37 @@ def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -
     assert current_revision(database) == REVISION
 
 
-def test_0015_upgrade_preserves_representative_untracked_stock(tmp_path: Path) -> None:
-    database = tmp_path / "representative-0015-upgrade.sqlite3"
+def test_0018_upgrade_preserves_existing_structured_stock_and_derives_role(
+    tmp_path: Path,
+) -> None:
+    database = tmp_path / "representative-0018-upgrade.sqlite3"
     config = alembic_config(database)
-    command.upgrade(config, "0015_purchases_fifo")
+    command.upgrade(config, "0017_inventory_intelligence")
     engine = create_sqlite_engine(database, require_local_storage=False)
+    household_id = uuid4()
+    item_id = uuid4()
     try:
-        bootstrap = HouseholdBootstrapService(
-            SQLAlchemyHouseholdBootstrapRepository(engine),
-            Argon2PasswordHasher.for_testing(),
-            command_hash_secret=b"m65-a2-correction-upgrade-secret",
-        ).bootstrap(
-            BootstrapCommand(
-                household_name="A2 Upgrade",
-                timezone="UTC",
-                owner_email="owner@example.com",
-                owner_display_name="Owner",
-                password="correct horse battery staple",
-                idempotency_key="a2-upgrade-bootstrap",
-                correlation_id=uuid4(),
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO inventory_balance "
+                    "(household_id,item_id,name,unit,on_hand_quantity,reserved_quantity,"
+                    "consumed_quantity,expired_quantity,reorder_threshold,stream_version,"
+                    "last_event_id,updated_at,status,inventory_type,unit_code,legacy_unit,"
+                    "food_category,food_type,size_stage,preparation_method,"
+                    "on_hand_quantity_scaled,reserved_quantity_scaled,"
+                    "consumed_quantity_scaled,expired_quantity_scaled,"
+                    "reorder_threshold_scaled) VALUES "
+                    "(:household_id,:item_id,'Legacy untracked rats','each',20,0,0,0,"
+                    "NULL,1,:event_id,'2026-09-01T12:00:00+00:00','active','food',"
+                    "'each',NULL,'whole_prey','rat','small','frozen_thawed',20000,0,0,0,NULL)"
+                ),
+                {
+                    "household_id": str(household_id),
+                    "item_id": str(item_id),
+                    "event_id": str(uuid4()),
+                },
             )
-        )
-        balance = SQLAlchemyInventoryBalanceProjection(engine)
-        inventory = InventoryService(
-            SQLAlchemyEventStore(engine),
-            SQLAlchemyInventoryAccountingProjection(
-                balance, SQLAlchemyInventoryEffectiveReceiptProjection()
-            ),
-        )
-        item = inventory.register_structured(
-            RegisterStructuredInventoryItemCommand(
-                bootstrap.household_id,
-                bootstrap.user_id,
-                uuid4(),
-                "a2-upgrade-stock",
-                "Legacy untracked rats",
-                "food",
-                "each",
-                "whole_prey",
-                "rat",
-                "small",
-                "frozen_thawed",
-                None,
-                20_000,
-            )
-        )
-        with engine.connect() as connection:
             before_events = connection.execute(
                 text("SELECT count(*) FROM domain_events")
             ).scalar_one()
@@ -272,27 +255,73 @@ def test_0015_upgrade_preserves_representative_untracked_stock(tmp_path: Path) -
     try:
         with engine.connect() as connection:
             assert current_revision(database) == REVISION
-            assert (
-                connection.execute(
-                    text("SELECT on_hand_quantity_scaled FROM inventory_balance WHERE item_id=:id"),
-                    {"id": str(item.item_id)},
-                ).scalar_one()
-                == 20_000
-            )
+            assert connection.execute(
+                text(
+                    "SELECT on_hand_quantity_scaled,stock_role FROM inventory_balance "
+                    "WHERE item_id=:id"
+                ),
+                {"id": str(item_id)},
+            ).one() == (20_000, None)
             assert (
                 connection.execute(text("SELECT count(*) FROM domain_events")).scalar_one()
                 == before_events
             )
-            assert (
-                connection.execute(
-                    text("SELECT count(*) FROM inventory_effective_cost_assignments")
-                ).scalar_one()
-                == 0
-            )
             assert connection.exec_driver_sql("PRAGMA integrity_check").scalar_one() == "ok"
             assert connection.exec_driver_sql("PRAGMA foreign_key_check").all() == []
+        balance = SQLAlchemyInventoryBalanceProjection(engine).balance_for(household_id, item_id)
+        assert balance is not None
+        assert balance.stock_role == "care_supply"
     finally:
         engine.dispose()
+
+
+def test_0018_downgrade_blocks_role_aware_inventory_history(tmp_path: Path) -> None:
+    database = tmp_path / "inventory-stock-role-downgrade.sqlite3"
+    config = alembic_config(database)
+    command.upgrade(config, "head")
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    try:
+        bootstrap = HouseholdBootstrapService(
+            SQLAlchemyHouseholdBootstrapRepository(engine),
+            Argon2PasswordHasher.for_testing(),
+            command_hash_secret=b"inventory-role-migration-guard-32b",
+        ).bootstrap(
+            BootstrapCommand(
+                household_name="Role Guard",
+                timezone="UTC",
+                owner_email="owner@example.com",
+                owner_display_name="Owner",
+                password="correct horse battery staple",
+                idempotency_key="role-guard-bootstrap",
+                correlation_id=uuid4(),
+            )
+        )
+        InventoryService(
+            SQLAlchemyEventStore(engine), SQLAlchemyInventoryBalanceProjection(engine)
+        ).register_structured(
+            RegisterStructuredInventoryItemCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                uuid4(),
+                "role-guard-item",
+                "Spare heat emitter",
+                "heating_lighting",
+                "each",
+                None,
+                None,
+                None,
+                None,
+                None,
+                2_000,
+                "replacement_spare",
+            )
+        )
+    finally:
+        engine.dispose()
+
+    with pytest.raises(RuntimeError, match="stock-role downgrade blocked"):
+        command.downgrade(config, "0017_inventory_intelligence")
+    assert current_revision(database) == REVISION
 
 
 def test_inventory_lifecycle_migration_blocks_lossy_downgrade(tmp_path: Path) -> None:

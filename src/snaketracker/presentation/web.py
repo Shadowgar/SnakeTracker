@@ -14,6 +14,7 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Protocol
+from urllib.parse import urlencode
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -111,12 +112,24 @@ from snaketracker.application.inventory import (
     AdjustScaledStockCommand,
     AdjustStockCommand,
     ArchiveInventoryItemCommand,
+    ChangeInventoryPolicyCommand,
     ConfigureInventoryItemCommand,
+    CorrectStockCountCommand,
+    CountStockCommand,
+    InventoryBalance,
     InventoryService,
     InventoryValidationError,
     ReceiveScaledStockCommand,
     ReceiveStockCommand,
     RestoreInventoryItemCommand,
+    UseInventoryCommand,
+)
+from snaketracker.application.inventory_intelligence import (
+    InventoryInsight,
+    InventoryIntelligenceProjection,
+    attention_reasons,
+    shows_consumption_forecast,
+    stock_check_is_due,
 )
 from snaketracker.application.purchases import (
     AcquireNewInventoryCommand,
@@ -169,13 +182,16 @@ from snaketracker.domains.inventory.catalog import (
     OTHER_STOCK_BASES,
     PREPARATION_METHODS,
     SIZE_STAGES,
+    STOCK_ROLES,
     SUBSTRATE_FORMS,
     SUPPLEMENT_FORMS,
     UNITS,
+    WATER_STOCK_BASES,
     WHOLE_PREY_TYPES,
     format_quantity_scaled,
     parse_quantity_scaled,
     resolve_creation_unit_policy,
+    resolve_stock_role,
     validate_creation_unit,
 )
 from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
@@ -196,6 +212,7 @@ CSRF_COOKIE = "snaketracker_csrf"
 PACKAGE_DIR = Path(__file__).parent
 templates = Jinja2Templates(directory=PACKAGE_DIR / "templates")
 templates.env.globals["current_year"] = datetime.now(UTC).year
+templates.env.globals["format_quantity"] = format_quantity_scaled
 
 CARE_FORM_DETAILS: dict[str, tuple[str, str, str]] = {
     "feeding": ("Record feeding", "Choose food from Inventory and record the outcome.", "feedings"),
@@ -401,6 +418,84 @@ def _inventory_cost_status(cost_summary: Any, item: Any) -> str:
     return "$0.00 tracked value"
 
 
+def _inventory_duration(days: int | None) -> str:
+    if days is None:
+        return "Not enough usage history"
+    if days < 14:
+        return f"About {days} day{'s' if days != 1 else ''}"
+    if days < 70:
+        weeks = max(1, round(days / 7))
+        return f"About {weeks} week{'s' if weeks != 1 else ''}"
+    months = max(1, round(days / 30))
+    return f"About {months} month{'s' if months != 1 else ''}"
+
+
+def _inventory_insight_view(item: Any, insight: InventoryInsight, timezone: str) -> dict[str, Any]:
+    zone = ZoneInfo(timezone)
+    last_count = item.last_counted_at.astimezone(zone) if item.last_counted_at else None
+    verification = {
+        "not_scheduled": "Stock checks not scheduled",
+        "due": "Check due",
+        "overdue": "Check due",
+        "verified_recently": f"Checked {last_count:%b %-d}" if last_count else "Checked recently",
+        "verified": f"Checked {last_count:%b %-d}" if last_count else "Checked",
+    }.get(insight.verification_state, "Stock check unavailable")
+    reorder = {
+        "reorder_now": "Reorder now",
+        "reorder_soon": "Reorder soon",
+        "stable": "Stock stable",
+        "not_configured": "Reorder level not set",
+    }.get(insight.reorder_state, "Stock status unavailable")
+    if insight.usage_state == "supported" and insight.daily_rate_scaled is not None:
+        weekly = int((insight.daily_rate_scaled * 7).to_integral_value())
+        usage = f"{format_quantity_scaled(weekly)} {item.unit_symbol} used per week"
+    elif insight.usage_state == "no_use_180":
+        usage = "No recorded use in 180 days"
+    elif insight.usage_state == "no_use_90":
+        usage = "No recorded use in 90 days"
+    elif insight.usage_state == "unavailable":
+        usage = "Usage information is updating"
+    else:
+        usage = "Not enough usage history"
+    trend = None
+    if (
+        insight.recent_30_daily_rate_scaled is not None
+        and insight.preceding_daily_rate_scaled is not None
+    ):
+        recent_weekly = int((insight.recent_30_daily_rate_scaled * 7).to_integral_value())
+        preceding_weekly = int((insight.preceding_daily_rate_scaled * 7).to_integral_value())
+        trend = (
+            f"{format_quantity_scaled(recent_weekly)} vs "
+            f"{format_quantity_scaled(preceding_weekly)} {item.unit_symbol} per week"
+        )
+    forecast = shows_consumption_forecast(item, insight)
+    reasons = attention_reasons(item, insight)
+    return {
+        "raw": insight,
+        "used_30": format_quantity_scaled(insight.used_30_scaled),
+        "used_90": format_quantity_scaled(insight.used_90_scaled),
+        "usage": usage,
+        "trend": trend,
+        "duration": _inventory_duration(insight.estimated_days_remaining) if forecast else None,
+        "reorder": reorder,
+        "verification": verification,
+        "last_received": (
+            insight.last_received_at.astimezone(zone).strftime("%b %-d, %Y")
+            if insight.last_received_at
+            else "No recorded restock"
+        ),
+        "above_maximum": (
+            format_quantity_scaled(insight.above_maximum_scaled)
+            if insight.above_maximum_scaled is not None
+            else None
+        ),
+        "show_forecast": forecast,
+        "attention_reasons": reasons,
+        "attention": bool(reasons),
+        "count_due": stock_check_is_due(item, insight),
+    }
+
+
 def _friendly_report_value(column: str, value: str) -> str:
     if column == "Occurred":
         try:
@@ -473,6 +568,8 @@ def _inventory_catalog_context() -> dict[str, object]:
         "supplement_forms": SUPPLEMENT_FORMS,
         "habitat_items": HABITAT_ITEMS,
         "other_stock_bases": OTHER_STOCK_BASES,
+        "water_stock_bases": WATER_STOCK_BASES,
+        "stock_roles": STOCK_ROLES,
     }
 
 
@@ -486,6 +583,7 @@ class _GuidedInventoryCreateValues:
     preparation_method: str | None
     starting_quantity_scaled: int
     reorder_threshold_scaled: int | None
+    stock_role: str
 
 
 def _guided_inventory_create_values(form: Any) -> _GuidedInventoryCreateValues:
@@ -525,6 +623,12 @@ def _guided_inventory_create_values(form: Any) -> _GuidedInventoryCreateValues:
             parse_quantity_scaled(threshold_value, unit_code, allow_zero=True)
             if threshold_value
             else None
+        ),
+        stock_role=resolve_stock_role(
+            _optional_form_text(form.get("stock_role", "")),
+            inventory_type,
+            name=str(form.get("name", "")),
+            context_category=context_category,
         ),
     )
 
@@ -900,6 +1004,7 @@ def create_web_router(
     backup_service: BackupService,
     enclosure_service: EnclosureService,
     inventory_service: InventoryService,
+    inventory_intelligence: InventoryIntelligenceProjection,
     purchase_service: PurchaseService,
     expense_service: ExpenseService,
     analytics_service: AnimalAnalyticsService,
@@ -2222,6 +2327,54 @@ def create_web_router(
             )
         return RedirectResponse("/settings/backups", status_code=303)
 
+    def inventory_insights_for(
+        principal: Principal, items: tuple[InventoryBalance, ...], as_of: datetime
+    ) -> dict[UUID, InventoryInsight]:
+        return {
+            item.item_id: inventory_intelligence.insight_for(
+                principal.household_id,
+                item.item_id,
+                principal.household_timezone,
+                as_of,
+            )
+            for item in items
+        }
+
+    def count_scope_items(
+        principal: Principal,
+        scope: str,
+        category: str,
+        selected_item: str,
+        stock_role: str = "",
+        workflow_id: UUID | None = None,
+    ) -> tuple[InventoryBalance, ...]:
+        items = tuple(
+            item
+            for item in inventory_service.list_balances(principal.household_id, status="active")
+            if not item.needs_setup and (not stock_role or item.stock_role == stock_role)
+        )
+        if scope == "category":
+            return tuple(item for item in items if item.inventory_type == category)
+        if scope == "single":
+            return tuple(item for item in items if str(item.item_id) == selected_item)
+        if scope == "cycle":
+            as_of = datetime.now(UTC)
+            insights = inventory_insights_for(principal, items, as_of)
+            due = tuple(item for item in items if stock_check_is_due(item, insights[item.item_id]))
+            if workflow_id is None:
+                return due
+            completed_ids = tuple(
+                count.item_id
+                for count in inventory_service.list_counts(
+                    principal.household_id, workflow_id=workflow_id
+                )
+            )
+            by_id = {item.item_id: item for item in items}
+            completed = tuple(by_id[item_id] for item_id in completed_ids if item_id in by_id)
+            completed_set = set(completed_ids)
+            return (*completed, *(item for item in due if item.item_id not in completed_set))
+        return items
+
     @router.get("/inventory", response_class=HTMLResponse)
     async def inventory_list(request: Request) -> Response:
         principal = principal_for(request, audit_denial=True)
@@ -2229,27 +2382,136 @@ def create_web_router(
             return RedirectResponse("/login", status_code=303)
         if "inventory.view" not in principal.capabilities:
             return _access_denied(request, "Inventory access denied")
-        status = "archived" if request.query_params.get("status") == "archived" else "active"
+        requested_view = request.query_params.get("view", "")
+        if request.query_params.get("status") == "archived":
+            requested_view = "archived"
+        view = (
+            requested_view if requested_view in {"care", "equipment", "all", "archived"} else "care"
+        )
+        search = request.query_params.get("q", "").strip()
+        quick_filter = request.query_params.get("filter", "")
+        if quick_filter not in {"low", "check_due", "cost"}:
+            quick_filter = ""
+        if projection_catch_up is not None:
+            projection_catch_up()
         active_items = inventory_service.list_balances(principal.household_id, status="active")
         archived_items = inventory_service.list_balances(principal.household_id, status="archived")
-        items = archived_items if status == "archived" else active_items
+        as_of = datetime.now(UTC)
+        active_insights = inventory_insights_for(principal, active_items, as_of)
+        source_items = archived_items if view == "archived" else active_items
+        if view == "care":
+            source_items = tuple(item for item in source_items if item.stock_role == "care_supply")
+        elif view == "equipment":
+            source_items = tuple(item for item in source_items if item.stock_role != "care_supply")
+        rows: list[dict[str, Any]] = []
+        for item in source_items:
+            raw_insight = active_insights.get(item.item_id) or inventory_intelligence.insight_for(
+                principal.household_id,
+                item.item_id,
+                principal.household_timezone,
+                as_of,
+            )
+            insight = _inventory_insight_view(
+                item,
+                raw_insight,
+                principal.household_timezone,
+            )
+            cost_summary = purchase_service.cost_summary_for(principal.household_id, item.item_id)
+            cost_not_tracked = bool(cost_summary.unknown_remaining_quantity_scaled)
+            haystack = " ".join(
+                str(value or "")
+                for value in (
+                    item.name,
+                    item.type_label,
+                    item.stock_role_label,
+                    item.food_category,
+                    item.food_type,
+                    item.size_stage,
+                    item.preparation_method,
+                )
+            ).casefold()
+            if search and search.casefold() not in haystack:
+                continue
+            if quick_filter == "low" and raw_insight.reorder_state not in {
+                "reorder_now",
+                "reorder_soon",
+            }:
+                continue
+            if quick_filter == "check_due" and not insight["count_due"]:
+                continue
+            if quick_filter == "cost" and not cost_not_tracked:
+                continue
+            rows.append(
+                {
+                    "item": item,
+                    "insight": insight,
+                    "cost_not_tracked": cost_not_tracked,
+                    "meta_label": (
+                        item.type_label if view == "equipment" else item.stock_role_label
+                    ),
+                }
+            )
+        rows.sort(key=lambda row: (not row["insight"]["attention"], row["item"].name.casefold()))
+        grouped: list[dict[str, Any]] = []
+        if view == "equipment":
+            for role in STOCK_ROLES:
+                if role.code == "care_supply":
+                    continue
+                grouped_rows = tuple(row for row in rows if row["item"].stock_role == role.code)
+                if grouped_rows:
+                    grouped.append({"code": role.code, "label": role.label, "rows": grouped_rows})
+        else:
+            for inventory_type in (*INVENTORY_TYPES, None):
+                grouped_rows = tuple(
+                    row
+                    for row in rows
+                    if row["item"].inventory_type
+                    == (inventory_type.code if inventory_type is not None else None)
+                )
+                if grouped_rows:
+                    grouped.append(
+                        {
+                            "code": (
+                                inventory_type.code if inventory_type is not None else "needs_setup"
+                            ),
+                            "label": (
+                                inventory_type.label
+                                if inventory_type is not None
+                                else "Needs setup"
+                            ),
+                            "rows": grouped_rows,
+                        }
+                    )
+        care_items = tuple(item for item in active_items if item.stock_role == "care_supply")
+        care_insights = {item.item_id: active_insights[item.item_id] for item in care_items}
+        care_due = tuple(
+            item for item in care_items if stock_check_is_due(item, care_insights[item.item_id])
+        )
+        care_reorder = sum(
+            1
+            for item in care_items
+            if "reorder" in attention_reasons(item, care_insights[item.item_id])
+        )
+        care_attention = sum(
+            1 for item in care_items if attention_reasons(item, care_insights[item.item_id])
+        )
         return protected_page(
             request,
             "inventory_list.html",
             principal,
             context={
-                "items": items,
-                "status": status,
+                "groups": tuple(grouped),
+                "view": view,
+                "search": search,
+                "quick_filter": quick_filter,
                 "inventory_summary": {
                     "active": len(active_items),
+                    "care": len(care_items),
                     "archived": len(archived_items),
                     "tracked": len(active_items) + len(archived_items),
-                    "attention": sum(
-                        1
-                        for item in active_items
-                        if item.reorder_threshold is not None
-                        and item.on_hand_quantity <= item.reorder_threshold
-                    ),
+                    "attention": care_attention,
+                    "reorder": care_reorder,
+                    "count_due": len(care_due),
                 },
             },
         )
@@ -2328,6 +2590,7 @@ def create_web_router(
                         vendor=_optional_form_text(form.get("vendor", "")),
                         reference=_optional_form_text(form.get("reference", "")),
                         occurred_at=occurred_at,
+                        stock_role=guided.stock_role,
                     )
                 )
                 result_item_id = result.item_id
@@ -2435,6 +2698,187 @@ def create_web_router(
         assert result_item_id is not None
         return RedirectResponse(f"/inventory/{result_item_id}", status_code=303)
 
+    @router.get("/inventory/count", response_class=HTMLResponse)
+    async def inventory_count_start(request: Request) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if "inventory.manage" not in principal.capabilities:
+            return _access_denied(request, "Inventory access denied")
+        if projection_catch_up is not None:
+            projection_catch_up()
+        scope = request.query_params.get("scope", "")
+        category = request.query_params.get("category", "")
+        selected_item = request.query_params.get("item", "")
+        stock_role = request.query_params.get("role", "")
+        if stock_role not in {"", "care_supply", "replacement_spare", "durable_asset"}:
+            stock_role = ""
+        active = tuple(
+            item
+            for item in inventory_service.list_balances(principal.household_id, status="active")
+            if not item.needs_setup
+        )
+        if scope not in {"full", "category", "cycle", "single"}:
+            due_items = count_scope_items(principal, "cycle", "", "")
+            return protected_page(
+                request,
+                "inventory_count_start.html",
+                principal,
+                context={
+                    "items": active,
+                    "care_items": tuple(
+                        item for item in active if item.stock_role == "care_supply"
+                    ),
+                    "due_items": due_items,
+                    "inventory_types": INVENTORY_TYPES,
+                },
+            )
+        try:
+            index = max(0, int(request.query_params.get("index", "0")))
+        except ValueError:
+            index = 0
+        try:
+            workflow_id = UUID(request.query_params.get("workflow", ""))
+        except ValueError:
+            workflow_id = uuid4()
+        items = count_scope_items(
+            principal, scope, category, selected_item, stock_role, workflow_id
+        )
+        if not items or index >= len(items):
+            counts = inventory_service.list_counts(principal.household_id, workflow_id=workflow_id)
+            count_rows = tuple(
+                {
+                    "count": count,
+                    "item": inventory_service.balance_for(principal.household_id, count.item_id),
+                }
+                for count in reversed(counts)
+            )
+            updated = sum(1 for count in counts if count.variance_quantity_scaled)
+            return protected_page(
+                request,
+                "inventory_count_complete.html",
+                principal,
+                context={
+                    "count_rows": count_rows,
+                    "workflow_id": workflow_id,
+                    "empty": not items,
+                    "updated": updated,
+                    "matched": len(counts) - updated,
+                },
+            )
+        return protected_page(
+            request,
+            "inventory_count.html",
+            principal,
+            context={
+                "item": items[index],
+                "scope": scope,
+                "category": category,
+                "selected_item": selected_item,
+                "stock_role": stock_role,
+                "index": index,
+                "total": len(items),
+                "workflow_id": workflow_id,
+                "values": {},
+                "conflict": False,
+            },
+        )
+
+    @router.post("/inventory/{item_id}/count", response_class=HTMLResponse)
+    async def inventory_count_save(request: Request, item_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "inventory.manage" not in principal.capabilities:
+            return _access_denied(request, "Inventory access denied")
+        scope = str(form.get("count_context", "single"))
+        category = str(form.get("category", ""))
+        selected_item = str(form.get("selected_item", ""))
+        stock_role = str(form.get("stock_role", ""))
+        if stock_role not in {"", "care_supply", "replacement_spare", "durable_asset"}:
+            stock_role = ""
+        index = 0
+        workflow_id = uuid4()
+        try:
+            index = _required_int(form.get("index", "0"), "count position")
+            workflow_id = UUID(str(form.get("workflow_id", "")))
+            item_uuid = UUID(item_id)
+            item = inventory_service.balance_for(principal.household_id, item_uuid)
+            if item is None or item.unit_code is None:
+                raise InventoryValidationError("Inventory item is unavailable for counting.")
+            inventory_service.count_stock(
+                CountStockCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    item_uuid,
+                    uuid4(),
+                    _form_idempotency_key(form),
+                    _required_int(form.get("expected_stream_version", ""), "stream version"),
+                    parse_quantity_scaled(
+                        str(form.get("actual_quantity", "")), item.unit_code, allow_zero=True
+                    ),
+                    scope,
+                    workflow_id,
+                    _optional_form_text(form.get("note", "")),
+                    datetime.now(UTC),
+                )
+            )
+        except ExpectedVersionConflictError:
+            try:
+                conflicted_item_id = UUID(item_id)
+            except ValueError:
+                return _not_found(request, "Inventory item not found")
+            item = inventory_service.balance_for(principal.household_id, conflicted_item_id)
+            if item is None:
+                return _not_found(request, "Inventory item not found")
+            return protected_page(
+                request,
+                "inventory_count.html",
+                principal,
+                status_code=409,
+                context={
+                    "item": item,
+                    "scope": scope,
+                    "category": category,
+                    "selected_item": selected_item,
+                    "index": index,
+                    "total": len(
+                        count_scope_items(
+                            principal,
+                            scope,
+                            category,
+                            selected_item,
+                            stock_role,
+                            workflow_id,
+                        )
+                    ),
+                    "workflow_id": workflow_id,
+                    "values": _form_values(form),
+                    "conflict": True,
+                    "stock_role": stock_role,
+                },
+            )
+        except (InventoryValidationError, FormValidationError, ValueError) as error:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=422,
+                context={"title": "Stock count could not be saved", "message": str(error)},
+            )
+        query = urlencode(
+            {
+                "scope": scope,
+                "category": category,
+                "item": selected_item,
+                "role": stock_role,
+                "index": index + 1,
+                "workflow": str(workflow_id),
+            }
+        )
+        return RedirectResponse(f"/inventory/count?{query}", status_code=303)
+
     @router.get("/inventory/{item_id}", response_class=HTMLResponse)
     async def inventory_detail(request: Request, item_id: str) -> Response:
         principal = principal_for(request, audit_denial=True)
@@ -2451,6 +2895,12 @@ def create_web_router(
         if projection_catch_up is not None:
             projection_catch_up()
         cost_summary = purchase_service.cost_summary_for(principal.household_id, item.item_id)
+        insight = inventory_intelligence.insight_for(
+            principal.household_id,
+            item.item_id,
+            principal.household_timezone,
+            datetime.now(UTC),
+        )
         return protected_page(
             request,
             "inventory_detail.html",
@@ -2459,6 +2909,10 @@ def create_web_router(
                 "item": item,
                 "errors": {},
                 "cost_summary": cost_summary,
+                "insight": _inventory_insight_view(item, insight, principal.household_timezone),
+                "counts": inventory_service.list_counts(
+                    principal.household_id, item_id=item.item_id
+                )[:5],
                 "remaining_value": (
                     _friendly_currency_values(cost_summary.known_remaining)
                     if cost_summary.known_remaining
@@ -2475,6 +2929,230 @@ def create_web_router(
                 ),
             },
         )
+
+    @router.get("/inventory/{item_id}/policy", response_class=HTMLResponse)
+    async def inventory_policy(request: Request, item_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if "inventory.manage" not in principal.capabilities:
+            return _access_denied(request, "Inventory access denied")
+        try:
+            item = inventory_service.balance_for(principal.household_id, UUID(item_id))
+        except ValueError:
+            item = None
+        if item is None or item.status != "active" or item.needs_setup:
+            return _not_found(request, "Inventory item not found")
+        return protected_page(
+            request,
+            "inventory_policy.html",
+            principal,
+            context={"item": item, "errors": {}, "values": {}},
+        )
+
+    @router.post("/inventory/{item_id}/policy", response_class=HTMLResponse)
+    async def inventory_policy_save(request: Request, item_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "inventory.manage" not in principal.capabilities:
+            return _access_denied(request, "Inventory access denied")
+        try:
+            item_uuid = UUID(item_id)
+            item = inventory_service.balance_for(principal.household_id, item_uuid)
+            if item is None or item.unit_code is None:
+                raise InventoryValidationError("Inventory item is unavailable.")
+            unit_code = item.unit_code
+
+            def quantity(name: str) -> int | None:
+                value = str(form.get(name, "")).strip()
+                return parse_quantity_scaled(value, unit_code, allow_zero=True) if value else None
+
+            def days(name: str) -> int | None:
+                value = str(form.get(name, "")).strip()
+                return _required_int(value, name.replace("_", " ")) if value else None
+
+            inventory_service.change_policy(
+                ChangeInventoryPolicyCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    item_uuid,
+                    uuid4(),
+                    _form_idempotency_key(form),
+                    _required_int(form.get("expected_stream_version", ""), "stream version"),
+                    quantity("reorder_minimum"),
+                    quantity("target_quantity"),
+                    quantity("maximum_quantity"),
+                    days("supplier_lead_time_days"),
+                    days("recount_interval_days"),
+                )
+            )
+        except (
+            InventoryValidationError,
+            ExpectedVersionConflictError,
+            FormValidationError,
+            ValueError,
+        ) as error:
+            try:
+                failed_item_id = UUID(item_id)
+            except ValueError:
+                return _not_found(request, "Inventory item not found")
+            item = inventory_service.balance_for(principal.household_id, failed_item_id)
+            if item is None:
+                return _not_found(request, "Inventory item not found")
+            return protected_page(
+                request,
+                "inventory_policy.html",
+                principal,
+                status_code=422,
+                context={
+                    "item": item,
+                    "errors": {"form": str(error)},
+                    "values": _form_values(form),
+                },
+            )
+        return RedirectResponse(f"/inventory/{item_id}", status_code=303)
+
+    @router.get("/inventory/{item_id}/use", response_class=HTMLResponse)
+    async def inventory_use(request: Request, item_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if "inventory.manage" not in principal.capabilities:
+            return _access_denied(request, "Inventory access denied")
+        try:
+            item = inventory_service.balance_for(principal.household_id, UUID(item_id))
+        except ValueError:
+            item = None
+        if item is None or item.status != "active" or item.needs_setup:
+            return _not_found(request, "Inventory item not found")
+        return protected_page(
+            request,
+            "inventory_use.html",
+            principal,
+            context={
+                "item": item,
+                "errors": {},
+                "values": {},
+                "default_occurred_at": datetime.now(
+                    ZoneInfo(principal.household_timezone)
+                ).strftime("%Y-%m-%dT%H:%M"),
+            },
+        )
+
+    @router.post("/inventory/{item_id}/use", response_class=HTMLResponse)
+    async def inventory_use_save(request: Request, item_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "inventory.manage" not in principal.capabilities:
+            return _access_denied(request, "Inventory access denied")
+        try:
+            item_uuid = UUID(item_id)
+            item = inventory_service.balance_for(principal.household_id, item_uuid)
+            if item is None or item.unit_code is None:
+                raise InventoryValidationError("Inventory item is unavailable.")
+            inventory_service.use_inventory(
+                UseInventoryCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    item_uuid,
+                    uuid4(),
+                    _form_idempotency_key(form),
+                    _required_int(form.get("expected_stream_version", ""), "stream version"),
+                    parse_quantity_scaled(str(form.get("quantity", "")), item.unit_code),
+                    str(form.get("use_kind", "")),
+                    _optional_form_text(form.get("note", "")),
+                    _form_datetime(form.get("occurred_at", ""), principal.household_timezone),
+                )
+            )
+        except (
+            InventoryValidationError,
+            ExpectedVersionConflictError,
+            FormValidationError,
+            ValueError,
+        ) as error:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=422,
+                context={"title": "Inventory use could not be saved", "message": str(error)},
+            )
+        return RedirectResponse(f"/inventory/{item_id}", status_code=303)
+
+    @router.get("/inventory/{item_id}/counts/{count_id}/correct", response_class=HTMLResponse)
+    async def inventory_count_correct(request: Request, item_id: str, count_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if "inventory.manage" not in principal.capabilities:
+            return _access_denied(request, "Inventory access denied")
+        try:
+            item_uuid = UUID(item_id)
+            item = inventory_service.balance_for(principal.household_id, item_uuid)
+            count = inventory_service.count_for_event(
+                principal.household_id, item_uuid, UUID(count_id)
+            )
+        except ValueError:
+            item = None
+            count = None
+        if item is None or count is None or count.status != "active":
+            return _not_found(request, "Inventory count not found")
+        return protected_page(
+            request,
+            "inventory_count_correct.html",
+            principal,
+            context={"item": item, "count": count},
+        )
+
+    @router.post("/inventory/{item_id}/counts/{count_id}/correct", response_class=HTMLResponse)
+    async def inventory_count_correct_save(
+        request: Request, item_id: str, count_id: str
+    ) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "inventory.manage" not in principal.capabilities:
+            return _access_denied(request, "Inventory access denied")
+        try:
+            item_uuid = UUID(item_id)
+            item = inventory_service.balance_for(principal.household_id, item_uuid)
+            if item is None or item.unit_code is None:
+                raise InventoryValidationError("Inventory item is unavailable.")
+            inventory_service.correct_count(
+                CorrectStockCountCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    item_uuid,
+                    uuid4(),
+                    _form_idempotency_key(form),
+                    _required_int(form.get("expected_stream_version", ""), "stream version"),
+                    UUID(count_id),
+                    parse_quantity_scaled(
+                        str(form.get("actual_quantity", "")), item.unit_code, allow_zero=True
+                    ),
+                    _optional_form_text(form.get("note", "")),
+                    datetime.now(UTC),
+                )
+            )
+        except (
+            InventoryValidationError,
+            ExpectedVersionConflictError,
+            FormValidationError,
+            ValueError,
+        ) as error:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=422,
+                context={"title": "Stock count could not be corrected", "message": str(error)},
+            )
+        return RedirectResponse(f"/inventory/{item_id}", status_code=303)
 
     @router.post("/inventory/{item_id}/receive", response_class=HTMLResponse)
     async def inventory_receive(request: Request, item_id: str) -> Response:
@@ -2590,6 +3268,7 @@ def create_web_router(
                         if threshold_value
                         else None
                     ),
+                    stock_role=_optional_form_text(form.get("stock_role", "")),
                 )
             )
         except (

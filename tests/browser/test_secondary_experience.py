@@ -67,8 +67,11 @@ def test_secondary_destinations_use_focused_responsive_presentations(tmp_path: P
         item_url = created.headers["location"]
         inventory = client.get("/inventory")
         assert 'class="summary-strip inventory-summary"' in inventory.text
-        assert "Needs attention" in inventory.text
-        assert "Keeper test supply" in inventory.text
+        assert "Care stock looks good" in inventory.text
+        assert "Keeper test supply" not in inventory.text
+        equipment = client.get("/inventory?view=equipment")
+        assert "Keeper test supply" in equipment.text
+        assert "Reorder now" in equipment.text
         adjust = client.get(f"{item_url}/adjust")
         assert adjust.status_code == 200
         assert '<h1 id="page-title">Adjust stock</h1>' in adjust.text

@@ -1,28 +1,52 @@
 {% extends "base.html" %}
 {% block title %}Inventory · Care Keeper{% endblock %}
 {% block content %}
-<section class="dashboard inventory-page" aria-labelledby="page-title">
+<section class="dashboard inventory-page inventory-intelligence" aria-labelledby="page-title">
   <header class="page-heading">
-    <div><p class="page-kicker">Supplies</p><h1 id="page-title">Inventory</h1><p class="lede">Stock on hand for feeding, habitats, and everyday care.</p></div>
-    {% if 'inventory.manage' in principal.capabilities and status == 'active' %}<div class="heading-actions"><a class="button-link" href="/inventory/new">Add inventory</a></div>{% endif %}
+    <div><p class="page-kicker">Supplies &amp; equipment</p><h1 id="page-title">Inventory</h1><p class="lede">Keep daily care stock visible without losing track of equipment and spares.</p></div>
+    {% if 'inventory.manage' in principal.capabilities and view != 'archived' %}<div class="heading-actions"><a class="button-link secondary-link" href="/inventory/count">Check stock</a><a class="button-link" href="/inventory/new">Add inventory</a></div>{% endif %}
   </header>
-  <dl class="summary-strip inventory-summary" aria-label="Inventory summary">
-    <div><dt>Active</dt><dd>{{ inventory_summary.active }}</dd></div>
-    <div><dt>Needs attention</dt><dd>{{ inventory_summary.attention }}</dd></div>
-    <div><dt>Tracked</dt><dd>{{ inventory_summary.tracked }}</dd></div>
-    <div><dt>Archived</dt><dd>{{ inventory_summary.archived }}</dd></div>
-  </dl>
-  <nav class="view-switcher inventory-switcher" aria-label="Inventory status">
-    <a href="/inventory"{% if status == 'active' %} aria-current="page"{% endif %}>Active</a>
-    <a href="/inventory?status=archived"{% if status == 'archived' %} aria-current="page"{% endif %}>Archived</a>
+
+  <nav class="view-switcher inventory-switcher" aria-label="Inventory views">
+    <a href="/inventory"{% if view == 'care' %} aria-current="page"{% endif %}>Care stock</a>
+    <a href="/inventory?view=equipment"{% if view == 'equipment' %} aria-current="page"{% endif %}>Equipment &amp; spares</a>
+    <a href="/inventory?view=all"{% if view == 'all' %} aria-current="page"{% endif %}>All inventory</a>
+    <a href="/inventory?view=archived"{% if view == 'archived' %} aria-current="page"{% endif %}>Archived</a>
   </nav>
-  {% if items %}<ul class="supply-grid" aria-label="{{ status|title }} inventory">
-    {% for item in items %}<li class="card supply-card{% if item.reorder_threshold is not none and item.on_hand_quantity <= item.reorder_threshold and item.status == 'active' %} supply-attention{% endif %}">
-      <div class="supply-heading"><div><p class="page-kicker">{{ item.type_label }} · {{ item.unit_label }}</p><h2><a href="/inventory/{{ item.item_id }}">{{ item.name }}</a></h2></div><span class="status-badge {% if item.needs_setup %}status-warning{% elif item.status == 'active' %}status-completed{% else %}status-disabled{% endif %}">{% if item.needs_setup %}Needs setup{% else %}{{ item.status|title }}{% endif %}</span></div>
-      <p class="supply-balance"><strong>{{ item.on_hand_display }}</strong><span>{{ item.on_hand_unit_display }} remaining</span></p>
-      <dl class="supply-facts"><div><dt>Reserved</dt><dd>{{ item.reserved_display }}</dd></div><div><dt>Used</dt><dd>{{ item.consumed_display }}</dd></div>{% if item.reorder_threshold_scaled is not none %}<div><dt>Reorder at</dt><dd>{{ item.reorder_threshold_display }}</dd></div>{% endif %}</dl>
-      <div class="supply-actions"><a href="/inventory/{{ item.item_id }}">View</a>{% if 'inventory.manage' in principal.capabilities and item.status == 'active' and item.needs_setup %}<a href="/inventory/{{ item.item_id }}/edit">Finish setup</a>{% elif 'inventory.manage' in principal.capabilities and item.status == 'active' %}<a href="/inventory/{{ item.item_id }}/adjust">Adjust stock</a>{% elif 'inventory.manage' in principal.capabilities %}<a href="/inventory/{{ item.item_id }}/restore">Restore</a>{% endif %}</div>
-    </li>{% endfor %}
-  </ul>{% else %}<div class="empty-state"><h2>No {{ status }} inventory</h2><p>{% if status == 'active' %}Add your first supply when you are ready to track stock.{% else %}Archived items remain here with their historical identity intact.{% endif %}</p>{% if status == 'active' and 'inventory.manage' in principal.capabilities %}<a class="button-link" href="/inventory/new">Add inventory</a>{% endif %}</div>{% endif %}
+
+  {% if view == 'care' %}
+    {% if inventory_summary.attention %}
+    <section class="inventory-attention card" aria-labelledby="attention-heading">
+      <div><p class="page-kicker">Needs attention</p><h2 id="attention-heading">{{ inventory_summary.attention }} care item{% if inventory_summary.attention != 1 %}s{% endif %} to review</h2><p>{{ inventory_summary.reorder }} low or nearing reorder{% if inventory_summary.count_due %} · {{ inventory_summary.count_due }} stock check{% if inventory_summary.count_due != 1 %}s{% endif %} due{% endif %}</p></div>
+      {% if inventory_summary.count_due and 'inventory.manage' in principal.capabilities %}<a class="button-link" href="/inventory/count?scope=cycle&amp;role=care_supply">Check {{ inventory_summary.count_due }} item{% if inventory_summary.count_due != 1 %}s{% endif %}</a>{% endif %}
+    </section>
+    {% else %}
+    <section class="inventory-calm card" aria-labelledby="attention-heading"><div><p class="page-kicker">Up to date</p><h2 id="attention-heading">Care stock looks good</h2><p>No configured care-stock rules need attention right now.</p></div></section>
+    {% endif %}
+    <dl class="summary-strip inventory-summary" aria-label="Care stock snapshot"><div><dt>Care supplies</dt><dd>{{ inventory_summary.care }}</dd></div><div><dt>Low stock</dt><dd>{{ inventory_summary.reorder }}</dd></div><div><dt>Checks due</dt><dd>{{ inventory_summary.count_due }}</dd></div><div><dt>Archived</dt><dd>{{ inventory_summary.archived }}</dd></div></dl>
+  {% endif %}
+
+  <form class="inventory-filter-bar card" method="get" action="/inventory" role="search">
+    {% if view != 'care' %}<input type="hidden" name="view" value="{{ view }}">{% endif %}
+    <label><span class="visually-hidden">Search inventory</span><input type="search" name="q" value="{{ search }}" placeholder="Search inventory" autocomplete="off"></label>
+    <label><span class="visually-hidden">Quick filter</span><select name="filter"><option value="">All shown items</option><option value="low"{% if quick_filter == 'low' %} selected{% endif %}>Low stock</option><option value="check_due"{% if quick_filter == 'check_due' %} selected{% endif %}>Check due</option><option value="cost"{% if quick_filter == 'cost' %} selected{% endif %}>Cost not tracked</option></select></label>
+    <button type="submit" class="secondary-button">Filter</button>
+    {% if search or quick_filter %}<a href="/inventory{% if view != 'care' %}?view={{ view }}{% endif %}">Clear</a>{% endif %}
+  </form>
+
+  {% if groups %}<div class="inventory-groups">
+    {% for group in groups %}<section class="inventory-group card" aria-labelledby="inventory-group-{{ group.code }}">
+      <header class="inventory-table-heading"><div><p class="page-kicker">{{ group.rows|length }} item{% if group.rows|length != 1 %}s{% endif %}</p><h2 id="inventory-group-{{ group.code }}">{{ group.label }}</h2></div></header>
+      <ul class="inventory-decision-list" aria-label="{{ group.label }} inventory">
+        {% for row in group.rows %}{% set item = row.item %}{% set insight = row.insight %}<li class="inventory-decision-row{% if insight.attention and item.status == 'active' %} needs-attention{% endif %}">
+          <div class="inventory-item-name"><h3><a href="/inventory/{{ item.item_id }}">{{ item.name }}</a></h3><span>{{ row.meta_label }}{% if row.cost_not_tracked %} · Cost not tracked{% endif %}</span></div>
+          <div class="inventory-level"><strong>{{ item.available_display }}</strong><span>{{ item.on_hand_unit_display }} on hand</span></div>
+          <div class="inventory-signal">{% if insight.raw.reorder_state in ('reorder_now','reorder_soon') %}<strong>{{ insight.reorder }}</strong>{% elif insight.duration %}<strong>{{ insight.duration }}</strong><span>at recorded use</span>{% else %}<strong>On hand</strong><span>{% if item.reorder_threshold_scaled is not none %}Reorder at {{ item.reorder_threshold_display }}{% else %}No reorder level{% endif %}</span>{% endif %}</div>
+          {% if insight.count_due %}<span class="status-badge status-due">Check due</span>{% endif %}
+          <a class="row-link" href="/inventory/{{ item.item_id }}" aria-label="View {{ item.name }}">View</a>
+        </li>{% endfor %}
+      </ul>
+    </section>{% endfor %}
+  </div>{% else %}<div class="empty-state"><h2>No inventory matches this view</h2><p>{% if view == 'care' %}Care supplies such as food, substrate, supplements, cleaning products, and stocked water will appear here.{% elif view == 'equipment' %}Equipment and replacement spares will appear here without crowding daily care stock.{% elif view == 'archived' %}Archived items remain available with their history preserved.{% else %}Try clearing the search or filter.{% endif %}</p>{% if view != 'archived' and 'inventory.manage' in principal.capabilities %}<a class="button-link" href="/inventory/new">Add inventory</a>{% endif %}</div>{% endif %}
 </section>
 {% endblock %}

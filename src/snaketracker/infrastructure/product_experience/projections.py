@@ -8,6 +8,9 @@ from collections.abc import Mapping
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine
 
+from snaketracker.infrastructure.inventory.intelligence import (
+    InventoryIntelligenceProjectionStrategy,
+)
 from snaketracker.infrastructure.projections.sqlite_generations import (
     SQLiteProjectionGenerationManager,
 )
@@ -163,6 +166,13 @@ product_projection_registry = ProjectionRegistry(
             strategy=InventoryCostingProjectionStrategy(),
             components=("lots", "allocations"),
             handler_version=2,
+        ),
+        _definition(
+            "inventory_intelligence",
+            "inventory_intelligence",
+            strategy=InventoryIntelligenceProjectionStrategy(),
+            components=("facts", "usage"),
+            handler_version=1,
         ),
         _definition(
             "cash_spend_facts",

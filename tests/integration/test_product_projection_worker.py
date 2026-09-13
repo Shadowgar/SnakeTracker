@@ -31,6 +31,7 @@ def test_product_projection_registry_is_allow_listed_and_grouped_by_failure_boun
         "dashboard",
         "insights",
         "inventory_costing",
+        "inventory_intelligence",
         "search",
     )
     assert {item.name for item in product_projection_registry.rebuild_group("insights")} == {

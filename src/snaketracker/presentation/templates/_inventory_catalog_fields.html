@@ -8,11 +8,19 @@
 {% set selected_context_category = values.get('context_category', '') %}
 {% set selected_context_detail = values.get('context_detail', '') %}
 {% set selected_stock_basis = values.get('stock_basis', '') %}
+{% set selected_role = values.get('stock_role', current.stock_role if current else '') %}
 <label>Type
   <select name="inventory_type" data-inventory-type required>
     <option value="">Choose a type</option>
     {% for option in inventory_types %}<option value="{{ option.code }}"{% if selected_type == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
   </select>
+</label>
+<label>How is this item used?
+  <select name="stock_role" data-stock-role data-role-explicit="{{ 'true' if values.get('stock_role') else 'false' }}" required>
+    <option value="">Choose how it is used</option>
+    {% for role in stock_roles %}<option value="{{ role.code }}"{% if selected_role == role.code %} selected{% endif %}>{{ role.label }}</option>{% endfor %}
+  </select>
+  <small>Care supplies stay prominent; equipment and spares remain available without crowding daily stock.</small>
 </label>
 {% if guided_creation %}
 <fieldset class="form-stack" data-context-fields="food"{% if selected_type != 'food' %} hidden{% endif %}>
@@ -79,6 +87,12 @@
 <fieldset class="form-stack" data-context-fields="supplement"{% if selected_type != 'supplement' %} hidden{% endif %}>
   <legend>Supplement details</legend>
   <label>Form<select name="context_category" data-context-control data-unit-driver{% if selected_type != 'supplement' %} disabled{% endif %} required><option value="">Choose a form</option>{% for option in supplement_forms %}<option value="{{ option.code }}" data-unit-codes="{{ option.unit_codes|join(',') }}" data-default-unit="{{ option.default_unit_code }}"{% if selected_context_category == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></label>
+</fieldset>
+
+<fieldset class="form-stack" data-context-fields="water_hydration"{% if selected_type != 'water_hydration' %} hidden{% endif %}>
+  <legend>Water &amp; hydration details</legend>
+  <p class="field-help">For stocked products such as distilled, bottled, RO, or misting water. Normal tap water does not need to be inventoried.</p>
+  <label>Tracking basis<select name="stock_basis" data-context-control data-unit-driver{% if selected_type != 'water_hydration' %} disabled{% endif %} required><option value="">Choose how water is stocked</option>{% for option in water_stock_bases %}<option value="{{ option.code }}" data-unit-codes="{{ option.unit_codes|join(',') }}" data-default-unit="{{ option.default_unit_code }}"{% if selected_stock_basis == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></label>
 </fieldset>
 
 <fieldset class="form-stack" data-context-fields="enclosure_habitat"{% if selected_type != 'enclosure_habitat' %} hidden{% endif %}>
