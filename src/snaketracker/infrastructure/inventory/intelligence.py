@@ -342,11 +342,11 @@ def _calculate(
         if balance["recount_interval_days"] is not None
         else None
     )
-    count_due = (
-        last_counted + timedelta(days=recount) if last_counted is not None and recount else None
-    )
-    if last_counted is None:
-        verification = "not_verified"
+    count_due = last_counted + timedelta(days=recount) if last_counted and recount else None
+    if recount is None:
+        verification = "not_scheduled"
+    elif last_counted is None:
+        verification = "due"
     elif count_due is not None and as_of.astimezone(UTC) >= count_due.astimezone(UTC):
         verification = "overdue"
     elif recount is not None:
@@ -414,7 +414,7 @@ def _unavailable(household_id: UUID, item_id: UUID, *, lag_events: int = 0) -> I
         None,
         None,
         "not_configured",
-        "not_verified",
+        "not_scheduled",
         None,
         "unavailable",
         None,

@@ -106,15 +106,21 @@ implements the A2 synchronous Purchase and effective-receipt tables; FIFO and un
 tables are activated as rebuildable projection generations. Expand-only migration
 `0016_inventory_acquisition` adds unified-acquisition mode and current-stock cost-assignment state.
 `0017_inventory_intelligence` adds owner stock/recount policy fields and immutable physical-count
-history. Its downgrade refuses to discard persisted M6.5-B event history.
-Count and broader intelligence schema remains deferred.
+history. Its downgrade refuses to discard persisted M6.5-B event history. Expand-only migration
+`0018_inventory_stock_roles` adds the nullable, owner-overridable `stock_role` projection field for
+Care supply, Replacement / spare, and Equipment classification. Existing rows and events are not
+rewritten: an absent stored role is derived deterministically from the existing controlled Type and
+name until the keeper edits the item. Role-aware registration and update history blocks a lossy
+downgrade.
 
 ### Evolved `inventory_balance`
 
 Migration 0014 adds parallel integer-thousandth on-hand, reserved, consumed, expired, and reorder
 threshold quantities; controlled Type/unit and Food metadata; original legacy unit; and existing
 version/lifecycle fields. Legacy integer columns remain and backfill exactly as `value * 1,000`.
-Target/maximum/lead time, recount state, and last physical verification remain later work.
+Migration 0017 adds target/maximum/lead time, optional recount state, and last physical
+verification. Migration 0018 adds the nullable stock-role override without changing quantities,
+cost basis, or lifecycle state.
 
 ### `inventory_consumption_links_v2` and `inventory_consumption_allocations_v2`
 

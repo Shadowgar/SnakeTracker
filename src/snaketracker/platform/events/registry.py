@@ -53,7 +53,11 @@ from snaketracker.domains.expenses.contracts import (
     ExpenseVoidedV1,
 )
 from snaketracker.domains.households.contracts import HouseholdCreatedV1, HouseholdOwnerAddedV1
-from snaketracker.domains.inventory.catalog import UNIT_BY_CODE, validate_catalog
+from snaketracker.domains.inventory.catalog import (
+    STOCK_ROLE_BY_CODE,
+    UNIT_BY_CODE,
+    validate_catalog,
+)
 from snaketracker.domains.inventory.contracts import (
     InventoryConsumptionReversedV1,
     InventoryConsumptionReversedV2,
@@ -63,9 +67,11 @@ from snaketracker.domains.inventory.contracts import (
     InventoryItemArchivedV1,
     InventoryItemRegisteredV1,
     InventoryItemRegisteredV2,
+    InventoryItemRegisteredV3,
     InventoryItemRestoredV1,
     InventoryItemUpdatedV1,
     InventoryItemUpdatedV2,
+    InventoryItemUpdatedV3,
     InventoryReceiptCorrectedV1,
     InventoryReorderPolicyChangedV1,
     InventoryReorderPolicyChangedV2,
@@ -1152,6 +1158,23 @@ def _deserialize_inventory_item_registered_v2(data: Mapping[str, object]) -> Eve
     )
 
 
+def _inventory_stock_role(data: Mapping[str, object], label: str) -> str:
+    role = _required_payload_text(data, "stock_role", label)
+    if role not in STOCK_ROLE_BY_CODE:
+        raise ValueError(f"Stored {label} role is invalid.")
+    return role
+
+
+def _deserialize_inventory_item_registered_v3(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryItemRegisteredV3, data)
+    return InventoryItemRegisteredV3(
+        _uuid_field(data, "item_id", "role-aware inventory registration"),
+        _required_payload_text(data, "name", "role-aware inventory registration"),
+        *_inventory_catalog_fields(data, "role-aware inventory registration"),
+        _inventory_stock_role(data, "role-aware inventory registration"),
+    )
+
+
 def _deserialize_inventory_item_updated(data: Mapping[str, object]) -> EventPayload:
     _require_exact_fields(InventoryItemUpdatedV1, data)
     threshold = data["reorder_threshold"]
@@ -1169,6 +1192,15 @@ def _deserialize_inventory_item_updated_v2(data: Mapping[str, object]) -> EventP
     return InventoryItemUpdatedV2(
         _required_payload_text(data, "name", "structured inventory update"),
         *_inventory_catalog_fields(data, "structured inventory update"),
+    )
+
+
+def _deserialize_inventory_item_updated_v3(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryItemUpdatedV3, data)
+    return InventoryItemUpdatedV3(
+        _required_payload_text(data, "name", "role-aware inventory update"),
+        *_inventory_catalog_fields(data, "role-aware inventory update"),
+        _inventory_stock_role(data, "role-aware inventory update"),
     )
 
 
@@ -1446,6 +1478,14 @@ INVENTORY_CONTRACTS = (
         (SubjectRequirement("inventory_item", "primary"),),
     ),
     EventContractRegistration(
+        "inventory.item_registered",
+        3,
+        "inventory",
+        InventoryItemRegisteredV3,
+        _deserialize_inventory_item_registered_v3,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
         "inventory.item_updated",
         1,
         "inventory",
@@ -1459,6 +1499,14 @@ INVENTORY_CONTRACTS = (
         "inventory",
         InventoryItemUpdatedV2,
         _deserialize_inventory_item_updated_v2,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
+        "inventory.item_updated",
+        3,
+        "inventory",
+        InventoryItemUpdatedV3,
+        _deserialize_inventory_item_updated_v3,
         (SubjectRequirement("inventory_item", "primary"),),
     ),
     EventContractRegistration(

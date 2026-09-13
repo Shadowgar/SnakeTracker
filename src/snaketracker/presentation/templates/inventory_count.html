@@ -1,8 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Count {{ item.name }} · Care Keeper{% endblock %}
+{% block title %}Check {{ item.name }} · Care Keeper{% endblock %}
+{% macro workflow_fields() -%}
+<input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}"><input type="hidden" name="expected_stream_version" value="{{ item.stream_version }}"><input type="hidden" name="count_context" value="{{ scope }}"><input type="hidden" name="category" value="{{ category }}"><input type="hidden" name="selected_item" value="{{ selected_item }}"><input type="hidden" name="stock_role" value="{{ stock_role }}"><input type="hidden" name="index" value="{{ index }}"><input type="hidden" name="workflow_id" value="{{ workflow_id }}">
+{%- endmacro %}
 {% block content %}
-<section class="form-page inventory-count-page" aria-labelledby="page-title"><header><p class="page-kicker">Stock count · {{ index + 1 }} of {{ total }}</p><h1 id="page-title">{{ item.name }}</h1><p class="lede">Expected: <strong>{{ item.on_hand_display }} {{ item.on_hand_unit_display }}</strong></p></header>
-{% if conflict %}<div class="alert" role="alert"><strong>Stock changed while you were counting.</strong> Your entered quantity is preserved below. Review the refreshed expected amount and save again.</div>{% endif %}
-<progress class="count-progress" value="{{ index + 1 }}" max="{{ total }}">{{ index + 1 }} of {{ total }}</progress>
-<form class="card form-stack" method="post" action="/inventory/{{ item.item_id }}/count"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}"><input type="hidden" name="expected_stream_version" value="{{ item.stream_version }}"><input type="hidden" name="count_context" value="{{ scope }}"><input type="hidden" name="category" value="{{ category }}"><input type="hidden" name="selected_item" value="{{ selected_item }}"><input type="hidden" name="index" value="{{ index }}"><input type="hidden" name="workflow_id" value="{{ workflow_id }}"><label class="count-actual">Actual physical count <span>({{ item.unit_symbol }})</span><input name="actual_quantity" type="number" min="0" step="{{ '0.001' if item.allows_fractional else '1' }}" inputmode="{{ 'decimal' if item.allows_fractional else 'numeric' }}" value="{{ values.get('actual_quantity', '') }}" required autofocus></label><p class="field-help">If actual differs from expected, the variance updates stock once and remains explainable in history.</p><label>Note <span class="visually-hidden">(optional)</span><input name="note" maxlength="500" value="{{ values.get('note', '') }}"><small>Optional</small></label><div class="form-actions"><a href="/inventory/count">{{ "Back" if index else "Cancel" }}</a><button type="submit">Save &amp; next</button></div></form></section>
+<section class="form-page inventory-count-page" aria-labelledby="page-title">
+  <header><p class="page-kicker">{{ index + 1 }} of {{ total }}</p><h1 id="page-title">{{ item.name }}</h1><p class="lede">Care Keeper has <strong>{{ item.on_hand_display }} {{ item.on_hand_unit_display }}</strong>.</p></header>
+  <progress class="count-progress" value="{{ index + 1 }}" max="{{ total }}">{{ index + 1 }} of {{ total }}</progress>
+  {% if conflict %}<div class="alert" role="alert"><strong>Stock changed while you were checking.</strong> Your amount is preserved below. Review the current Care Keeper amount and save again.</div>{% endif %}
+  <section class="card check-stock-question" aria-labelledby="stock-correct-heading"><h2 id="stock-correct-heading">Is that correct?</h2>
+    <form method="post" action="/inventory/{{ item.item_id }}/count">{{ workflow_fields() }}<button class="check-stock-match" type="submit" name="actual_quantity" value="{{ item.on_hand_display }}">Yes — I have {{ item.on_hand_display }}</button></form>
+    <details{% if conflict or values.get('actual_quantity') %} open{% endif %}><summary>No, change the amount</summary>
+      <form class="form-stack check-stock-change" method="post" action="/inventory/{{ item.item_id }}/count">{{ workflow_fields() }}<label>How many do you actually have? <span>({{ item.unit_symbol }})</span><input name="actual_quantity" type="number" min="0" step="{{ '0.001' if item.allows_fractional else '1' }}" inputmode="{{ 'decimal' if item.allows_fractional else 'numeric' }}" value="{{ values.get('actual_quantity', '') }}" required autofocus></label><label>Note <span class="visually-hidden">(optional)</span><input name="note" maxlength="500" value="{{ values.get('note', '') }}"><small>Optional</small></label><button type="submit">Save &amp; next</button></form>
+    </details>
+  </section>
+  <p><a href="/inventory/count">{{ "Back to check stock" if index else "Cancel" }}</a></p>
+</section>
 {% endblock %}

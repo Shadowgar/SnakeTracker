@@ -8,20 +8,23 @@ from typing import Protocol
 from uuid import UUID, uuid4
 
 from snaketracker.domains.inventory.catalog import (
+    STOCK_ROLE_BY_CODE,
     TYPE_BY_CODE,
     UNIT_BY_CODE,
+    derive_stock_role,
     format_quantity_scaled,
     legacy_unit_code,
+    resolve_stock_role,
     validate_catalog,
 )
 from snaketracker.domains.inventory.contracts import (
     InventoryConsumptionReversedV1,
     InventoryItemArchivedV1,
     InventoryItemRegisteredV1,
-    InventoryItemRegisteredV2,
+    InventoryItemRegisteredV3,
     InventoryItemRestoredV1,
     InventoryItemUpdatedV1,
-    InventoryItemUpdatedV2,
+    InventoryItemUpdatedV3,
     InventoryReorderPolicyChangedV1,
     InventoryReorderPolicyChangedV2,
     InventoryStockAdjustedV1,
@@ -91,10 +94,22 @@ class InventoryBalance:
     last_counted_at: datetime | None
     last_count_expected_scaled: int | None
     last_count_actual_scaled: int | None
+    stock_role_override: str | None
 
     @property
     def needs_setup(self) -> bool:
         return self.inventory_type is None or self.unit_code is None
+
+    @property
+    def stock_role(self) -> str:
+        return self.stock_role_override or derive_stock_role(
+            self.inventory_type,
+            name=self.name,
+        )
+
+    @property
+    def stock_role_label(self) -> str:
+        return STOCK_ROLE_BY_CODE[self.stock_role].label
 
     @property
     def type_label(self) -> str:
@@ -128,6 +143,7 @@ class InventoryBalance:
             "case": "cases",
             "bag": "bags",
             "bottle": "bottles",
+            "jug": "jugs",
             "bucket": "buckets",
             "roll": "rolls",
             "bale": "bales",
@@ -245,6 +261,7 @@ class RegisterStructuredInventoryItemCommand:
     preparation_method: str | None
     reorder_threshold_scaled: int | None
     starting_quantity_scaled: int = 0
+    stock_role: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -455,6 +472,7 @@ class ConfigureInventoryItemCommand:
     size_stage: str | None
     preparation_method: str | None
     reorder_threshold_scaled: int | None
+    stock_role: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -554,6 +572,11 @@ class InventoryService:
             command.size_stage,
             command.preparation_method,
         )
+        stock_role = resolve_stock_role(
+            command.stock_role,
+            command.inventory_type,
+            name=name,
+        )
         _validate_threshold(command.reorder_threshold_scaled, catalog[1])
         _validate_starting_quantity(command.starting_quantity_scaled, catalog[1])
         item_id = uuid4()
@@ -563,18 +586,19 @@ class InventoryService:
             key,
             1,
             "inventory.item_registered",
-            InventoryItemRegisteredV2(
+            InventoryItemRegisteredV3(
                 item_id,
                 name,
                 *catalog,
                 command.reorder_threshold_scaled,
+                stock_role,
             ),
             command.actor_user_id,
             command.correlation_id,
             command.idempotency_key,
             now,
             "Inventory item registered",
-            schema_version=2,
+            schema_version=3,
         )
         events: tuple[DomainEvent, ...] = (registration,)
         if command.starting_quantity_scaled:
@@ -945,6 +969,11 @@ class InventoryService:
             command.size_stage,
             command.preparation_method,
         )
+        stock_role = resolve_stock_role(
+            command.stock_role,
+            command.inventory_type,
+            name=command.name,
+        )
         _validate_threshold(command.reorder_threshold_scaled, catalog[1])
         moved = any(
             quantity != 0
@@ -967,14 +996,15 @@ class InventoryService:
         return self._append(
             command,
             "inventory.item_updated",
-            InventoryItemUpdatedV2(
+            InventoryItemUpdatedV3(
                 _required_text(command.name, "Inventory name"),
                 *catalog,
                 command.reorder_threshold_scaled,
+                stock_role,
             ),
             "inventory.configure_item",
             "Inventory item configured",
-            schema_version=2,
+            schema_version=3,
         )
 
     def archive_item(self, command: ArchiveInventoryItemCommand) -> InventoryCommandResult:

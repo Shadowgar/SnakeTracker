@@ -29,6 +29,20 @@ owner-accepted.
   unknown-basis increase or a variance depletion; correction rebuilds from the effective count set.
 - The asynchronous intelligence generation is household-scoped and rebuildable. A stale generation
   returns unavailable labels instead of serving a stale estimate.
+- The owner-review correction replaces the flat Inventory overview with Care stock (default),
+  Equipment & spares, All inventory, and Archived views. Care and All views are grouped by
+  controlled Type; Equipment & spares is separated into Replacement / spare and Equipment groups.
+  Search and Low stock, Check due, and Cost not tracked filters operate inside each selected view.
+- One centralized stock-role model classifies Care supplies, Replacement / spares, and durable
+  Equipment. Existing structured rows derive a safe role without rewriting history; new and edited
+  rows persist an owner-overridable role. Water & Hydration is an additive controlled Type with
+  volume and Bottle/Jug/Case tracking.
+- Keeper-facing **Check stock** replaces warehouse terminology. A due CTA opens the first eligible
+  item directly, a matching amount is confirmed with one tap while still recording the zero-variance
+  event, changed amounts advance automatically, and completion lists only differences.
+- Stock-check attention now requires an owner-configured recurrence. Never-counted stock without a
+  recurrence is `not_scheduled`, legacy setup-only rows are excluded, and one shared eligibility
+  function drives the dashboard count, CTA destination, and stable multi-item workflow.
 
 ## Contracts and migration
 
@@ -45,7 +59,19 @@ New registered contracts are:
 - `inventory.verification_policy_changed` v1 for the optional recount interval.
 
 All legacy contracts remain registered and replayable. The startup compatibility head advances to
-relational schema version 17.
+relational schema version 18 after the additive `0018_inventory_stock_roles` migration. That
+migration adds only a nullable projection override, leaves old events and quantities unchanged, and
+blocks downgrade once role-aware v3 history exists. Role-aware Item registration and update use
+`inventory.item_registered` v3 and `inventory.item_updated` v3; earlier versions remain registered.
+
+## Owner-review correction qualification
+
+The correction specifically covers stock-role derivation and override, Water & Hydration units,
+care/equipment filtering, Type grouping, lightweight search/filters, role-aware detail semantics,
+actionable-only attention, the reported six-due/zero-count contradiction, a stable exact three-item
+due workflow, direct entry, one-tap match, changed quantity, completion summary, and 0017-to-0018
+preservation/downgrade behavior. Final authoritative-gate, isolated-browser, screenshot, backup,
+live migration, runtime, and GitHub results are recorded below after promotion.
 
 ## Qualification
 
@@ -72,10 +98,10 @@ uv sync --frozen
 ./scripts/quality/check.sh
 ```
 
-It passed formatting and Ruff across 459 files, the 42-ADR accepted architecture freeze,
-documentation links across 207 files, strict mypy across 132 source files, all 583 tests,
-dependency audit, Compose validation, and diff checks. Coverage artifacts report 94.62% lines,
-85.06% branches, and 92.71% combined coverage. `coverage.json`, `coverage.xml`, and `junit.xml`
+It passed formatting and Ruff across 460 files, the 42-ADR accepted architecture freeze,
+documentation links across 207 files, strict mypy across 132 source files, all 600 tests,
+dependency audit, Compose validation, and diff checks. Coverage artifacts report 94.58% lines,
+85.19% branches, and 92.69% combined coverage. `coverage.json`, `coverage.xml`, and `junit.xml`
 were produced; JUnit reports zero failures, zero errors, and zero skipped tests.
 
 The initial GitHub run exposed a browser-test fixture defect rather than an application defect:
@@ -108,6 +134,34 @@ console errors, page errors, HTTP errors, or failed requests. The machine-readab
 - [mobile count start](screenshots/mobile-390x844-count-start.png)
 - [mobile count complete](screenshots/mobile-390x844-count-complete.png)
 - [mobile count correction](screenshots/mobile-390x844-count-correction.png)
+
+The owner-review correction then ran in native ARM64 Chromium 1208 against the isolated restored
+database at
+`/tmp/carekeeper-m65-b-correction-browser.0nRmwz/e3b6e0f5ee164f25bac7e13336c1002c/snaketracker.sqlite3`.
+The active database was explicitly excluded. The journey proved the calm zero-attention state,
+three genuinely actionable Care-stock items, an exact two-item due CTA and destination, direct
+entry, `1 of 2` / `2 of 2` stable progress, one-tap zero-variance acceptance, a 20-to-18
+correction, Water & Hydration, separate Equipment and Replacement / spare groups, Type-grouped All
+Inventory, and a difference-only completion summary. Across 22 required viewport states, axe
+reported zero violations and capture reported zero horizontal overflow, application console
+diagnostics, page errors, failed requests, or HTTP errors. A focused post-review run after the
+completion-row spacing correction repeated the affected axe/overflow/console checks successfully.
+The machine-readable result is
+[`browser-owner-correction.json`](browser-owner-correction.json).
+
+Owner-review correction captures, each framed at the literal requested viewport size, are:
+
+- Care Stock default: [mobile](screenshots/owner-correction-mobile-390x844-care-stock-default-overview.png), [desktop](screenshots/owner-correction-desktop-1440x900-care-stock-default-overview.png)
+- Food section: [mobile](screenshots/owner-correction-mobile-390x844-food-section.png), [desktop](screenshots/owner-correction-desktop-1440x900-food-section.png)
+- Equipment & spares: [mobile](screenshots/owner-correction-mobile-390x844-equipment-and-spares.png), [desktop](screenshots/owner-correction-desktop-1440x900-equipment-and-spares.png)
+- All Inventory grouped: [mobile](screenshots/owner-correction-mobile-390x844-all-inventory-grouped.png), [desktop](screenshots/owner-correction-desktop-1440x900-all-inventory-grouped.png)
+- Actionable attention: [mobile](screenshots/owner-correction-mobile-390x844-attention-actionable-items.png), [desktop](screenshots/owner-correction-desktop-1440x900-attention-actionable-items.png)
+- Calm state: [mobile](screenshots/owner-correction-mobile-390x844-no-attention-calm-state.png), [desktop](screenshots/owner-correction-desktop-1440x900-no-attention-calm-state.png)
+- Check Stock start: [mobile](screenshots/owner-correction-mobile-390x844-check-stock-start.png), [desktop](screenshots/owner-correction-desktop-1440x900-check-stock-start.png)
+- Direct due workflow: [mobile](screenshots/owner-correction-mobile-390x844-direct-due-items-workflow.png), [desktop](screenshots/owner-correction-desktop-1440x900-direct-due-items-workflow.png)
+- One-tap match: [mobile](screenshots/owner-correction-mobile-390x844-quick-yes-matches-stock-check.png), [desktop](screenshots/owner-correction-desktop-1440x900-quick-yes-matches-stock-check.png)
+- Changed quantity: [mobile](screenshots/owner-correction-mobile-390x844-changed-quantity-stock-check.png), [desktop](screenshots/owner-correction-desktop-1440x900-changed-quantity-stock-check.png)
+- Completion summary: [mobile](screenshots/owner-correction-mobile-390x844-completion-summary.png), [desktop](screenshots/owner-correction-desktop-1440x900-completion-summary.png)
 
 ## Live-data safety, backup, and deployment
 
@@ -148,6 +202,30 @@ UID/GID `1001:1001`; web, worker, and Nginx are healthy; local and public readin
 `ready`; nine product projection definitions are active; and exactly one Care Keeper Compose
 project is running. The active database and Attachment store were never wiped, reset, reseeded,
 replaced, restored over, or used for qualification writes.
+
+Before this owner-review correction, a second non-overwriting encrypted backup completed as
+request `bc886983-6b20-4e16-ac75-89db601925c9`, run
+`e3b6e0f5-ee16-4f25-bac7-e13336c1002c`. The encrypted database artifact is 12,636,193 bytes with
+SHA-256 `1432256184fda54ebd4d88e9f4d64b94d0cb936d420549cdd501c90aa4803d49`; the encrypted
+manifest is 24,329 bytes with SHA-256
+`845815411a8a60173416ce17b2dbd564220dfec1917e2c68e90bd6a45327e47c`. Restore verification
+used only `/tmp/carekeeper-m65-b-correction-restore.hlI7LN`, returned status `verified`, and
+restored 33 referenced Attachments. The active database was never a restore target.
+
+Immediately before owner-correction promotion, the live runtime remained on
+`0017_inventory_intelligence` with 743 events at high-water 743, four households, four users, 42
+Animals, 29 Enclosures, 25 Inventory Items, and 39 Attachment versions. Its ordered event hash was
+`2dd2fdb9dd3bee8751dfd4700953b396da13cb17551207e0da70ba9c2f2226f9`. After the additive
+`0018_inventory_stock_roles` migration, every count and that exact event hash remained unchanged;
+SQLite integrity remained `ok` with zero foreign-key violations. The 40-file Attachment tree also
+remained byte-identical under the same qualification algorithm, SHA-256
+`d9c69298591f8d42adb9ca6a43174ac17a3925d718bf8034866e79444e375fab` before and after.
+
+The corrected native ARM64 image is `snaketracker:m65-b-owner-correction`, SHA-256
+`d238843c73045fcb24b86cf8ce59d7e2fee3a14baa6c40e1091eeea714d4a4f4`. Migration 0018 is
+applied; web, worker, and Nginx are healthy; web and worker run as UID/GID `1001:1001`; local and
+public readiness return `ready`; and exactly one `snaketracker` Compose project with three active
+services remains. No browser qualification write targeted the active database or Attachment store.
 
 Care Keeper's production CSP remains unchanged. The isolated origin produced no CSP or application
 console diagnostics. As established in M6 qualification, any Cloudflare Browser Insights script

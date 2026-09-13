@@ -1,8 +1,17 @@
 {% extends "base.html" %}
-{% block title %}Count stock · Care Keeper{% endblock %}
+{% block title %}Check stock · Care Keeper{% endblock %}
 {% block content %}
-<section class="form-page inventory-count-start" aria-labelledby="page-title"><header><p class="page-kicker">Inventory verification</p><h1 id="page-title">Count stock</h1><p class="lede">Compare Care Keeper with what is physically on hand. Each saved item becomes an immutable verification.</p></header>
-<div class="count-scope-grid"><a class="card" href="/inventory/count?scope=cycle"><strong>Items due</strong><span>Count items not yet verified or overdue.</span></a><a class="card" href="/inventory/count?scope=full"><strong>Full inventory</strong><span>Work through every active configured item.</span></a></div>
-<form class="card form-stack" method="get" action="/inventory/count"><input type="hidden" name="scope" value="category"><label>One category<select name="category" required><option value="">Choose a category</option>{% for type in inventory_types %}<option value="{{ type.code }}">{{ type.label }}</option>{% endfor %}</select></label><button type="submit">Start category count</button></form>
-<form class="card form-stack" method="get" action="/inventory/count"><input type="hidden" name="scope" value="single"><label>One item<select name="item" required><option value="">Choose an item</option>{% for item in items %}<option value="{{ item.item_id }}">{{ item.name }} · {{ item.on_hand_display }} {{ item.unit_symbol }}</option>{% endfor %}</select></label><button type="submit">Count one item</button></form><p><a href="/inventory">← Back to inventory</a></p></section>
+<section class="form-page inventory-count-start" aria-labelledby="page-title">
+  <header><p class="page-kicker">Inventory</p><h1 id="page-title">Check stock</h1><p class="lede">Make sure Care Keeper matches what you actually have.</p></header>
+  {% if due_items %}<section class="card check-stock-recommended" aria-labelledby="recommended-heading"><div><p class="page-kicker">Recommended</p><h2 id="recommended-heading">Check {{ due_items|length }} item{% if due_items|length != 1 %}s{% endif %} due now</h2><p>These are the items with a stock-check reminder that is due.</p></div><a class="button-link" href="/inventory/count?scope=cycle">Start</a></section>{% endif %}
+  <section aria-labelledby="other-checks-heading"><p class="page-kicker">Other ways to check</p><h2 id="other-checks-heading">Choose what you have in front of you</h2>
+    <div class="count-scope-grid">
+      {% if care_items %}<a class="card" href="/inventory/count?scope=full&amp;role=care_supply"><strong>Care supplies</strong><span>Check all food, water, substrate, supplements, and cleaning supplies.</span></a>{% endif %}
+      <form class="card form-stack" method="get" action="/inventory/count"><input type="hidden" name="scope" value="category"><label>Choose a category<select name="category" required><option value="">Choose a category</option>{% for type in inventory_types %}<option value="{{ type.code }}">{{ type.label }}</option>{% endfor %}</select></label><button type="submit">Start</button></form>
+      <form class="card form-stack" method="get" action="/inventory/count"><input type="hidden" name="scope" value="single"><label>Choose one item<select name="item" required><option value="">Choose an item</option>{% for item in items %}<option value="{{ item.item_id }}">{{ item.name }} · {{ item.on_hand_display }} {{ item.unit_symbol }}</option>{% endfor %}</select></label><button type="submit">Check item</button></form>
+    </div>
+  </section>
+  <details class="card form-advanced"><summary>More options</summary><div><p>Check every configured item, including equipment and spares.</p><a class="button-link secondary-link" href="/inventory/count?scope=full">Check all inventory</a></div></details>
+  <p><a href="/inventory">← Back to inventory</a></p>
+</section>
 {% endblock %}

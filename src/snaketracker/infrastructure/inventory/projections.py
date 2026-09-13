@@ -23,9 +23,11 @@ from snaketracker.domains.inventory.contracts import (
     InventoryItemArchivedV1,
     InventoryItemRegisteredV1,
     InventoryItemRegisteredV2,
+    InventoryItemRegisteredV3,
     InventoryItemRestoredV1,
     InventoryItemUpdatedV1,
     InventoryItemUpdatedV2,
+    InventoryItemUpdatedV3,
     InventoryReceiptCorrectedV1,
     InventoryReorderPolicyChangedV1,
     InventoryReorderPolicyChangedV2,
@@ -55,7 +57,10 @@ class SQLAlchemyInventoryBalanceProjection:
         for event in events:
             if event.stream_type != "inventory-item":
                 continue
-            if isinstance(event.payload, InventoryItemRegisteredV1 | InventoryItemRegisteredV2):
+            if isinstance(
+                event.payload,
+                InventoryItemRegisteredV1 | InventoryItemRegisteredV2 | InventoryItemRegisteredV3,
+            ):
                 self._register(connection, event, event.payload)
                 continue
             row = self._row(connection, event.household_id, event.stream_id)
@@ -83,6 +88,7 @@ class SQLAlchemyInventoryBalanceProjection:
             preparation_method = (
                 str(row["preparation_method"]) if row["preparation_method"] else None
             )
+            stock_role = str(row["stock_role"]) if row["stock_role"] else None
             reorder_scaled = (
                 int(row["reorder_threshold_scaled"])
                 if row["reorder_threshold_scaled"] is not None
@@ -564,6 +570,22 @@ class SQLAlchemyInventoryBalanceProjection:
                     if payload.reorder_threshold_scaled is not None
                     else None
                 )
+            elif isinstance(payload, InventoryItemUpdatedV3):
+                name = payload.name
+                unit = payload.unit_code
+                inventory_type = payload.inventory_type
+                unit_code = payload.unit_code
+                food_category = payload.food_category
+                food_type = payload.food_type
+                size_stage = payload.size_stage
+                preparation_method = payload.preparation_method
+                reorder_scaled = payload.reorder_threshold_scaled
+                reorder = (
+                    payload.reorder_threshold_scaled // 1000
+                    if payload.reorder_threshold_scaled is not None
+                    else None
+                )
+                stock_role = payload.stock_role
             elif isinstance(payload, InventoryItemArchivedV1):
                 if status != "active":
                     raise InventoryValidationError("Inventory item is already archived.")
@@ -599,6 +621,7 @@ class SQLAlchemyInventoryBalanceProjection:
                     "last_counted_at=:last_counted_at,"
                     "last_count_expected_scaled=:last_count_expected,"
                     "last_count_actual_scaled=:last_count_actual,"
+                    "stock_role=:stock_role,"
                     "stream_version=:version,last_event_id=:event_id,updated_at=:updated_at "
                     "WHERE household_id=:household_id AND item_id=:item_id"
                 ),
@@ -631,6 +654,7 @@ class SQLAlchemyInventoryBalanceProjection:
                     "last_counted_at": last_counted_at,
                     "last_count_expected": last_count_expected,
                     "last_count_actual": last_count_actual,
+                    "stock_role": stock_role,
                     "version": event.stream_version,
                     "event_id": str(event.event_id),
                     "updated_at": event.recorded_at.isoformat(timespec="microseconds"),
@@ -807,9 +831,9 @@ class SQLAlchemyInventoryBalanceProjection:
     def _register(
         connection: Connection,
         event: DomainEvent,
-        payload: InventoryItemRegisteredV1 | InventoryItemRegisteredV2,
+        payload: InventoryItemRegisteredV1 | InventoryItemRegisteredV2 | InventoryItemRegisteredV3,
     ) -> None:
-        if isinstance(payload, InventoryItemRegisteredV2):
+        if isinstance(payload, InventoryItemRegisteredV2 | InventoryItemRegisteredV3):
             unit = payload.unit_code
             reorder = (
                 payload.reorder_threshold_scaled // 1000
@@ -824,6 +848,9 @@ class SQLAlchemyInventoryBalanceProjection:
             size_stage = payload.size_stage
             preparation_method = payload.preparation_method
             reorder_scaled = payload.reorder_threshold_scaled
+            stock_role = (
+                payload.stock_role if isinstance(payload, InventoryItemRegisteredV3) else None
+            )
         else:
             unit = payload.unit
             reorder = payload.reorder_threshold
@@ -837,6 +864,7 @@ class SQLAlchemyInventoryBalanceProjection:
             reorder_scaled = (
                 payload.reorder_threshold * 1000 if payload.reorder_threshold is not None else None
             )
+            stock_role = None
         connection.execute(
             text(
                 "INSERT INTO inventory_balance "
@@ -845,10 +873,10 @@ class SQLAlchemyInventoryBalanceProjection:
                 "status,last_event_id,updated_at,inventory_type,unit_code,legacy_unit,"
                 "food_category,food_type,size_stage,preparation_method,on_hand_quantity_scaled,"
                 "reserved_quantity_scaled,consumed_quantity_scaled,expired_quantity_scaled,"
-                "reorder_threshold_scaled) VALUES "
+                "reorder_threshold_scaled,stock_role) VALUES "
                 "(:household_id,:item_id,:name,:unit,0,0,0,0,:reorder,1,'active',"
                 ":event_id,:updated_at,:inventory_type,:unit_code,:legacy_unit,:food_category,"
-                ":food_type,:size_stage,:preparation_method,0,0,0,0,:reorder_scaled)"
+                ":food_type,:size_stage,:preparation_method,0,0,0,0,:reorder_scaled,:stock_role)"
             ),
             {
                 "household_id": str(event.household_id),
@@ -864,6 +892,7 @@ class SQLAlchemyInventoryBalanceProjection:
                 "size_stage": size_stage,
                 "preparation_method": preparation_method,
                 "reorder_scaled": reorder_scaled,
+                "stock_role": stock_role,
                 "event_id": str(event.event_id),
                 "updated_at": event.recorded_at.isoformat(timespec="microseconds"),
             },
@@ -935,6 +964,7 @@ def _balance(row: RowMapping) -> InventoryBalance:
             if row["last_count_actual_scaled"] is not None
             else None
         ),
+        stock_role_override=(str(row["stock_role"]) if row["stock_role"] else None),
     )
 
 

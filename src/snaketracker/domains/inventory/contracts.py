@@ -28,6 +28,20 @@ class InventoryItemRegisteredV2:
 
 
 @dataclass(frozen=True, slots=True)
+class InventoryItemRegisteredV3:
+    item_id: UUID
+    name: str
+    inventory_type: str
+    unit_code: str
+    food_category: str | None
+    food_type: str | None
+    size_stage: str | None
+    preparation_method: str | None
+    reorder_threshold_scaled: int | None
+    stock_role: str
+
+
+@dataclass(frozen=True, slots=True)
 class InventoryItemUpdatedV1:
     name: str
     unit: str
@@ -44,6 +58,19 @@ class InventoryItemUpdatedV2:
     size_stage: str | None
     preparation_method: str | None
     reorder_threshold_scaled: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class InventoryItemUpdatedV3:
+    name: str
+    inventory_type: str
+    unit_code: str
+    food_category: str | None
+    food_type: str | None
+    size_stage: str | None
+    preparation_method: str | None
+    reorder_threshold_scaled: int | None
+    stock_role: str
 
 
 @dataclass(frozen=True, slots=True)

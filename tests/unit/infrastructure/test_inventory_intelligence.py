@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import cast
@@ -8,7 +9,20 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.engine import RowMapping
 
+from snaketracker.application.inventory_intelligence import (
+    attention_reasons,
+    stock_check_is_due,
+)
 from snaketracker.infrastructure.inventory.intelligence import _calculate
+
+
+@dataclass
+class _AttentionItem:
+    status: str = "active"
+    stock_role: str = "care_supply"
+    recount_interval_days: int | None = None
+    reorder_threshold_scaled: int | None = None
+    needs_setup: bool = False
 
 
 def _row(values: dict[str, object]) -> RowMapping:
@@ -175,3 +189,57 @@ def test_reorder_now_requires_only_owner_minimum_but_reorder_soon_requires_suppo
     assert low.reorder_state == "reorder_now"
     assert sparse.reorder_state == "stable"
     assert sparse.estimated_days_to_minimum is None
+
+
+def test_stock_check_is_due_only_when_an_owner_schedule_exists() -> None:
+    as_of = datetime(2026, 9, 12, 12, tzinfo=UTC)
+    unscheduled = _calculate(
+        uuid4(),
+        uuid4(),
+        _fact("2026-08-01T12:00:00+00:00"),
+        _balance(last_counted_at=None, recount_interval_days=None),
+        [],
+        ZoneInfo("UTC"),
+        as_of,
+        0,
+    )
+    scheduled = _calculate(
+        uuid4(),
+        uuid4(),
+        _fact("2026-08-01T12:00:00+00:00"),
+        _balance(last_counted_at=None, recount_interval_days=30),
+        [],
+        ZoneInfo("UTC"),
+        as_of,
+        0,
+    )
+
+    assert unscheduled.verification_state == "not_scheduled"
+    assert not stock_check_is_due(_AttentionItem(), unscheduled)
+    assert attention_reasons(_AttentionItem(), unscheduled) == ("above_maximum",)
+    assert scheduled.verification_state == "due"
+    assert stock_check_is_due(_AttentionItem(recount_interval_days=30), scheduled)
+    assert "check_due" in attention_reasons(_AttentionItem(recount_interval_days=30), scheduled)
+
+
+def test_unconfigured_and_equipment_disuse_do_not_create_false_attention() -> None:
+    as_of = datetime(2026, 9, 12, 12, tzinfo=UTC)
+    insight = _calculate(
+        uuid4(),
+        uuid4(),
+        _fact("2026-01-01T12:00:00+00:00"),
+        _balance(
+            reorder_threshold_scaled=None,
+            maximum_quantity_scaled=None,
+            last_counted_at=None,
+            recount_interval_days=None,
+        ),
+        [],
+        ZoneInfo("UTC"),
+        as_of,
+        0,
+    )
+
+    assert insight.usage_state == "no_use_180"
+    assert attention_reasons(_AttentionItem(stock_role="durable_asset"), insight) == ()
+    assert attention_reasons(_AttentionItem(needs_setup=True), insight) == ()

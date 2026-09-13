@@ -20,6 +20,7 @@ from snaketracker.domains.animals.contracts import (
 from snaketracker.domains.households.replay import replay_household
 from snaketracker.domains.inventory.contracts import (
     InventoryItemRegisteredV2,
+    InventoryItemRegisteredV3,
     InventoryReorderPolicyChangedV2,
     InventoryStockConsumedV3,
     InventoryStockCountedV1,
@@ -276,6 +277,14 @@ def test_structured_inventory_registry_validates_catalog_and_scaled_quantities()
     assert isinstance(
         registry.deserialize("inventory.item_registered", 2, valid), InventoryItemRegisteredV2
     )
+    assert isinstance(
+        registry.deserialize(
+            "inventory.item_registered", 3, {**valid, "stock_role": "care_supply"}
+        ),
+        InventoryItemRegisteredV3,
+    )
+    with pytest.raises(ValueError, match="role is invalid"):
+        registry.deserialize("inventory.item_registered", 3, {**valid, "stock_role": "warehouse"})
 
     invalid_payloads = (
         {**valid, "name": ""},

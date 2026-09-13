@@ -2,6 +2,7 @@
 
 const typeSelect = document.querySelector("[data-inventory-type]");
 const guidedUnitSection = document.querySelector("[data-unit-section]");
+const stockRoleSelect = document.querySelector("[data-stock-role]");
 
 const setControlState = (container, enabled, clear = false) => {
   if (!(container instanceof HTMLElement)) return;
@@ -141,6 +142,27 @@ const synchronizeGuidedUnit = () => {
   }
 };
 
+const synchronizeStockRole = () => {
+  if (!(typeSelect instanceof HTMLSelectElement) || !(stockRoleSelect instanceof HTMLSelectElement)) {
+    return;
+  }
+  if (stockRoleSelect.dataset.roleExplicit === "true") return;
+  const type = typeSelect.value;
+  let role = "";
+  if (["food", "supplement", "substrate_bedding", "cleaning_supply", "water_hydration"].includes(type)) {
+    role = "care_supply";
+  } else if (["equipment", "enclosure_habitat"].includes(type)) {
+    role = "durable_asset";
+  } else if (type === "heating_lighting") {
+    const fieldset = document.querySelector('[data-context-fields="heating_lighting"]');
+    const category = fieldset?.querySelector("[data-context-category]");
+    role = category instanceof HTMLSelectElement && ["heat_bulb", "ceramic_heat_emitter", "uvb_tube"].includes(category.value)
+      ? "replacement_spare"
+      : "durable_asset";
+  }
+  stockRoleSelect.value = role;
+};
+
 const synchronizeGuided = () => {
   if (!(typeSelect instanceof HTMLSelectElement)) return;
   const type = typeSelect.value;
@@ -152,6 +174,7 @@ const synchronizeGuided = () => {
     synchronizeDetail(fieldset);
   }
   synchronizeCleaning();
+  synchronizeStockRole();
   synchronizeGuidedUnit();
 };
 
@@ -177,7 +200,13 @@ const synchronizeLegacyEdit = () => {
 
 if (typeSelect instanceof HTMLSelectElement) {
   if (guidedUnitSection instanceof HTMLElement) {
-    typeSelect.addEventListener("change", synchronizeGuided);
+    typeSelect.addEventListener("change", () => {
+      if (stockRoleSelect instanceof HTMLSelectElement) stockRoleSelect.dataset.roleExplicit = "false";
+      synchronizeGuided();
+    });
+    stockRoleSelect?.addEventListener("change", () => {
+      if (stockRoleSelect instanceof HTMLSelectElement) stockRoleSelect.dataset.roleExplicit = "true";
+    });
     for (const control of document.querySelectorAll("select")) {
       if (control !== typeSelect) control.addEventListener("change", synchronizeGuided);
     }
