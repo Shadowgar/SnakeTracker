@@ -3,7 +3,8 @@
 Status: **owner-accepted September 12, 2026**
 
 Requirements `R-073` through `R-075`; acceptance procedures `AT-INVINT-04`, `AT-INVINT-05`,
-and `AR-INVINT-01`. Branch `phase6.5/purchases-fifo`. M6.5 is not complete or owner-accepted.
+and `AR-INVINT-01`. Branch `phase6.5/purchases-fifo`. This tranche was accepted before the complete
+M6.5 milestone was owner-accepted September 13, 2026.
 
 ## Owner-review correction 2: guided Add inventory
 

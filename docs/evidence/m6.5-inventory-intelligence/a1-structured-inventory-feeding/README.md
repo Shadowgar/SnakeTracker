@@ -3,7 +3,8 @@
 Status: **owner accepted September 11, 2026**
 
 Requirements `R-084` and `R-085`; acceptance procedures `AT-INVINT-07` and `AT-INVINT-08`.
-Branch `phase6.5/inventory-intelligence`. M6.5 is not complete or owner-accepted.
+Branch `phase6.5/inventory-intelligence`. This tranche was accepted before the complete M6.5
+milestone was owner-accepted September 13, 2026.
 
 ## Integrated baseline
 

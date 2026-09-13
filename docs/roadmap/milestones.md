@@ -11,10 +11,10 @@
 ## Planned sequence from M6 forward
 
 M6 is owner-accepted and PR #8 is merged at
-`8b0c062a39453bd2a4e65cb6ce288eea6298137f`. The authoritative remaining sequence is M6.5
-inventory intelligence, M7 deployment/recovery qualification, M8 release qualification, and M9
-public profiles/media sharing. Early Raspberry Pi owner-review use is not a substitute for M7
-qualification.
+`8b0c062a39453bd2a4e65cb6ce288eea6298137f`. M6.5 Inventory Intelligence and Cost Tracking was
+owner-accepted September 13, 2026. The authoritative remaining sequence is M7 deployment/recovery
+qualification, M8 release qualification, and M9 public profiles/media sharing. Early Raspberry Pi
+owner-review use is not a substitute for M7 qualification.
 
 ## Phase 0 / M0 — Architecture approved
 
@@ -244,8 +244,7 @@ qualified and presented for owner review.
 
 ## Phase 6.5 / M6.5 — Inventory intelligence and cost tracking
 
-Status: ADR-0042 and M6.5-A1/A2/B/C owner-accepted; final technical qualification passed; explicit
-M6.5 owner acceptance pending
+Status: Accepted September 13, 2026
 
 M6.5 is a substantial product milestone after final M6 acceptance and before M7. It turns Inventory
 from a list of owned objects into an explainable decision-support system. It must have its own
@@ -333,7 +332,7 @@ derived only under the costing policy accepted during M6.5 design.
 
 - [x] RB Per-item reports reconcile purchased quantity/value, consumed quantity/value, current quantity, estimated stock value, consumption rate, and projected reorder need. M6.5-C was owner-accepted September 13, 2026. (`R-076`, `AT-INVINT-06`)
 - [x] RB Collection reports distinguish purchases during a period, inventory value consumed, current stock value, category spending, consumption trends, and deterministically supportable near-term supply-spending estimates. Projections are labelled estimates, never guarantees. M6.5-C was owner-accepted September 13, 2026. (`R-076`, `AT-INVINT-06`)
-- [x] RB M6.5 compatibility, migration, immutable-event, correction/compensation, authorization, reporting reconciliation, accessibility, performance, backup/restore, and owner-review evidence passes before explicit M6.5 acceptance. Final technical qualification passed September 13, 2026; explicit M6.5 owner acceptance remains pending. Evidence: [final M6.5 qualification](../evidence/m6.5-inventory-intelligence/final-qualification/README.md).
+- [x] RB M6.5 compatibility, migration, immutable-event, correction/compensation, authorization, reporting reconciliation, accessibility, performance, backup/restore, and owner-review evidence passes before explicit M6.5 acceptance. Final technical qualification passed and the owner explicitly accepted M6.5 on September 13, 2026. Evidence: [final M6.5 qualification](../evidence/m6.5-inventory-intelligence/final-qualification/README.md) and [owner acceptance](../evidence/m6.5-inventory-intelligence/approvals/2026-09-13-owner-acceptance.md).
 
 ## Phase 7 / M7 — Formal Raspberry Pi deployment and recovery qualification
 

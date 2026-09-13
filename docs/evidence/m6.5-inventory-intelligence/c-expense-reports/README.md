@@ -3,7 +3,8 @@
 Status: **owner-accepted September 13, 2026**
 
 Requirement `R-076`; acceptance procedure `AT-INVINT-06`. Branch
-`phase6.5/expense-reports`. M6.5 as a whole is not owner-accepted.
+`phase6.5/expense-reports`. This tranche was accepted before the complete M6.5 milestone was
+owner-accepted September 13, 2026.
 
 ## Implemented boundary
 

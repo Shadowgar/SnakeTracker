@@ -1,7 +1,7 @@
 # Owner Problem Triage
 
-Status: M6 owner-accepted and merged; M6.5 architecture/domain proposal prepared. Later
-milestones remain prospective.
+Status: M6 owner-accepted and merged; M6.5 owner-accepted September 13, 2026. Later milestones
+remain prospective.
 
 The [raw owner problem log](problemsfound.md) is preserved verbatim as the source record. This
 companion maps every statement into the authoritative [milestone roadmap](../roadmap/milestones.md)
@@ -70,7 +70,7 @@ The planned attribution is `© <current year> Paul Rocco`, linked appropriately 
 
 - Target milestone: M6.5 — Inventory intelligence and cost tracking
 - Requirements: `R-070`–`R-072` and `R-076`; acceptance procedures `AT-INVINT-01`–`AT-INVINT-03` and `AT-INVINT-06`
-- Status: **M6.5-B/C owner-accepted September 13, 2026; final technical qualification passed**
+- Status: **Accepted in M6.5 September 13, 2026**
 
 ## 8. Inventory-linked expenses and consumption cost
 
@@ -78,14 +78,13 @@ The planned attribution is `© <current year> Paul Rocco`, linked appropriately 
 
 - Target milestone: M6.5 — Inventory intelligence and cost tracking
 - Requirements: `R-073`–`R-076`; acceptance procedures `AT-INVINT-04`–`AT-INVINT-06` and architecture review `AR-INVINT-01`
-- Status: **A1, A2, B, and C owner-accepted; final technical qualification passed**
+- Status: **Accepted in M6.5 September 13, 2026**
 
 The roadmap distinguishes cash spending, inventory value, and consumption cost. Purchase history or
 cost lots are required; a single mutable price is insufficient. The exact deterministic costing
 policy is deliberately deferred to M6.5 architecture/domain review and an ADR if required.
 The [architecture proposal](../plans/2026-09-04-m6.5-inventory-intelligence-architecture.md) and
-[ADR-0042](../adr/0042-inventory-purchases-fifo-and-quantity-policy.md) now recommend the policy;
-the ADR remains Proposed pending owner review.
+[ADR-0042](../adr/0042-inventory-purchases-fifo-and-quantity-policy.md) define the accepted policy.
 
 ## 9. Normal phone profile-photo upload
 
@@ -105,7 +104,7 @@ deliberately extend this privacy-safe boundary rather than expose raw metadata.
 
 The roadmap order is M6 UX Passes 1–4, M6.1 (six owner issues), final M6 qualification/acceptance,
 M6.2, M6.5, M7, M8, then M9. M6, PR #8, and the M6.2 correction merged through PR #9 are
-complete. M6.5 does not qualify M7 Raspberry Pi deployment/recovery, authorize M8 release
+complete. M6.5 is owner-accepted but does not qualify M7 Raspberry Pi deployment/recovery, authorize M8 release
 qualification, or enable M9 public sharing.
 
 ## 10. Delete an incorrectly entered care record

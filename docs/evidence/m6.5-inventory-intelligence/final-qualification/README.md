@@ -1,6 +1,6 @@
 # Final M6.5 qualification
 
-Status: **Technical qualification passed; explicit M6.5 owner acceptance pending**
+Status: **Technical qualification passed; M6.5 owner-accepted September 13, 2026**
 
 The owner accepted M6.5-C on September 13, 2026. M6.5-D adds no product capability and does not
 begin M7: it consolidates the accepted A1, A2, B, and C tranches and qualifies the complete M6.5
@@ -86,8 +86,9 @@ are healthy; local and public readiness return `ready`; web and worker run as UI
 all nine active projection definitions are current at position 810; and exactly one Care Keeper
 Compose stack is active.
 
-## Boundary
+## Owner acceptance and boundary
 
-M6.5 is technically qualified but is not marked owner-accepted by this record. Explicit owner
-acceptance remains required. M7 deployment/recovery qualification, M8 release qualification, M9
-public media, and unrelated feature work have not begun.
+The owner explicitly accepted M6.5 on September 13, 2026; the decision is retained in the
+[owner-acceptance record](../approvals/2026-09-13-owner-acceptance.md). M7 deployment/recovery
+qualification, M8 release qualification, M9 public media, and unrelated feature work have not
+begun.
