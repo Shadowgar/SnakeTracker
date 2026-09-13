@@ -1,0 +1,114 @@
+{% set current = item if item is defined else none %}
+{% set selected_type = values.get('inventory_type', current.inventory_type if current else '') %}
+{% set selected_unit = values.get('unit_code', current.unit_code if current else '') %}
+{% set selected_category = values.get('food_category', current.food_category if current else '') %}
+{% set selected_food_type = values.get('food_type', current.food_type if current else '') %}
+{% set selected_size = values.get('size_stage', current.size_stage if current else '') %}
+{% set selected_preparation = values.get('preparation_method', current.preparation_method if current else '') %}
+{% set selected_context_category = values.get('context_category', '') %}
+{% set selected_context_detail = values.get('context_detail', '') %}
+{% set selected_stock_basis = values.get('stock_basis', '') %}
+<label>Type
+  <select name="inventory_type" data-inventory-type required>
+    <option value="">Choose a type</option>
+    {% for option in inventory_types %}<option value="{{ option.code }}"{% if selected_type == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+  </select>
+</label>
+{% if guided_creation %}
+<fieldset class="form-stack" data-context-fields="food"{% if selected_type != 'food' %} hidden{% endif %}>
+  <legend>Food details</legend>
+  <label>Food category
+    <select name="food_category" data-food-category data-context-control{% if selected_type != 'food' %} disabled{% endif %} required>
+      <option value="">Choose a category</option>
+      {% for option in food_categories %}<option value="{{ option.code }}"{% if option.code in ('whole_prey', 'insect') %} data-unit-codes="each" data-default-unit="each"{% endif %}{% if selected_category == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+    </select>
+  </label>
+  <div class="form-stack" data-prey-fields{% if selected_category not in ('whole_prey', 'insect') %} hidden{% endif %}>
+    <label><span data-food-type-label>{% if selected_category == 'insect' %}Feeder{% else %}Prey{% endif %}</span>
+      <select name="food_type" data-food-type{% if selected_category not in ('whole_prey', 'insect') %} disabled{% endif %}>
+        <option value="">Choose a type</option>
+        {% for option in whole_prey_types if option.code != 'other' %}<option value="{{ option.code }}" data-parent="whole_prey"{% if selected_food_type == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+        {% for option in insect_types if option.code != 'other' %}<option value="{{ option.code }}" data-parent="insect"{% if selected_food_type == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+        <option value="other" data-parent="whole_prey,insect"{% if selected_food_type == 'other' %} selected{% endif %}>Other</option>
+      </select>
+    </label>
+    <label>Size / stage
+      <select name="size_stage" data-size-stage{% if selected_category not in ('whole_prey', 'insect') %} disabled{% endif %}>
+        <option value="">{% if selected_category == 'insect' %}Not specified{% else %}Choose a size or stage{% endif %}</option>
+        {% for option in size_stages %}<option value="{{ option.code }}"{% if selected_size == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+      </select>
+    </label>
+  </div>
+  <label data-preparation-field{% if selected_category != 'whole_prey' %} hidden{% endif %}>Preparation / form
+    <select name="preparation_method" data-preparation-method{% if selected_category != 'whole_prey' %} disabled{% endif %}>
+      <option value="">Choose preparation</option>
+      {% for option in preparation_methods %}<option value="{{ option.code }}"{% if selected_preparation == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+    </select>
+  </label>
+  <label data-food-stock-field{% if selected_category in ('', 'whole_prey', 'insect') %} hidden{% endif %}>Stock form
+    <select name="stock_basis" data-food-stock-basis data-unit-driver{% if selected_category in ('', 'whole_prey', 'insect') %} disabled{% endif %}>
+      <option value="">Choose how this food is stocked</option>
+      {% for option in food_stock_forms %}<option value="{{ option.code }}" data-parent="{{ option.parent_code }}" data-unit-codes="{{ option.unit_codes|join(',') }}" data-default-unit="{{ option.default_unit_code }}"{% if selected_stock_basis == option.code and selected_category == option.parent_code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+    </select>
+  </label>
+</fieldset>
+
+<fieldset class="form-stack" data-context-fields="equipment"{% if selected_type != 'equipment' %} hidden{% endif %}>
+  <legend>Equipment details</legend>
+  <label>Equipment category<select name="context_category" data-context-category data-context-control{% if selected_type != 'equipment' %} disabled{% endif %} required><option value="">Choose a category</option>{% for option in equipment_categories %}<option value="{{ option.code }}"{% if selected_context_category == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></label>
+  <label data-context-detail-field{% if not selected_context_category %} hidden{% endif %}>Item<select name="context_detail" data-context-detail data-unit-driver{% if not selected_context_category or selected_type != 'equipment' %} disabled{% endif %} required><option value="">Choose an item</option>{% for option in equipment_items %}<option value="{{ option.code }}" data-parent="{{ option.parent_code }}" data-unit-codes="{{ option.unit_codes|join(',') }}" data-default-unit="{{ option.default_unit_code }}"{% if selected_context_detail == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></label>
+</fieldset>
+
+<fieldset class="form-stack" data-context-fields="heating_lighting"{% if selected_type != 'heating_lighting' %} hidden{% endif %}>
+  <legend>Heating &amp; lighting details</legend>
+  <label>Category<select name="context_category" data-context-category data-context-control{% if selected_type != 'heating_lighting' %} disabled{% endif %} required><option value="">Choose a category</option>{% for option in heating_lighting_categories %}<option value="{{ option.code }}"{% if selected_context_category == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></label>
+  <label data-context-detail-field{% if not selected_context_category %} hidden{% endif %}>Item<select name="context_detail" data-context-detail data-unit-driver{% if not selected_context_category or selected_type != 'heating_lighting' %} disabled{% endif %} required><option value="">Choose an item</option>{% for option in heating_lighting_items %}<option value="{{ option.code }}" data-parent="{{ option.parent_code }}" data-unit-codes="{{ option.unit_codes|join(',') }}" data-default-unit="{{ option.default_unit_code }}"{% if selected_context_detail == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></label>
+</fieldset>
+
+<fieldset class="form-stack" data-context-fields="substrate_bedding"{% if selected_type != 'substrate_bedding' %} hidden{% endif %}>
+  <legend>Substrate &amp; bedding details</legend>
+  <label>Form<select name="context_category" data-context-control data-unit-driver{% if selected_type != 'substrate_bedding' %} disabled{% endif %} required><option value="">Choose a form</option>{% for option in substrate_forms %}<option value="{{ option.code }}" data-unit-codes="{{ option.unit_codes|join(',') }}" data-default-unit="{{ option.default_unit_code }}"{% if selected_context_category == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></label>
+</fieldset>
+
+<fieldset class="form-stack" data-context-fields="cleaning_supply"{% if selected_type != 'cleaning_supply' %} hidden{% endif %}>
+  <legend>Cleaning supply details</legend>
+  <label>Form<select name="context_category" data-cleaning-form data-context-control data-unit-driver{% if selected_type != 'cleaning_supply' %} disabled{% endif %} required><option value="">Choose a form</option>{% for option in cleaning_forms %}<option value="{{ option.code }}"{% if option.unit_codes %} data-unit-codes="{{ option.unit_codes|join(',') }}" data-default-unit="{{ option.default_unit_code }}"{% endif %}{% if selected_context_category == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></label>
+  <label data-cleaning-basis-field{% if selected_context_category != 'liquid' %} hidden{% endif %}>Tracking basis<select name="stock_basis" data-cleaning-basis data-unit-driver{% if selected_context_category != 'liquid' or selected_type != 'cleaning_supply' %} disabled{% endif %} required><option value="">Choose a tracking basis</option>{% for option in cleaning_liquid_bases %}<option value="{{ option.code }}" data-unit-codes="{{ option.unit_codes|join(',') }}" data-default-unit="{{ option.default_unit_code }}"{% if selected_stock_basis == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></label>
+</fieldset>
+
+<fieldset class="form-stack" data-context-fields="supplement"{% if selected_type != 'supplement' %} hidden{% endif %}>
+  <legend>Supplement details</legend>
+  <label>Form<select name="context_category" data-context-control data-unit-driver{% if selected_type != 'supplement' %} disabled{% endif %} required><option value="">Choose a form</option>{% for option in supplement_forms %}<option value="{{ option.code }}" data-unit-codes="{{ option.unit_codes|join(',') }}" data-default-unit="{{ option.default_unit_code }}"{% if selected_context_category == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></label>
+</fieldset>
+
+<fieldset class="form-stack" data-context-fields="enclosure_habitat"{% if selected_type != 'enclosure_habitat' %} hidden{% endif %}>
+  <legend>Enclosure &amp; habitat details</legend>
+  <label>Item<select name="context_category" data-context-control data-unit-driver{% if selected_type != 'enclosure_habitat' %} disabled{% endif %} required><option value="">Choose an item</option>{% for option in habitat_items %}<option value="{{ option.code }}" data-unit-codes="{{ option.unit_codes|join(',') }}" data-default-unit="{{ option.default_unit_code }}"{% if selected_context_category == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></label>
+</fieldset>
+
+<fieldset class="form-stack" data-context-fields="other"{% if selected_type != 'other' %} hidden{% endif %}>
+  <legend>Other inventory details</legend>
+  <label>Stock basis<select name="stock_basis" data-context-control data-unit-driver{% if selected_type != 'other' %} disabled{% endif %} required><option value="">Choose a stock basis</option>{% for option in other_stock_bases %}<option value="{{ option.code }}" data-unit-codes="{{ option.unit_codes|join(',') }}" data-default-unit="{{ option.default_unit_code }}"{% if selected_stock_basis == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></label>
+</fieldset>
+
+<label>Item name<input name="name" value="{{ values.get('name', '') }}" required maxlength="200" autocomplete="off"></label>
+<section data-unit-section hidden aria-live="polite" aria-atomic="true">
+  <p class="inventory-unit-readout" data-fixed-unit-field hidden><span>Tracked as</span><strong data-fixed-unit-label></strong><input type="hidden" name="unit_code" data-fixed-unit-input disabled></p>
+  <label data-filtered-unit-field hidden>Unit<select name="unit_code" data-inventory-unit disabled required>{% for unit in inventory_units %}<option value="{{ unit.code }}" data-label="{{ unit.label }}" data-fractional="{{ 'true' if unit.allows_fractional else 'false' }}">{{ unit.label }}</option>{% endfor %}</select></label>
+</section>
+<label data-starting-quantity-field hidden>Starting quantity<input name="starting_quantity" type="number" min="0" step="1" inputmode="numeric" value="{{ values.get('starting_quantity', '') }}" disabled required><small data-starting-quantity-help></small></label>
+<label data-reorder-field hidden>Reorder when stock reaches <span class="visually-hidden">(optional)</span><input name="reorder_threshold" type="number" min="0" step="1" inputmode="numeric" value="{{ values.get('reorder_threshold', '') }}" disabled><small>Optional</small></label>
+{% else %}
+<label>Item name<input name="name" value="{{ values.get('name', current.name if current else '') }}" required maxlength="200"></label>
+<fieldset class="form-stack" data-food-fields{% if selected_type != 'food' %} hidden{% endif %}>
+  <legend>Food details</legend>
+  <label>Food category<select name="food_category" data-food-category{% if selected_type == 'food' %} required{% endif %}><option value="">Choose a category</option>{% for option in food_categories %}<option value="{{ option.code }}"{% if selected_category == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></label>
+  <div class="form-stack" data-prey-fields{% if selected_category not in ('whole_prey', 'insect') %} hidden{% endif %}>
+    <label><span data-food-type-label>{% if selected_category == 'insect' %}Feeder{% else %}Prey{% endif %}</span><select name="food_type" data-food-type><option value="">Choose a type</option>{% for option in whole_prey_types if option.code != 'other' %}<option value="{{ option.code }}" data-parent="whole_prey"{% if selected_food_type == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}{% for option in insect_types if option.code != 'other' %}<option value="{{ option.code }}" data-parent="insect"{% if selected_food_type == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}<option value="other" data-parent="whole_prey,insect"{% if selected_food_type == 'other' %} selected{% endif %}>Other</option></select></label>
+    <label>Size / stage<select name="size_stage" data-size-stage><option value="">Choose a size or stage</option>{% for option in size_stages %}<option value="{{ option.code }}"{% if selected_size == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></label>
+  </div>
+  <label data-preparation-field{% if selected_category != 'whole_prey' %} hidden{% endif %}>Preparation / form<select name="preparation_method" data-preparation-method><option value="">Choose preparation</option>{% for option in preparation_methods %}<option value="{{ option.code }}"{% if selected_preparation == option.code %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></label>
+</fieldset>
+<label>Unit<select name="unit_code" data-inventory-unit required><option value="">Choose a unit</option>{% for unit in inventory_units %}<option value="{{ unit.code }}" data-inventory-types="{{ unit.inventory_types|sort|join(',') }}" data-fractional="{{ 'true' if unit.allows_fractional else 'false' }}"{% if selected_unit == unit.code %} selected{% endif %}>{{ unit.label }}</option>{% endfor %}</select>{% if current and current.needs_setup and current.legacy_unit %}<small>Current legacy unit: {{ current.legacy_unit }}. Choose only its exact controlled equivalent; stock will not be converted.</small>{% endif %}</label>
+<label>Reorder threshold<input name="reorder_threshold" type="number" min="0" step="0.001" value="{{ values.get('reorder_threshold', current.reorder_threshold_display if current else '') }}"></label>
+{% endif %}

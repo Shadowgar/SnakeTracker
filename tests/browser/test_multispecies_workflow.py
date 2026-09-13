@@ -138,27 +138,21 @@ def _create_stock(client: TestClient) -> str:
         data={
             "csrf_token": _csrf(form.text),
             "idempotency_key": "m55-shared-prey-stock",
+            "inventory_type": "food",
             "name": "Shared feeder portions",
-            "unit": "item",
+            "food_category": "whole_prey",
+            "food_type": "mouse",
+            "size_stage": "small",
+            "preparation_method": "frozen_thawed",
+            "unit_code": "each",
+            "starting_quantity": "5",
             "reorder_threshold": "1",
         },
         follow_redirects=False,
     )
     assert created.status_code == 303
     item_url = cast(str, created.headers["location"])
-    item = client.get(item_url)
-    received = client.post(
-        f"{item_url}/receive",
-        data={
-            "csrf_token": _csrf(item.text),
-            "idempotency_key": "m55-shared-prey-receive",
-            "expected_stream_version": "1",
-            "quantity": "5",
-            "reference": "Mixed fixture stock",
-        },
-        follow_redirects=False,
-    )
-    assert received.status_code == 303
+    assert "5 each" in client.get(item_url).text
     return item_url
 
 
@@ -337,7 +331,7 @@ def test_four_group_collection_shows_type_photo_and_applicable_actions(
             key="m55-browser-spider-feeding",
             occurred_at=occurred_at,
         )
-        assert "3 item" in client.get(shared_stock).text
+        assert "3 each" in client.get(shared_stock).text
 
         lizard_profile = client.get(profiles["Lizard A"])
         lizard_length = client.post(

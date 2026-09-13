@@ -1,0 +1,54 @@
+{
+  "status": "passed",
+  "origin": "https://tracker.theroccos.us",
+  "chromium_architecture": "arm64",
+  "viewports": ["390x844", "1440x900"],
+  "initial_state": {
+    "food_details_visible": false,
+    "generic_unit_visible": false,
+    "starting_quantity_visible": false
+  },
+  "guided_rat": {
+    "path": ["Food", "Whole prey", "Rat", "Small", "Frozen / thawed"],
+    "unit": "each",
+    "starting_quantity": 20,
+    "reorder_threshold": 5,
+    "single_submit": true,
+    "receive_stock_step": false,
+    "initial_reason_prompt": false,
+    "immediate_balance": "20 each on hand",
+    "after_feeding_one": "19 each on hand",
+    "after_delete": "20 each on hand"
+  },
+  "additional_cases": {
+    "medium_dubia_roach": "75 each on hand",
+    "tank_light": "1 each on hand",
+    "coconut_husk_brick": "6 bricks on hand",
+    "powder_supplement": "500 g on hand"
+  },
+  "axe": {
+    "scans": [
+      "mobile initial",
+      "mobile configured rat",
+      "mobile inventory detail",
+      "desktop initial",
+      "desktop configured rat"
+    ],
+    "violations": 0
+  },
+  "console": {
+    "application_javascript_errors": 0,
+    "application_resource_failures": 0,
+    "page_errors": 0,
+    "http_responses_at_or_above_400": 0,
+    "expected_external_diagnostic": "Cloudflare-injected beacon and inline challenge scripts blocked by script-src self",
+    "csp_weakened": false
+  },
+  "live_write_boundary": {
+    "household": "Care Keeper Fictional Collection",
+    "qualification_items": 7,
+    "qualification_items_archived": 7,
+    "manual_row_deletions": 0,
+    "customer_household_events": 0
+  }
+}

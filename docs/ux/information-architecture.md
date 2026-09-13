@@ -55,6 +55,33 @@ Husbandry and health remain coherent feature slices within one animal experience
 - Reports provide accessible tabular alternatives to every chart and export only authorized data.
 - Administration contains household users/roles, backup health, dead letters, projection health, plugins, security audit, and compatibility diagnostics.
 
+### Proposed M6.5 Inventory experience
+
+Pending owner approval of ADR-0042, Inventory evolves from a list-first screen to this mobile-first
+hierarchy:
+
+1. Needs attention: owner-threshold reorder state, count due/not verified, and shortest supported
+   duration.
+2. Stock snapshot: current available quantity, known value, and explicit unknown-cost stock.
+3. Reorder and verification: evidence plus direct Add purchase / Start count actions.
+4. Usage and purchasing: 30/90-day use, explainable duration, unused observations, and recent
+   Purchases.
+5. All items: searchable/filterable item list after the decision-support summary.
+
+Item detail combines current quantity/policy, rate/duration explanation, last count, Purchase lots,
+consumed/current value, and immutable movements. Actions are Add purchase, Use inventory, Count
+stock, Adjust stock, Edit policy, and Archive/Restore.
+
+A phone count selects Full, Category, Cycle, or One item, then shows one item's unit and expected
+quantity with a large actual-quantity input and thumb-reachable Save & next. Each save is an
+independent concurrency-safe count fact; review permits appended correction. Desktop uses the same
+hierarchy with a denser table/review pane. Expenses distinguishes linked Supply purchases from
+Other expenses and never creates a second editable Expense for a Purchase.
+
+Rates, duration, stock value, unknown cost, and spending estimates always display source window,
+currency, freshness, and estimate/unavailable language where material. This section is a wireframe-
+level proposal only; no M6.5 UI is implemented.
+
 ## Interaction and accessibility rules
 
 - Minimum touch target: 44 by 44 CSS pixels.

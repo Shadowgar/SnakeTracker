@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from snaketracker.bootstrap.application import build_application
 from snaketracker.bootstrap.configuration import Environment, Settings
 from tests.browser.test_identity_flow import client_for, complete_setup, csrf_from
+from tests.support.inventory import create_food_inventory, inventory_feeding_fields
 
 ROOT = Path(__file__).parents[2]
 
@@ -125,13 +126,13 @@ def test_analytics_explains_estimates_and_passed_windows_in_plain_language(tmp_p
             follow_redirects=False,
         )
         animal_url = registered.headers["location"]
+        create_food_inventory(client, idempotency_prefix="plain-estimate-food")
         first_day = date(2025, 1, 1)
         for index in range(6):
-            feeding_form = client.get(f"{animal_url}/feedings/new")
             response = client.post(
                 f"{animal_url}/feedings",
                 data={
-                    "csrf_token": csrf_from(feeding_form.text),
+                    **inventory_feeding_fields(client, animal_url),
                     "idempotency_key": f"plain-estimate-{index}",
                     "occurred_at": (first_day + timedelta(days=index * 10)).isoformat() + "T12:00",
                     "prey_type": "Mouse",
@@ -249,12 +250,13 @@ def test_selected_calendar_care_rows_are_large_navigable_household_scoped_links(
             follow_redirects=False,
         )
         animal_url = created.headers["location"]
+        create_food_inventory(client, idempotency_prefix="calendar-food")
         profile = client.get(animal_url)
         selected_day = (date.today() - timedelta(days=1)).isoformat()
         completed = client.post(
             f"{animal_url}/feedings",
             data={
-                "csrf_token": csrf_from(profile.text),
+                **inventory_feeding_fields(client, animal_url),
                 "idempotency_key": "m61-calendar-completed",
                 "occurred_at": f"{selected_day}T08:00",
                 "prey_type": "mouse",

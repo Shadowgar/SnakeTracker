@@ -15,6 +15,7 @@ from httpx import Response
 
 from snaketracker.bootstrap.application import build_application
 from snaketracker.bootstrap.configuration import Environment, Settings
+from tests.support.inventory import create_food_inventory, inventory_feeding_fields
 
 ROOT = Path(__file__).parents[2]
 
@@ -77,8 +78,14 @@ def test_keeper_can_use_inventory_expense_and_reminder_workflows(tmp_path: Path)
             "/inventory",
             data={
                 "csrf_token": _csrf(inventory_form.text),
+                "inventory_type": "food",
                 "name": "Small mice",
-                "unit": "item",
+                "food_category": "whole_prey",
+                "food_type": "mouse",
+                "size_stage": "small",
+                "preparation_method": "frozen_thawed",
+                "unit_code": "each",
+                "starting_quantity": "10",
                 "reorder_threshold": "3",
             },
             follow_redirects=False,
@@ -87,18 +94,7 @@ def test_keeper_can_use_inventory_expense_and_reminder_workflows(tmp_path: Path)
         inventory_url = created.headers["location"]
         inventory_page = client.get(inventory_url)
         assert "Small mice" in inventory_page.text
-        received = client.post(
-            f"{inventory_url}/receive",
-            data={
-                "csrf_token": _csrf(inventory_page.text),
-                "expected_stream_version": "1",
-                "quantity": "10",
-                "reference": "Order 1001",
-            },
-            follow_redirects=False,
-        )
-        assert received.status_code == 303
-        assert "10 item" in client.get(inventory_url).text
+        assert "10 each" in client.get(inventory_url).text
         stale_inventory_page = client.get(inventory_url)
         stale_receive = client.post(
             f"{inventory_url}/receive",
@@ -136,7 +132,7 @@ def test_keeper_can_use_inventory_expense_and_reminder_workflows(tmp_path: Path)
         assert 'name="subject_type"' not in reminder_form.text
         assert f'value="animal:{animal_url.rsplit("/", 1)[-1]}"' in reminder_form.text
         feeding_form = client.get(f"{animal_url}/feedings/new")
-        assert "Use inventory" in feeding_form.text
+        assert "Food from inventory" in feeding_form.text
         unlinked_feeding = client.post(
             f"{animal_url}/feedings",
             data={
@@ -158,8 +154,10 @@ def test_keeper_can_use_inventory_expense_and_reminder_workflows(tmp_path: Path)
             },
             follow_redirects=False,
         )
-        assert unlinked_feeding.status_code == 303
-        assert "10 item" in client.get(inventory_url).text
+        assert unlinked_feeding.status_code == 422
+        assert "Choose a Food Inventory Item" in unlinked_feeding.text
+        assert "10 each" in client.get(inventory_url).text
+        feeding_form = client.get(f"{animal_url}/feedings/new")
         feeding = client.post(
             f"{animal_url}/feedings",
             data={
@@ -174,14 +172,13 @@ def test_keeper_can_use_inventory_expense_and_reminder_workflows(tmp_path: Path)
                 "quantity": "1",
                 "outcome": "accepted",
                 "notes": "",
-                "inventory_item_id": inventory_url.rsplit("/", 1)[-1],
-                "inventory_expected_stream_version": "2",
+                "inventory_item_id": f"{inventory_url.rsplit('/', 1)[-1]}:2",
                 "inventory_quantity": "1",
             },
             follow_redirects=False,
         )
         assert feeding.status_code == 303
-        assert "9 item" in client.get(inventory_url).text
+        assert "9 each" in client.get(inventory_url).text
 
         expense_form = client.get("/expenses/new")
         expense = client.post(
@@ -268,7 +265,7 @@ def test_keeper_can_use_inventory_expense_and_reminder_workflows(tmp_path: Path)
         assert protected.headers["location"] == "/login"
 
 
-def test_feeding_form_normalizes_unlinked_inventory_and_rejects_partial_links(
+def test_feeding_form_requires_valid_food_inventory_and_rejects_invalid_links(
     tmp_path: Path,
 ) -> None:
     with _client(tmp_path) as client:
@@ -278,8 +275,14 @@ def test_feeding_form_normalizes_unlinked_inventory_and_rejects_partial_links(
             "/inventory",
             data={
                 "csrf_token": _csrf(inventory_form.text),
+                "inventory_type": "food",
                 "name": "Qualification mice",
-                "unit": "item",
+                "food_category": "whole_prey",
+                "food_type": "mouse",
+                "size_stage": "small",
+                "preparation_method": "frozen_thawed",
+                "unit_code": "each",
+                "starting_quantity": "3",
                 "reorder_threshold": "1",
             },
             follow_redirects=False,
@@ -287,20 +290,7 @@ def test_feeding_form_normalizes_unlinked_inventory_and_rejects_partial_links(
         assert created_item.status_code == 303
         inventory_url = created_item.headers["location"]
         item_id = inventory_url.rsplit("/", 1)[-1]
-        inventory_page = client.get(inventory_url)
-        assert (
-            client.post(
-                f"{inventory_url}/receive",
-                data={
-                    "csrf_token": _csrf(inventory_page.text),
-                    "expected_stream_version": "1",
-                    "quantity": "3",
-                    "reference": "Feeding boundary qualification",
-                },
-                follow_redirects=False,
-            ).status_code
-            == 303
-        )
+        assert "3 each" in client.get(inventory_url).text
 
         animal_form = client.get("/animals/new")
         created_animal = client.post(
@@ -322,10 +312,10 @@ def test_feeding_form_normalizes_unlinked_inventory_and_rejects_partial_links(
         assert created_animal.status_code == 303
         animal_url = created_animal.headers["location"]
         feeding_form = client.get(f"{animal_url}/feedings/new")
-        assert 'src="/static/feeding-form.js?v=m62-inventory-normalization"' in feeding_form.text
+        assert 'src="/static/feeding-form.js?v=m65-a1"' in feeding_form.text
         quantity_control = re.search(r'<input name="inventory_quantity"[^>]+>', feeding_form.text)
         assert quantity_control is not None
-        assert " disabled" in quantity_control.group(0)
+        assert " required" in quantity_control.group(0)
         csrf_token = _csrf(feeding_form.text)
 
         def submit_feeding(
@@ -358,26 +348,8 @@ def test_feeding_form_normalizes_unlinked_inventory_and_rejects_partial_links(
                 data["inventory_quantity"] = inventory_quantity
             return client.post(f"{animal_url}/feedings", data=data, follow_redirects=False)
 
-        assert (
-            submit_feeding(
-                "unlinked-default-quantity",
-                inventory_item_id="",
-                inventory_version="",
-                inventory_quantity="1",
-            ).status_code
-            == 303
-        )
-        assert submit_feeding("unlinked-omitted-inventory").status_code == 303
-        assert (
-            submit_feeding(
-                "unlinked-stale-fields",
-                inventory_item_id="",
-                inventory_version="not-a-version",
-                inventory_quantity="not-a-quantity",
-            ).status_code
-            == 303
-        )
-        assert "3 item" in client.get(inventory_url).text
+        assert submit_feeding("unlinked-omitted-inventory").status_code == 422
+        assert "3 each" in client.get(inventory_url).text
 
         assert (
             submit_feeding(
@@ -387,13 +359,13 @@ def test_feeding_form_normalizes_unlinked_inventory_and_rejects_partial_links(
             ).status_code
             == 303
         )
-        assert "2 item" in client.get(inventory_url).text
+        assert "2 each" in client.get(inventory_url).text
 
         missing_quantity = submit_feeding(
             "linked-missing-quantity", inventory_item_id=f"{item_id}:3"
         )
         assert missing_quantity.status_code == 422
-        assert "item, version, and quantity are required together" in missing_quantity.text
+        assert "Quantity must use at most three decimal places" in missing_quantity.text
         missing_version = submit_feeding(
             "linked-missing-version",
             inventory_item_id=item_id,
@@ -415,7 +387,7 @@ def test_feeding_form_normalizes_unlinked_inventory_and_rejects_partial_links(
         )
         assert insufficient.status_code == 422
         assert "Insufficient available inventory" in insufficient.text
-        assert "2 item" in client.get(inventory_url).text
+        assert "2 each" in client.get(inventory_url).text
 
         assert (
             submit_feeding(
@@ -425,9 +397,9 @@ def test_feeding_form_normalizes_unlinked_inventory_and_rejects_partial_links(
                 inventory_version="stale",
                 inventory_quantity="1",
             ).status_code
-            == 303
+            == 422
         )
-        assert "2 item" in client.get(inventory_url).text
+        assert "2 each" in client.get(inventory_url).text
         assert (
             submit_feeding(
                 "linked-refusal",
@@ -437,7 +409,7 @@ def test_feeding_form_normalizes_unlinked_inventory_and_rejects_partial_links(
             ).status_code
             == 303
         )
-        assert "1 item" in client.get(inventory_url).text
+        assert "1 each" in client.get(inventory_url).text
 
         client.cookies.clear()
         registration = client.get("/register")
@@ -493,7 +465,7 @@ def test_feeding_form_normalizes_unlinked_inventory_and_rejects_partial_links(
             },
         )
         assert cross_household.status_code == 422
-        assert "Inventory item does not exist in this household" in cross_household.text
+        assert "Choose a configured Food Inventory Item" in cross_household.text
 
         with client.app.state.database_engine.connect() as connection:
             assert (
@@ -516,26 +488,19 @@ def test_inventory_browser_lifecycle_excludes_archived_items_from_new_feedings(
             "/inventory",
             data={
                 "csrf_token": _csrf(new_item.text),
+                "inventory_type": "food",
                 "name": "Old prey stock",
-                "unit": "item",
+                "food_category": "whole_prey",
+                "food_type": "mouse",
+                "size_stage": "small",
+                "preparation_method": "frozen_thawed",
+                "unit_code": "each",
+                "starting_quantity": "6",
                 "reorder_threshold": "2",
             },
             follow_redirects=False,
         )
         item_url = created.headers["location"]
-        detail = client.get(item_url)
-        received = client.post(
-            f"{item_url}/receive",
-            data={
-                "csrf_token": _csrf(detail.text),
-                "expected_stream_version": "1",
-                "quantity": "6",
-                "reference": "Lifecycle order",
-            },
-            follow_redirects=False,
-        )
-        assert received.status_code == 303
-
         edit = client.get(f"{item_url}/edit")
         edited = client.post(
             f"{item_url}/edit",
@@ -543,7 +508,12 @@ def test_inventory_browser_lifecycle_excludes_archived_items_from_new_feedings(
                 "csrf_token": _csrf(edit.text),
                 "expected_stream_version": "2",
                 "name": "Archived prey stock",
-                "unit": "prey",
+                "inventory_type": "food",
+                "food_category": "whole_prey",
+                "food_type": "mouse",
+                "size_stage": "small",
+                "preparation_method": "frozen_thawed",
+                "unit_code": "each",
                 "reorder_threshold": "3",
             },
             follow_redirects=False,
@@ -561,7 +531,7 @@ def test_inventory_browser_lifecycle_excludes_archived_items_from_new_feedings(
             follow_redirects=False,
         )
         assert adjusted.status_code == 303
-        assert "5 prey" in client.get(item_url).text
+        assert "5 each" in client.get(item_url).text
 
         animal_form = client.get("/animals/new")
         animal = client.post(
@@ -602,7 +572,7 @@ def test_inventory_browser_lifecycle_excludes_archived_items_from_new_feedings(
         assert "Archived prey stock" not in client.get(f"{animal_url}/feedings/new").text
         archived_detail = client.get(item_url)
         assert "Archived" in archived_detail.text
-        assert "5 prey" in archived_detail.text
+        assert "5 each" in archived_detail.text
         assert client.get(f"{item_url}/edit").status_code == 403
 
         restored = client.post(
@@ -634,6 +604,7 @@ def test_today_feeding_action_reconciles_overdue_to_next_occurrence_for_each_pro
 ) -> None:
     with _client(tmp_path) as client:
         _setup(client)
+        create_food_inventory(client, idempotency_prefix=f"{animal_type}-today-food")
         animal_form = client.get("/animals/new")
         animal = client.post(
             "/animals",
@@ -676,11 +647,10 @@ def test_today_feeding_action_reconciles_overdue_to_next_occurrence_for_each_pro
         action_url = f"{animal_url}/feedings/new?return_to=today"
         assert f'href="{action_url}"' in overdue.group(0)
 
-        care_form = client.get(action_url)
         saved = client.post(
             f"{animal_url}/feedings",
             data={
-                "csrf_token": _csrf(care_form.text),
+                **inventory_feeding_fields(client, animal_url),
                 "return_to": "today",
                 "occurred_at": (datetime.now(UTC) - timedelta(minutes=1)).strftime(
                     "%Y-%m-%dT%H:%M"
@@ -692,9 +662,6 @@ def test_today_feeding_action_reconciles_overdue_to_next_occurrence_for_each_pro
                 "quantity": "1",
                 "outcome": "accepted",
                 "notes": "",
-                "inventory_item_id": "",
-                "inventory_expected_stream_version": "",
-                "inventory_quantity": "",
             },
             follow_redirects=False,
         )
@@ -722,7 +689,7 @@ def test_operational_routes_fail_closed_for_invalid_and_unauthorized_requests(
             data={"csrf_token": token, "name": " ", "unit": "item"},
         )
         assert invalid_inventory.status_code == 422
-        assert "Inventory name is required" in invalid_inventory.text
+        assert "Inventory type is invalid" in invalid_inventory.text
         assert client.get("/inventory/not-a-uuid").status_code == 404
         assert client.get("/inventory/not-a-uuid/edit").status_code == 404
         invalid_receipt = client.post(
@@ -860,6 +827,7 @@ def test_animal_profile_manages_care_schedule_and_reminders_is_an_agenda(
 ) -> None:
     with _client(tmp_path) as client:
         _setup(client)
+        create_food_inventory(client, idempotency_prefix="profile-schedule-food")
         animal_form = client.get("/animals/new")
         animal = client.post(
             "/animals",
@@ -895,11 +863,10 @@ def test_animal_profile_manages_care_schedule_and_reminders_is_an_agenda(
         assert missing_interval.status_code == 422
         assert "interval is required" in missing_interval.text.lower()
 
-        feeding_form = client.get(f"{animal_url}/feedings/new")
         feeding = client.post(
             f"{animal_url}/feedings",
             data={
-                "csrf_token": _csrf(feeding_form.text),
+                **inventory_feeding_fields(client, animal_url),
                 "occurred_at": (datetime.now(UTC) - timedelta(minutes=1)).strftime(
                     "%Y-%m-%dT%H:%M"
                 ),
@@ -910,9 +877,6 @@ def test_animal_profile_manages_care_schedule_and_reminders_is_an_agenda(
                 "quantity": "1",
                 "outcome": "accepted",
                 "notes": "",
-                "inventory_item_id": "",
-                "inventory_expected_stream_version": "",
-                "inventory_quantity": "",
             },
             follow_redirects=False,
         )

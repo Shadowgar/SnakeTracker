@@ -17,7 +17,9 @@ from snaketracker.domains.animals.contracts import (
     AnimalBathRecordedV1,
     AnimalEnclosureAssignedV1,
     AnimalFeedingCorrectedV1,
+    AnimalFeedingCorrectedV2,
     AnimalFeedingRecordedV1,
+    AnimalFeedingRecordedV2,
     AnimalLengthCorrectedV1,
     AnimalLengthRecordedV1,
     AnimalMoltCorrectedV1,
@@ -51,17 +53,24 @@ from snaketracker.domains.expenses.contracts import (
     ExpenseVoidedV1,
 )
 from snaketracker.domains.households.contracts import HouseholdCreatedV1, HouseholdOwnerAddedV1
+from snaketracker.domains.inventory.catalog import UNIT_BY_CODE, validate_catalog
 from snaketracker.domains.inventory.contracts import (
     InventoryConsumptionReversedV1,
+    InventoryConsumptionReversedV2,
     InventoryItemArchivedV1,
     InventoryItemRegisteredV1,
+    InventoryItemRegisteredV2,
     InventoryItemRestoredV1,
     InventoryItemUpdatedV1,
+    InventoryItemUpdatedV2,
     InventoryReorderPolicyChangedV1,
     InventoryStockAdjustedV1,
+    InventoryStockAdjustedV2,
     InventoryStockConsumedV1,
+    InventoryStockConsumedV2,
     InventoryStockExpiredV1,
     InventoryStockReceivedV1,
+    InventoryStockReceivedV2,
     InventoryStockReservedV1,
 )
 from snaketracker.domains.reminders.contracts import (
@@ -458,6 +467,76 @@ def _deserialize_animal_feeding_corrected(data: Mapping[str, object]) -> EventPa
     )
 
 
+def _deserialize_animal_feeding_recorded_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalFeedingRecordedV2, data)
+    fields = _inventory_feeding_fields(data)
+    return AnimalFeedingRecordedV2(*fields)
+
+
+def _deserialize_animal_feeding_corrected_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalFeedingCorrectedV2, data)
+    target_event_id = _uuid_field(data, "target_event_id", "feeding correction")
+    return AnimalFeedingCorrectedV2(target_event_id, *_inventory_feeding_fields(data))
+
+
+def _inventory_feeding_fields(
+    data: Mapping[str, object],
+) -> tuple[UUID, str, str, str, str | None, str | None, str | None, str, int, str]:
+    inventory_item_id = _uuid_field(data, "inventory_item_id", "inventory feeding")
+    required = ("item_name", "inventory_type", "food_category", "unit_code", "outcome")
+    optional = ("food_type", "size_stage", "preparation_method")
+    quantity_scaled = data["quantity_scaled"]
+    if (
+        any(not isinstance(data[name], str) for name in required)
+        or any(data[name] is not None and not isinstance(data[name], str) for name in optional)
+        or type(quantity_scaled) is not int
+        or quantity_scaled <= 0
+    ):
+        raise ValueError("Stored inventory feeding payload is invalid.")
+    item_name = cast(str, data["item_name"])
+    inventory_type = cast(str, data["inventory_type"])
+    food_category = cast(str, data["food_category"])
+    food_type = cast(str | None, data["food_type"])
+    size_stage = cast(str | None, data["size_stage"])
+    preparation_method = cast(str | None, data["preparation_method"])
+    unit_code = cast(str, data["unit_code"])
+    outcome = cast(str, data["outcome"])
+    if (
+        not item_name.strip()
+        or inventory_type != "food"
+        or outcome
+        not in {
+            "accepted",
+            "refused",
+            "regurgitated",
+        }
+    ):
+        raise ValueError("Stored inventory feeding payload is invalid.")
+    validate_catalog(
+        inventory_type,
+        unit_code,
+        food_category,
+        food_type,
+        size_stage,
+        preparation_method,
+    )
+    unit = UNIT_BY_CODE[unit_code]
+    if not unit.allows_fractional and quantity_scaled % 1000:
+        raise ValueError("Stored inventory feeding payload is invalid.")
+    return (
+        inventory_item_id,
+        item_name,
+        inventory_type,
+        food_category,
+        food_type,
+        size_stage,
+        preparation_method,
+        unit_code,
+        quantity_scaled,
+        outcome,
+    )
+
+
 def _feeding_payload_from_data(data: Mapping[str, object]) -> AnimalFeedingRecordedV1:
     prey_type, prey_size, prey_weight, preparation, quantity, outcome = _feeding_fields(data)
     return AnimalFeedingRecordedV1(
@@ -665,12 +744,42 @@ ANIMAL_HUSBANDRY_CONTRACTS = (
         ),
     ),
     EventContractRegistration(
+        event_type="animal.feeding_recorded",
+        schema_version=2,
+        owner="animals.husbandry",
+        payload_type=AnimalFeedingRecordedV2,
+        deserialize_payload=_deserialize_animal_feeding_recorded_v2,
+        subject_requirements=(
+            SubjectRequirement("animal", "primary"),
+            SubjectRequirement("inventory_item", "related"),
+        ),
+        correction=CorrectionCapabilities(
+            correctable=True,
+            voidable=True,
+            reinstatable=True,
+            required_role="owner",
+            correction_event_types=("animal.feeding_corrected",),
+        ),
+    ),
+    EventContractRegistration(
         event_type="animal.feeding_corrected",
         schema_version=1,
         owner="animals.husbandry",
         payload_type=AnimalFeedingCorrectedV1,
         deserialize_payload=_deserialize_animal_feeding_corrected,
         subject_requirements=(SubjectRequirement("animal", "primary"),),
+        correction=CorrectionCapabilities(voidable=True, reinstatable=True, required_role="owner"),
+    ),
+    EventContractRegistration(
+        event_type="animal.feeding_corrected",
+        schema_version=2,
+        owner="animals.husbandry",
+        payload_type=AnimalFeedingCorrectedV2,
+        deserialize_payload=_deserialize_animal_feeding_corrected_v2,
+        subject_requirements=(
+            SubjectRequirement("animal", "primary"),
+            SubjectRequirement("inventory_item", "related"),
+        ),
         correction=CorrectionCapabilities(voidable=True, reinstatable=True, required_role="owner"),
     ),
     EventContractRegistration(
@@ -993,6 +1102,40 @@ def _deserialize_inventory_item_registered(data: Mapping[str, object]) -> EventP
     )
 
 
+def _inventory_catalog_fields(
+    data: Mapping[str, object], label: str
+) -> tuple[str, str, str | None, str | None, str | None, str | None, int | None]:
+    threshold = data["reorder_threshold_scaled"]
+    if threshold is not None and (type(threshold) is not int or threshold < 0):
+        raise ValueError(f"Stored {label} payload is invalid.")
+    fields = (
+        _required_payload_text(data, "inventory_type", label),
+        _required_payload_text(data, "unit_code", label),
+        _optional_payload_text(data, "food_category", label),
+        _optional_payload_text(data, "food_type", label),
+        _optional_payload_text(data, "size_stage", label),
+        _optional_payload_text(data, "preparation_method", label),
+    )
+    validate_catalog(*fields)
+    if threshold:
+        unit = UNIT_BY_CODE[fields[1]]
+        if not unit.allows_fractional and threshold % 1000:
+            raise ValueError(f"Stored {label} payload is invalid.")
+    return (
+        *fields,
+        threshold,
+    )
+
+
+def _deserialize_inventory_item_registered_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryItemRegisteredV2, data)
+    return InventoryItemRegisteredV2(
+        _uuid_field(data, "item_id", "structured inventory registration"),
+        _required_payload_text(data, "name", "structured inventory registration"),
+        *_inventory_catalog_fields(data, "structured inventory registration"),
+    )
+
+
 def _deserialize_inventory_item_updated(data: Mapping[str, object]) -> EventPayload:
     _require_exact_fields(InventoryItemUpdatedV1, data)
     threshold = data["reorder_threshold"]
@@ -1002,6 +1145,14 @@ def _deserialize_inventory_item_updated(data: Mapping[str, object]) -> EventPayl
         _required_payload_text(data, "name", "inventory update"),
         _required_payload_text(data, "unit", "inventory update"),
         threshold,
+    )
+
+
+def _deserialize_inventory_item_updated_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryItemUpdatedV2, data)
+    return InventoryItemUpdatedV2(
+        _required_payload_text(data, "name", "structured inventory update"),
+        *_inventory_catalog_fields(data, "structured inventory update"),
     )
 
 
@@ -1020,6 +1171,14 @@ def _deserialize_inventory_stock_received(data: Mapping[str, object]) -> EventPa
     return InventoryStockReceivedV1(
         _payload_integer(data, "quantity", "inventory receipt"),
         _optional_payload_text(data, "reference", "inventory receipt"),
+    )
+
+
+def _deserialize_inventory_stock_received_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryStockReceivedV2, data)
+    return InventoryStockReceivedV2(
+        _payload_integer(data, "quantity_scaled", "scaled inventory receipt"),
+        _optional_payload_text(data, "reference", "scaled inventory receipt"),
     )
 
 
@@ -1045,6 +1204,20 @@ def _deserialize_inventory_stock_consumed(data: Mapping[str, object]) -> EventPa
     )
 
 
+def _deserialize_inventory_stock_consumed_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryStockConsumedV2, data)
+    source = data["source_event_id"]
+    if source is not None and not isinstance(source, str):
+        raise ValueError("Stored scaled inventory consumption payload is invalid.")
+    try:
+        source_id = UUID(source) if source is not None else None
+    except ValueError as error:
+        raise ValueError("Stored scaled inventory consumption payload is invalid.") from error
+    return InventoryStockConsumedV2(
+        _payload_integer(data, "quantity_scaled", "scaled inventory consumption"), source_id
+    )
+
+
 def _deserialize_inventory_consumption_reversed(data: Mapping[str, object]) -> EventPayload:
     _require_exact_fields(InventoryConsumptionReversedV1, data)
     return InventoryConsumptionReversedV1(
@@ -1054,11 +1227,28 @@ def _deserialize_inventory_consumption_reversed(data: Mapping[str, object]) -> E
     )
 
 
+def _deserialize_inventory_consumption_reversed_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryConsumptionReversedV2, data)
+    return InventoryConsumptionReversedV2(
+        _uuid_field(data, "target_event_id", "scaled inventory reversal"),
+        _payload_integer(data, "quantity_scaled", "scaled inventory reversal"),
+        _required_payload_text(data, "reason", "scaled inventory reversal"),
+    )
+
+
 def _deserialize_inventory_stock_adjusted(data: Mapping[str, object]) -> EventPayload:
     _require_exact_fields(InventoryStockAdjustedV1, data)
     return InventoryStockAdjustedV1(
         _payload_integer(data, "quantity_delta", "inventory adjustment"),
         _required_payload_text(data, "reason", "inventory adjustment"),
+    )
+
+
+def _deserialize_inventory_stock_adjusted_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(InventoryStockAdjustedV2, data)
+    return InventoryStockAdjustedV2(
+        _payload_integer(data, "quantity_delta_scaled", "scaled inventory adjustment"),
+        _required_payload_text(data, "reason", "scaled inventory adjustment"),
     )
 
 
@@ -1088,11 +1278,27 @@ INVENTORY_CONTRACTS = (
         (SubjectRequirement("inventory_item", "primary"),),
     ),
     EventContractRegistration(
+        "inventory.item_registered",
+        2,
+        "inventory",
+        InventoryItemRegisteredV2,
+        _deserialize_inventory_item_registered_v2,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
         "inventory.item_updated",
         1,
         "inventory",
         InventoryItemUpdatedV1,
         _deserialize_inventory_item_updated,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
+        "inventory.item_updated",
+        2,
+        "inventory",
+        InventoryItemUpdatedV2,
+        _deserialize_inventory_item_updated_v2,
         (SubjectRequirement("inventory_item", "primary"),),
     ),
     EventContractRegistration(
@@ -1120,6 +1326,14 @@ INVENTORY_CONTRACTS = (
         (SubjectRequirement("inventory_item", "primary"),),
     ),
     EventContractRegistration(
+        "inventory.stock_received",
+        2,
+        "inventory",
+        InventoryStockReceivedV2,
+        _deserialize_inventory_stock_received_v2,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
         "inventory.stock_reserved",
         1,
         "inventory",
@@ -1136,6 +1350,14 @@ INVENTORY_CONTRACTS = (
         (SubjectRequirement("inventory_item", "primary"),),
     ),
     EventContractRegistration(
+        "inventory.stock_consumed",
+        2,
+        "inventory",
+        InventoryStockConsumedV2,
+        _deserialize_inventory_stock_consumed_v2,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
         "inventory.consumption_reversed",
         1,
         "inventory",
@@ -1144,11 +1366,27 @@ INVENTORY_CONTRACTS = (
         (SubjectRequirement("inventory_item", "primary"),),
     ),
     EventContractRegistration(
+        "inventory.consumption_reversed",
+        2,
+        "inventory",
+        InventoryConsumptionReversedV2,
+        _deserialize_inventory_consumption_reversed_v2,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
         "inventory.stock_adjusted",
         1,
         "inventory",
         InventoryStockAdjustedV1,
         _deserialize_inventory_stock_adjusted,
+        (SubjectRequirement("inventory_item", "primary"),),
+    ),
+    EventContractRegistration(
+        "inventory.stock_adjusted",
+        2,
+        "inventory",
+        InventoryStockAdjustedV2,
+        _deserialize_inventory_stock_adjusted_v2,
         (SubjectRequirement("inventory_item", "primary"),),
     ),
     EventContractRegistration(

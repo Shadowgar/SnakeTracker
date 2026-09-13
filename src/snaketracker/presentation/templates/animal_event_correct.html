@@ -13,12 +13,17 @@
     {% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
     <label>When ({{ principal.household_timezone }})<input name="occurred_at" type="datetime-local" value="{{ target.occurred_at.astimezone(household_zone).strftime('%Y-%m-%dT%H:%M') }}" required></label>
     {% if target.event_type == "animal.feeding_recorded" %}
+    {% if target.schema_version == 2 %}
+    <div class="alert-neutral"><strong>{{ target.payload.item_name }}</strong><p>The recorded Food Inventory item and amount remain linked. This bounded correction can update when, outcome, and notes; delete and record again to change food or amount safely.</p></div>
+    <label>Outcome<select name="outcome">{% for option in ("accepted", "refused", "regurgitated") %}<option value="{{ option }}" {% if target.payload.outcome == option %}selected{% endif %}>{{ option|capitalize }}</option>{% endfor %}</select></label>
+    {% else %}
     <label>Prey type<input name="prey_type" value="{{ target.payload.prey_type }}" required></label>
     <label>Prey size<input name="prey_size" value="{{ target.payload.prey_size }}" required></label>
     <label>Prey weight (g)<input name="prey_weight_grams" type="number" min="1" value="{{ target.payload.prey_weight_grams or '' }}"></label>
     <label>Preparation<select name="preparation_method">{% for option in ("frozen_thawed", "live", "other") %}<option value="{{ option }}" {% if target.payload.preparation_method == option %}selected{% endif %}>{{ option|replace('_', ' ')|capitalize }}</option>{% endfor %}</select></label>
     <label>Quantity<input name="quantity" type="number" min="1" value="{{ target.payload.quantity }}" required></label>
     <label>Outcome<select name="outcome">{% for option in ("accepted", "refused", "regurgitated") %}<option value="{{ option }}" {% if target.payload.outcome == option %}selected{% endif %}>{{ option|capitalize }}</option>{% endfor %}</select></label>
+    {% endif %}
     {% elif target.event_type == "animal.weight_recorded" %}
     <label>Weight (g)<input name="weight_grams" type="number" min="1" value="{{ target.payload.weight_grams }}" required></label>
     {% elif target.event_type == "animal.length_recorded" %}

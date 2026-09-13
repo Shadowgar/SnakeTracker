@@ -15,6 +15,7 @@ from sqlalchemy import text
 
 from snaketracker.bootstrap.application import build_application
 from snaketracker.bootstrap.configuration import Environment, Settings
+from tests.support.inventory import create_food_inventory, inventory_feeding_fields
 
 ROOT = Path(__file__).parents[2]
 ONE_PIXEL_PNG = b64decode(
@@ -104,17 +105,13 @@ def test_authenticated_keeper_can_track_animal_care_and_enclosure_workflow(
         profile = client.get(profile_url)
         assert "Nyx" in profile.text
         assert "Record feeding" in profile.text
+        create_food_inventory(client, idempotency_prefix="care-workflow-food")
 
         feeding = client.post(
             f"{profile_url}/feedings",
             data={
-                "csrf_token": csrf_from(profile.text),
+                **inventory_feeding_fields(client, profile_url),
                 "occurred_at": occurred_value,
-                "prey_type": "rat",
-                "prey_size": "small",
-                "prey_weight_grams": "",
-                "preparation_method": "frozen_thawed",
-                "quantity": "1",
                 "outcome": "accepted",
                 "notes": "Fed eagerly.",
             },
@@ -764,10 +761,12 @@ def test_animal_list_and_profile_present_a_focused_keeper_experience(tmp_path: P
             assert 'href="' + profile_url + '"' in page.text
         feeding_form = client.get(f"{profile_url}/feedings/new")
         assert '<details class="form-advanced">' in feeding_form.text
-        assert "More feeding details" in feeding_form.text
-        assert feeding_form.text.index("Prey type") < feeding_form.text.index(
-            "More feeding details"
-        )
+        assert "Add food to Inventory first" in feeding_form.text
+        assert "Prey type" not in feeding_form.text
+        assert "Prey size" not in feeding_form.text
+        assert "Prey weight" not in feeding_form.text
+        assert "Preparation method" not in feeding_form.text
+        assert "Do not deduct inventory" not in feeding_form.text
 
 
 def test_keeper_histories_show_effective_values_and_hide_voided_facts(tmp_path: Path) -> None:
@@ -788,6 +787,7 @@ def test_keeper_histories_show_effective_values_and_hide_voided_facts(tmp_path: 
             follow_redirects=False,
         )
         profile_url = created.headers["location"]
+        create_food_inventory(client, idempotency_prefix="effective-history-food")
         csrf = csrf_from(client.get(profile_url).text)
         records = (
             (
@@ -811,6 +811,11 @@ def test_keeper_histories_show_effective_values_and_hide_voided_facts(tmp_path: 
             ),
         )
         for index, (route, event_time, facts) in enumerate(records):
+            feeding_fields = (
+                inventory_feeding_fields(client, profile_url, amount="2")
+                if route == "feedings"
+                else {}
+            )
             response = client.post(
                 f"{profile_url}/{route}",
                 data={
@@ -818,13 +823,14 @@ def test_keeper_histories_show_effective_values_and_hide_voided_facts(tmp_path: 
                     "idempotency_key": f"effective-history-{index}",
                     "occurred_at": event_time,
                     **facts,
+                    **feeding_fields,
                 },
                 follow_redirects=False,
             )
             assert response.status_code == 303
 
         profile = client.get(profile_url)
-        assert "2 medium mouse" in profile.text
+        assert "Small Frozen Mouse" in profile.text
         assert "510 g" in profile.text
         assert "925 mm" in profile.text
         assert "Animal registered" not in profile.text
@@ -833,9 +839,9 @@ def test_keeper_histories_show_effective_values_and_hide_voided_facts(tmp_path: 
 
         feeding_history = client.get(f"{profile_url}/feedings")
         effective_feeding = feeding_history.text.split('<details class="technical-audit"', 1)[0]
-        assert "2 medium mouse" in effective_feeding
-        assert "28 g" in effective_feeding
-        assert "Frozen thawed" in effective_feeding
+        assert "Small Frozen Mouse" in effective_feeding
+        assert "2 each" in effective_feeding
+        assert "Frozen / thawed" in effective_feeding
         assert "Accepted" in effective_feeding
 
         measurement_history = client.get(f"{profile_url}/measurements")
@@ -904,8 +910,7 @@ def test_keeper_histories_show_effective_values_and_hide_voided_facts(tmp_path: 
         effective_feeding = client.get(f"{profile_url}/feedings").text.split(
             '<details class="technical-audit"', 1
         )[0]
-        assert "2 medium mouse" in effective_feeding
-        assert "1 large rat" not in effective_feeding
+        assert "Small Frozen Mouse" in effective_feeding
 
         timeline = client.get(f"{profile_url}/timeline")
         correction_reinstated = client.post(
@@ -933,10 +938,9 @@ def test_keeper_histories_show_effective_values_and_hide_voided_facts(tmp_path: 
 
         feeding_history = client.get(f"{profile_url}/feedings")
         effective_feeding = feeding_history.text.split('<details class="technical-audit"', 1)[0]
-        assert "1 large rat" in effective_feeding
-        assert "50 g" in effective_feeding
+        assert "Small Frozen Mouse" in effective_feeding
+        assert "2 each" in effective_feeding
         assert "Refused" in effective_feeding
-        assert "2 medium mouse" not in effective_feeding
 
         measurement_history = client.get(f"{profile_url}/measurements")
         effective_measurements = measurement_history.text.split(
@@ -947,7 +951,7 @@ def test_keeper_histories_show_effective_values_and_hide_voided_facts(tmp_path: 
 
         timeline = client.get(f"{profile_url}/timeline")
         effective_timeline = timeline.text.split('<details class="technical-audit"', 1)[0]
-        assert "1 large rat" in effective_timeline
+        assert "Small Frozen Mouse" in effective_timeline
         assert "925 mm" in effective_timeline
         assert "510 g" not in effective_timeline
         assert "Technical audit" in timeline.text
@@ -1060,6 +1064,7 @@ def test_browser_corrections_cover_each_supported_care_contract(tmp_path: Path) 
             follow_redirects=False,
         )
         profile_url = created.headers["location"]
+        create_food_inventory(client, idempotency_prefix="browser-correction-food")
         profile = client.get(profile_url)
         csrf = csrf_from(profile.text)
         records = (
@@ -1083,6 +1088,9 @@ def test_browser_corrections_cover_each_supported_care_contract(tmp_path: Path) 
             ),
         )
         for index, (_, route, values) in enumerate(records):
+            feeding_fields = (
+                inventory_feeding_fields(client, profile_url) if route == "feedings" else {}
+            )
             response = client.post(
                 f"{profile_url}/{route}",
                 data={
@@ -1091,6 +1099,7 @@ def test_browser_corrections_cover_each_supported_care_contract(tmp_path: Path) 
                     "occurred_at": occurred_value,
                     "notes": "Original keeper entry.",
                     **values,
+                    **feeding_fields,
                 },
                 follow_redirects=False,
             )

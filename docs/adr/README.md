@@ -7,6 +7,10 @@ ADR-0001 through ADR-0035 were **Accepted on 2026-08-04**. ADR-0036 and ADR-0037
 architectural changes must create or supersede an ADR and must never silently rewrite accepted
 decisions.
 
+[ADR-0042](0042-inventory-purchases-fifo-and-quantity-policy.md) was **Accepted on 2026-09-10**.
+M6.5-A1 implements its structured Inventory and Inventory-authoritative Feeding foundation;
+Purchase, FIFO, costing, counting, and intelligence remain later M6.5 tranches.
+
 | ADR | Decision |
 |---|---|
 | [0001](0001-modular-monolith.md) | Modular monolith |
@@ -50,3 +54,4 @@ decisions.
 | [0039](0039-multispecies-animal-capabilities.md) | Multi-species Animal capability profiles and compatibility |
 | [0040](0040-trusted-local-demo-household-provisioning.md) | Trusted local demo-household provisioning |
 | [0041](0041-four-group-capability-expansion-and-neutral-molt-contracts.md) | Four-group capability expansion and neutral molt contracts |
+| [0042](0042-inventory-purchases-fifo-and-quantity-policy.md) | Structured Inventory, Inventory-authoritative Feeding, multi-line Purchases, FIFO valuation, canonical quantities, and physical counts |

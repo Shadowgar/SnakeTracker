@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
@@ -8,7 +9,12 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy import create_engine, inspect, text
 
-from snaketracker.application.animals import AnimalService, RegisterAnimalCommand
+from snaketracker.application.animals import (
+    AnimalService,
+    DeleteAnimalCareRecordCommand,
+    RecordFeedingCommand,
+    RegisterAnimalCommand,
+)
 from snaketracker.application.household_bootstrap import (
     BootstrapCommand,
     HouseholdBootstrapService,
@@ -16,6 +22,7 @@ from snaketracker.application.household_bootstrap import (
 from snaketracker.application.inventory import (
     ArchiveInventoryItemCommand,
     InventoryService,
+    ReceiveStockCommand,
     RegisterInventoryItemCommand,
 )
 from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
@@ -28,7 +35,7 @@ from snaketracker.infrastructure.inventory.projections import SQLAlchemyInventor
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 
 ROOT = Path(__file__).parents[2]
-REVISION = "0013_password_recovery"
+REVISION = "0014_structured_inventory_feeding"
 PHASE_FIVE_TABLES = {
     "aggregate_snapshots",
     "alembic_version",
@@ -51,6 +58,8 @@ PHASE_FIVE_TABLES = {
     "inventory_balance",
     "inventory_consumption_links",
     "inventory_consumption_allocations",
+    "inventory_consumption_links_v2",
+    "inventory_consumption_allocations_v2",
     "jobs",
     "login_rate_limits",
     "local_notification_operations",
@@ -164,7 +173,17 @@ def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -
         inventory_columns = {
             column["name"] for column in inspector.get_columns("inventory_balance")
         }
-        assert "status" in inventory_columns
+        assert {
+            "status",
+            "inventory_type",
+            "unit_code",
+            "legacy_unit",
+            "food_category",
+            "food_type",
+            "size_stage",
+            "preparation_method",
+            "on_hand_quantity_scaled",
+        } <= inventory_columns
         reset_columns = {
             column["name"] for column in inspector.get_columns("password_reset_credentials")
         }
@@ -239,6 +258,165 @@ def test_inventory_lifecycle_migration_blocks_lossy_downgrade(tmp_path: Path) ->
     with pytest.raises(RuntimeError, match="lifecycle downgrade blocked"):
         command.downgrade(config, "0011_product_experience")
     assert current_revision(database) == "0012_account_reminder_inventory"
+
+
+def test_structured_inventory_upgrade_preserves_0013_history_and_scaled_state(
+    tmp_path: Path,
+) -> None:
+    database = tmp_path / "representative-0013-upgrade.sqlite3"
+    config = alembic_config(database)
+    command.upgrade(config, "head")
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    try:
+        bootstrap = HouseholdBootstrapService(
+            SQLAlchemyHouseholdBootstrapRepository(engine),
+            Argon2PasswordHasher.for_testing(),
+            command_hash_secret=b"m65-a1-upgrade-fixture-secret-32b",
+        ).bootstrap(
+            BootstrapCommand(
+                household_name="Upgrade Household",
+                timezone="UTC",
+                owner_email="owner@example.com",
+                owner_display_name="Owner",
+                password="correct horse battery staple",
+                idempotency_key="upgrade-bootstrap",
+                correlation_id=uuid4(),
+            )
+        )
+        store = SQLAlchemyEventStore(engine)
+        inventory_projection = SQLAlchemyInventoryBalanceProjection(engine)
+        inventory = InventoryService(store, inventory_projection)
+        animals = AnimalService(
+            store,
+            SQLAlchemyAnimalCurrentProjection(engine),
+            inventory_projection=inventory_projection,
+        )
+        animal = animals.register(
+            RegisterAnimalCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                uuid4(),
+                "upgrade-animal",
+                "Atlas",
+                "Python regius",
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+        )
+        item = inventory.register(
+            RegisterInventoryItemCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                uuid4(),
+                "upgrade-inventory",
+                "Legacy mice",
+                "item",
+                1,
+            )
+        )
+        inventory.receive(
+            ReceiveStockCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                item.item_id,
+                uuid4(),
+                "upgrade-stock",
+                1,
+                5,
+                "Historical stock",
+            )
+        )
+        linked = animals.record_feeding(
+            RecordFeedingCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                animal.animal_id,
+                uuid4(),
+                "upgrade-linked-feed",
+                datetime(2026, 9, 1, tzinfo=UTC),
+                "mouse",
+                "small",
+                None,
+                "frozen_thawed",
+                1,
+                "accepted",
+                None,
+                item.item_id,
+                2,
+                2,
+            )
+        )
+        unlinked = animals.record_feeding(
+            RecordFeedingCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                animal.animal_id,
+                uuid4(),
+                "upgrade-unlinked-feed",
+                datetime(2026, 9, 2, tzinfo=UTC),
+                "mouse",
+                "small",
+                None,
+                "frozen_thawed",
+                1,
+                "refused",
+                None,
+            )
+        )
+        animals.delete_care_record(
+            DeleteAnimalCareRecordCommand(
+                bootstrap.household_id,
+                bootstrap.user_id,
+                "owner",
+                animal.animal_id,
+                unlinked.event.event_id,
+                "upgrade-delete-feed",
+            )
+        )
+        with engine.connect() as connection:
+            immutable_before = connection.execute(
+                text("SELECT event_id,checksum FROM domain_events ORDER BY global_position")
+            ).all()
+    finally:
+        engine.dispose()
+
+    command.downgrade(config, "0013_password_recovery")
+    assert current_revision(database) == "0013_password_recovery"
+    command.upgrade(config, "head")
+
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    try:
+        with engine.connect() as connection:
+            assert connection.exec_driver_sql("PRAGMA integrity_check").scalar_one() == "ok"
+            assert connection.exec_driver_sql("PRAGMA foreign_key_check").all() == []
+            assert (
+                connection.execute(
+                    text("SELECT event_id,checksum FROM domain_events ORDER BY global_position")
+                ).all()
+                == immutable_before
+            )
+            migrated = connection.execute(
+                text(
+                    "SELECT inventory_type,unit_code,legacy_unit,on_hand_quantity_scaled "
+                    "FROM inventory_balance WHERE item_id=:item_id"
+                ),
+                {"item_id": str(item.item_id)},
+            ).one()
+            assert migrated == (None, None, "item", 3000)
+        replayed = AnimalService(
+            SQLAlchemyEventStore(engine),
+            SQLAlchemyAnimalCurrentProjection(engine),
+            inventory_projection=SQLAlchemyInventoryBalanceProjection(engine),
+        ).effective_history(bootstrap.household_id, animal.animal_id)
+        assert linked.event.event_id in {event.event_id for event in replayed}
+        assert unlinked.event.event_id not in {event.event_id for event in replayed}
+    finally:
+        engine.dispose()
 
 
 def test_phase_five_downgrade_normalizes_new_outbox_states(tmp_path: Path) -> None:

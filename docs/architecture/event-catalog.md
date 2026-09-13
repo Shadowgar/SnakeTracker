@@ -68,8 +68,10 @@ a distinct event contract identity and never rewrites an event stored under an e
 
 | Event type | Meaning |
 |---|---|
-| `animal.feeding_recorded` | Records food offered, quantity, outcome, and occurred time |
-| `animal.feeding_corrected` | Replaces effective feeding facts |
+| `animal.feeding_recorded` v1 | Preserves legacy manually described linked or unlinked Feeding history |
+| `animal.feeding_recorded` v2 | Records required Inventory Food snapshot, scaled amount, outcome, and occurred time |
+| `animal.feeding_corrected` v1 | Replaces effective legacy feeding facts |
+| `animal.feeding_corrected` v2 | Safely replaces time/outcome/notes while retaining Inventory Food and amount snapshot |
 | `animal.weight_recorded` | Records normalized and entered weight |
 | `animal.weight_corrected` | Corrects a measurement |
 | `animal.length_recorded` | Records normalized and entered length |
@@ -129,6 +131,28 @@ remain shared where the active profile permits them.
 | `inventory.stock_expired` | Removes expired stock |
 | `inventory.reorder_policy_changed` | Changes threshold policy |
 
+#### M6.5 contracts
+
+ADR-0042 is accepted. The A1 versions marked implemented are registered while version-1 Inventory
+history remains registered unchanged. Purchase/FIFO/count/intelligence contracts remain deferred.
+
+| Event contract | Meaning |
+|---|---|
+| `inventory.item_registered` v2 *(A1 implemented)* | Adds controlled Type, unit, Food metadata, and scaled threshold |
+| `inventory.item_updated` v2 *(A1 implemented)* | Changes name/metadata and safely establishes or retains canonical unit |
+| `inventory.stock_received` v2 *(A1 implemented)* | Adds positive scaled quantity with an optional reference |
+| `inventory.receipt_corrected` v1 | Replaces effective quantity of a targeted v2 receipt without relinking its source |
+| `inventory.stock_consumed` v2 *(A1 implemented)* | Removes scaled quantity with an optional linked source event |
+| `inventory.consumption_reversed` v2 *(A1 implemented)* | Restores one exact linked scaled consumption |
+| `inventory.stock_adjusted` v2 *(A1 implemented)* | Applies a scaled nonzero manual delta with reason |
+| `inventory.stock_counted` v1 | Records expected, actual, variance, actor/time, and count-workflow context |
+| `inventory.reorder_policy_changed` v2 | Sets minimum, target, maximum, and owner lead time |
+| `inventory.verification_policy_changed` v1 | Sets or clears the owner recount interval |
+
+`event.voided`, `event.reinstated`, and `inventory.consumption_reversed` are reused where their
+target registration permits them. A physical count applies its own variance and does not generate a
+duplicate adjustment event.
+
 ### Expenses, reminders, and documents
 
 | Event type | Meaning |
@@ -136,6 +160,8 @@ remain shared where the active profile permits them.
 | `expense.recorded` | Creates expense |
 | `expense.corrected` | Replaces effective financial facts |
 | `expense.voided` | Voids expense |
+| `purchase.recorded` v1 *(Proposed M6.5)* | Records one specialized cash-spend receipt with bounded inventory lines |
+| `purchase.corrected` v1 *(Proposed M6.5)* | Replaces effective Purchase facts and coordinates receipt corrections |
 | `reminder.rule_created` | Creates rule |
 | `reminder.rule_changed` | Changes schedule or channels |
 | `reminder.rule_disabled` | Disables rule |

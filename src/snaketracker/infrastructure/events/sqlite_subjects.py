@@ -97,7 +97,10 @@ class SQLAlchemySubjectReferenceValidator:
                     exists = connection.execute(
                         text(
                             "SELECT 1 FROM inventory_balance WHERE household_id=:household_id "
-                            "AND item_id=:subject_id"
+                            "AND item_id=:subject_id UNION ALL SELECT 1 FROM domain_events "
+                            "WHERE household_id=:household_id AND stream_type='inventory-item' "
+                            "AND stream_id=:subject_id AND event_type='inventory.item_registered' "
+                            "LIMIT 1"
                         ),
                         {
                             "subject_id": str(subject.subject_id),

@@ -221,11 +221,9 @@ class SQLAlchemyEventStore:
                     return existing
                 for item in ordered:
                     self._assert_expected_version(connection, item.key, item.expected_version)
-                    for event in item.events:
-                        self._subject_validator.validate(connection, event)
-                for item in ordered:
                     self._ensure_stream(connection, item.key, item.events[0])
                     for event in item.events:
+                        self._subject_validator.validate(connection, event)
                         self._insert_event(connection, event)
                     self._update_stream(connection, item.key, item.events[-1])
                 committed_events = tuple(event for item in ordered for event in item.events)

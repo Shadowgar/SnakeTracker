@@ -16,38 +16,27 @@
     </label>
 
     {% if care_kind == 'feeding' %}
-    <label>Prey type<input name="prey_type" value="{{ values.get('prey_type', '') }}" required></label>
-    <label>Prey size<input name="prey_size" value="{{ values.get('prey_size', '') }}" required></label>
-    <label>Quantity<input name="quantity" type="number" min="1" value="{{ values.get('quantity', '1') }}" required></label>
+    {% if inventory_items %}
+    {% set selected_inventory = values.get('inventory_item_id', '') %}
+    <label>Food from inventory
+      <select name="inventory_item_id" data-feeding-inventory required>
+        <option value="">Choose food</option>
+        {% for item in inventory_items %}
+        {% set inventory_reference = item.item_id ~ ':' ~ item.stream_version %}
+        <option value="{{ inventory_reference }}" data-unit="{{ item.unit_symbol }}" data-fractional="{{ 'true' if item.allows_fractional else 'false' }}"{% if selected_inventory == inventory_reference or selected_inventory == item.item_id|string %} selected{% endif %}>{{ item.name }} · {{ item.on_hand_display }} {{ item.on_hand_unit_display }} available</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label><span data-feeding-amount-label>Amount</span>
+      <input name="inventory_quantity" data-feeding-inventory-quantity type="number" inputmode="decimal" min="0.001" step="0.001" value="{{ values.get('inventory_quantity', '1') }}" required>
+    </label>
     <label>Outcome
       {% set outcome = values.get('outcome', 'accepted') %}
       <select name="outcome"><option value="accepted" {% if outcome == 'accepted' %}selected{% endif %}>Accepted</option><option value="refused" {% if outcome == 'refused' %}selected{% endif %}>Refused</option><option value="regurgitated" {% if outcome == 'regurgitated' %}selected{% endif %}>Regurgitated</option></select>
     </label>
-    <details class="form-advanced"{% if values.get('prey_weight_grams') or values.get('inventory_item_id') %} open{% endif %}>
-      <summary>More feeding details</summary>
-      <div class="form-stack">
-        <label>Prey weight (g)<input name="prey_weight_grams" type="number" inputmode="numeric" min="1" value="{{ values.get('prey_weight_grams', '') }}"></label>
-        <label>Preparation
-          {% set preparation = values.get('preparation_method', 'frozen_thawed') %}
-          <select name="preparation_method"><option value="frozen_thawed" {% if preparation == 'frozen_thawed' %}selected{% endif %}>Frozen thawed</option><option value="live" {% if preparation == 'live' %}selected{% endif %}>Live</option><option value="other" {% if preparation == 'other' %}selected{% endif %}>Other</option></select>
-        </label>
-        {% if inventory_items %}
-        {% set selected_inventory = values.get('inventory_item_id', '') %}
-        <label>Use inventory
-          <select name="inventory_item_id" data-feeding-inventory>
-            <option value=""{% if not selected_inventory %} selected{% endif %}>Do not deduct inventory</option>
-            {% for item in inventory_items %}
-            {% set inventory_reference = item.item_id ~ ':' ~ item.stream_version %}
-            <option value="{{ inventory_reference }}"{% if selected_inventory == inventory_reference or selected_inventory == item.item_id|string %} selected{% endif %}>{{ item.name }} · {{ item.on_hand_quantity }} {{ item.unit }} available</option>
-            {% endfor %}
-          </select>
-        </label>
-        <label>Inventory quantity
-          <input name="inventory_quantity" data-feeding-inventory-quantity type="number" inputmode="numeric" min="1" value="{{ values.get('inventory_quantity', '1') }}"{% if not selected_inventory %} disabled{% else %} required{% endif %}>
-        </label>
-        {% endif %}
-      </div>
-    </details>
+    {% else %}
+    <div class="empty-state"><h2>Add food to Inventory first</h2><p>New feedings use an active, configured Food Inventory Item so stock stays accurate.</p><a class="button-link" href="/inventory/new">Add food to inventory</a><a href="/inventory">Set up inventory</a></div>
+    {% endif %}
     {% elif care_kind == 'weight' %}
     <label>Weight (g)<input name="weight_grams" type="number" min="1" value="{{ values.get('weight_grams', '') }}" required></label>
     {% elif care_kind == 'length' %}
@@ -75,9 +64,9 @@
     <details class="form-advanced"{% if values.get('notes') %} open{% endif %}><summary>Notes and context</summary><label>Notes<textarea name="notes" rows="3" placeholder="Optional">{{ values.get('notes', '') }}</textarea></label></details>
     <div class="form-actions">
       <a href="{{ return_url }}">Cancel</a>
-      <button type="submit">Record {{ care_kind }}</button>
+      {% if care_kind != 'feeding' or inventory_items %}<button type="submit">Record {{ care_kind }}</button>{% endif %}
     </div>
   </form>
 </section>
 {% endblock %}
-{% block scripts %}{% if care_kind == 'feeding' %}<script defer src="/static/feeding-form.js?v=m62-inventory-normalization"></script>{% endif %}{% endblock %}
+{% block scripts %}{% if care_kind == 'feeding' %}<script defer src="/static/feeding-form.js?v=m65-a1"></script>{% endif %}{% endblock %}

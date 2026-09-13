@@ -28,6 +28,28 @@
 
 Moving a projection into the synchronous command transaction requires a measured correctness or user-experience need and an ADR impact review.
 
+## M6.5 projection groups
+
+ADR-0042 is accepted. A1 evolves the synchronous balance and adds version-2 consumption
+link/allocation compatibility; the remaining Purchase/FIFO/intelligence read models are deferred:
+
+| Projection/group | Purpose | Consistency |
+|---|---|---|
+| `inventory_balance` A1 evolution *(implemented)* | Scaled balance, controlled Type/unit, Food metadata, lifecycle, and legacy setup state | Synchronous |
+| `inventory_consumption_links_v2` / `inventory_consumption_allocations_v2` *(implemented)* | Exact scaled Feeding linkage, reversal, and reserved-allocation state | Synchronous |
+| `inventory_effective_receipts` | Effective receipt roots/corrections/controls and Purchase-line linkage needed for invariants | Synchronous |
+| `purchase_current` / `purchase_line_current` | Effective Purchase lifecycle, totals, lines, and resulting receipt IDs | Synchronous |
+| `inventory_costing` | FIFO cost layers/allocations, known/unknown quantity, consumed/current/variance value per currency | Asynchronous generation |
+| `inventory_intelligence` | Usage windows, rate/duration, verification/reorder state, and unused/excess observations | Asynchronous generation |
+| `cash_spend_facts` | Exactly one effective cash fact per typed Expense or Purchase source | Asynchronous generation |
+| `inventory_report_facts` | Periodized item/category quantity, value, estimate provenance, and export facts | Asynchronous generation |
+
+The synchronous group validates stock, receipt, Purchase, correction, and multi-stream invariants.
+The asynchronous groups consume only registered effective facts, expose material freshness, and
+rebuild affected items after backdated/corrected history. Currencies remain separate and
+unknown-cost quantity remains explicit. Jinja templates never allocate FIFO or derive costs from raw
+event JSON. See the [M6.5 architecture proposal](../plans/2026-09-04-m6.5-inventory-intelligence-architecture.md).
+
 ## Projection definition
 
 Each projection declares a stable name, schema version, handler version, supported event contracts, consistency class, rebuild group, correction/reversal behavior, last processed global position, health, last error, and active generation.
