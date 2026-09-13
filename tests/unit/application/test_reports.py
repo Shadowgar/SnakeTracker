@@ -16,7 +16,12 @@ from snaketracker.application.purchases import (
     PurchaseCurrent,
     PurchaseLineCurrent,
 )
-from snaketracker.application.reports import KeeperReport, ReportRow, ReportService
+from snaketracker.application.reports import (
+    KeeperReport,
+    ReportRow,
+    ReportService,
+    SpendingPeriodBucket,
+)
 
 
 class Animals:
@@ -291,6 +296,22 @@ def test_inventory_report_separates_cash_consumption_value_and_currency() -> Non
     assert report.items[0].known_value_reconciles is True
     assert report.spending_trend_supported is True
     assert report.spending_trend_direction == "increased"
+    decreased = replace(
+        report,
+        period_buckets=(
+            SpendingPeriodBucket(now.date(), 100, 0, 0),
+            SpendingPeriodBucket(now.date(), 0, 0, 0),
+        ),
+    )
+    steady = replace(
+        report,
+        period_buckets=(
+            SpendingPeriodBucket(now.date(), 100, 0, 0),
+            SpendingPeriodBucket(now.date(), 100, 0, 0),
+        ),
+    )
+    assert decreased.spending_trend_direction == "decreased"
+    assert steady.spending_trend_direction == "held steady"
     assert sum(bucket.known_consumption_value_minor for bucket in report.period_buckets) == 2_340
     assert report.spending_categories[-1].label == "Other expenses · Vet Care"
     assert activity_ends[-1] == now
