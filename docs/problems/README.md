@@ -70,7 +70,7 @@ The planned attribution is `© <current year> Paul Rocco`, linked appropriately 
 
 - Target milestone: M6.5 — Inventory intelligence and cost tracking
 - Requirements: `R-070`–`R-072` and `R-076`; acceptance procedures `AT-INVINT-01`–`AT-INVINT-03` and `AT-INVINT-06`
-- Status: **M6.5-B owner-accepted September 13, 2026; M6.5-C reports implemented for review**
+- Status: **M6.5-B/C owner-accepted September 13, 2026; final technical qualification passed**
 
 ## 8. Inventory-linked expenses and consumption cost
 
@@ -78,7 +78,7 @@ The planned attribution is `© <current year> Paul Rocco`, linked appropriately 
 
 - Target milestone: M6.5 — Inventory intelligence and cost tracking
 - Requirements: `R-073`–`R-076`; acceptance procedures `AT-INVINT-04`–`AT-INVINT-06` and architecture review `AR-INVINT-01`
-- Status: **A1, A2, and B owner-accepted; C reporting implemented for owner review**
+- Status: **A1, A2, B, and C owner-accepted; final technical qualification passed**
 
 The roadmap distinguishes cash spending, inventory value, and consumption cost. Purchase history or
 cost lots are required; a single mutable price is insufficient. The exact deterministic costing

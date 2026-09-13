@@ -1,0 +1,49 @@
+{
+  "status": "passed",
+  "active_paths": {
+    "database": "/home/rocco/SnakeTracker/runtime/phase2/snaketracker.sqlite3",
+    "attachments": "/home/rocco/SnakeTracker/runtime/phase2/attachments",
+    "backups": "/home/rocco/SnakeTracker/runtime/phase2/backups"
+  },
+  "backup": {
+    "request_id": "69716e57-08a7-4ae9-9fea-5ce4fdb2dd18",
+    "run_id": "0263b1a8-69c1-4c23-b7bf-75cd874f2c32",
+    "status": "completed",
+    "completed_at": "2026-09-13T08:49:08.203427+00:00",
+    "encrypted_database_bytes": 13451297,
+    "encrypted_database_sha256": "d9897a397097a3bac777f7e64bf3972e45b57fa5ee3fed23fbb262e54897cba6",
+    "encrypted_manifest_bytes": 24569,
+    "manifest_checksum": "188dfbf936065e1743c4667888e58b0f8a873db6e37b03d738d0f618600e8cec"
+  },
+  "restore": {
+    "target": "/tmp/carekeeper-m65-d-restore.65Ouqo",
+    "active_runtime_mounted_read_only": true,
+    "status": "verified",
+    "attachment_count": 33,
+    "migration": "0018_inventory_stock_roles",
+    "events": 810,
+    "high_water": 810,
+    "event_hash": "9c9104d103d4a2bba99c2394cff953fe9fa554f5c7c381d5dec94d808031e76c",
+    "integrity": "ok",
+    "foreign_key_violations": 0,
+    "sessions": 0,
+    "password_reset_credentials": 0
+  },
+  "live_comparison": {
+    "before_events": 809,
+    "before_high_water": 809,
+    "before_hash": "2352c365c4f34c49b1a375d4ec240f91938490d80a18f3297a545ac466b9647b",
+    "after_events": 810,
+    "after_high_water": 810,
+    "after_hash": "9c9104d103d4a2bba99c2394cff953fe9fa554f5c7c381d5dec94d808031e76c",
+    "first_809_event_prefix_unchanged": true,
+    "concurrent_owner_event": {
+      "global_position": 810,
+      "event_type": "animal.weight_recorded",
+      "occurred_at": "2026-09-13T08:46:00.000000+00:00"
+    },
+    "qualification_domain_writes": 0,
+    "integrity": "ok",
+    "foreign_key_violations": 0
+  }
+}

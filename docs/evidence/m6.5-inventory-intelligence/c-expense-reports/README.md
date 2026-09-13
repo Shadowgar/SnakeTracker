@@ -1,9 +1,9 @@
 # M6.5-C Expense Integration and Inventory Reports
 
-Status: **implemented and qualified; owner review pending**
+Status: **owner-accepted September 13, 2026**
 
 Requirement `R-076`; acceptance procedure `AT-INVINT-06`. Branch
-`phase6.5/expense-reports`. M6.5 is not complete or owner-accepted.
+`phase6.5/expense-reports`. M6.5 as a whole is not owner-accepted.
 
 ## Implemented boundary
 
@@ -210,5 +210,6 @@ authoritative gate above its 85% threshold before this final successful run.
 
 ## Scope boundary
 
-M6.5-D final milestone qualification and acceptance, M7 formal recovery/deployment qualification,
-M8 release qualification, M9 public media, and unrelated UX work have not begun.
+The owner accepted M6.5-C on September 13, 2026. Final milestone qualification is tracked in the
+[M6.5-D evidence](../final-qualification/README.md). This acceptance does not accept M6.5 as a
+whole or begin M7, M8, M9, or unrelated UX work.

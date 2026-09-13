@@ -244,7 +244,8 @@ qualified and presented for owner review.
 
 ## Phase 6.5 / M6.5 — Inventory intelligence and cost tracking
 
-Status: ADR-0042 and M6.5-A1/A2/B owner-accepted; M6.5-C implementation and review in progress
+Status: ADR-0042 and M6.5-A1/A2/B/C owner-accepted; final technical qualification passed; explicit
+M6.5 owner acceptance pending
 
 M6.5 is a substantial product milestone after final M6 acceptance and before M7. It turns Inventory
 from a list of owned objects into an explainable decision-support system. It must have its own
@@ -264,8 +265,9 @@ structured catalog direction for M6.5-A1 on September 10, 2026.
 
 M6.5-A1 implements the approved foundation and was owner-accepted September 11, 2026. M6.5-A2
 Purchase/FIFO and its unified-acquisition corrections were owner-accepted September 12, 2026.
-M6.5-B now implements the bounded Inventory intelligence and physical-count experience; expanded
-reporting remains M6.5-C work.
+M6.5-B implements the bounded Inventory intelligence and physical-count experience. M6.5-C
+implements the visual-first Inventory and spending reports and was owner-accepted September 13,
+2026.
 
 - [x] RB Every new M6.5 Feeding references a same-household **Food** Inventory Item. The normal
   workflow becomes **Date/time**, **Food from inventory**, **Quantity**, and **Outcome**; **Do not
@@ -329,9 +331,9 @@ derived only under the costing policy accepted during M6.5 design.
 
 ### Inventory and expense reporting
 
-- [x] RB Per-item reports reconcile purchased quantity/value, consumed quantity/value, current quantity, estimated stock value, consumption rate, and projected reorder need. M6.5-C is implemented for owner review. (`R-076`, `AT-INVINT-06`)
-- [x] RB Collection reports distinguish purchases during a period, inventory value consumed, current stock value, category spending, consumption trends, and deterministically supportable near-term supply-spending estimates. Projections are labelled estimates, never guarantees. M6.5-C is implemented for owner review. (`R-076`, `AT-INVINT-06`)
-- [ ] RB M6.5 compatibility, migration, immutable-event, correction/compensation, authorization, reporting reconciliation, accessibility, performance, backup/restore, and owner-review evidence passes before explicit M6.5 acceptance.
+- [x] RB Per-item reports reconcile purchased quantity/value, consumed quantity/value, current quantity, estimated stock value, consumption rate, and projected reorder need. M6.5-C was owner-accepted September 13, 2026. (`R-076`, `AT-INVINT-06`)
+- [x] RB Collection reports distinguish purchases during a period, inventory value consumed, current stock value, category spending, consumption trends, and deterministically supportable near-term supply-spending estimates. Projections are labelled estimates, never guarantees. M6.5-C was owner-accepted September 13, 2026. (`R-076`, `AT-INVINT-06`)
+- [x] RB M6.5 compatibility, migration, immutable-event, correction/compensation, authorization, reporting reconciliation, accessibility, performance, backup/restore, and owner-review evidence passes before explicit M6.5 acceptance. Final technical qualification passed September 13, 2026; explicit M6.5 owner acceptance remains pending. Evidence: [final M6.5 qualification](../evidence/m6.5-inventory-intelligence/final-qualification/README.md).
 
 ## Phase 7 / M7 — Formal Raspberry Pi deployment and recovery qualification
 
