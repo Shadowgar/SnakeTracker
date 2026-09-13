@@ -290,7 +290,12 @@ def build_application(settings: Settings) -> FastAPI:
                     animal_service, projected_events=analytics_events
                 ),
                 report_service=ReportService(
-                    animal_service, expense_service, projected_events=report_events
+                    animal_service,
+                    expense_service,
+                    projected_events=report_events,
+                    inventory=inventory_service,
+                    purchases=purchase_service,
+                    inventory_intelligence=inventory_intelligence,
                 ),
                 dashboard_statistics_service=DashboardStatisticsService(dashboard_events),
                 reminder_rule_service=ReminderRuleService(event_store, reminder_projection),

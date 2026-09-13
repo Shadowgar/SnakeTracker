@@ -136,6 +136,20 @@ def test_multiline_purchase_receives_stock_and_appears_once_in_expenses(
         assert expenses.text.count("A2 Supply") == 1
         assert "Supply purchases" in expenses.text
         assert "Other expenses" not in expenses.text
+        spending_report = client.get("/reports/expenses")
+        assert spending_report.status_code == 200
+        assert spending_report.text.count("Supply purchase") == 1
+        inventory_report = client.get("/reports/inventory?period=30&currency=USD")
+        assert inventory_report.status_code == 200
+        assert "Cash paid for supplies" in inventory_report.text
+        assert "$90.00" in inventory_report.text
+        assert "Acquisition cost assigned to recorded use" in inventory_report.text
+        item_report = client.get(f"/reports/inventory/items/{first_id}?period=30&currency=USD")
+        assert item_report.status_code == 200
+        assert "Known acquisition value" in item_report.text
+        report_csv = client.get("/reports/inventory.csv?period=30&currency=USD")
+        assert "Purchase Mouse" in report_csv.text
+        assert "purchase_id" not in report_csv.text
 
         engine = client.app.state.database_engine
         facts_table = (

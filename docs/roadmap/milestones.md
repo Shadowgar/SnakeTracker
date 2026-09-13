@@ -244,7 +244,7 @@ qualified and presented for owner review.
 
 ## Phase 6.5 / M6.5 — Inventory intelligence and cost tracking
 
-Status: ADR-0042 and M6.5-A1/A2 owner-accepted; M6.5-B implemented and qualified, owner review pending
+Status: ADR-0042 and M6.5-A1/A2/B owner-accepted; M6.5-C implementation and review in progress
 
 M6.5 is a substantial product milestone after final M6 acceptance and before M7. It turns Inventory
 from a list of owned objects into an explainable decision-support system. It must have its own
@@ -296,20 +296,20 @@ new writes use the version-2 Inventory-authoritative contract.
 
 ### Inventory levels and reorder intelligence
 
-- [x] RB Items support decision-useful quantity on hand, unit, owner-controlled reorder minimum, optional target/maximum where appropriate, active/archive state, usage history, recent consumption rate, estimated remaining duration where supportable, last purchase/restock, and last physical verification. M6.5-B implementation and isolated qualification complete; owner review remains open. (`R-070`, `AT-INVINT-01`)
-- [x] RB Keeper-facing views identify items approaching the owner's reorder level, stable stock, and potential excess/unused stock using honest labels and deterministic evidence. Care Keeper does not invent husbandry thresholds or present estimates as guarantees. M6.5-B owner review remains open. (`R-070`, `AT-INVINT-01`)
+- [x] RB Items support decision-useful quantity on hand, unit, owner-controlled reorder minimum, optional target/maximum where appropriate, active/archive state, usage history, recent consumption rate, estimated remaining duration where supportable, last purchase/restock, and last physical verification. M6.5-B was owner-accepted September 13, 2026. (`R-070`, `AT-INVINT-01`)
+- [x] RB Keeper-facing views identify items approaching the owner's reorder level, stable stock, and potential excess/unused stock using honest labels and deterministic evidence. Care Keeper does not invent husbandry thresholds or present estimates as guarantees. M6.5-B was owner-accepted September 13, 2026. (`R-070`, `AT-INVINT-01`)
 
 ### Physical recount and cycle count
 
-- [x] RB A physical-count workflow compares expected and actual stock and records the exact variance through an immutable enriched count event; correction atomically voids the original effect and appends a replacement. M6.5-B owner review remains open. (`R-071`, `AT-INVINT-02`)
-- [x] RB Last-verified and recount-due information supports full, category, rolling/cycle, and single-item count workflows using the optional owner-selected per-item interval. M6.5-B owner review remains open. (`R-071`, `AT-INVINT-02`)
+- [x] RB A physical-count workflow compares expected and actual stock and records the exact variance through an immutable enriched count event; correction atomically voids the original effect and appends a replacement. M6.5-B was owner-accepted September 13, 2026. (`R-071`, `AT-INVINT-02`)
+- [x] RB Last-verified and recount-due information supports full, category, rolling/cycle, and single-item count workflows using the optional owner-selected per-item interval. M6.5-B was owner-accepted September 13, 2026. (`R-071`, `AT-INVINT-02`)
 
 A representative count is `Expected: 25; actual physical count: 23`; the difference becomes an
 explainable immutable adjustment rather than an in-place overwrite.
 
 ### Usage intelligence
 
-- [x] RB Deterministic, explainable calculations report 30/90-day consumption, supported usage pace and prior-period comparison, estimated stock remaining, fixed-window disuse, and owner-maximum excess without opaque prediction. M6.5-B owner review remains open. (`R-072`, `AT-INVINT-03`)
+- [x] RB Deterministic, explainable calculations report 30/90-day consumption, supported usage pace and prior-period comparison, estimated stock remaining, fixed-window disuse, and owner-maximum excess without opaque prediction. M6.5-B was owner-accepted September 13, 2026. (`R-072`, `AT-INVINT-03`)
 
 ### Inventory, purchases, expenses, and costing
 
@@ -329,8 +329,8 @@ derived only under the costing policy accepted during M6.5 design.
 
 ### Inventory and expense reporting
 
-- [ ] RB Per-item reports reconcile purchased quantity/value, consumed quantity/value, current quantity, estimated stock value, consumption rate, and projected reorder need. (`R-076`, `AT-INVINT-06`)
-- [ ] RB Collection reports distinguish purchases during a period, inventory value consumed, current stock value, category spending, consumption trends, and deterministically supportable near-term supply-spending estimates. Projections are labelled estimates, never guarantees. (`R-076`, `AT-INVINT-06`)
+- [x] RB Per-item reports reconcile purchased quantity/value, consumed quantity/value, current quantity, estimated stock value, consumption rate, and projected reorder need. M6.5-C is implemented for owner review. (`R-076`, `AT-INVINT-06`)
+- [x] RB Collection reports distinguish purchases during a period, inventory value consumed, current stock value, category spending, consumption trends, and deterministically supportable near-term supply-spending estimates. Projections are labelled estimates, never guarantees. M6.5-C is implemented for owner review. (`R-076`, `AT-INVINT-06`)
 - [ ] RB M6.5 compatibility, migration, immutable-event, correction/compensation, authorization, reporting reconciliation, accessibility, performance, backup/restore, and owner-review evidence passes before explicit M6.5 acceptance.
 
 ## Phase 7 / M7 — Formal Raspberry Pi deployment and recovery qualification

@@ -381,6 +381,9 @@ def _friendly_money(amount_minor: int, currency: str) -> str:
     return f"${amount:,.2f}" if currency.upper() == "USD" else f"{currency.upper()} {amount:,.2f}"
 
 
+templates.env.globals["format_money"] = _friendly_money
+
+
 def _friendly_expense_total(expenses: tuple[Any, ...]) -> str:
     totals: dict[str, int] = {}
     for expense in expenses:
@@ -2036,6 +2039,11 @@ def create_web_router(
             for item in expense_service.list_expenses(principal.household_id)
             if item.status == "active"
         )
+        purchases = tuple(
+            item
+            for item in purchase_service.list_purchases(principal.household_id)
+            if item.status == "active"
+        )
         group_counts: dict[str, int] = {}
         for animal in animals:
             group_counts[animal.type_label] = group_counts.get(animal.type_label, 0) + 1
@@ -2062,10 +2070,154 @@ def create_web_router(
                         )
                         for animal in animals
                     ),
-                    "expense_total": _friendly_expense_total(expenses),
-                    "expense_count": len(expenses),
+                    "expense_total": _friendly_expense_total(expenses + purchases),
+                    "expense_count": len(expenses) + len(purchases),
                 },
             },
+        )
+
+    def inventory_report_options(request: Request) -> tuple[int, str | None]:
+        raw_period = request.query_params.get("period", "30")
+        try:
+            period = int(raw_period)
+        except ValueError as error:
+            raise ValueError("Choose a 30-day or 90-day reporting period.") from error
+        if period not in {30, 90}:
+            raise ValueError("Choose a 30-day or 90-day reporting period.")
+        currency = request.query_params.get("currency")
+        if currency is not None:
+            currency = currency.strip().upper()
+            if len(currency) != 3 or not currency.isalpha() or not currency.isascii():
+                raise ValueError("Choose an available three-letter currency.")
+        return period, currency
+
+    def inventory_report_error(request: Request, principal: Principal, message: str) -> Response:
+        return protected_page(
+            request,
+            "error.html",
+            principal,
+            status_code=422,
+            context={"title": "Report options are invalid", "message": message},
+        )
+
+    @router.get("/reports/inventory.csv", response_class=PlainTextResponse)
+    async def inventory_report_csv(request: Request) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if not {"inventory.view", "expense.view"}.issubset(principal.capabilities):
+            return _access_denied(request, "Inventory report access denied")
+        if projection_catch_up is not None:
+            projection_catch_up()
+        try:
+            period, currency = inventory_report_options(request)
+            report = report_service.inventory_collection(
+                principal.household_id,
+                household_timezone=principal.household_timezone,
+                generated_at=datetime.now(UTC),
+                period_days=period,
+                currency=currency,
+            )
+        except ValueError as error:
+            return PlainTextResponse(str(error), status_code=422)
+        except RuntimeError:
+            return PlainTextResponse("Report is catching up.", status_code=503)
+        return PlainTextResponse(
+            report_service.csv(report_service.inventory_collection_csv(report)),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": 'attachment; filename="care-keeper-inventory.csv"'},
+        )
+
+    @router.get("/reports/inventory/items/{item_id}.csv", response_class=PlainTextResponse)
+    async def inventory_item_report_csv(request: Request, item_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if not {"inventory.view", "expense.view"}.issubset(principal.capabilities):
+            return _access_denied(request, "Inventory report access denied")
+        if projection_catch_up is not None:
+            projection_catch_up()
+        try:
+            period, currency = inventory_report_options(request)
+            report = report_service.inventory_item(
+                principal.household_id,
+                UUID(item_id),
+                household_timezone=principal.household_timezone,
+                generated_at=datetime.now(UTC),
+                period_days=period,
+                currency=currency,
+            )
+        except ValueError as error:
+            return PlainTextResponse(str(error), status_code=422)
+        except RuntimeError:
+            return PlainTextResponse("Report is catching up.", status_code=503)
+        if report is None:
+            return _not_found(request, "Inventory report not found")
+        return PlainTextResponse(
+            report_service.csv(report_service.inventory_item_csv(report)),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": 'attachment; filename="care-keeper-item-report.csv"'},
+        )
+
+    @router.get("/reports/inventory/items/{item_id}", response_class=HTMLResponse)
+    async def inventory_item_report(request: Request, item_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if not {"inventory.view", "expense.view"}.issubset(principal.capabilities):
+            return _access_denied(request, "Inventory report access denied")
+        if projection_catch_up is not None:
+            projection_catch_up()
+        try:
+            period, currency = inventory_report_options(request)
+            report = report_service.inventory_item(
+                principal.household_id,
+                UUID(item_id),
+                household_timezone=principal.household_timezone,
+                generated_at=datetime.now(UTC),
+                period_days=period,
+                currency=currency,
+            )
+        except ValueError as error:
+            return inventory_report_error(request, principal, str(error))
+        except RuntimeError:
+            return inventory_report_error(request, principal, "Report data is catching up.")
+        if report is None:
+            return _not_found(request, "Inventory report not found")
+        return protected_page(
+            request,
+            "inventory_item_report.html",
+            principal,
+            context={"report": report},
+        )
+
+    @router.get("/reports/inventory", response_class=HTMLResponse)
+    async def inventory_report(request: Request) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if not {"inventory.view", "expense.view"}.issubset(principal.capabilities):
+            return _access_denied(request, "Inventory report access denied")
+        if projection_catch_up is not None:
+            projection_catch_up()
+        try:
+            period, currency = inventory_report_options(request)
+            report = report_service.inventory_collection(
+                principal.household_id,
+                household_timezone=principal.household_timezone,
+                generated_at=datetime.now(UTC),
+                period_days=period,
+                currency=currency,
+            )
+        except ValueError as error:
+            return inventory_report_error(request, principal, str(error))
+        except RuntimeError:
+            return inventory_report_error(request, principal, "Report data is catching up.")
+        return protected_page(
+            request,
+            "inventory_report.html",
+            principal,
+            context={"report": report},
         )
 
     @router.get("/reports/{kind}.csv", response_class=PlainTextResponse)
