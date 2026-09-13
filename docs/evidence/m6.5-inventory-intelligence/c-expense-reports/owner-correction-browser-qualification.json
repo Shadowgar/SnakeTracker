@@ -1,0 +1,260 @@
+{
+  "status": "passed",
+  "browser": "Chromium 1208 native ARM64",
+  "origin": "http://127.0.0.1:8093",
+  "qualificationDatabase": "/tmp/carekeeper-m65-correction-IllXzRzG/snaketracker.sqlite3",
+  "activeDatabase": "/home/rocco/SnakeTracker/runtime/phase2/snaketracker.sqlite3",
+  "activeDatabaseMutatedByBrowserQualification": false,
+  "animalId": "3db5dd30-9239-49cf-bfa5-5397d92216a9",
+  "projectionCatchUp": {
+    "measurementAnalyticsHighWater": 772,
+    "domainEventHighWater": 772
+  },
+  "required": {
+    "isolatedTarget": true,
+    "thirtyDaySeries": true,
+    "ninetyDaySeries": true,
+    "periodDataChanges": true,
+    "spendingTrendVisible": true,
+    "spendingCategoryVisible": true,
+    "boughtVsUsedVisible": true,
+    "stockValueVisible": true,
+    "reportChartsSized": true,
+    "reportTitlesAndLegends": true,
+    "reportHasMeaningfulValues": true,
+    "categoryLabelsReadable": true,
+    "unknownCostDisclosure": true,
+    "accountingJargonRemoved": true,
+    "meaningfulItemChart": true,
+    "sparseItemFallback": true,
+    "decimalInputContract": true,
+    "decimalCorrectionRoundTrip": true,
+    "decimalCorrectionBrowserFlow": true,
+    "overprecisionReadable": true,
+    "decimalAnalytics": true,
+    "analyticsChartSized": true,
+    "zeroAxeViolations": true,
+    "noHorizontalOverflow": true,
+    "noApplicationConsoleErrors": true,
+    "noPageErrors": true,
+    "noFailedRequests": true,
+    "noUnexpectedHttpErrors": true
+  },
+  "report30Metrics": [
+    {
+      "kind": "spending-trend",
+      "width": 346,
+      "height": 256
+    },
+    {
+      "kind": "spending-category",
+      "width": 346,
+      "height": 240
+    },
+    {
+      "kind": "bought-used",
+      "width": 346,
+      "height": 256
+    },
+    {
+      "kind": "stock-value",
+      "width": 346,
+      "height": 240
+    }
+  ],
+  "report90Metrics": [
+    {
+      "kind": "spending-trend",
+      "width": 346,
+      "height": 256
+    },
+    {
+      "kind": "spending-category",
+      "width": 346,
+      "height": 322
+    },
+    {
+      "kind": "bought-used",
+      "width": 346,
+      "height": 256
+    },
+    {
+      "kind": "stock-value",
+      "width": 346,
+      "height": 240
+    }
+  ],
+  "meaningfulItemMetrics": [
+    {
+      "kind": "item-bought-used",
+      "width": 346,
+      "height": 256
+    }
+  ],
+  "analyticsCanvas": {
+    "width": 338,
+    "height": 208
+  },
+  "analyticsValues": [
+    8.175,
+    0.875
+  ],
+  "captures": [
+    {
+      "label": "owner-correction-report-30-day",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/c-expense-reports/screenshots/mobile-390x844-owner-correction-report-30-day.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "owner-correction-report-30-day",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/c-expense-reports/screenshots/desktop-1440x900-owner-correction-report-30-day.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "owner-correction-report-90-day",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/c-expense-reports/screenshots/mobile-390x844-owner-correction-report-90-day.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "owner-correction-report-90-day",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/c-expense-reports/screenshots/desktop-1440x900-owner-correction-report-90-day.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "owner-correction-item-meaningful",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/c-expense-reports/screenshots/mobile-390x844-owner-correction-item-meaningful.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "owner-correction-item-meaningful",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/c-expense-reports/screenshots/desktop-1440x900-owner-correction-item-meaningful.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "owner-correction-item-sparse",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/c-expense-reports/screenshots/mobile-390x844-owner-correction-item-sparse.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "owner-correction-item-sparse",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/c-expense-reports/screenshots/desktop-1440x900-owner-correction-item-sparse.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "decimal-weight-entry",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/c-expense-reports/screenshots/mobile-390x844-decimal-weight-entry.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "decimal-weight-entry",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/c-expense-reports/screenshots/desktop-1440x900-decimal-weight-entry.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "decimal-weight-history",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/c-expense-reports/screenshots/mobile-390x844-decimal-weight-history.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "decimal-weight-history",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/c-expense-reports/screenshots/desktop-1440x900-decimal-weight-history.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "decimal-weight-trend",
+      "viewport": "390x844",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/c-expense-reports/screenshots/mobile-390x844-decimal-weight-trend.png",
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "decimal-weight-trend",
+      "viewport": "1440x900",
+      "path": "/home/rocco/SnakeTracker/docs/evidence/m6.5-inventory-intelligence/c-expense-reports/screenshots/desktop-1440x900-decimal-weight-trend.png",
+      "noHorizontalOverflow": true
+    }
+  ],
+  "axe": {
+    "scans": [
+      {
+        "label": "mobile-390x844-owner-correction-report-30-day",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-owner-correction-report-30-day",
+        "violations": []
+      },
+      {
+        "label": "mobile-390x844-owner-correction-report-90-day",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-owner-correction-report-90-day",
+        "violations": []
+      },
+      {
+        "label": "mobile-390x844-owner-correction-item-meaningful",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-owner-correction-item-meaningful",
+        "violations": []
+      },
+      {
+        "label": "mobile-390x844-owner-correction-item-sparse",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-owner-correction-item-sparse",
+        "violations": []
+      },
+      {
+        "label": "mobile-390x844-decimal-weight-entry",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-decimal-weight-entry",
+        "violations": []
+      },
+      {
+        "label": "mobile-390x844-decimal-weight-history",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-decimal-weight-history",
+        "violations": []
+      },
+      {
+        "label": "mobile-390x844-decimal-weight-trend",
+        "violations": []
+      },
+      {
+        "label": "desktop-1440x900-decimal-weight-trend",
+        "violations": []
+      }
+    ],
+    "totalViolations": 0
+  },
+  "console": {
+    "diagnostics": [],
+    "pageErrors": [],
+    "failedRequests": [],
+    "httpErrors": []
+  },
+  "expectedValidationResponses": [
+    {
+      "status": 422
+    }
+  ]
+}

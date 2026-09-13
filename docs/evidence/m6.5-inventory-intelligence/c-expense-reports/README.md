@@ -11,8 +11,13 @@ Requirement `R-076`; acceptance procedure `AT-INVINT-06`. Branch
   independent Expense once as an **Other expense**. A Purchase is not duplicated as an editable
   Expense.
 - The household Inventory & spending report has explicit 30/90 complete-day and currency controls.
-  It keeps supply cash, other-expense cash, FIFO consumption value, expiry/variance value, and
-  current known stock value distinct.
+  It keeps supply cash, other-expense cash, known value used, expiry/variance value, and current
+  known stock value distinct.
+- The report is visually led by summary metrics and locally rendered Chart.js charts for spending
+  over time, spending by category, bought versus used, and current known stock value. Attention and
+  plain-language explanation follow; exact reconciliation tables and protected CSV exports are
+  secondary. Chart input is authoritative server-derived read-side data rather than browser-side
+  financial calculation.
 - Category and Item tables expose period purchase/use quantities and values, current stock/value,
   reorder and count attention, fixed-window unused observations, and unknown-cost stock. Quantities
   with unlike units are never summed. Unknown acquisition cost is disclosed and never changed to
@@ -28,12 +33,30 @@ Requirement `R-076`; acceptance procedure `AT-INVINT-06`. Branch
   injection protection and contains no event, household, user, or other internal identifiers.
   Tables retain row/column semantics and collapse responsively at the accepted mobile breakpoint.
 
-No event contract, domain write behavior, schema migration, CSP, or live-user record changes are
-part of M6.5-C.
+M6.5-C itself adds no event contract, domain write behavior, or schema migration. Its owner-review
+correction also removes FIFO, cost-basis, depletion-layer, and projection-internals terminology
+from normal keeper-facing report templates while preserving the deterministic internal accounting
+policy. The Chart.js dependency and `/static/report-charts.js` are self-hosted; production CSP was
+not weakened.
 
-The bounded cost-activity reader groups effective FIFO allocations into consumption, expiry, and
-variance for an explicit household, Item, half-open time range, and currency. Unknown-cost stock is
-always reconciled separately.
+The bounded internal cost-activity reader groups effective allocations into consumption, expiry,
+and variance for an explicit household, Item, half-open time range, and currency. Unknown-cost
+stock is always reconciled separately.
+
+## Decimal animal-weight correction
+
+The separately committed live-bug correction replaces whole-number-only body-weight writes with an
+exact fixed-point representation: `weight_grams_scaled: int`, where one gram is 1,000 scaled units
+and supported precision is 0.001 g. Keeper strings are parsed with `Decimal`; zero, negative,
+malformed, scientific-notation, and over-precision input is rejected without rounding.
+
+Existing `animal.weight_recorded` and `animal.weight_corrected` V1 events remain immutable and
+replay as whole grams normalized into the same internal scale. New writes use
+`AnimalWeightRecordedV2` and `AnimalWeightCorrectedV2`. A V2 correction can target an effective V1
+record. Central normalization and formatting produces natural output such as `525 g`, `42.5 g`,
+`8.25 g`, and `0.875 g`; timeline, correction forms, reminder/effective-state handling, and
+measurement analytics all consume the shared representation. Analytics retains `Decimal` until
+the numeric JSON presentation boundary. No event rewrite or SQL migration was required.
 
 ## Automated qualification
 
@@ -42,8 +65,8 @@ the representative `$65 / 50` acquisition and `$23.40 / 18` consumption reconcil
 expiry/variance classification, multiple currencies without mixing, unsupported estimate states,
 formula-safe export, invalid period/currency input, and cross-household direct Item/CSV denial.
 
-Native ARM64 Chromium 1208 ran against the isolated restored database at
-`/tmp/carekeeper-m65-c-restore-host-325c741a/verified/325c741a2378454c97f5200530272f56/snaketracker.sqlite3`.
+The original M6.5-C journey used native ARM64 Chromium 1208 against the isolated restored database
+at `/tmp/carekeeper-m65-c-restore-host-325c741a/verified/325c741a2378454c97f5200530272f56/snaketracker.sqlite3`.
 The active database was explicitly recorded as
 `/home/rocco/SnakeTracker/runtime/phase2/snaketracker.sqlite3` and was never a browser target. The
 journey covered the collection Inventory & spending report, a costed Dubia Roaches Item with
@@ -61,6 +84,45 @@ Owner-review captures are:
   [desktop](screenshots/desktop-1440x900-inventory-item-reconciliation.png)
 - Integrated Expenses: [mobile](screenshots/mobile-390x844-expenses-integrated-spending.png),
   [desktop](screenshots/desktop-1440x900-expenses-integrated-spending.png)
+
+The owner-review correction used a separate writable copy at
+`/tmp/carekeeper-m65-correction-IllXzRzG/snaketracker.sqlite3`; the active database path was checked
+and rejected as a possible target before the journey. A web and worker pair using the corrected
+native ARM64 image caught every isolated projection up to the isolated event high-water of 772.
+The journey exercised meaningful 30-day and 90-day reports, all four required charts, period-data
+changes, readable category labels, unknown-cost disclosure, a meaningful Item chart, sparse Item
+fallback, decimal entry, correction, history, over-precision validation, and decimal analytics.
+The analytics API and chart preserved `[8.175, 0.875]` exactly at the presentation boundary.
+
+Across 14 mobile 390×844/desktop 1440×900 page scans, axe reported zero violations and every page
+had zero horizontal overflow. Chart canvases were non-zero and sensibly sized (mobile report width
+346 px; heights 240–322 px; mobile measurement chart 338×208 px). Console capture found zero Care
+Keeper JavaScript diagnostics, page errors, failed requests, or unexpected HTTP errors. The one
+deliberate invalid `8.2579` submission returned the expected readable 422 validation response.
+Machine-readable assertions and artifact paths are in
+[`owner-correction-browser-qualification.json`](owner-correction-browser-qualification.json).
+
+Visual-first report captures:
+
+- Meaningful 30-day report: [mobile](screenshots/mobile-390x844-owner-correction-report-30-day.png),
+  [desktop](screenshots/desktop-1440x900-owner-correction-report-30-day.png)
+- Meaningful 90-day report: [mobile](screenshots/mobile-390x844-owner-correction-report-90-day.png),
+  [desktop](screenshots/desktop-1440x900-owner-correction-report-90-day.png)
+- Meaningful Item: [mobile](screenshots/mobile-390x844-owner-correction-item-meaningful.png),
+  [desktop](screenshots/desktop-1440x900-owner-correction-item-meaningful.png)
+- Sparse Item: [mobile](screenshots/mobile-390x844-owner-correction-item-sparse.png),
+  [desktop](screenshots/desktop-1440x900-owner-correction-item-sparse.png)
+
+Decimal-weight captures:
+
+- Entry: [mobile](screenshots/mobile-390x844-decimal-weight-entry.png),
+  [desktop](screenshots/desktop-1440x900-decimal-weight-entry.png)
+- Readable over-precision validation:
+  [mobile](screenshots/mobile-390x844-decimal-weight-validation.png)
+- Corrected effective history: [mobile](screenshots/mobile-390x844-decimal-weight-history.png),
+  [desktop](screenshots/desktop-1440x900-decimal-weight-history.png)
+- Decimal trend: [mobile](screenshots/mobile-390x844-decimal-weight-trend.png),
+  [desktop](screenshots/desktop-1440x900-decimal-weight-trend.png)
 
 ## Live-data safety and backup
 
@@ -100,10 +162,31 @@ an active path. The same encrypted run then restored successfully to the explici
 isolated target above, reporting `verified` with 33 referenced Attachments. No restore was
 performed over the active database.
 
-The owner-review image is native ARM64 `snaketracker:m65-c-owner-review`, SHA-256
-`e8e457e4c06b2ad896bacdd7d1660a6acc405fae9e507a795b2a9ec0a4e47a8f`, built for UID/GID
-`1001:1001`. It is promoted without a schema change: migration head remains
-`0018_inventory_stock_roles`. Web, worker, and Nginx are healthy; local readiness returns `ready`;
+Immediately before this combined owner correction, the active runtime was explicitly rechecked at
+809 events/high-water 809. Its ordered position/event-identity/checksum hash was
+`2352c365c4f34c49b1a375d4ec240f91938490d80a18f3297a545ac466b9647b`; SQLite integrity was
+`ok`, foreign-key violations were zero, and counts were four households, four users, 42 Animals,
+29 Enclosures, 30 Inventory Items, and 39 finalized Attachment versions. The 40-file Attachment
+tree retained the previously recorded hash
+`0ce316009a1127871bbe3101849b76df5b898b1c0d3386ec815e570659110c73`.
+
+A fresh, non-overwriting encrypted backup completed before promotion: request
+`55340d04-8eee-48dc-8db2-71c3334eabec`, run
+`a64ca575-bfdf-4df4-8415-909414cf74be`. The 13,418,529-byte encrypted database has SHA-256
+`a3a531ff8d449f5479fe825e5cbb8d304a9dc1fb245f52057ddba2b7aa77d51c`; the 24,489-byte
+encrypted manifest has SHA-256 and manifest checksum
+`a86cc56428ac93604dde4706de6f894ed96198373b16e02f1cda99bfd5b3b995`. The worker completed
+its verification pipeline. Because this correction has no schema migration and the immediately
+preceding M6.5-C backup already passed an isolated restore rehearsal, no destructive restore was
+repeated and the active runtime was never a restore target.
+
+After promotion, the active database remained exactly at 809 events/high-water 809 with the same
+ordered hash, counts, SQLite `ok`, and zero foreign-key violations. The browser qualification made
+no live writes. Migration head remains `0018_inventory_stock_roles`.
+
+The corrected owner-review image is native ARM64 `snaketracker:m65-c-owner-correction`, SHA-256
+`cb51cc6898606530d24ec6bf3a6128988a9e5994295616040a3528208783cb40`, built and promoted for
+UID/GID `1001:1001`. Web, worker, and Nginx are healthy; local and public readiness return `ready`;
 web and worker run as UID/GID `1001:1001`; and exactly one three-service Care Keeper Compose stack
 remains active.
 
@@ -116,15 +199,14 @@ uv sync --frozen
 ./scripts/quality/check.sh
 ```
 
-The first complete suite passed all 602 tests but exposed 84.91% branch coverage against the
-85.00% gate, so it correctly stopped before the later quality steps. Focused tests were added for
-the unsupported dependency, invalid period, absent/stale price, and zero-replenishment branches.
-The completed post-correction gate passed formatting and Ruff across 461 files, the 42-ADR accepted
-architecture freeze, documentation links across 208 files, strict mypy across 132 source files,
-all 604 tests in 795.10 seconds, coverage, dependency audit, Compose validation, and diff checks.
-JUnit reports zero failures, errors, or skipped tests. Coverage is 94.49% lines, 85.03% branches,
-and 92.60% combined. `coverage.json`, `coverage.xml`, and `junit.xml` were produced, and the strict
-dependency audit reports no known vulnerabilities.
+The exact post-correction gate passed formatting across 463 files, Ruff, the 42-ADR accepted
+architecture freeze, documentation links across 208 files, strict mypy across 133 source files,
+all 619 tests in 801.94 seconds, coverage artifact generation, dependency audit, Compose
+validation, and diff checks. JUnit reports zero failures, errors, or skipped tests. Coverage is
+94.52% lines and 85.08% branches. `coverage.json`, `coverage.xml`, and `junit.xml` were produced,
+and the strict dependency audit reports no known vulnerabilities. The first run had correctly
+stopped at 84.99% branch coverage; one focused spending-direction regression test brought the
+authoritative gate above its 85% threshold before this final successful run.
 
 ## Scope boundary
 
