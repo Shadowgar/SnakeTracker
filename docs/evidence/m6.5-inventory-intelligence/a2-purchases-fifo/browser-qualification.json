@@ -1,0 +1,65 @@
+{
+  "qualified_at": "2026-09-11T16:34:47-04:00",
+  "host_architecture": "aarch64",
+  "browser": "native ARM64 Chromium 1208",
+  "image": {
+    "tag": "snaketracker:m65-a2-correction",
+    "sha256": "ccafa69e4c473d61b578537fce2814451517247e55aa53c9c9094e28dc1b3ae8",
+    "uid_gid": "1001:1001"
+  },
+  "protected_live_paths": {
+    "database": "/home/rocco/SnakeTracker/runtime/phase2/snaketracker.sqlite3",
+    "attachments": "/home/rocco/SnakeTracker/runtime/phase2/attachments",
+    "used_for_browser_writes": false
+  },
+  "isolated_target": "/tmp/carekeeper-a2-correction-browser.JkS6PH",
+  "viewports": ["1440x900", "390x844"],
+  "journeys": {
+    "new_paid_item": true,
+    "paid_existing_item": true,
+    "zero_amount_untracked_item": true,
+    "legacy_cost_assignment": true,
+    "feeding_from_known_stock": true,
+    "feeding_deletion_compensation": true,
+    "plain_language_no_fifo_jargon": true
+  },
+  "representative_results": {
+    "desktop": {
+      "tracked_item_id": "4fb21301-f320-4ceb-877b-23251a068fdf",
+      "legacy_item_id": "bff4385f-dd1b-4d03-b149-fcc2edbc3660"
+    },
+    "mobile": {
+      "tracked_item_id": "c6302a2d-8f80-469d-8477-0f36017a45db",
+      "legacy_item_id": "568210f8-a2cb-4594-89f2-4bc04f1c27dc"
+    },
+    "tracked_quantity_scaled": 35000,
+    "known_remaining_cost_minor": 6500,
+    "unknown_quantity_scaled": 5000,
+    "legacy_quantity_scaled": 20000,
+    "legacy_known_cost_minor": 3600,
+    "feeding_consumed_cost_minor_before_delete": 200,
+    "feeding_consumed_cost_minor_after_delete": 0
+  },
+  "browser_results": {
+    "axe_checks": 14,
+    "axe_violations": 0,
+    "application_console_errors": 0,
+    "page_errors": 0,
+    "http_errors": 0,
+    "failed_requests": 0,
+    "horizontal_overflow": false,
+    "csp_unchanged": true
+  },
+  "screenshots": {
+    "desktop_add_inventory": "screenshots/correction-desktop-1440x900-add-inventory.png",
+    "desktop_tracked_detail": "screenshots/correction-desktop-1440x900-tracked-detail.png",
+    "desktop_mixed_cost_detail": "screenshots/correction-desktop-1440x900-mixed-cost-detail.png",
+    "desktop_legacy_cost_form": "screenshots/correction-desktop-1440x900-legacy-cost-form.png",
+    "desktop_purchase_history": "screenshots/correction-desktop-1440x900-purchase-history.png",
+    "mobile_add_inventory": "screenshots/correction-mobile-390x844-add-inventory.png",
+    "mobile_tracked_detail": "screenshots/correction-mobile-390x844-tracked-detail.png",
+    "mobile_mixed_cost_detail": "screenshots/correction-mobile-390x844-mixed-cost-detail.png",
+    "mobile_legacy_cost_form": "screenshots/correction-mobile-390x844-legacy-cost-form.png",
+    "mobile_purchase_history": "screenshots/correction-mobile-390x844-purchase-history.png"
+  }
+}

@@ -21,9 +21,10 @@ cannot be used for destructive migration, replay, fresh-install, or restoration 
 ## Decision
 
 The owner accepted the Purchase/FIFO/fixed-precision decision and the A1 structured Inventory and
-inventory-authoritative Feeding amendment on September 10, 2026. M6.5-A1 implements only the
-catalog, quantity, Feeding, snapshot, and compatibility foundation. Purchase, FIFO valuation,
-physical-count intelligence, forecasting, and cost reporting remain later M6.5 tranches.
+inventory-authoritative Feeding amendment on September 10, 2026. M6.5-A1 implements the catalog,
+quantity, Feeding, snapshot, and compatibility foundation. A2 implements Purchase, receipt
+correction/control, FIFO valuation, and unified cash-spend facts; physical-count intelligence,
+forecasting, and expanded cost reporting remain later M6.5 tranches.
 
 ### Purchase and cash-spend authority
 
@@ -38,14 +39,42 @@ Existing Expense streams remain authoritative for non-purchase spending. A unifi
 contains one row per `(source_kind, source_id)`, where source kind is `purchase` or `expense`, so
 the application cannot count a Purchase a second time merely to expose it in Expenses or reports.
 The generic expense workflow cannot create an inventory link or use the reserved Inventory
-Purchase source kind. The UI directs supply receipts to Add purchase and warns about a same-day,
-same-vendor, same-currency, same-amount manual expense, while allowing a keeper to confirm a
-legitimate duplicate transaction.
+Purchase source kind. The UI directs inventory acquisition to one **Add inventory** workflow and
+warns about a same-day, same-vendor, same-currency, same-amount manual expense, while allowing a
+keeper to confirm a legitimate duplicate transaction. A positive amount creates one Purchase
+cash-spend fact; a zero amount creates only the physical receipt and means that financial value is
+not tracked. It does not mean a known zero-cost acquisition and does not create a zero-dollar
+Purchase.
 
-Purchase posting atomically appends the Purchase fact and one version-2 stock-receipt fact per line
+Purchase posting atomically appends the Purchase fact and one version-3 stock-receipt fact per line
 to the affected Inventory Item streams under ADR-0011. Multiple lines for the same item share that
 item stream. The 25-line bound limits transaction and payload size; M6.5 qualification must prove
 the bound on SQLite and the supported Raspberry Pi environment.
+
+The same keeper-facing workflow can create and stock a new structured Item in one atomic append,
+or receive more stock for an existing Item. Purchase history and lifecycle controls remain
+available, but Purchase is not a competing primary data-entry workflow.
+
+### Cost information for existing stock
+
+Migration-era or deliberately non-financial receipts can leave current stock with unknown cost.
+The unified workflow therefore has a **Cost for stock already on hand** mode. It appends a typed
+cost-assignment fact and its Purchase fact atomically without appending a physical receipt or
+changing on-hand quantity. The assignment stores exact portions of eligible unknown-cost source
+layers, is bounded by the unknown-cost quantity currently remaining, and can cover only part of
+that quantity.
+
+A2 uses the explicit **current remaining quantity** semantic. A cost assignment does not
+retroactively value units already consumed before the assignment. This avoids silently claiming
+that a remembered total applied to an original receipt whose full quantity or provenance may no
+longer be known. The keeper-facing form says that the quantity is stock currently on hand; prior
+consumption remains cost-not-tracked.
+
+Assignment correction appends a replacement cost fact over the same stored portions, or
+deterministically adds/trims currently eligible portions when quantity changes. Voiding an
+assignment removes its effective cost and cash-spend fact but never changes physical quantity;
+reinstatement restores both. Original receipt, consumption, and assignment events remain
+immutable.
 
 ### Acquisition cost and FIFO
 
@@ -214,10 +243,17 @@ effective, non-reversed facts and rebuild deterministically from their correlati
 M6.5-A1 uses expand-only migration `0014_structured_inventory_feeding`. It adds nullable structured
 catalog fields, parallel scaled-quantity state, and separate version-2 consumption link/allocation
 tables. It populates scaled current quantities as exact multiples of 1,000 and retains legacy
-columns and original unit text without destructive event rewriting. Purchase/cost/read-model
-tables remain deferred to A2 and later tranches.
+columns and original unit text without destructive event rewriting. Expand-only migration
+`0015_purchases_fifo` adds synchronous Purchase current/line and effective-receipt state. A2 FIFO
+and unified cash-spend state use versioned asynchronous projection generations rather than fixed
+mutable accounting tables.
 
-Historical version-1 receipts will become uncosted FIFO layers when A2 implements costing.
+Expand-only migration `0016_inventory_acquisition` adds the Purchase acquisition-mode discriminator
+and synchronous effective cost-assignment state. Existing Purchase rows default to
+`stock_received`; no event or balance is rewritten. The generated costing projection is versioned
+forward so replay incorporates current-stock assignments deterministically.
+
+Historical version-1 receipts become uncosted FIFO layers under A2 costing.
 Historical version-1 consumption and feeding links remain effective and normalize to scaled
 quantities. Existing Expenses remain
 standalone cash-spend facts and are never inferred to be Purchases. Existing reorder thresholds map
@@ -282,9 +318,10 @@ for every destructive rehearsal and prove the active database and attachment sto
 ## Schedule, roadmap, and milestone consequences
 
 This decision establishes the M6.5-A through M6.5-D sequence documented in the M6.5 architecture
-plan. A1 implements `R-084` and `R-085`; `R-070` through `R-074` and `R-076` remain later work.
-`R-075`'s policy decision is accepted, but FIFO implementation remains A2. M7, M8, and M9 ordering
-and scope do not change.
+plan. A1 implements `R-084` and `R-085`; A2 implements the Purchase/FIFO portions of `R-073` and
+`R-074` and the policy selected by `R-075`. `R-070` through `R-072`, expanded reporting in `R-076`,
+and remaining intelligence presentation stay later work. M7, M8, and M9 ordering and scope do not
+change.
 
 ## Approval
 

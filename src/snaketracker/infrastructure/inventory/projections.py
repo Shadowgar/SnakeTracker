@@ -16,12 +16,15 @@ from snaketracker.application.inventory import (
 from snaketracker.domains.inventory.contracts import (
     InventoryConsumptionReversedV1,
     InventoryConsumptionReversedV2,
+    InventoryCostAssignedV1,
+    InventoryCostAssignmentCorrectedV1,
     InventoryItemArchivedV1,
     InventoryItemRegisteredV1,
     InventoryItemRegisteredV2,
     InventoryItemRestoredV1,
     InventoryItemUpdatedV1,
     InventoryItemUpdatedV2,
+    InventoryReceiptCorrectedV1,
     InventoryReorderPolicyChangedV1,
     InventoryStockAdjustedV1,
     InventoryStockAdjustedV2,
@@ -30,8 +33,10 @@ from snaketracker.domains.inventory.contracts import (
     InventoryStockExpiredV1,
     InventoryStockReceivedV1,
     InventoryStockReceivedV2,
+    InventoryStockReceivedV3,
     InventoryStockReservedV1,
 )
+from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
 from snaketracker.platform.events.envelope import DomainEvent
 
 
@@ -82,8 +87,67 @@ class SQLAlchemyInventoryBalanceProjection:
             if isinstance(payload, InventoryStockReceivedV1):
                 on_hand += payload.quantity
                 on_hand_scaled += payload.quantity * 1000
-            elif isinstance(payload, InventoryStockReceivedV2):
+            elif isinstance(payload, InventoryStockReceivedV2 | InventoryStockReceivedV3):
                 on_hand_scaled += payload.quantity_scaled
+                on_hand = on_hand_scaled // 1000
+            elif isinstance(payload, InventoryReceiptCorrectedV1):
+                receipt = (
+                    connection.execute(
+                        text(
+                            "SELECT quantity_scaled,status FROM inventory_effective_receipts "
+                            "WHERE household_id=:household_id AND item_id=:item_id "
+                            "AND root_receipt_event_id=:target"
+                        ),
+                        {
+                            "household_id": str(event.household_id),
+                            "item_id": str(event.stream_id),
+                            "target": str(payload.target_event_id),
+                        },
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                if receipt is None or receipt["status"] != "active":
+                    raise InventoryValidationError(
+                        "Purchase receipt correction target is missing or inactive."
+                    )
+                on_hand_scaled += payload.quantity_scaled - int(receipt["quantity_scaled"])
+                if on_hand_scaled < reserved_scaled:
+                    raise InventoryValidationError(
+                        "Purchase correction would conflict with stock already used or reserved."
+                    )
+                on_hand = on_hand_scaled // 1000
+            elif isinstance(payload, EventVoidedV1 | EventReinstatedV1):
+                receipt = (
+                    connection.execute(
+                        text(
+                            "SELECT quantity_scaled,status FROM inventory_effective_receipts "
+                            "WHERE household_id=:household_id AND item_id=:item_id "
+                            "AND root_receipt_event_id=:target"
+                        ),
+                        {
+                            "household_id": str(event.household_id),
+                            "item_id": str(event.stream_id),
+                            "target": str(payload.target_event_id),
+                        },
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                if receipt is None:
+                    pass
+                elif isinstance(payload, EventVoidedV1):
+                    if receipt["status"] != "active":
+                        raise InventoryValidationError("Purchase receipt is already inactive.")
+                    on_hand_scaled -= int(receipt["quantity_scaled"])
+                    if on_hand_scaled < reserved_scaled:
+                        raise InventoryValidationError(
+                            "Purchase void would conflict with stock already used or reserved."
+                        )
+                else:
+                    if receipt["status"] != "voided":
+                        raise InventoryValidationError("Purchase receipt is already active.")
+                    on_hand_scaled += int(receipt["quantity_scaled"])
                 on_hand = on_hand_scaled // 1000
             elif isinstance(payload, InventoryStockReservedV1):
                 if on_hand - reserved < payload.quantity:
@@ -366,6 +430,8 @@ class SQLAlchemyInventoryBalanceProjection:
                 if status != "archived":
                     raise InventoryValidationError("Inventory item is already active.")
                 status = "active"
+            elif isinstance(payload, InventoryCostAssignedV1 | InventoryCostAssignmentCorrectedV1):
+                pass
             else:
                 continue
             if on_hand < 0 or on_hand_scaled < 0:

@@ -69,6 +69,44 @@ class InventoryStockReceivedV2:
 
 
 @dataclass(frozen=True, slots=True)
+class InventoryStockReceivedV3:
+    quantity_scaled: int
+    reference: str | None
+    purchase_id: UUID
+    purchase_line_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class InventoryReceiptCorrectedV1:
+    target_event_id: UUID
+    quantity_scaled: int
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class InventoryCostAssignmentPortionV1:
+    source_event_id: UUID
+    offset_scaled: int
+    quantity_scaled: int
+
+
+@dataclass(frozen=True, slots=True)
+class InventoryCostAssignedV1:
+    quantity_scaled: int
+    purchase_id: UUID
+    purchase_line_id: UUID
+    portions: tuple[InventoryCostAssignmentPortionV1, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class InventoryCostAssignmentCorrectedV1:
+    target_event_id: UUID
+    quantity_scaled: int
+    portions: tuple[InventoryCostAssignmentPortionV1, ...]
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
 class InventoryStockReservedV1:
     quantity: int
     reservation_key: str

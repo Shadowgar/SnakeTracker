@@ -1,0 +1,75 @@
+{
+  "qualified_at": "2026-09-12T00:30:42-04:00",
+  "origin": "https://tracker.theroccos.us",
+  "browser": "native ARM64 Chromium 1208",
+  "image": {
+    "tag": "snaketracker:m65-a2-owner-c2",
+    "sha256": "013f289d52491e26e060a969a7ad0930016a2b59bc856e57e53aa066a4c3d710",
+    "uid_gid": "1001:1001"
+  },
+  "asset": "/static/app.css?v=m65-a2-owner-c2",
+  "protected_live_paths": {
+    "database": "/home/rocco/SnakeTracker/runtime/phase2/snaketracker.sqlite3",
+    "attachments": "/home/rocco/SnakeTracker/runtime/phase2/attachments",
+    "browser_submissions": 0,
+    "domain_records_written": false
+  },
+  "states": [
+    "initial",
+    "existing-before-item",
+    "existing-selected",
+    "add-stock",
+    "add-cost",
+    "new-item"
+  ],
+  "viewports": {
+    "390x844": {
+      "form_width_px": 372.390625,
+      "segment_label_box_px": [165.1875, 44.75],
+      "radio_box_px": [1, 1],
+      "radio_position": "absolute",
+      "radio_opacity": 0,
+      "horizontal_overflow": false
+    },
+    "1440x900": {
+      "form_width_px": 672,
+      "segment_label_box_px": [311, 47.75],
+      "radio_box_px": [1, 1],
+      "radio_position": "absolute",
+      "radio_opacity": 0,
+      "horizontal_overflow": false
+    }
+  },
+  "results": {
+    "screenshots_inspected": 12,
+    "axe_checks": 12,
+    "axe_violations": 0,
+    "keyboard_arrow_selection": true,
+    "hidden_branch_enabled_controls": 0,
+    "application_console_errors": 0,
+    "page_errors": 0,
+    "http_errors": 0,
+    "care_keeper_failed_requests": 0,
+    "care_keeper_csp_violations": 0,
+    "csp_unchanged": true
+  },
+  "external_platform_diagnostics": {
+    "classification": "Cloudflare-injected analytics and inline loader blocked by Care Keeper's script-src 'self' policy",
+    "blocked_resource": "https://static.cloudflareinsights.com/beacon.min.js/...",
+    "expected": true
+  },
+  "screenshots": {
+    "mobile_initial": "screenshots/owner-c2-mobile-390x844-initial.png",
+    "mobile_existing_before_item": "screenshots/owner-c2-mobile-390x844-existing-before-item.png",
+    "mobile_existing_selected": "screenshots/owner-c2-mobile-390x844-existing-selected.png",
+    "mobile_add_stock": "screenshots/owner-c2-mobile-390x844-add-stock.png",
+    "mobile_add_cost": "screenshots/owner-c2-mobile-390x844-add-cost.png",
+    "mobile_new_item": "screenshots/owner-c2-mobile-390x844-new-item.png",
+    "desktop_initial": "screenshots/owner-c2-desktop-1440x900-initial.png",
+    "desktop_existing_before_item": "screenshots/owner-c2-desktop-1440x900-existing-before-item.png",
+    "desktop_existing_selected": "screenshots/owner-c2-desktop-1440x900-existing-selected.png",
+    "desktop_add_stock": "screenshots/owner-c2-desktop-1440x900-add-stock.png",
+    "desktop_add_cost": "screenshots/owner-c2-desktop-1440x900-add-cost.png",
+    "desktop_new_item": "screenshots/owner-c2-desktop-1440x900-new-item.png"
+  }
+}

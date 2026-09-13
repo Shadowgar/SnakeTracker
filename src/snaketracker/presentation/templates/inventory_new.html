@@ -1,10 +1,76 @@
 {% extends "base.html" %}
 {% block title %}Add inventory · Care Keeper{% endblock %}
 {% block content %}
-<section class="form-page" aria-labelledby="page-title"><header><p class="eyebrow">Inventory</p><h1 id="page-title">Add inventory item</h1></header>
-{% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
-<form class="card form-stack" method="post" action="/inventory" novalidate><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}">
-{% include "_inventory_catalog_fields.html" %}
-<div class="form-actions"><a href="/inventory">Cancel</a><button type="submit">Add item</button></div></form></section>
+<section class="form-page inventory-acquisition-page" aria-labelledby="page-title">
+  <header class="inventory-acquisition-header"><p class="eyebrow">Inventory</p><h1 id="page-title">Add inventory</h1><p class="lede">Add something you already track, or set up a new item.</p></header>
+  {% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+  <form class="card form-stack inventory-acquisition-form" method="post" action="/inventory" novalidate data-inventory-acquisition>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="idempotency_key" value="{{ command_id }}">
+    {% set selected_choice = values.get('item_selection', '') %}
+    {% set selected_mode = values.get('recording_mode', '') %}
+    <fieldset class="segmented-field" data-selection-field>
+      <legend>What are you adding?</legend>
+      <div class="segmented-control">
+        <label class="segment-choice"><input class="segment-input" type="radio" name="item_selection" value="existing"{% if selected_choice == 'existing' %} checked{% endif %} required><span>Existing item</span></label>
+        <label class="segment-choice"><input class="segment-input" type="radio" name="item_selection" value="new"{% if selected_choice == 'new' %} checked{% endif %} required><span>New item</span></label>
+      </div>
+    </fieldset>
+
+    <section class="form-stack acquisition-step" data-acquisition-existing{% if selected_choice != 'existing' %} hidden{% endif %}>
+      <label>Item
+        <select name="inventory_item_id" data-acquisition-item{% if selected_choice != 'existing' %} disabled{% endif %} required>
+          <option value="">Choose an item</option>
+          {% for row in inventory_items %}{% set item = row.item %}{% set item_value = item.item_id|string ~ ':' ~ item.stream_version|string %}<option value="{{ item_value }}" data-name="{{ item.name }}" data-stock="{{ item.on_hand_display }} {{ item.on_hand_unit_display }} on hand" data-cost="{{ row.cost_status }}" data-unit="{{ item.unit_symbol }}"{% if values.get('inventory_item_id','') in (item.item_id|string, item_value) %} selected{% endif %}>{{ item.name }} · {{ item.on_hand_display }} {{ item.on_hand_unit_display }} on hand</option>{% endfor %}
+        </select>
+      </label>
+
+      <section class="selected-stock-summary" data-selected-item-summary hidden aria-live="polite" aria-atomic="true">
+        <strong data-selected-item-name></strong>
+        <span data-current-stock></span>
+        <span data-current-cost></span>
+      </section>
+
+      <fieldset class="segmented-field acquisition-action-field" data-acquisition-action hidden>
+        <legend>What would you like to do?</legend>
+        <div class="segmented-control">
+          <label class="segment-choice"><input class="segment-input" type="radio" name="recording_mode" value="add_stock"{% if selected_mode == 'add_stock' %} checked{% endif %}><span>Add stock</span></label>
+          <label class="segment-choice"><input class="segment-input" type="radio" name="recording_mode" value="existing_cost"{% if selected_mode == 'existing_cost' %} checked{% endif %}><span>Add cost information</span></label>
+        </div>
+      </fieldset>
+
+      <section class="form-stack acquisition-fields" data-existing-fields hidden>
+        <label><span data-quantity-label>Quantity</span><input name="quantity" type="number" min="0.001" step="0.001" inputmode="decimal" value="{{ values.get('quantity','') }}" disabled required><small data-quantity-help></small></label>
+        <p class="cost-assignment-note" data-cost-assignment-note hidden>This adds cost information to stock already on hand. It does not change the quantity in inventory.</p>
+      </section>
+    </section>
+
+    <section class="form-stack acquisition-step acquisition-new-item" data-acquisition-new{% if selected_choice != 'new' %} hidden{% endif %}>
+      <div class="acquisition-section-heading"><h2>Set up the item</h2><p>Choose what it is, then enter the amount you have.</p></div>
+      {% include "_inventory_catalog_fields.html" %}
+    </section>
+
+    <section class="form-stack acquisition-payment" data-acquisition-payment hidden>
+      <div class="form-grid acquisition-primary-fields">
+        <label><span data-amount-label>Amount paid</span>
+          <span class="money-input"><span aria-hidden="true">$</span><input name="amount_paid" inputmode="decimal" value="{{ values.get('amount_paid','0.00') }}" aria-describedby="amount-paid-help" required></span>
+          <small id="amount-paid-help" data-amount-help>Use $0.00 when you only want to track quantity.</small>
+        </label>
+        <label>Date<input name="occurred_at" type="datetime-local" value="{{ values.get('occurred_at', default_occurred_at) }}" required></label>
+      </div>
+      <details class="form-advanced acquisition-more-details">
+        <summary>More details</summary>
+        <div class="form-grid">
+          <label>Vendor <span class="visually-hidden">(optional)</span><input name="vendor" maxlength="200" value="{{ values.get('vendor','') }}" autocomplete="organization"><small>Optional</small></label>
+          <label>Reference or note <span class="visually-hidden">(optional)</span><input name="reference" maxlength="300" value="{{ values.get('reference','') }}"><small>Optional</small></label>
+          <label>Currency<input name="currency" value="{{ values.get('currency','USD') }}" maxlength="3" autocomplete="off" required><small>Defaults to USD</small></label>
+          <label data-reorder-field hidden>Reorder when stock reaches <span class="visually-hidden">(optional)</span><input name="reorder_threshold" type="number" min="0" step="1" inputmode="numeric" value="{{ values.get('reorder_threshold', '') }}" disabled><small>Optional</small></label>
+        </div>
+      </details>
+    </section>
+
+    <div class="form-actions acquisition-form-actions" data-acquisition-actions hidden><a href="/inventory">Cancel</a><button type="submit" data-submit-label>Add inventory</button></div>
+  </form>
+</section>
 {% endblock %}
-{% block scripts %}<script defer src="/static/inventory-form.js?v=m65-a1-c2"></script>{% endblock %}
+{% block scripts %}<script defer src="/static/inventory-form.js?v=m65-a2-owner-c2"></script><script defer src="/static/inventory-acquisition.js?v=m65-a2-owner-c2"></script>{% endblock %}

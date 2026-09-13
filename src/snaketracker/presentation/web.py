@@ -116,8 +116,19 @@ from snaketracker.application.inventory import (
     InventoryValidationError,
     ReceiveScaledStockCommand,
     ReceiveStockCommand,
-    RegisterStructuredInventoryItemCommand,
     RestoreInventoryItemCommand,
+)
+from snaketracker.application.purchases import (
+    AcquireNewInventoryCommand,
+    AssignExistingStockCostCommand,
+    ControlPurchaseCommand,
+    CorrectPurchaseCommand,
+    CorrectPurchaseLineCommand,
+    PostPurchaseCommand,
+    PurchaseAuthorizationError,
+    PurchaseLineCommand,
+    PurchaseService,
+    PurchaseValidationError,
 )
 from snaketracker.application.reminders import (
     CreateReminderRuleCommand,
@@ -162,6 +173,7 @@ from snaketracker.domains.inventory.catalog import (
     SUPPLEMENT_FORMS,
     UNITS,
     WHOLE_PREY_TYPES,
+    format_quantity_scaled,
     parse_quantity_scaled,
     resolve_creation_unit_policy,
     validate_creation_unit,
@@ -333,6 +345,20 @@ def _money_minor(value: object) -> int:
     return minor
 
 
+def _nonnegative_money_minor(value: object, label: str) -> int:
+    normalized = str(value).strip()
+    if not normalized:
+        return 0
+    try:
+        amount = Decimal(normalized).quantize(Decimal("0.01"))
+    except (InvalidOperation, ValueError) as error:
+        raise FormValidationError(f"Enter a valid {label.lower()} amount.") from error
+    minor = int(amount * 100)
+    if minor < 0:
+        raise FormValidationError(f"{label} cannot be negative.")
+    return minor
+
+
 def _friendly_money(amount_minor: int, currency: str) -> str:
     amount = amount_minor / 100
     return f"${amount:,.2f}" if currency.upper() == "USD" else f"{currency.upper()} {amount:,.2f}"
@@ -341,12 +367,38 @@ def _friendly_money(amount_minor: int, currency: str) -> str:
 def _friendly_expense_total(expenses: tuple[Any, ...]) -> str:
     totals: dict[str, int] = {}
     for expense in expenses:
-        totals[expense.currency] = totals.get(expense.currency, 0) + expense.amount_minor
+        amount_minor = (
+            expense.amount_minor if hasattr(expense, "amount_minor") else expense.total_paid_minor
+        )
+        totals[expense.currency] = totals.get(expense.currency, 0) + amount_minor
     if not totals:
         return "$0.00"
     return " + ".join(
         _friendly_money(total, currency) for currency, total in sorted(totals.items())
     )
+
+
+def _friendly_currency_values(values: tuple[Any, ...]) -> str:
+    if not values:
+        return "Not available"
+    return " + ".join(_friendly_money(value.amount_minor, value.currency) for value in values)
+
+
+def _inventory_cost_status(cost_summary: Any, item: Any) -> str:
+    if not cost_summary.available:
+        return "Cost information is updating"
+    if cost_summary.known_remaining:
+        tracked_value = _friendly_currency_values(cost_summary.known_remaining)
+        status = f"{tracked_value} tracked value"
+        if cost_summary.unknown_remaining_quantity_scaled:
+            unknown_quantity = format_quantity_scaled(
+                cost_summary.unknown_remaining_quantity_scaled
+            )
+            status += f" · {unknown_quantity} {item.unit_symbol} cost not tracked"
+        return status
+    if cost_summary.unknown_remaining_quantity_scaled:
+        return "Cost not tracked"
+    return "$0.00 tracked value"
 
 
 def _friendly_report_value(column: str, value: str) -> str:
@@ -848,6 +900,7 @@ def create_web_router(
     backup_service: BackupService,
     enclosure_service: EnclosureService,
     inventory_service: InventoryService,
+    purchase_service: PurchaseService,
     expense_service: ExpenseService,
     analytics_service: AnimalAnalyticsService,
     report_service: ReportService,
@@ -921,6 +974,18 @@ def create_web_router(
         if issued is not None:
             _set_session_cookies(response, issued, secure_cookie)
         return response
+
+    def inventory_acquisition_items(household_id: UUID) -> tuple[dict[str, Any], ...]:
+        if projection_catch_up is not None:
+            projection_catch_up()
+        rows = []
+        for item in inventory_service.list_balances(household_id, status="active"):
+            if item.needs_setup or item.unit_code is None:
+                continue
+            cost_summary = purchase_service.cost_summary_for(household_id, item.item_id)
+            cost_status = _inventory_cost_status(cost_summary, item)
+            rows.append({"item": item, "cost_status": cost_status})
+        return tuple(rows)
 
     async def protected_form(
         request: Request,
@@ -2196,14 +2261,26 @@ def create_web_router(
             return RedirectResponse("/login", status_code=303)
         if "inventory.manage" not in principal.capabilities:
             return _access_denied(request, "Inventory access denied")
+        selected_item = request.query_params.get("item", "")
+        selected_mode = (
+            "existing_cost" if request.query_params.get("mode") == "existing_cost" else ""
+        )
         return protected_page(
             request,
             "inventory_new.html",
             principal,
             context={
                 "errors": {},
-                "values": {},
+                "values": {
+                    "item_selection": "existing" if selected_item else "",
+                    "inventory_item_id": selected_item,
+                    "recording_mode": selected_mode,
+                },
                 "guided_creation": True,
+                "inventory_items": inventory_acquisition_items(principal.household_id),
+                "default_occurred_at": datetime.now(
+                    ZoneInfo(principal.household_timezone)
+                ).strftime("%Y-%m-%dT%H:%M"),
                 **_inventory_catalog_context(),
             },
         )
@@ -2216,26 +2293,131 @@ def create_web_router(
         assert principal is not None and form is not None
         if "inventory.manage" not in principal.capabilities:
             return _access_denied(request, "Inventory access denied")
+        item_selection = str(form.get("item_selection", "new"))
+        result_item_id: UUID | None = None
         try:
-            guided = _guided_inventory_create_values(form)
-            result = inventory_service.register_structured(
-                RegisterStructuredInventoryItemCommand(
-                    household_id=principal.household_id,
-                    actor_user_id=principal.user_id,
-                    correlation_id=uuid4(),
-                    idempotency_key=_form_idempotency_key(form),
-                    name=str(form.get("name", "")),
-                    inventory_type=guided.inventory_type,
-                    unit_code=guided.unit_code,
-                    food_category=guided.food_category,
-                    food_type=guided.food_type,
-                    size_stage=guided.size_stage,
-                    preparation_method=guided.preparation_method,
-                    reorder_threshold_scaled=guided.reorder_threshold_scaled,
-                    starting_quantity_scaled=guided.starting_quantity_scaled,
-                )
+            amount_paid = _nonnegative_money_minor(form.get("amount_paid", "0"), "Amount paid")
+            raw_occurred_at = str(form.get("occurred_at", "")).strip()
+            occurred_at = (
+                _form_datetime(raw_occurred_at, principal.household_timezone)
+                if raw_occurred_at
+                else datetime.now(UTC)
             )
-        except (InventoryValidationError, FormValidationError, ValueError) as error:
+            if amount_paid and "expense.manage" not in principal.capabilities:
+                return _access_denied(request, "Inventory cost access denied")
+            if item_selection == "new":
+                guided = _guided_inventory_create_values(form)
+                result = purchase_service.acquire_new(
+                    AcquireNewInventoryCommand(
+                        household_id=principal.household_id,
+                        actor_user_id=principal.user_id,
+                        actor_role=principal.role,
+                        correlation_id=uuid4(),
+                        idempotency_key=_form_idempotency_key(form),
+                        name=str(form.get("name", "")),
+                        inventory_type=guided.inventory_type,
+                        unit_code=guided.unit_code,
+                        food_category=guided.food_category,
+                        food_type=guided.food_type,
+                        size_stage=guided.size_stage,
+                        preparation_method=guided.preparation_method,
+                        reorder_threshold_scaled=guided.reorder_threshold_scaled,
+                        quantity_scaled=guided.starting_quantity_scaled,
+                        amount_paid_minor=amount_paid,
+                        currency=str(form.get("currency", "USD")),
+                        vendor=_optional_form_text(form.get("vendor", "")),
+                        reference=_optional_form_text(form.get("reference", "")),
+                        occurred_at=occurred_at,
+                    )
+                )
+                result_item_id = result.item_id
+            elif item_selection == "existing":
+                item_id, expected_version = _inventory_reference(form)
+                if item_id is None or expected_version is None:
+                    raise FormValidationError("Choose an existing inventory item.")
+                item = inventory_service.balance_for(principal.household_id, item_id)
+                if item is None or item.unit_code is None or item.needs_setup:
+                    raise FormValidationError("Choose an active, configured inventory item.")
+                quantity = parse_quantity_scaled(str(form.get("quantity", "")), item.unit_code)
+                mode = str(form.get("recording_mode", "add_stock"))
+                if mode == "existing_cost":
+                    if not amount_paid:
+                        raise FormValidationError(
+                            "Enter what you paid when adding cost information."
+                        )
+                    if projection_catch_up is not None:
+                        projection_catch_up()
+                    purchase_service.assign_existing_stock_cost(
+                        AssignExistingStockCostCommand(
+                            principal.household_id,
+                            principal.user_id,
+                            principal.role,
+                            uuid4(),
+                            _form_idempotency_key(form),
+                            item_id,
+                            expected_version,
+                            quantity,
+                            amount_paid,
+                            str(form.get("currency", "USD")),
+                            _optional_form_text(form.get("vendor", "")),
+                            _optional_form_text(form.get("reference", "")),
+                            occurred_at,
+                        )
+                    )
+                elif mode == "add_stock" and amount_paid:
+                    purchase_service.post(
+                        PostPurchaseCommand(
+                            principal.household_id,
+                            principal.user_id,
+                            principal.role,
+                            uuid4(),
+                            _form_idempotency_key(form),
+                            _optional_form_text(form.get("vendor", "")) or "Vendor not recorded",
+                            str(form.get("currency", "USD")),
+                            _optional_form_text(form.get("reference", "")),
+                            None,
+                            occurred_at,
+                            0,
+                            0,
+                            0,
+                            amount_paid,
+                            (
+                                PurchaseLineCommand(
+                                    item_id,
+                                    expected_version,
+                                    quantity,
+                                    item.unit_code,
+                                    amount_paid,
+                                ),
+                            ),
+                        )
+                    )
+                elif mode == "add_stock":
+                    inventory_service.receive_scaled(
+                        ReceiveScaledStockCommand(
+                            principal.household_id,
+                            principal.user_id,
+                            item_id,
+                            uuid4(),
+                            _form_idempotency_key(form),
+                            expected_version,
+                            quantity,
+                            _optional_form_text(form.get("reference", "")) or "Cost not tracked",
+                            occurred_at,
+                        )
+                    )
+                else:
+                    raise FormValidationError("Choose what you are recording.")
+                result_item_id = item_id
+            else:
+                raise FormValidationError("Choose what you are adding.")
+        except (
+            InventoryValidationError,
+            PurchaseAuthorizationError,
+            PurchaseValidationError,
+            FormValidationError,
+            ValueError,
+        ) as error:
             return protected_page(
                 request,
                 "inventory_new.html",
@@ -2245,10 +2427,13 @@ def create_web_router(
                     "errors": {"form": str(error)},
                     "values": _form_values(form),
                     "guided_creation": True,
+                    "inventory_items": inventory_acquisition_items(principal.household_id),
+                    "default_occurred_at": str(form.get("occurred_at", "")),
                     **_inventory_catalog_context(),
                 },
             )
-        return RedirectResponse(f"/inventory/{result.item_id}", status_code=303)
+        assert result_item_id is not None
+        return RedirectResponse(f"/inventory/{result_item_id}", status_code=303)
 
     @router.get("/inventory/{item_id}", response_class=HTMLResponse)
     async def inventory_detail(request: Request, item_id: str) -> Response:
@@ -2263,11 +2448,32 @@ def create_web_router(
             item = None
         if item is None:
             return _not_found(request, "Inventory item not found")
+        if projection_catch_up is not None:
+            projection_catch_up()
+        cost_summary = purchase_service.cost_summary_for(principal.household_id, item.item_id)
         return protected_page(
             request,
             "inventory_detail.html",
             principal,
-            context={"item": item, "errors": {}},
+            context={
+                "item": item,
+                "errors": {},
+                "cost_summary": cost_summary,
+                "remaining_value": (
+                    _friendly_currency_values(cost_summary.known_remaining)
+                    if cost_summary.known_remaining
+                    else (
+                        "Cost not tracked"
+                        if cost_summary.unknown_remaining_quantity_scaled
+                        else "$0.00"
+                    )
+                ),
+                "consumed_value": (
+                    _friendly_currency_values(cost_summary.known_consumed)
+                    if cost_summary.known_consumed
+                    else ("Cost not tracked" if item.consumed_quantity_scaled else "$0.00")
+                ),
+            },
         )
 
     @router.post("/inventory/{item_id}/receive", response_class=HTMLResponse)
@@ -2556,6 +2762,390 @@ def create_web_router(
             context={"item": item, "action": action},
         )
 
+    def purchase_form_context(
+        principal: Principal,
+        *,
+        errors: dict[str, str] | None = None,
+        values: dict[str, str] | None = None,
+        line_values: tuple[dict[str, str], ...] | None = None,
+    ) -> dict[str, object]:
+        items = tuple(
+            item
+            for item in inventory_service.list_balances(principal.household_id, status="active")
+            if not item.needs_setup and item.unit_code is not None
+        )
+        return {
+            "errors": errors or {},
+            "values": values or {},
+            "line_values": line_values
+            or (
+                {
+                    "purchase_line_id": "",
+                    "inventory_item_id": "",
+                    "quantity": "",
+                    "subtotal": "",
+                },
+            ),
+            "inventory_items": items,
+            "default_occurred_at": datetime.now(ZoneInfo(principal.household_timezone)).strftime(
+                "%Y-%m-%dT%H:%M"
+            ),
+        }
+
+    @router.get("/purchases", response_class=HTMLResponse)
+    async def purchase_list(request: Request) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if not {"inventory.view", "expense.view"}.issubset(principal.capabilities):
+            return _access_denied(request, "Purchase access denied")
+        return protected_page(
+            request,
+            "purchase_list.html",
+            principal,
+            context={"purchases": purchase_service.list_purchases(principal.household_id)},
+        )
+
+    @router.get("/purchases/new", response_class=HTMLResponse)
+    async def purchase_new(request: Request) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if not {"inventory.manage", "expense.manage"}.issubset(principal.capabilities):
+            return _access_denied(request, "Purchase access denied")
+        return RedirectResponse("/inventory/new", status_code=303)
+
+    @router.post("/purchases", response_class=HTMLResponse)
+    async def purchase_create(request: Request) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if not {"inventory.manage", "expense.manage"}.issubset(principal.capabilities):
+            return _access_denied(request, "Purchase access denied")
+        raw_items = tuple(str(value).strip() for value in form.getlist("inventory_item_id"))
+        raw_quantities = tuple(str(value).strip() for value in form.getlist("quantity"))
+        raw_subtotals = tuple(str(value).strip() for value in form.getlist("subtotal"))
+        line_values = tuple(
+            {
+                "purchase_line_id": "",
+                "inventory_item_id": item,
+                "quantity": quantity,
+                "subtotal": subtotal,
+            }
+            for item, quantity, subtotal in zip(
+                raw_items, raw_quantities, raw_subtotals, strict=False
+            )
+        )
+        try:
+            if not (
+                len(raw_items) == len(raw_quantities) == len(raw_subtotals)
+                and 1 <= len(raw_items) <= 25
+            ):
+                raise FormValidationError("A purchase requires between 1 and 25 complete lines.")
+            active_items = {
+                item.item_id: item
+                for item in inventory_service.list_balances(principal.household_id, status="active")
+            }
+            lines: list[PurchaseLineCommand] = []
+            for raw_item, raw_quantity, raw_subtotal in zip(
+                raw_items, raw_quantities, raw_subtotals, strict=True
+            ):
+                item_id, expected_version = _inventory_reference({"inventory_item_id": raw_item})
+                if item_id is None or expected_version is None:
+                    raise FormValidationError("Choose an inventory item for every purchase line.")
+                item = active_items.get(item_id)
+                if item is None or item.unit_code is None or item.needs_setup:
+                    raise FormValidationError(
+                        "Every purchase line must use an active, configured inventory item."
+                    )
+                lines.append(
+                    PurchaseLineCommand(
+                        item_id,
+                        expected_version,
+                        parse_quantity_scaled(raw_quantity, item.unit_code),
+                        item.unit_code,
+                        _money_minor(raw_subtotal),
+                    )
+                )
+            result = purchase_service.post(
+                PostPurchaseCommand(
+                    household_id=principal.household_id,
+                    actor_user_id=principal.user_id,
+                    actor_role=principal.role,
+                    correlation_id=uuid4(),
+                    idempotency_key=_form_idempotency_key(form),
+                    vendor=str(form.get("vendor", "")),
+                    currency=str(form.get("currency", "")),
+                    reference=_optional_form_text(form.get("reference", "")),
+                    notes=_optional_form_text(form.get("notes", "")),
+                    occurred_at=_form_datetime(
+                        form.get("occurred_at", ""), principal.household_timezone
+                    ),
+                    tax_minor=_nonnegative_money_minor(form.get("tax", ""), "Tax"),
+                    fee_minor=_nonnegative_money_minor(form.get("fee", ""), "Fees"),
+                    discount_minor=_nonnegative_money_minor(form.get("discount", ""), "Discount"),
+                    total_paid_minor=_money_minor(form.get("total_paid", "")),
+                    lines=tuple(lines),
+                )
+            )
+        except PurchaseAuthorizationError as error:
+            return _access_denied(request, str(error))
+        except (
+            PurchaseValidationError,
+            InventoryValidationError,
+            ExpectedVersionConflictError,
+            FormValidationError,
+            ValueError,
+        ) as error:
+            return protected_page(
+                request,
+                "purchase_new.html",
+                principal,
+                status_code=422,
+                context=purchase_form_context(
+                    principal,
+                    errors={"form": str(error)},
+                    values=_form_values(form),
+                    line_values=line_values,
+                ),
+            )
+        return RedirectResponse(f"/purchases/{result.purchase_id}", status_code=303)
+
+    @router.get("/purchases/{purchase_id}", response_class=HTMLResponse)
+    async def purchase_detail(request: Request, purchase_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if not {"inventory.view", "expense.view"}.issubset(principal.capabilities):
+            return _access_denied(request, "Purchase access denied")
+        try:
+            purchase = purchase_service.purchase_for(principal.household_id, UUID(purchase_id))
+        except ValueError:
+            purchase = None
+        if purchase is None:
+            return _not_found(request, "Purchase not found")
+        return protected_page(
+            request,
+            "purchase_detail.html",
+            principal,
+            context={"purchase": purchase},
+        )
+
+    @router.get("/purchases/{purchase_id}/edit", response_class=HTMLResponse)
+    async def purchase_edit(request: Request, purchase_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if principal.role != "owner":
+            return _access_denied(request, "Purchase correction access denied")
+        try:
+            purchase = purchase_service.purchase_for(principal.household_id, UUID(purchase_id))
+        except ValueError:
+            purchase = None
+        if purchase is None:
+            return _not_found(request, "Purchase not found")
+        if purchase.status != "active":
+            return _access_denied(request, "Reinstate this purchase before correcting it")
+        balances = {
+            item.item_id: item
+            for item in inventory_service.list_balances(principal.household_id, status="active")
+        }
+        line_values = tuple(
+            {
+                "purchase_line_id": str(line.purchase_line_id),
+                "inventory_item_id": (
+                    f"{line.inventory_item_id}:{balances[line.inventory_item_id].stream_version}"
+                ),
+                "quantity": format_quantity_scaled(line.quantity_scaled),
+                "subtotal": f"{line.subtotal_minor / 100:.2f}",
+            }
+            for line in purchase.lines
+            if line.inventory_item_id in balances
+        )
+        if len(line_values) != len(purchase.lines):
+            return _access_denied(
+                request, "An archived purchase item must be restored before correction"
+            )
+        zone = ZoneInfo(principal.household_timezone)
+        values = {
+            "vendor": purchase.vendor,
+            "occurred_at": purchase.occurred_at.astimezone(zone).strftime("%Y-%m-%dT%H:%M"),
+            "currency": purchase.currency,
+            "reference": purchase.reference or "",
+            "tax": f"{purchase.tax_minor / 100:.2f}",
+            "fee": f"{purchase.fee_minor / 100:.2f}",
+            "discount": f"{purchase.discount_minor / 100:.2f}",
+            "total_paid": f"{purchase.total_paid_minor / 100:.2f}",
+            "notes": purchase.notes or "",
+        }
+        return protected_page(
+            request,
+            "purchase_new.html",
+            principal,
+            context={
+                **purchase_form_context(principal, values=values, line_values=line_values),
+                "purchase": purchase,
+            },
+        )
+
+    @router.post("/purchases/{purchase_id}/correct", response_class=HTMLResponse)
+    async def purchase_correct(request: Request, purchase_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if principal.role != "owner":
+            return _access_denied(request, "Purchase correction access denied")
+        raw_line_ids = tuple(str(value).strip() for value in form.getlist("purchase_line_id"))
+        raw_items = tuple(str(value).strip() for value in form.getlist("inventory_item_id"))
+        raw_quantities = tuple(str(value).strip() for value in form.getlist("quantity"))
+        raw_subtotals = tuple(str(value).strip() for value in form.getlist("subtotal"))
+        line_values = tuple(
+            {
+                "purchase_line_id": line_id,
+                "inventory_item_id": item,
+                "quantity": quantity,
+                "subtotal": subtotal,
+            }
+            for line_id, item, quantity, subtotal in zip(
+                raw_line_ids, raw_items, raw_quantities, raw_subtotals, strict=False
+            )
+        )
+        try:
+            purchase_uuid = UUID(purchase_id)
+            purchase = purchase_service.purchase_for(principal.household_id, purchase_uuid)
+            if purchase is None:
+                raise PurchaseValidationError("Purchase does not exist in this household.")
+            if not (
+                len(raw_line_ids) == len(raw_items) == len(raw_quantities) == len(raw_subtotals)
+                and 1 <= len(raw_items) <= 25
+            ):
+                raise FormValidationError("A purchase requires between 1 and 25 complete lines.")
+            balances = {
+                item.item_id: item
+                for item in inventory_service.list_balances(principal.household_id, status="active")
+            }
+            lines: list[CorrectPurchaseLineCommand] = []
+            for raw_line_id, raw_item, raw_quantity, raw_subtotal in zip(
+                raw_line_ids, raw_items, raw_quantities, raw_subtotals, strict=True
+            ):
+                item_id, expected_version = _inventory_reference({"inventory_item_id": raw_item})
+                if item_id is None or expected_version is None:
+                    raise FormValidationError("Choose an item for every purchase line.")
+                item = balances.get(item_id)
+                if item is None or item.unit_code is None or item.needs_setup:
+                    raise FormValidationError(
+                        "Every purchase line must use an active, configured inventory item."
+                    )
+                lines.append(
+                    CorrectPurchaseLineCommand(
+                        UUID(raw_line_id) if raw_line_id else None,
+                        item_id,
+                        expected_version,
+                        parse_quantity_scaled(raw_quantity, item.unit_code),
+                        item.unit_code,
+                        _money_minor(raw_subtotal),
+                    )
+                )
+            result = purchase_service.correct(
+                CorrectPurchaseCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    principal.role,
+                    purchase_uuid,
+                    UUID(str(form.get("target_event_id", ""))),
+                    _required_int(form.get("expected_stream_version", ""), "stream version"),
+                    purchase_service.correlation_id_for(principal.household_id, purchase_uuid),
+                    _form_idempotency_key(form),
+                    str(form.get("vendor", "")),
+                    str(form.get("currency", "")),
+                    _optional_form_text(form.get("reference", "")),
+                    _optional_form_text(form.get("notes", "")),
+                    _form_datetime(form.get("occurred_at", ""), principal.household_timezone),
+                    _nonnegative_money_minor(form.get("tax", ""), "Tax"),
+                    _nonnegative_money_minor(form.get("fee", ""), "Fees"),
+                    _nonnegative_money_minor(form.get("discount", ""), "Discount"),
+                    _money_minor(form.get("total_paid", "")),
+                    tuple(lines),
+                    str(form.get("reason", "")),
+                )
+            )
+        except PurchaseAuthorizationError as error:
+            return _access_denied(request, str(error))
+        except (
+            PurchaseValidationError,
+            InventoryValidationError,
+            ExpectedVersionConflictError,
+            FormValidationError,
+            ValueError,
+        ) as error:
+            current = purchase_service.purchase_for(principal.household_id, UUID(purchase_id))
+            if current is None:
+                return _not_found(request, "Purchase not found")
+            return protected_page(
+                request,
+                "purchase_new.html",
+                principal,
+                status_code=422,
+                context={
+                    **purchase_form_context(
+                        principal,
+                        errors={"form": str(error)},
+                        values=_form_values(form),
+                        line_values=line_values,
+                    ),
+                    "purchase": current,
+                },
+            )
+        return RedirectResponse(f"/purchases/{result.purchase_id}", status_code=303)
+
+    @router.post("/purchases/{purchase_id}/{action}", response_class=HTMLResponse)
+    async def purchase_control(request: Request, purchase_id: str, action: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if principal.role != "owner":
+            return _access_denied(request, "Purchase correction access denied")
+        if action not in {"void", "reinstate"}:
+            return _not_found(request, "Purchase action not found")
+        try:
+            purchase_uuid = UUID(purchase_id)
+            command = ControlPurchaseCommand(
+                principal.household_id,
+                principal.user_id,
+                principal.role,
+                purchase_uuid,
+                UUID(str(form.get("target_event_id", ""))),
+                _required_int(form.get("expected_stream_version", ""), "stream version"),
+                purchase_service.correlation_id_for(principal.household_id, purchase_uuid),
+                _form_idempotency_key(form),
+                str(form.get("reason", "")),
+            )
+            result = (
+                purchase_service.void(command)
+                if action == "void"
+                else purchase_service.reinstate(command)
+            )
+        except PurchaseAuthorizationError as error:
+            return _access_denied(request, str(error))
+        except (
+            PurchaseValidationError,
+            InventoryValidationError,
+            ExpectedVersionConflictError,
+            FormValidationError,
+            ValueError,
+        ) as error:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=422,
+                context={"title": "Purchase could not be updated", "message": str(error)},
+            )
+        return RedirectResponse(f"/purchases/{result.purchase_id}", status_code=303)
+
     @router.get("/expenses", response_class=HTMLResponse)
     async def expense_list(request: Request) -> Response:
         principal = principal_for(request, audit_denial=True)
@@ -2564,7 +3154,10 @@ def create_web_router(
         if "expense.view" not in principal.capabilities:
             return _access_denied(request, "Expense access denied")
         expenses = expense_service.list_expenses(principal.household_id)
-        active = tuple(expense for expense in expenses if expense.status == "active")
+        purchases = purchase_service.list_purchases(principal.household_id)
+        active_expenses = tuple(expense for expense in expenses if expense.status == "active")
+        active_purchases = tuple(purchase for purchase in purchases if purchase.status == "active")
+        active = active_expenses + active_purchases
         zone = ZoneInfo(principal.household_timezone)
         now = datetime.now(UTC).astimezone(zone)
         current_month = tuple(
@@ -2577,15 +3170,19 @@ def create_web_router(
             expense for expense in active if expense.occurred_at >= now - timedelta(days=30)
         )
         category_totals: dict[str, dict[str, int]] = {}
-        for expense in active:
+        for expense in active_expenses:
             totals = category_totals.setdefault(expense.category, {})
             totals[expense.currency] = totals.get(expense.currency, 0) + expense.amount_minor
+        for purchase in active_purchases:
+            totals = category_totals.setdefault("Supply purchase", {})
+            totals[purchase.currency] = totals.get(purchase.currency, 0) + purchase.total_paid_minor
         return protected_page(
             request,
             "expense_list.html",
             principal,
             context={
                 "expenses": expenses,
+                "purchases": purchases,
                 "expense_summary": {
                     "month": _friendly_expense_total(current_month),
                     "recent": _friendly_expense_total(recent),

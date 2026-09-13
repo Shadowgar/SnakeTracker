@@ -26,7 +26,13 @@ from tests.integration.test_projection_rebuilds import (
 
 
 def test_product_projection_registry_is_allow_listed_and_grouped_by_failure_boundary() -> None:
-    assert product_projection_registry.group_names == ("dashboard", "insights", "search")
+    assert product_projection_registry.group_names == (
+        "cash_spend",
+        "dashboard",
+        "insights",
+        "inventory_costing",
+        "search",
+    )
     assert {item.name for item in product_projection_registry.rebuild_group("insights")} == {
         "feeding_analytics",
         "husbandry_recommendations",
@@ -60,10 +66,11 @@ def test_product_projection_worker_advances_every_active_group_before_acknowledg
                         "SELECT count(*) FROM projection_definitions "
                         "WHERE projection_name IN ('global_search_fts','measurement_analytics',"
                         "'feeding_analytics','report_facts','dashboard_statistics',"
+                        "'inventory_costing','cash_spend_facts',"
                         "'husbandry_recommendations')"
                     )
                 ).scalar_one()
-                == 6
+                == 8
             )
             assert (
                 connection.execute(

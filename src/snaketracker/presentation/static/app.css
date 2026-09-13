@@ -152,6 +152,11 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
 .form-advanced[open] summary { margin-bottom: var(--space-4); }
 .checkbox-label { display: flex; width: max-content; align-items: center; gap: var(--space-3); }
 .checkbox-label input { width: 1.15rem; min-height: 1.15rem; height: 1.15rem; margin: 0; }
+.choice-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin: 0; padding: 0; border: 0; }
+.choice-cards legend { grid-column: 1 / -1; margin-bottom: var(--space-1); color: var(--color-text); font-weight: 800; }
+.choice-cards label { display: flex; min-height: var(--control-height); align-items: center; gap: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: .65rem .75rem; background: var(--color-canvas); cursor: pointer; }
+.choice-cards label:has(input:checked) { border-color: var(--color-primary); color: var(--color-text); background: var(--color-primary-soft); }
+.choice-cards input[type="radio"] { flex: 0 0 auto; width: 1.1rem; min-height: 1.1rem; height: 1.1rem; margin: 0; padding: 0; accent-color: var(--color-primary); }
 .input-with-unit { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); color: var(--color-text-muted); font-weight: 400; }
 .alert { border: 1px solid rgba(255,125,139,.4); border-left: .3rem solid var(--color-overdue); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); background: var(--color-overdue-soft); }
 .field-error { color: var(--color-overdue); font-size: var(--text-sm); }
@@ -765,6 +770,54 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
 .alert-neutral { border-left: .25rem solid var(--color-primary); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); background: var(--color-primary-soft); }
 .alert-neutral p { margin-bottom: 0; color: var(--color-text-secondary); }
 
+/* M6.5-A2: progressive inventory acquisition */
+.inventory-acquisition-page { width: min(100%, 42rem); max-width: 42rem; }
+.inventory-acquisition-header { display: grid; gap: var(--space-1); }
+.inventory-acquisition-header > * { margin-block: 0; }
+.inventory-acquisition-form { gap: var(--space-5); overflow: hidden; }
+.segmented-field { min-width: 0; margin: 0; border: 0; padding: 0; }
+.segmented-field > legend { margin-bottom: var(--space-2); color: var(--color-text); font-weight: 850; }
+.segmented-control { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.segment-choice { position: relative; display: flex; min-width: 0; min-height: var(--control-height); align-items: center; justify-content: center; border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: .68rem 2rem .68rem .8rem; color: var(--color-text-secondary); background: var(--color-canvas); cursor: pointer; text-align: center; }
+.segment-choice:hover { border-color: var(--color-primary); background: var(--color-surface-hover); }
+.segment-choice:has(.segment-input:checked) { border-color: var(--color-primary); color: var(--color-text); background: var(--color-primary-soft); box-shadow: inset 0 0 0 1px rgba(167,139,250,.18); }
+.segment-choice:has(.segment-input:checked)::after { position: absolute; right: .75rem; display: grid; width: 1.15rem; height: 1.15rem; place-items: center; border-radius: 50%; color: var(--color-on-primary); background: var(--color-primary); content: "\2713"; font-size: .72rem; font-weight: 900; }
+.segment-choice:has(.segment-input:focus-visible) { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+.segment-input { position: absolute !important; width: 1px !important; min-height: 1px !important; height: 1px !important; margin: -1px !important; overflow: hidden; border: 0 !important; padding: 0 !important; opacity: 0; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.acquisition-step, .acquisition-payment { border-top: 1px solid var(--color-border-subtle); padding-top: var(--space-5); }
+.acquisition-action-field { margin-top: var(--space-1); }
+.selected-stock-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .1rem var(--space-4); border-left: .2rem solid var(--color-primary); padding: .45rem 0 .45rem var(--space-3); }
+.selected-stock-summary strong { grid-column: 1 / -1; color: var(--color-text); }
+.selected-stock-summary span { color: var(--color-text-muted); font-size: var(--text-sm); }
+.selected-stock-summary span:last-child { text-align: right; }
+.acquisition-fields { gap: var(--space-3); }
+.cost-assignment-note { margin: 0; border-left: .2rem solid var(--color-primary); padding-left: var(--space-3); color: var(--color-text-secondary); font-size: var(--text-sm); }
+.acquisition-section-heading { display: grid; gap: var(--space-1); }
+.acquisition-section-heading h2, .acquisition-section-heading p { margin: 0; }
+.acquisition-section-heading h2 { font-size: var(--text-lg); }
+.acquisition-section-heading p { color: var(--color-text-muted); font-size: var(--text-sm); }
+.inventory-acquisition-form [data-context-fields] { gap: var(--space-3); margin: 0; border: 0; padding: 0; }
+.inventory-acquisition-form [data-context-fields] > legend { margin-bottom: var(--space-1); color: var(--color-text); font-size: var(--text-sm); font-weight: 850; }
+.acquisition-primary-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.money-input { display: grid; grid-template-columns: auto minmax(0, 1fr); min-height: var(--control-height); align-items: center; overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-text-muted); background: var(--color-canvas); font-weight: 750; }
+.money-input > span { padding-left: .85rem; }
+.money-input input { min-width: 0; border: 0; border-radius: 0; padding-left: .35rem; }
+.money-input:has(input:focus-visible) { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+.money-input input:focus-visible { outline: 0; }
+.acquisition-more-details { border-bottom: 0; }
+.acquisition-form-actions { border-top: 1px solid var(--color-border-subtle); padding-top: var(--space-4); }
+
+@media (max-width: 34.99rem) {
+  .inventory-acquisition-page { gap: var(--space-3); }
+  .inventory-acquisition-form { gap: var(--space-4); padding: var(--space-4); }
+  .segment-choice { padding-inline: .55rem 1.65rem; font-size: var(--text-sm); }
+  .segment-choice:has(.segment-input:checked)::after { right: .45rem; }
+  .acquisition-step, .acquisition-payment { padding-top: var(--space-4); }
+  .acquisition-primary-fields { grid-template-columns: 1fr; }
+  .selected-stock-summary { grid-template-columns: 1fr; }
+  .selected-stock-summary span:last-child { text-align: left; }
+}
+
 .expense-layout { display: grid; gap: var(--space-5); align-items: start; }
 .category-card { box-shadow: none; }
 .category-card h2 { margin-top: 0; }
@@ -778,6 +831,14 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
 .expense-copy span { overflow: hidden; color: var(--color-text-muted); font-size: var(--text-sm); text-overflow: ellipsis; white-space: nowrap; }
 .expense-amount { justify-items: end; font-weight: 900; }
 .expense-amount small { color: var(--color-overdue); font-size: var(--text-xs); }
+.heading-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.purchase-lines { display: grid; gap: var(--space-3); margin: 0; padding: 0; border: 0; }
+.purchase-lines legend { margin-bottom: var(--space-1); font-size: var(--text-lg); font-weight: 800; }
+.purchase-line-list { display: grid; gap: var(--space-2); }
+.purchase-line { display: grid; grid-template-columns: minmax(12rem, 2fr) minmax(8rem, 1fr) minmax(8rem, 1fr) auto; gap: var(--space-2); align-items: end; padding: var(--space-3); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-surface-raised); }
+.purchase-line .compact-button { min-height: 2.75rem; }
+.purchase-total-check { margin: 0; }
+.inline-facts { padding: 0; box-shadow: none; }
 
 .report-dashboard { display: grid; gap: var(--space-4); }
 .report-overview { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; min-height: 9rem; align-items: center; gap: var(--space-5); color: inherit; text-decoration: none; }
@@ -863,6 +924,9 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
   .supply-card { gap: var(--space-3); padding: var(--space-3); }
   .supply-balance strong { font-size: 2rem; }
   .expense-row { grid-template-columns: 2.25rem minmax(0, 1fr) auto; gap: var(--space-2); }
+  .purchase-line { grid-template-columns: 1fr 1fr; }
+  .purchase-line label:first-child { grid-column: 1 / -1; }
+  .purchase-line .compact-button { grid-column: 1 / -1; justify-self: start; }
   .expense-layout > .category-card { order: 2; }
   .expense-icon { width: 2.25rem; height: 2.25rem; }
   .expense-copy span { font-size: .7rem; }

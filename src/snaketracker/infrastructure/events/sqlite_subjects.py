@@ -7,6 +7,7 @@ from typing import cast
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
+from snaketracker.domains.purchases.contracts import PurchaseRecordedV2
 from snaketracker.platform.events.envelope import DomainEvent
 from snaketracker.platform.events.validation import EventValidationError
 
@@ -93,6 +94,17 @@ class SQLAlchemySubjectReferenceValidator:
                     and subject.subject_id == event.stream_id
                 ):
                     exists = 1
+                elif (
+                    isinstance(event.payload, PurchaseRecordedV2)
+                    and event.payload.acquisition_mode == "new_item_stock"
+                    and any(
+                        line.inventory_item_id == subject.subject_id for line in event.payload.lines
+                    )
+                ):
+                    # The matching registration and receipt are appended atomically after this
+                    # Purchase event; their synchronous projections fail the whole transaction
+                    # if the new Inventory Item is not established.
+                    exists = 1
                 else:
                     exists = connection.execute(
                         text(
@@ -119,6 +131,26 @@ class SQLAlchemySubjectReferenceValidator:
                         text(
                             "SELECT 1 FROM expense_current WHERE household_id=:household_id "
                             "AND expense_id=:subject_id"
+                        ),
+                        {
+                            "subject_id": str(subject.subject_id),
+                            "household_id": str(event.household_id),
+                        },
+                    ).scalar_one_or_none()
+            elif subject.subject_type == "purchase":
+                if (
+                    event.event_type == "purchase.recorded"
+                    and subject.relationship == "primary"
+                    and subject.subject_id == event.stream_id
+                ):
+                    exists = 1
+                else:
+                    exists = connection.execute(
+                        text(
+                            "SELECT 1 FROM purchase_current WHERE household_id=:household_id "
+                            "AND purchase_id=:subject_id UNION ALL SELECT 1 FROM domain_events "
+                            "WHERE household_id=:household_id AND stream_type='purchase' "
+                            "AND stream_id=:subject_id AND event_type='purchase.recorded' LIMIT 1"
                         ),
                         {
                             "subject_id": str(subject.subject_id),

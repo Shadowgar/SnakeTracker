@@ -62,15 +62,16 @@ they do not change enclosure ownership or create type-specific enclosure aggrega
 
 A feeding that consumes stock uses one atomic multi-stream operation across the animal and inventory-item streams. Archived items remain replayable and visible in historical reads but cannot receive stock changes or new feeding consumption. Restoration is an explicit event. Permanent deletion is intentionally unavailable because registration itself creates immutable item history.
 
-#### Accepted M6.5 extension (A1 implemented; later tranches deferred)
+#### Accepted M6.5 extension (A1 and A2 implemented; later tranches deferred)
 
 ADR-0042 retains the Inventory Item boundary. M6.5-A1 implements structured item types,
 type-aware canonical units and scaled quantities, Food metadata, and Inventory-authoritative
-Feeding. Owner categories/reorder/verification policies, purchase-linked receipt lots, enriched
+Feeding. A2 adds purchase-linked receipts and append-only cost assignments for exact portions of
+currently remaining unknown-cost stock. Owner categories/reorder/verification policies, enriched
 physical counts, and generic use remain deferred. Physical counts and all balance-affecting facts
 remain on the item stream. FIFO lots, allocations, usage, duration, and valuation remain
 rebuildable read-side concepts. Existing v1 integer events remain valid and normalize exactly;
-historical cost stays unknown where no Purchase exists. See the
+historical cost stays unknown where no Purchase or assignment exists. See the
 [M6.5 architecture plan](../plans/2026-09-04-m6.5-inventory-intelligence-architecture.md).
 
 The accepted design also permits authorized correction/void/reinstate effects against archived item
@@ -83,7 +84,7 @@ quantity cannot exceed on hand.
 - **Stream:** `expense:{expense_uuid}`
 - **Owns:** amount, currency, category, payee/reference, subject associations, correction and void state
 
-#### Accepted M6.5 Purchase boundary (deferred; not implemented in A1)
+#### Accepted M6.5 Purchase boundary (A2 implemented)
 
 - **Aggregate:** Purchase
 - **Stream:** `purchase:{purchase_uuid}`
@@ -91,10 +92,13 @@ quantity cannot exceed on hand.
   totals, stable line identities, correction, void, and reinstate state
 - **Does not own:** Inventory Item balance, FIFO projection rows, or standalone Expenses
 
-ADR-0042 proposes that a Purchase is the single specialized cash-spend source for its receipt; it
+ADR-0042 establishes that a Purchase is the single specialized cash-spend source for its receipt; it
 does not append `expense.recorded`. A unified read model presents Purchases and existing standalone
 Expenses exactly once. Posting or historically controlling a Purchase coordinates the Purchase and
-affected Inventory Item streams through atomic multi-stream append.
+affected Inventory Item streams through atomic multi-stream append. The keeper enters new and
+existing stock through one Add inventory workflow. A positive amount creates the Purchase; a zero
+amount keeps cost unknown and creates no cash-spend fact. Cost information for currently remaining
+legacy stock uses the same interface and a quantity-neutral typed assignment.
 
 ### Reminders
 

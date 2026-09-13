@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Care Keeper{% endblock %}</title>
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/static/app.css?v=m65-a1-c2">
+    <link rel="stylesheet" href="/static/app.css?v=m65-a2-owner-c2">
     <link rel="manifest" href="/static/manifest.webmanifest">
     <meta name="theme-color" content="#100d18">
     <script defer src="/static/vendor/chart.js/chart.umd.min.js"></script>
@@ -17,7 +17,7 @@
     <a class="skip-link" href="#main-content">Skip to main content</a>
     {% if principal is defined %}
     {% set current_path = request.url.path %}
-    {% set more_active = current_path == '/more' or current_path.startswith('/inventory') or current_path.startswith('/reports') or current_path.startswith('/expenses') or current_path.startswith('/reminders') or current_path.startswith('/settings') or current_path.startswith('/operations') %}
+    {% set more_active = current_path == '/more' or current_path.startswith('/inventory') or current_path.startswith('/purchases') or current_path.startswith('/reports') or current_path.startswith('/expenses') or current_path.startswith('/reminders') or current_path.startswith('/settings') or current_path.startswith('/operations') %}
     <div class="app-layout">
       <aside class="desktop-sidebar" aria-label="Care Keeper navigation">
         <a class="brand brand-desktop" href="/home" aria-label="Care Keeper home">

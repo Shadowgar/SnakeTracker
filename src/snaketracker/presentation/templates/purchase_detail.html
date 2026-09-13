@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ purchase.vendor }} · Purchase · Care Keeper{% endblock %}
+{% block content %}
+<section class="form-page purchase-detail" aria-labelledby="page-title">
+  <header>
+    <p class="page-kicker">Purchase · {{ purchase.occurred_at.astimezone(household_zone).strftime('%b %-d, %Y') }}</p>
+    <h1 id="page-title">{{ purchase.vendor }}</h1>
+    <p class="lede">{% if purchase.acquisition_mode == 'existing_stock_cost' %}Cost information for stock already on hand; physical quantity was not increased.{% else %}One payment covering {{ purchase.lines|length }} inventory item{% if purchase.lines|length != 1 %}s{% endif %}.{% endif %}</p>
+  </header>
+  <dl class="card fact-list">
+    <div><dt>Total paid</dt><dd>{% if purchase.currency == 'USD' %}${% else %}{{ purchase.currency }} {% endif %}{{ '%.2f'|format(purchase.total_paid_minor / 100) }}</dd></div>
+    <div><dt>Item total</dt><dd>{{ purchase.currency }} {{ '%.2f'|format(purchase.line_subtotal_minor / 100) }}</dd></div>
+    <div><dt>Tax</dt><dd>{{ purchase.currency }} {{ '%.2f'|format(purchase.tax_minor / 100) }}</dd></div>
+    <div><dt>Fees</dt><dd>{{ purchase.currency }} {{ '%.2f'|format(purchase.fee_minor / 100) }}</dd></div>
+    <div><dt>Discount</dt><dd>{{ purchase.currency }} {{ '%.2f'|format(purchase.discount_minor / 100) }}</dd></div>
+    {% if purchase.reference %}<div><dt>Reference</dt><dd>{{ purchase.reference }}</dd></div>{% endif %}
+  </dl>
+  <section class="card" aria-labelledby="purchase-lines-heading">
+    <h2 id="purchase-lines-heading">{% if purchase.acquisition_mode == 'existing_stock_cost' %}Stock given cost information{% else %}Inventory added{% endif %}</h2>
+    <div class="responsive-table"><table><thead><tr><th scope="col">Item</th><th scope="col">Quantity</th><th scope="col">Item amount</th><th scope="col">Inventory cost</th></tr></thead><tbody>{% for line in purchase.lines %}<tr><th scope="row"><a href="/inventory/{{ line.inventory_item_id }}">{{ line.item_name }}</a></th><td>{{ line.quantity_scaled / 1000 }} {{ line.unit_code }}</td><td>{{ purchase.currency }} {{ '%.2f'|format(line.subtotal_minor / 100) }}</td><td>{{ purchase.currency }} {{ '%.2f'|format(line.allocated_cost_minor / 100) }}</td></tr>{% endfor %}</tbody></table></div>
+    {% if purchase.tax_minor or purchase.fee_minor or purchase.discount_minor %}<p class="field-help">Tax and fees, less discount, are distributed across items exactly.</p>{% endif %}
+  </section>
+  {% if purchase.notes %}<section class="card"><h2>Notes</h2><p>{{ purchase.notes }}</p></section>{% endif %}
+  {% if principal.role == 'owner' %}
+  <section class="card form-stack" aria-labelledby="purchase-history-actions">
+    <h2 id="purchase-history-actions">Correct purchase history</h2>
+    {% if purchase.status == 'active' %}
+      <p>Corrections replace the effective information while retaining its audit history. {% if purchase.acquisition_mode == 'existing_stock_cost' %}Voiding removes only the cost information, never physical stock.{% else %}Voiding also removes the related stock receipt and is refused if that would make stock invalid.{% endif %}</p>
+      <div class="heading-actions"><a class="button-link secondary-link" href="/purchases/{{ purchase.purchase_id }}/edit">Correct purchase</a></div>
+      <form class="form-stack compact-control-form" method="post" action="/purchases/{{ purchase.purchase_id }}/void">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}"><input type="hidden" name="target_event_id" value="{{ purchase.last_event_id }}"><input type="hidden" name="expected_stream_version" value="{{ purchase.stream_version }}">
+        <label>Void reason<input name="reason" maxlength="1000" required></label>
+        <button class="danger-button" type="submit">Void purchase{% if purchase.acquisition_mode != 'existing_stock_cost' %} and stock receipt{% endif %}</button>
+      </form>
+    {% else %}
+      <p>This purchase is currently voided. {% if purchase.acquisition_mode == 'existing_stock_cost' %}Physical stock was not changed.{% endif %}</p>
+      <form class="form-stack compact-control-form" method="post" action="/purchases/{{ purchase.purchase_id }}/reinstate">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}"><input type="hidden" name="target_event_id" value="{{ purchase.last_event_id }}"><input type="hidden" name="expected_stream_version" value="{{ purchase.stream_version }}">
+        <label>Reinstatement reason<input name="reason" maxlength="1000" required></label>
+        <button type="submit">Reinstate purchase</button>
+      </form>
+    {% endif %}
+  </section>
+  {% endif %}
+  <p><a href="/purchases">← Back to purchase history</a></p>
+</section>
+{% endblock %}

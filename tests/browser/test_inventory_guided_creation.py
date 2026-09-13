@@ -53,12 +53,13 @@ def test_counted_food_creation_resolves_each_and_sets_initial_stock(
             "name": name,
             "starting_quantity": "20",
             "reorder_threshold": "5",
+            "occurred_at": "2026-01-01T12:00",
         }
         created = client.post("/inventory", data=data, follow_redirects=False)
         assert created.status_code == 303, created.text
         detail = client.get(created.headers["location"])
         assert ">20</strong><span>each on hand" in detail.text
-        assert "Receive stock" in detail.text
+        assert "Add inventory" in detail.text
 
         retried = client.post("/inventory", data=data, follow_redirects=False)
         assert retried.status_code == 303, retried.text

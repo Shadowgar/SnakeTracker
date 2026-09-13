@@ -101,8 +101,11 @@ consumption links or allocations.
 ## M6.5 schema evolution
 
 Accepted ADR-0042 governs the expand-only evolution. Migration
-`0014_structured_inventory_feeding` implements the A1 subset; the Purchase/FIFO/intelligence schema
-below remains deferred.
+`0014_structured_inventory_feeding` implements A1. Expand-only migration `0015_purchases_fifo`
+implements the A2 synchronous Purchase and effective-receipt tables; FIFO and unified cash-spend
+tables are activated as rebuildable projection generations. Expand-only migration
+`0016_inventory_acquisition` adds unified-acquisition mode and current-stock cost-assignment state.
+Count and broader intelligence schema remains deferred.
 
 ### Evolved `inventory_balance`
 
@@ -117,21 +120,31 @@ Migration 0014 adds household-scoped exact scaled consumption source links and r
 state alongside the unchanged version-1 tables. This keeps old and new Feeding compensation
 coexistent without rewriting immutable events.
 
-### `purchase_current` and `purchase_line_current`
+### `purchase_current` and `purchase_line_current` *(A2 implemented)*
 
 Household-scoped effective Purchase header/lifecycle with one currency, vendor, occurrence time,
 reference, line/tax/fee/discount/total minor units, source versions, and bounded line count. Lines
 have stable ID, Inventory Item, scaled canonical quantity, subtotal, deterministically allocated
 acquisition cost, resulting receipt event ID, and active state. Unique Purchase/line and receipt
-links prevent duplicate projection.
+links prevent duplicate projection. Migration 0016 adds `acquisition_mode` to distinguish ordinary
+stock receipts, atomic new-Item acquisitions, and cost information assigned to existing stock.
 
-### `inventory_effective_receipts`
+### `inventory_effective_receipts` *(A2 implemented)*
 
 Household/item/root-receipt identity, effective receipt/correction/control event, scaled quantity,
 immutable optional Purchase/line source, status, and stream/global versions. It supports synchronous
 correction/void/reinstate validation without mutating history.
 
-### `inventory_cost_lots` and `inventory_cost_allocations`
+### `inventory_effective_cost_assignments` *(A2 owner-review correction)*
+
+Household/item/root-assignment identity, effective assignment/correction/control event, exact
+assigned quantity, Purchase/line identity, persisted source-event portions and offsets,
+occurrence/order metadata, and active/voided state. Each assignment targets only eligible
+unknown-cost quantity currently remaining and never changes physical stock. Persisted portions make
+partial assignment, correction, void, reinstatement, and projection replay deterministic without
+rewriting legacy receipts or already-consumed history.
+
+### `inventory_costing` lots and allocations *(A2 implemented generations)*
 
 Generation-scoped FIFO lot source, occurrence/order keys, received/remaining scaled quantity,
 currency, allocated acquisition cost, known/unknown state, and correction provenance. Allocations
@@ -145,7 +158,7 @@ Generation-scoped per-item usage windows, rate/duration inputs/results, last use
 reorder/count-due/unused observations, known/unknown current value, per-currency period facts,
 explanation fields, source high-water position, and calculated time.
 
-### `cash_spend_facts`
+### `cash_spend_facts` *(A2 implemented generation)*
 
 Generation-scoped household, source kind (`expense` or `purchase`), source ID, effective status,
 occurred time, category/vendor/payee, currency, amount minor, and destination link. Unique

@@ -26,6 +26,7 @@ from snaketracker.domains.inventory.contracts import (
     InventoryStockAdjustedV1,
     InventoryStockAdjustedV2,
     InventoryStockConsumedV1,
+    InventoryStockConsumedV2,
     InventoryStockExpiredV1,
     InventoryStockReceivedV1,
     InventoryStockReceivedV2,
@@ -222,6 +223,7 @@ class ReceiveScaledStockCommand:
     expected_stream_version: int
     quantity_scaled: int
     reference: str | None
+    occurred_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -233,6 +235,18 @@ class ConsumeStockCommand:
     idempotency_key: str
     expected_stream_version: int
     quantity: int
+    source_event_id: UUID | None
+
+
+@dataclass(frozen=True, slots=True)
+class ConsumeScaledStockCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    item_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    expected_stream_version: int
+    quantity_scaled: int
     source_event_id: UUID | None
 
 
@@ -519,6 +533,8 @@ class InventoryService:
     def receive_scaled(self, command: ReceiveScaledStockCommand) -> InventoryCommandResult:
         balance = self._require_structured_item(command.household_id, command.item_id)
         _validate_scaled(command.quantity_scaled, balance.unit_code, "Received quantity")
+        if command.occurred_at is not None and command.occurred_at.tzinfo is None:
+            raise InventoryValidationError("Inventory receipt time must include a timezone.")
         return self._append(
             command,
             "inventory.stock_received",
@@ -540,6 +556,18 @@ class InventoryService:
             ),
             "inventory.consume",
             "Inventory stock consumed",
+        )
+
+    def consume_scaled(self, command: ConsumeScaledStockCommand) -> InventoryCommandResult:
+        balance = self._require_structured_item(command.household_id, command.item_id)
+        _validate_scaled(command.quantity_scaled, balance.unit_code, "Consumed quantity")
+        return self._append(
+            command,
+            "inventory.stock_consumed",
+            InventoryStockConsumedV2(command.quantity_scaled, command.source_event_id),
+            "inventory.consume_scaled",
+            "Inventory stock consumed",
+            schema_version=2,
         )
 
     def reserve(self, command: ReserveStockCommand) -> InventoryCommandResult:
@@ -740,6 +768,7 @@ class InventoryService:
         command: ReceiveStockCommand
         | ReceiveScaledStockCommand
         | ConsumeStockCommand
+        | ConsumeScaledStockCommand
         | ReserveStockCommand
         | ReverseConsumptionCommand
         | AdjustStockCommand
@@ -768,6 +797,13 @@ class InventoryService:
             raise InventoryValidationError("Expected inventory stream version is invalid.")
         key = StreamKey(command.household_id, "inventory-item", command.item_id)
         now = datetime.now(UTC)
+        occurred_at = (
+            command.occurred_at.astimezone(UTC)
+            if isinstance(command, ReceiveScaledStockCommand)
+            and command.occurred_at is not None
+            and command.occurred_at.tzinfo is not None
+            else now
+        )
         event = _event(
             key,
             command.expected_stream_version + 1,
@@ -776,10 +812,11 @@ class InventoryService:
             command.actor_user_id,
             command.correlation_id,
             command.idempotency_key,
-            now,
+            occurred_at,
             title,
             causation_id,
             schema_version,
+            recorded_at=now,
         )
         result = self._event_store.append_many(
             AtomicAppendRequest(
@@ -850,7 +887,10 @@ def _event(
     title: str,
     causation_id: UUID | None = None,
     schema_version: int = 1,
+    *,
+    recorded_at: datetime | None = None,
 ) -> DomainEvent:
+    recorded = recorded_at or now
     candidate = DomainEvent(
         event_id=uuid4(),
         household_id=key.household_id,
@@ -860,7 +900,7 @@ def _event(
         event_type=event_type,
         schema_version=schema_version,
         occurred_at=now,
-        recorded_at=now,
+        recorded_at=recorded,
         actor_user_id=actor_user_id,
         correlation_id=correlation_id,
         causation_id=causation_id,
@@ -904,6 +944,8 @@ def _idempotency(
 def _canonical(value: object) -> object:
     if isinstance(value, UUID):
         return str(value)
+    if isinstance(value, datetime):
+        return value.astimezone(UTC).isoformat()
     return value
 
 
