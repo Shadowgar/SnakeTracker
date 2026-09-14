@@ -14,6 +14,7 @@ from snaketracker.domains.animals.contracts import (
     AnimalEnclosureAssignedV1,
     AnimalPhotoSelectedV1,
     AnimalProfileCorrectedV1,
+    AnimalReferenceImagePreferenceChangedV1,
     AnimalRegisteredV1,
     AnimalRegisteredV2,
     AnimalStatusChangedV1,
@@ -41,10 +42,11 @@ class SQLAlchemyAnimalCurrentProjection:
                         "(household_id,animal_id,name,species,morph,genetics,sex,birth_hatch_date,"
                         "acquisition_date,breeder_source,status,notes,current_enclosure_id,"
                         "photo_attachment_version_id,animal_type,capability_profile_version,"
+                        "reference_image_enabled,"
                         "stream_version,last_event_id,updated_at) "
                         "VALUES (:household_id,:animal_id,:name,:species,:morph,:genetics,:sex,"
                         ":birth_hatch_date,:acquisition_date,:breeder_source,:status,:notes,NULL,"
-                        "NULL,:animal_type,:capability_profile_version,:stream_version,"
+                        "NULL,:animal_type,:capability_profile_version,0,:stream_version,"
                         ":last_event_id,:updated_at)"
                     ),
                     {
@@ -155,6 +157,25 @@ class SQLAlchemyAnimalCurrentProjection:
                     },
                 )
                 continue
+            if event.event_type == "animal.reference_image_preference_changed":
+                preference = cast(AnimalReferenceImagePreferenceChangedV1, event.payload)
+                connection.execute(
+                    text(
+                        "UPDATE animal_current SET reference_image_enabled=:enabled,"
+                        "stream_version=:stream_version,last_event_id=:last_event_id,"
+                        "updated_at=:updated_at WHERE household_id=:household_id "
+                        "AND animal_id=:animal_id"
+                    ),
+                    {
+                        "household_id": str(event.household_id),
+                        "animal_id": str(event.stream_id),
+                        "enabled": preference.enabled,
+                        "stream_version": event.stream_version,
+                        "last_event_id": str(event.event_id),
+                        "updated_at": event.recorded_at.isoformat(timespec="microseconds"),
+                    },
+                )
+                continue
             connection.execute(
                 text(
                     "UPDATE animal_current SET stream_version=:stream_version,"
@@ -228,6 +249,7 @@ def _profile_from_row(row: RowMapping) -> AnimalProfile:
         animal_type=str(row["animal_type"]),
         capability_profile_version=int(row["capability_profile_version"]),
         stream_version=int(row["stream_version"]),
+        reference_image_enabled=bool(row["reference_image_enabled"]),
     )
 
 

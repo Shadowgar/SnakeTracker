@@ -1,0 +1,68 @@
+{
+  "qualified_at": "2026-09-14T09:10:33Z",
+  "public_origin": "https://tracker.theroccos.us",
+  "previous_stylesheet_url": "/static/app.css?v=m65-c1",
+  "requested_stylesheet_url": "/static/app.css?v=m66-a-owner-c3",
+  "public_stylesheet_sha256": "0304f9ddf9a2fc21971c7be56f05f912ecedf84f5f29e7e969d64e60dfd8f0e2",
+  "direct_origin_stylesheet_sha256": "0304f9ddf9a2fc21971c7be56f05f912ecedf84f5f29e7e969d64e60dfd8f0e2",
+  "species_directory_js_sha256": "08ff826736d9280e728c759691cad4be8de89c5e13c04277743e61d46a0f6ede",
+  "service_worker_sha256": "05300c73a713ed6b8a93366c0d2af7329363b5f5bcb343fee9287047a046af67",
+  "service_worker_cache_before": "snaketracker-shell-v5",
+  "service_worker_cache_after": "snaketracker-shell-m66-a-owner-c3",
+  "manual_cache_clearing_required": false,
+  "observations": [
+    {
+      "viewport": "390x844",
+      "group": "snake",
+      "position": "static",
+      "input_box": {"x": 25.796875, "y": 420.734375, "width": 338.390625, "height": 49.03125},
+      "results_box": {"x": 25.796875, "y": 473.765625, "width": 338.390625, "height": 106.734375},
+      "gap_after_input_px": 4,
+      "width_delta_px": 0,
+      "profile_picture_clearance_px": 212.78125,
+      "horizontal_overflow": false,
+      "overlap": false
+    },
+    {
+      "viewport": "390x844",
+      "group": "spider",
+      "position": "static",
+      "input_box": {"x": 25.796875, "y": 420.734375, "width": 338.390625, "height": 49.03125},
+      "results_box": {"x": 25.796875, "y": 473.765625, "width": 338.390625, "height": 304},
+      "gap_after_input_px": 4,
+      "width_delta_px": 0,
+      "profile_picture_clearance_px": 212.78125,
+      "horizontal_overflow": false,
+      "overlap": false
+    },
+    {
+      "viewport": "1440x900",
+      "group": "snake",
+      "position": "static",
+      "input_box": {"x": 325, "y": 458.4375, "width": 726, "height": 49.03125},
+      "results_box": {"x": 325, "y": 511.46875, "width": 726, "height": 106.734375},
+      "gap_after_input_px": 4,
+      "width_delta_px": 0,
+      "profile_picture_clearance_px": 164.78125,
+      "horizontal_overflow": false,
+      "overlap": false
+    },
+    {
+      "viewport": "1440x900",
+      "group": "spider",
+      "position": "static",
+      "input_box": {"x": 325, "y": 458.4375, "width": 726, "height": 49.03125},
+      "results_box": {"x": 325, "y": 511.46875, "width": 726, "height": 304},
+      "gap_after_input_px": 4,
+      "width_delta_px": 0,
+      "profile_picture_clearance_px": 164.78125,
+      "horizontal_overflow": false,
+      "overlap": false
+    }
+  ],
+  "application_console_errors": 0,
+  "application_page_errors": 0,
+  "application_request_errors": 0,
+  "external_platform_diagnostics": "Cloudflare-injected Browser Insights beacon and paired inline loaders were blocked by Care Keeper's unchanged script-src 'self' CSP.",
+  "csp_weakened": false
+}

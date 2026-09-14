@@ -42,3 +42,35 @@ class EnclosureWaterChangeRecordedV1:
 class EnclosureMistingRecordedV1:
     duration_seconds: int | None
     observation: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class EnclosurePlantAddedV1:
+    enclosure_plant_id: UUID
+    taxon_id: UUID | None
+    confirmed_scientific_name: str | None
+    confirmed_common_name: str | None
+    manual_species: str | None
+    label: str | None
+    quantity: int
+    date_added: str | None
+    notes: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class EnclosurePlantProfileChangedV1:
+    enclosure_plant_id: UUID
+    taxon_id: UUID | None
+    confirmed_scientific_name: str | None
+    confirmed_common_name: str | None
+    manual_species: str | None
+    label: str | None
+    quantity: int
+    date_added: str | None
+    notes: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class EnclosurePlantRemovedV1:
+    enclosure_plant_id: UUID
+    reason: str | None

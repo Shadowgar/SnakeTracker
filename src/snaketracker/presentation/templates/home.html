@@ -12,6 +12,7 @@
     <a href="#home-overdue"><strong>{{ agenda_counts.overdue }}</strong><span>Overdue</span></a>
     <a href="#home-due_today"><strong>{{ agenda_counts.due_today }}</strong><span>Due today</span></a>
     <a href="#home-upcoming"><strong>{{ agenda_counts.upcoming }}</strong><span>Upcoming</span></a>
+    <a href="/calendar?view=agenda"><strong>{{ agenda_counts.overdue + agenda_counts.due_today + agenda_counts.upcoming }}</strong><span>All tasks</span></a>
   </div>
   {% set agenda = namespace(has_items=false) %}
   <div class="today-columns">
@@ -21,7 +22,7 @@
       {% if rows %}{% set agenda.has_items = true %}
       <ul class="today-list">
         {% for row in rows[:6] %}<li class="today-care-card status-edge-{{ key }}">
-          {% if row.photo_attachment_version_id %}<img class="care-avatar" src="/attachments/{{ row.photo_attachment_version_id }}" alt="">{% else %}<span class="care-avatar care-avatar-placeholder fallback-{{ row.photo_fallback_key }}" aria-hidden="true">{{ row.subject_name[0]|upper }}</span>{% endif %}
+          {% if row.visual %}<img class="care-avatar" src="{{ row.visual.url }}" alt="" width="96" height="96" loading="lazy" decoding="async">{% else %}<span class="care-avatar care-avatar-placeholder fallback-{{ row.photo_fallback_key }}" aria-hidden="true">{{ row.subject_name[0]|upper }}</span>{% endif %}
           <div class="today-care-copy"><p class="eyebrow">{{ row.title }}</p><h3><a href="{{ row.subject_url }}">{{ row.subject_name }}</a></h3><p class="care-context"><span class="due-language">{{ row.due_label }}</span><span>{{ row.last_context }}</span>{% if row.location_name %}<span class="care-location-inline">{{ row.location_name }}</span>{% endif %}</p></div>
           {% if row.action_url %}<a class="compact-action" href="{{ row.action_url }}">{{ row.action_label }}</a>{% endif %}
         </li>{% endfor %}
@@ -36,5 +37,6 @@
     <span><strong id="collection-summary">Your collection</strong>{% if collection_statistics %}<span>{{ collection_statistics.animals }} animals · {{ collection_statistics.enclosures }} enclosures</span>{% else %}<span>Collection statistics are catching up.</span>{% endif %}</span>
     <span aria-hidden="true">View animals →</span>
   </a>
+  <a class="quick-log-fab" href="/quick-log" aria-label="Add care"><span aria-hidden="true">+</span></a>
 </section>
 {% endblock %}

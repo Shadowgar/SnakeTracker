@@ -21,6 +21,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -35,6 +36,7 @@ from snaketracker.application.animals import (
     AnimalValidationError,
     AssignEnclosureCommand,
     ChangeAnimalStatusCommand,
+    ChangeReferenceImagePreferenceCommand,
     CorrectFeedingCommand,
     CorrectInventoryFeedingCommand,
     CorrectLengthCommand,
@@ -70,7 +72,10 @@ from snaketracker.application.backups import (
 )
 from snaketracker.application.dashboard import DashboardStatisticsService
 from snaketracker.application.enclosures import (
+    CUSTOM_ENCLOSURE_TYPE,
     DELETABLE_ENCLOSURE_CARE_EVENT_TYPES,
+    ENCLOSURE_TYPE_OPTIONS,
+    AddEnclosurePlantCommand,
     ChangeEnclosureStatusCommand,
     DeleteEnclosureCareRecordCommand,
     EnclosureService,
@@ -79,6 +84,8 @@ from snaketracker.application.enclosures import (
     RecordMistingCommand,
     RecordWaterChangeCommand,
     RegisterEnclosureCommand,
+    RemoveEnclosurePlantCommand,
+    UpdateEnclosurePlantCommand,
     UpdateEnclosureProfileCommand,
 )
 from snaketracker.application.expenses import (
@@ -165,6 +172,14 @@ from snaketracker.application.search import (
     SearchUnavailableError,
     SearchValidationError,
 )
+from snaketracker.application.species_directory import (
+    REFERENCE_IMAGE_LICENSES,
+    SUPPORTED_GROUPS,
+    DirectoryValidationError,
+    LinkAnimalTaxonCommand,
+    SpeciesDirectoryService,
+    TaxonRecord,
+)
 from snaketracker.application.suggestion_policy import CareWindowEstimate
 from snaketracker.application.weight_measurements import (
     format_weight_payload,
@@ -215,6 +230,7 @@ from snaketracker.presentation.animal_care_views import (
     present_care_events,
     present_effective_care_events,
 )
+from snaketracker.presentation.animal_visuals import AnimalVisual, AnimalVisualResolver
 
 SESSION_COOKIE = "snaketracker_session"
 CSRF_COOKIE = "snaketracker_csrf"
@@ -347,6 +363,34 @@ def _form_datetime(value: object, household_timezone: str) -> datetime:
     if parsed.tzinfo is None:
         return household_local_to_utc(parsed, household_timezone)
     return parsed.astimezone(UTC)
+
+
+def _optional_form_date(value: object, label: str) -> date | None:
+    normalized = str(value).strip()
+    if not normalized:
+        return None
+    try:
+        return date.fromisoformat(normalized)
+    except ValueError as error:
+        raise FormValidationError(f"Enter a valid {label.lower()}.") from error
+
+
+def _resolved_enclosure_type(
+    choice_value: object, custom_value: object, *, current: str | None = None
+) -> str:
+    choice = str(choice_value).strip()
+    if choice == "__preserve__" and current is not None:
+        return current
+    if choice not in ENCLOSURE_TYPE_OPTIONS:
+        raise FormValidationError("Choose an enclosure type.")
+    if choice != CUSTOM_ENCLOSURE_TYPE:
+        return choice
+    custom = str(custom_value).strip()
+    if not custom:
+        raise FormValidationError("Describe the custom enclosure type.")
+    if len(custom) > 100:
+        raise FormValidationError("Custom enclosure type must be at most 100 characters.")
+    return custom
 
 
 def _required_int(value: object, label: str) -> int:
@@ -1079,8 +1123,10 @@ def create_web_router(
     is_bootstrapped: Callable[[], bool],
     secure_cookie: bool,
     expected_origin: str | None = None,
+    directory_service: SpeciesDirectoryService | None = None,
 ) -> APIRouter:
     router = APIRouter(include_in_schema=False)
+    animal_visual_resolver = AnimalVisualResolver(directory_service)
 
     def principal_for(request: Request, *, audit_denial: bool = False) -> Principal | None:
         token = request.cookies.get(SESSION_COOKIE)
@@ -1150,6 +1196,28 @@ def create_web_router(
             cost_status = _inventory_cost_status(cost_summary, item)
             rows.append({"item": item, "cost_status": cost_status})
         return tuple(rows)
+
+    def available_reference_taxon(taxon_id: UUID | None) -> TaxonRecord | None:
+        if taxon_id is None or directory_service is None:
+            return None
+        taxon = directory_service.get(taxon_id)
+        if taxon is None:
+            return None
+        if directory_service.reference_image(taxon_id) is None:
+            return None
+        return directory_service.get(taxon_id)
+
+    def available_plant_reference_taxon(taxon_id: UUID | None) -> TaxonRecord | None:
+        taxon = available_reference_taxon(taxon_id)
+        return taxon if taxon is not None and taxon.supported_group == "plant" else None
+
+    def available_plant_reference_taxa(plants: tuple[Any, ...]) -> dict[UUID, TaxonRecord]:
+        references: dict[UUID, TaxonRecord] = {}
+        for plant in plants:
+            taxon = available_plant_reference_taxon(plant.taxon_id)
+            if taxon is not None:
+                references[taxon.taxon_id] = taxon
+        return references
 
     async def protected_form(
         request: Request,
@@ -1297,8 +1365,23 @@ def create_web_router(
             )
             if item is not None
         )
+        animal_visual = animal_visual_resolver.resolve(principal.household_id, animal)
+        linked_taxon = (
+            directory_service.linked_for(principal.household_id, animal.animal_id)
+            if directory_service is not None
+            else None
+        )
+        reference_taxon_available = (
+            linked_taxon.taxon
+            if linked_taxon is not None and animal_visual.is_species_reference
+            else None
+        )
         return {
             "animal": animal,
+            "linked_taxon": linked_taxon,
+            "reference_taxon": reference_taxon_available,
+            "reference_taxon_available": reference_taxon_available,
+            "animal_visual": animal_visual,
             "enclosures": enclosures,
             "current_enclosure": current_enclosure,
             "recent_events": recent_events[:6],
@@ -1841,6 +1924,7 @@ def create_web_router(
             )
             csrf_token = issued.csrf_token
         animals = animal_service.list_profiles(principal.household_id)
+        animal_visuals = animal_visual_resolver.resolve_all(principal.household_id, animals)
         enclosures = enclosure_service.list_profiles(principal.household_id)
         now = datetime.now(UTC)
         household_zone = ZoneInfo(principal.household_timezone)
@@ -1851,6 +1935,7 @@ def create_web_router(
             enclosures=enclosures,
             timezone=household_zone,
             now=now,
+            animal_visuals=animal_visuals,
         )
         try:
             collection_statistics = dashboard_statistics_service.collection(principal.household_id)
@@ -1897,6 +1982,7 @@ def create_web_router(
         if principal is None:
             return RedirectResponse("/login", status_code=303)
         animals = animal_service.list_profiles(principal.household_id)
+        animal_visuals = animal_visual_resolver.resolve_all(principal.household_id, animals)
         enclosures = enclosure_service.list_profiles(principal.household_id)
         now = datetime.now(UTC)
         animal_types = {
@@ -1925,6 +2011,7 @@ def create_web_router(
                     enclosures=enclosures,
                     timezone=ZoneInfo(principal.household_timezone),
                     now=now,
+                    animal_visuals=animal_visuals,
                 ),
                 "selected_kind": selected_kind,
                 "animal_filters": (
@@ -1948,6 +2035,167 @@ def create_web_router(
             return RedirectResponse("/login", status_code=303)
         return protected_page(request, "more.html", principal)
 
+    @router.get("/directory", response_class=HTMLResponse)
+    async def directory(request: Request, group: str = "plant", q: str = "") -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        normalized_group = group if group in SUPPORTED_GROUPS else "plant"
+        result = None
+        error = None
+        if q.strip() and directory_service is not None:
+            try:
+                result = await run_in_threadpool(directory_service.search, q, normalized_group)
+            except DirectoryValidationError as exc:
+                error = str(exc)
+        return protected_page(
+            request,
+            "directory.html",
+            principal,
+            context={
+                "groups": tuple(sorted(SUPPORTED_GROUPS)),
+                "selected_group": normalized_group,
+                "query": q,
+                "result": result,
+                "error": error,
+                "directory_available": directory_service is not None,
+            },
+        )
+
+    @router.get("/directory/{taxon_id}", response_class=HTMLResponse)
+    async def directory_detail(request: Request, taxon_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            taxon = (
+                await run_in_threadpool(directory_service.refresh_detail, UUID(taxon_id))
+                if directory_service is not None
+                else None
+            )
+        except ValueError:
+            taxon = None
+        if taxon is None:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=404,
+                context={
+                    "title": "Directory entry not found",
+                    "message": "Return to Directory and search again.",
+                },
+            )
+        reference_taxon = await run_in_threadpool(available_reference_taxon, taxon.taxon_id)
+        return protected_page(
+            request,
+            "directory_detail.html",
+            principal,
+            context={"taxon": taxon, "reference_taxon": reference_taxon},
+        )
+
+    @router.get("/api/directory/search", response_class=JSONResponse)
+    async def directory_search_api(request: Request, group: str, q: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return JSONResponse({"error": "Authentication required."}, status_code=401)
+        if directory_service is None:
+            return JSONResponse({"state": "unavailable", "records": []}, status_code=503)
+        try:
+            result = await run_in_threadpool(directory_service.search, q, group)
+        except DirectoryValidationError as exc:
+            return JSONResponse({"error": str(exc), "records": []}, status_code=422)
+        return JSONResponse(
+            {
+                "state": result.state,
+                "message": result.message,
+                "records": [
+                    {
+                        "taxon_id": str(record.taxon_id),
+                        "group": record.supported_group,
+                        "common_name": record.preferred_common_name,
+                        "scientific_name": record.accepted_scientific_name,
+                        "family": record.family,
+                        "stale": record.stale,
+                        "reference_image_available": bool(
+                            record.image_source_url
+                            and record.image_creator
+                            and record.image_license_code in REFERENCE_IMAGE_LICENSES
+                        ),
+                        "reference_image_url": f"/directory/reference-images/{record.taxon_id}",
+                        "image_creator": record.image_creator,
+                        "image_license_code": record.image_license_code,
+                    }
+                    for record in result.records
+                ],
+            }
+        )
+
+    @router.get("/api/directory/{taxon_id}/identity-suggestions", response_class=JSONResponse)
+    async def directory_identity_suggestions(request: Request, taxon_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return JSONResponse({"error": "Authentication required."}, status_code=401)
+        if directory_service is None:
+            return JSONResponse({"morphs": [], "genetics": []})
+        try:
+            suggestions = directory_service.identity_suggestions(
+                principal.household_id, UUID(taxon_id)
+            )
+        except ValueError:
+            return JSONResponse({"error": "Directory entry is invalid."}, status_code=422)
+        return JSONResponse(
+            {"morphs": list(suggestions.morphs), "genetics": list(suggestions.genetics)}
+        )
+
+    @router.get("/api/directory/{taxon_id}/reference-image", response_class=JSONResponse)
+    async def directory_reference_image_metadata(request: Request, taxon_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return JSONResponse({"error": "Authentication required."}, status_code=401)
+        if directory_service is None:
+            return JSONResponse({"available": False})
+        try:
+            reference = await run_in_threadpool(directory_service.reference_image, UUID(taxon_id))
+        except ValueError:
+            return JSONResponse({"error": "Directory entry is invalid."}, status_code=422)
+        if reference is None:
+            return JSONResponse({"available": False})
+        return JSONResponse(
+            {
+                "available": True,
+                "url": f"/directory/reference-images/{taxon_id}",
+                "creator": reference.creator,
+                "license_code": reference.license_code,
+                "license_url": reference.license_url,
+                "provider": reference.provider,
+                "provider_record_id": reference.provider_id,
+                "source_page_url": reference.source_page_url,
+                "kind": reference.kind,
+            }
+        )
+
+    @router.get("/directory/reference-images/{taxon_id}")
+    async def directory_reference_image(request: Request, taxon_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None or directory_service is None:
+            return Response(status_code=404)
+        try:
+            reference = await run_in_threadpool(directory_service.reference_image, UUID(taxon_id))
+        except ValueError:
+            reference = None
+        if reference is None:
+            return Response(status_code=404)
+        return Response(
+            reference.content,
+            media_type=reference.media_type,
+            headers={
+                "Cache-Control": "public, immutable, max-age=31536000",
+                "Content-Disposition": 'inline; filename="species-reference.webp"',
+                "Cross-Origin-Resource-Policy": "same-origin",
+            },
+        )
+
     @router.get("/calendar", response_class=HTMLResponse)
     async def calendar(
         request: Request, view: str = "agenda", month: str = "", selected: str = ""
@@ -1956,6 +2204,7 @@ def create_web_router(
         if principal is None:
             return RedirectResponse("/login", status_code=303)
         animals = animal_service.list_profiles(principal.household_id)
+        animal_visuals = animal_visual_resolver.resolve_all(principal.household_id, animals)
         enclosures = enclosure_service.list_profiles(principal.household_id)
         now = datetime.now(UTC)
         household_zone = ZoneInfo(principal.household_timezone)
@@ -1966,6 +2215,7 @@ def create_web_router(
             enclosures=enclosures,
             timezone=household_zone,
             now=now,
+            animal_visuals=animal_visuals,
         )
         completed = _completed_care_rows(
             household_id=principal.household_id,
@@ -2004,17 +2254,42 @@ def create_web_router(
         if principal is None:
             return RedirectResponse("/login", status_code=303)
         animals = animal_service.list_profiles(principal.household_id)
+        animal_visuals = animal_visual_resolver.resolve_all(principal.household_id, animals)
         type_order = ("snake", "spider", "lizard", "scorpion")
+        quick_log_animals = tuple(
+            {
+                "animal": animal,
+                "actions": _care_action_rows(animal),
+                "visual": animal_visuals[animal.animal_id],
+            }
+            for animal_type in type_order
+            for animal in animals
+            if animal.animal_type == animal_type
+        )
+        quick_log_recent = _completed_care_rows(
+            household_id=principal.household_id,
+            animals=animals,
+            enclosures=enclosure_service.list_profiles(principal.household_id),
+            animal_service=animal_service,
+            enclosure_service=enclosure_service,
+            timezone=ZoneInfo(principal.household_timezone),
+        )[:4]
         return protected_page(
             request,
             "quick_log.html",
             principal,
             context={
+                "quick_log_animals": quick_log_animals,
+                "quick_log_recent": quick_log_recent,
                 "quick_log_groups": tuple(
                     (
                         animal_capability_registry.require(f"{animal_type}.v1").label,
                         tuple(
-                            {"animal": animal, "actions": _care_action_rows(animal)}
+                            {
+                                "animal": animal,
+                                "actions": _care_action_rows(animal),
+                                "visual": animal_visuals[animal.animal_id],
+                            }
                             for animal in animals
                             if animal.animal_type == animal_type
                         ),
@@ -2040,21 +2315,25 @@ def create_web_router(
         except SearchUnavailableError:
             unavailable = True
         animals = animal_service.list_profiles(principal.household_id)
+        animal_visuals = animal_visual_resolver.resolve_all(principal.household_id, animals)
         animal_by_route = {f"/animals/{animal.animal_id}": animal for animal in animals}
-        result_rows = tuple(
-            {
-                "result": result,
-                "animal": next(
-                    (
-                        animal
-                        for route, animal in animal_by_route.items()
-                        if result.route == route or result.route.startswith(f"{route}/")
-                    ),
-                    None,
+        result_rows = []
+        for result in results:
+            animal = next(
+                (
+                    item
+                    for route, item in animal_by_route.items()
+                    if result.route == route or result.route.startswith(f"{route}/")
                 ),
-            }
-            for result in results
-        )
+                None,
+            )
+            result_rows.append(
+                {
+                    "result": result,
+                    "animal": animal,
+                    "visual": animal_visuals.get(animal.animal_id) if animal else None,
+                }
+            )
         return protected_page(
             request,
             "search.html",
@@ -2062,7 +2341,7 @@ def create_web_router(
             status_code=422 if error is not None else 200,
             context={
                 "query": q,
-                "results": result_rows,
+                "results": tuple(result_rows),
                 "error": error,
                 "search_unavailable": unavailable,
             },
@@ -2421,6 +2700,7 @@ def create_web_router(
             return RedirectResponse("/login", status_code=303)
         enclosures = enclosure_service.list_profiles(principal.household_id)
         animals = animal_service.list_profiles(principal.household_id)
+        animal_visuals = animal_visual_resolver.resolve_all(principal.household_id, animals)
         now = datetime.now(UTC)
         return protected_page(
             request,
@@ -2433,6 +2713,7 @@ def create_web_router(
                     reminder_fact_service.agenda_for(principal.household_id, now=now),
                     timezone=ZoneInfo(principal.household_timezone),
                     now=now,
+                    animal_visuals=animal_visuals,
                 )
             },
         )
@@ -4405,6 +4686,7 @@ def create_web_router(
                 "errors": {},
                 "values": {},
                 "animal_types": _animal_type_options(),
+                "directory_available": directory_service is not None,
             },
         )
 
@@ -4417,7 +4699,12 @@ def create_web_router(
             request,
             "enclosure_new.html",
             principal,
-            context={"errors": {}, "values": {}},
+            context={
+                "errors": {},
+                "values": {},
+                "enclosure_type_options": ENCLOSURE_TYPE_OPTIONS,
+                "custom_enclosure_type": CUSTOM_ENCLOSURE_TYPE,
+            },
         )
 
     @router.post("/enclosures", response_class=HTMLResponse)
@@ -4428,25 +4715,36 @@ def create_web_router(
         assert principal is not None
         assert form is not None
         values = {
-            name: str(form.get(name, "")).strip() for name in ("name", "enclosure_type", "notes")
+            name: str(form.get(name, "")).strip()
+            for name in ("name", "enclosure_type_choice", "custom_enclosure_type", "notes")
         }
         try:
+            enclosure_type = _resolved_enclosure_type(
+                values["enclosure_type_choice"], values["custom_enclosure_type"]
+            )
             result = enclosure_service.register(
                 RegisterEnclosureCommand(
                     household_id=principal.household_id,
                     actor_user_id=principal.user_id,
                     correlation_id=uuid4(),
                     idempotency_key=_form_idempotency_key(form),
-                    **values,
+                    name=values["name"],
+                    enclosure_type=enclosure_type,
+                    notes=values["notes"],
                 )
             )
-        except EnclosureValidationError as error:
+        except (EnclosureValidationError, FormValidationError) as error:
             return protected_page(
                 request,
                 "enclosure_new.html",
                 principal,
                 status_code=422,
-                context={"errors": {"form": str(error)}, "values": values},
+                context={
+                    "errors": {"form": str(error)},
+                    "values": values,
+                    "enclosure_type_options": ENCLOSURE_TYPE_OPTIONS,
+                    "custom_enclosure_type": CUSTOM_ENCLOSURE_TYPE,
+                },
             )
         return RedirectResponse(f"/enclosures/{result.enclosure_id}", status_code=303)
 
@@ -4475,6 +4773,8 @@ def create_web_router(
                 status_code=404,
             )
         assert enclosure_uuid is not None
+        plants = enclosure_service.plants(principal.household_id, enclosure_uuid)
+        plant_reference_taxa = await run_in_threadpool(available_plant_reference_taxa, plants)
         return protected_page(
             request,
             "enclosure_profile.html",
@@ -4482,6 +4782,8 @@ def create_web_router(
             context={
                 "enclosure": profile,
                 "occupants": enclosure_service.occupants(principal.household_id, enclosure_uuid),
+                "plants": plants,
+                "plant_reference_taxa": plant_reference_taxa,
                 "enclosure_statuses": tuple(sorted(ENCLOSURE_STATUSES)),
             },
         )
@@ -4509,7 +4811,12 @@ def create_web_router(
             request,
             "enclosure_edit.html",
             principal,
-            context={"enclosure": enclosure, "errors": {}},
+            context={
+                "enclosure": enclosure,
+                "errors": {},
+                "enclosure_type_options": ENCLOSURE_TYPE_OPTIONS,
+                "legacy_enclosure_type": enclosure.enclosure_type not in ENCLOSURE_TYPE_OPTIONS,
+            },
         )
 
     @router.post("/enclosures/{enclosure_id}/edit", response_class=HTMLResponse)
@@ -4521,8 +4828,14 @@ def create_web_router(
         assert form is not None
         try:
             enclosure_uuid = UUID(enclosure_id)
-            if enclosure_service.profile_for(principal.household_id, enclosure_uuid) is None:
+            current = enclosure_service.profile_for(principal.household_id, enclosure_uuid)
+            if current is None:
                 raise FormValidationError("Enclosure not found.")
+            enclosure_type = _resolved_enclosure_type(
+                form.get("enclosure_type_choice", ""),
+                form.get("custom_enclosure_type", ""),
+                current=current.enclosure_type,
+            )
             enclosure_service.update_profile(
                 UpdateEnclosureProfileCommand(
                     household_id=principal.household_id,
@@ -4531,13 +4844,272 @@ def create_web_router(
                     correlation_id=uuid4(),
                     idempotency_key=_form_idempotency_key(form),
                     name=str(form.get("name", "")),
-                    enclosure_type=str(form.get("enclosure_type", "")),
+                    enclosure_type=enclosure_type,
                     notes=str(form.get("notes", "")),
                 )
             )
         except (EnclosureValidationError, FormValidationError, ValueError) as error:
             return _enclosure_edit_error(
                 request, principal, enclosure_id, str(error), enclosure_service
+            )
+        return RedirectResponse(f"/enclosures/{enclosure_id}", status_code=303)
+
+    @router.get("/enclosures/{enclosure_id}/plants/new", response_class=HTMLResponse)
+    async def enclosure_plant_new(request: Request, enclosure_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            enclosure = enclosure_service.profile_for(principal.household_id, UUID(enclosure_id))
+        except ValueError:
+            enclosure = None
+        if enclosure is None:
+            return _not_found(request, "Enclosure not found")
+        return protected_page(
+            request,
+            "enclosure_plant_form.html",
+            principal,
+            context={
+                "enclosure": enclosure,
+                "plant": None,
+                "values": {"quantity": "1"},
+                "errors": {},
+                "directory_available": directory_service is not None,
+            },
+        )
+
+    @router.post("/enclosures/{enclosure_id}/plants", response_class=HTMLResponse)
+    async def enclosure_plant_create(request: Request, enclosure_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None
+        assert form is not None
+        values = {
+            name: str(form.get(name, "")).strip()
+            for name in ("taxon_id", "manual_species", "label", "quantity", "date_added", "notes")
+        }
+        try:
+            enclosure_uuid = UUID(enclosure_id)
+            enclosure = enclosure_service.profile_for(principal.household_id, enclosure_uuid)
+            if enclosure is None:
+                raise FormValidationError("Enclosure not found.")
+            plant = enclosure_service.add_plant(
+                AddEnclosurePlantCommand(
+                    household_id=principal.household_id,
+                    actor_user_id=principal.user_id,
+                    enclosure_id=enclosure_uuid,
+                    correlation_id=uuid4(),
+                    idempotency_key=_form_idempotency_key(form),
+                    taxon_id=UUID(values["taxon_id"]) if values["taxon_id"] else None,
+                    manual_species=values["manual_species"],
+                    label=values["label"],
+                    quantity=_required_int(values["quantity"], "quantity"),
+                    date_added=_optional_form_date(values["date_added"], "date added"),
+                    notes=values["notes"],
+                )
+            )
+        except (EnclosureValidationError, FormValidationError, ValueError) as error:
+            try:
+                enclosure = enclosure_service.profile_for(
+                    principal.household_id, UUID(enclosure_id)
+                )
+            except ValueError:
+                enclosure = None
+            if enclosure is None:
+                return _not_found(request, "Enclosure not found")
+            return protected_page(
+                request,
+                "enclosure_plant_form.html",
+                principal,
+                status_code=422,
+                context={
+                    "enclosure": enclosure,
+                    "plant": None,
+                    "values": values,
+                    "errors": {"form": str(error)},
+                    "directory_available": directory_service is not None,
+                },
+            )
+        return RedirectResponse(
+            f"/enclosures/{enclosure_id}/plants/{plant.enclosure_plant_id}", status_code=303
+        )
+
+    @router.get("/enclosures/{enclosure_id}/plants/{plant_id}", response_class=HTMLResponse)
+    async def enclosure_plant_detail(
+        request: Request, enclosure_id: str, plant_id: str
+    ) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            enclosure_uuid = UUID(enclosure_id)
+            enclosure = enclosure_service.profile_for(principal.household_id, enclosure_uuid)
+            plant = enclosure_service.plant_for(
+                principal.household_id, enclosure_uuid, UUID(plant_id)
+            )
+        except ValueError:
+            enclosure = None
+            plant = None
+        if enclosure is None or plant is None:
+            return _not_found(request, "Enclosure plant not found")
+        reference_taxon = await run_in_threadpool(available_plant_reference_taxon, plant.taxon_id)
+        return protected_page(
+            request,
+            "enclosure_plant_detail.html",
+            principal,
+            context={
+                "enclosure": enclosure,
+                "plant": plant,
+                "reference_taxon": reference_taxon,
+            },
+        )
+
+    @router.get("/enclosures/{enclosure_id}/plants/{plant_id}/edit", response_class=HTMLResponse)
+    async def enclosure_plant_edit(request: Request, enclosure_id: str, plant_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            enclosure_uuid = UUID(enclosure_id)
+            enclosure = enclosure_service.profile_for(principal.household_id, enclosure_uuid)
+            plant = enclosure_service.plant_for(
+                principal.household_id, enclosure_uuid, UUID(plant_id)
+            )
+        except ValueError:
+            enclosure = None
+            plant = None
+        if enclosure is None or plant is None or plant.status != "active":
+            return _not_found(request, "Active enclosure plant not found")
+        return protected_page(
+            request,
+            "enclosure_plant_form.html",
+            principal,
+            context={
+                "enclosure": enclosure,
+                "plant": plant,
+                "values": {},
+                "errors": {},
+                "directory_available": directory_service is not None,
+            },
+        )
+
+    @router.post("/enclosures/{enclosure_id}/plants/{plant_id}/edit", response_class=HTMLResponse)
+    async def enclosure_plant_edit_submit(
+        request: Request, enclosure_id: str, plant_id: str
+    ) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None
+        assert form is not None
+        values = {
+            name: str(form.get(name, "")).strip()
+            for name in ("taxon_id", "manual_species", "label", "quantity", "date_added", "notes")
+        }
+        try:
+            enclosure_uuid = UUID(enclosure_id)
+            enclosure = enclosure_service.profile_for(principal.household_id, enclosure_uuid)
+            if enclosure is None:
+                raise FormValidationError("Enclosure not found.")
+            plant = enclosure_service.update_plant(
+                UpdateEnclosurePlantCommand(
+                    household_id=principal.household_id,
+                    actor_user_id=principal.user_id,
+                    enclosure_id=enclosure_uuid,
+                    enclosure_plant_id=UUID(plant_id),
+                    correlation_id=uuid4(),
+                    idempotency_key=_form_idempotency_key(form),
+                    taxon_id=UUID(values["taxon_id"]) if values["taxon_id"] else None,
+                    manual_species=values["manual_species"],
+                    label=values["label"],
+                    quantity=_required_int(values["quantity"], "quantity"),
+                    date_added=_optional_form_date(values["date_added"], "date added"),
+                    notes=values["notes"],
+                )
+            )
+        except (EnclosureValidationError, FormValidationError, ValueError) as error:
+            try:
+                enclosure_uuid = UUID(enclosure_id)
+                enclosure = enclosure_service.profile_for(principal.household_id, enclosure_uuid)
+                current_plant = enclosure_service.plant_for(
+                    principal.household_id, enclosure_uuid, UUID(plant_id)
+                )
+            except ValueError:
+                enclosure = None
+                current_plant = None
+            if enclosure is None or current_plant is None:
+                return _not_found(request, "Enclosure plant not found")
+            return protected_page(
+                request,
+                "enclosure_plant_form.html",
+                principal,
+                status_code=422,
+                context={
+                    "enclosure": enclosure,
+                    "plant": current_plant,
+                    "values": values,
+                    "errors": {"form": str(error)},
+                    "directory_available": directory_service is not None,
+                },
+            )
+        return RedirectResponse(
+            f"/enclosures/{enclosure_id}/plants/{plant.enclosure_plant_id}", status_code=303
+        )
+
+    @router.get("/enclosures/{enclosure_id}/plants/{plant_id}/remove", response_class=HTMLResponse)
+    async def enclosure_plant_remove_confirm(
+        request: Request, enclosure_id: str, plant_id: str
+    ) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            enclosure_uuid = UUID(enclosure_id)
+            enclosure = enclosure_service.profile_for(principal.household_id, enclosure_uuid)
+            plant = enclosure_service.plant_for(
+                principal.household_id, enclosure_uuid, UUID(plant_id)
+            )
+        except ValueError:
+            enclosure = None
+            plant = None
+        if enclosure is None or plant is None or plant.status != "active":
+            return _not_found(request, "Active enclosure plant not found")
+        return protected_page(
+            request,
+            "enclosure_plant_remove.html",
+            principal,
+            context={"enclosure": enclosure, "plant": plant, "errors": {}},
+        )
+
+    @router.post("/enclosures/{enclosure_id}/plants/{plant_id}/remove", response_class=HTMLResponse)
+    async def enclosure_plant_remove_submit(
+        request: Request, enclosure_id: str, plant_id: str
+    ) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None
+        assert form is not None
+        try:
+            enclosure_service.remove_plant(
+                RemoveEnclosurePlantCommand(
+                    household_id=principal.household_id,
+                    actor_user_id=principal.user_id,
+                    enclosure_id=UUID(enclosure_id),
+                    enclosure_plant_id=UUID(plant_id),
+                    correlation_id=uuid4(),
+                    idempotency_key=_form_idempotency_key(form),
+                    reason=str(form.get("reason", "")),
+                )
+            )
+        except (EnclosureValidationError, ValueError) as error:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=422,
+                context={"title": "Plant could not be removed", "message": str(error)},
             )
         return RedirectResponse(f"/enclosures/{enclosure_id}", status_code=303)
 
@@ -4657,7 +5229,31 @@ def create_web_router(
             )
         }
         values["animal_type"] = str(form.get("animal_type", "snake")).strip()
+        selected_taxon_id = str(form.get("taxon_id", "")).strip()
+        photo_preference = str(form.get("photo_preference", "none")).strip()
         try:
+            selected_taxon = None
+            if selected_taxon_id:
+                if directory_service is None:
+                    raise DirectoryValidationError(
+                        "Animal & plant directory is currently unavailable."
+                    )
+                selected_taxon = directory_service.get(UUID(selected_taxon_id))
+                if (
+                    selected_taxon is None
+                    or selected_taxon.supported_group != values["animal_type"]
+                ):
+                    raise DirectoryValidationError("Choose a species that matches the Animal type.")
+                if photo_preference not in {"none", "species_reference"}:
+                    raise DirectoryValidationError("Choose a valid profile-picture option.")
+                if photo_preference == "species_reference" and not (
+                    selected_taxon.image_source_url
+                    and selected_taxon.image_creator
+                    and selected_taxon.image_license_code in REFERENCE_IMAGE_LICENSES
+                ):
+                    raise DirectoryValidationError(
+                        "A licensed species reference image is not available."
+                    )
             result = animal_service.register(
                 RegisterAnimalCommand(
                     household_id=principal.household_id,
@@ -4667,7 +5263,31 @@ def create_web_router(
                     **values,
                 )
             )
-        except AnimalValidationError as error:
+            if selected_taxon is not None and directory_service is not None:
+                await run_in_threadpool(
+                    directory_service.link_animal,
+                    LinkAnimalTaxonCommand(
+                        household_id=principal.household_id,
+                        actor_user_id=principal.user_id,
+                        animal_id=result.animal_id,
+                        taxon_id=selected_taxon.taxon_id,
+                        correlation_id=uuid4(),
+                        idempotency_key=_form_idempotency_key(form),
+                    ),
+                )
+                animal_service.change_reference_image_preference(
+                    ChangeReferenceImagePreferenceCommand(
+                        household_id=principal.household_id,
+                        actor_user_id=principal.user_id,
+                        animal_id=result.animal_id,
+                        enabled=photo_preference == "species_reference",
+                        correlation_id=uuid4(),
+                        idempotency_key=_form_idempotency_key(form),
+                    )
+                )
+        except (AnimalValidationError, DirectoryValidationError, ValueError) as error:
+            values["taxon_id"] = selected_taxon_id
+            values["photo_preference"] = photo_preference
             return protected_page(
                 request,
                 "animal_new.html",
@@ -4677,9 +5297,87 @@ def create_web_router(
                     "errors": {"form": str(error)},
                     "values": values,
                     "animal_types": _animal_type_options(),
+                    "directory_available": directory_service is not None,
                 },
             )
         return RedirectResponse(f"/animals/{result.animal_id}", status_code=303)
+
+    @router.get("/animals/{animal_id}/species", response_class=HTMLResponse)
+    async def animal_species_link(request: Request, animal_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            animal_uuid = UUID(animal_id)
+            animal = animal_service.profile_for(principal.household_id, animal_uuid)
+        except ValueError:
+            animal = None
+        if animal is None:
+            return _not_found(request, "Animal not found")
+        linked = (
+            directory_service.linked_for(principal.household_id, animal_uuid)
+            if directory_service is not None
+            else None
+        )
+        return protected_page(
+            request,
+            "animal_species_link.html",
+            principal,
+            context={
+                "animal": animal,
+                "linked_taxon": linked,
+                "errors": {},
+                "directory_available": directory_service is not None,
+            },
+        )
+
+    @router.post("/animals/{animal_id}/species", response_class=HTMLResponse)
+    async def animal_species_link_submit(request: Request, animal_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None
+        assert form is not None
+        try:
+            if directory_service is None:
+                raise DirectoryValidationError("Animal & plant directory is currently unavailable.")
+            animal_uuid = UUID(animal_id)
+            taxon_id = UUID(str(form.get("taxon_id", "")))
+            await run_in_threadpool(
+                directory_service.link_animal,
+                LinkAnimalTaxonCommand(
+                    household_id=principal.household_id,
+                    actor_user_id=principal.user_id,
+                    animal_id=animal_uuid,
+                    taxon_id=taxon_id,
+                    correlation_id=uuid4(),
+                    idempotency_key=_form_idempotency_key(form),
+                ),
+            )
+        except (DirectoryValidationError, ValueError) as error:
+            try:
+                animal = animal_service.profile_for(principal.household_id, UUID(animal_id))
+            except ValueError:
+                animal = None
+            if animal is None:
+                return _not_found(request, "Animal not found")
+            return protected_page(
+                request,
+                "animal_species_link.html",
+                principal,
+                status_code=422,
+                context={
+                    "animal": animal,
+                    "linked_taxon": directory_service.linked_for(
+                        principal.household_id, animal.animal_id
+                    )
+                    if directory_service is not None
+                    else None,
+                    "errors": {"form": str(error)},
+                    "directory_available": directory_service is not None,
+                },
+            )
+        return RedirectResponse(f"/animals/{animal_id}", status_code=303)
 
     @router.get("/animals/{animal_id}", response_class=HTMLResponse)
     async def animal_profile(request: Request, animal_id: str) -> Response:
@@ -5036,6 +5734,48 @@ def create_web_router(
             _care_return_location(animal_id, form.get("return_to", "animal")), status_code=303
         )
 
+    @router.post("/animals/{animal_id}/reference-photo", response_class=HTMLResponse)
+    async def animal_reference_photo_preference(request: Request, animal_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        try:
+            animal_uuid = UUID(animal_id)
+            preference = str(form.get("photo_preference", "none"))
+            if preference not in {"none", "species_reference"}:
+                raise DirectoryValidationError("Choose a valid reference-image preference.")
+            enabled = preference == "species_reference"
+            linked = (
+                directory_service.linked_for(principal.household_id, animal_uuid)
+                if directory_service is not None
+                else None
+            )
+            if enabled and not (
+                linked is not None
+                and linked.taxon.image_source_url
+                and linked.taxon.image_creator
+                and linked.taxon.image_license_code in REFERENCE_IMAGE_LICENSES
+            ):
+                raise DirectoryValidationError(
+                    "A licensed species reference image is not available."
+                )
+            animal_service.change_reference_image_preference(
+                ChangeReferenceImagePreferenceCommand(
+                    household_id=principal.household_id,
+                    actor_user_id=principal.user_id,
+                    animal_id=animal_uuid,
+                    enabled=enabled,
+                    correlation_id=uuid4(),
+                    idempotency_key=_form_idempotency_key(form),
+                )
+            )
+        except (AnimalValidationError, DirectoryValidationError, ValueError) as error:
+            return animal_management_response(
+                request, principal, animal_id, "photo", status_code=422, error=str(error)
+            )
+        return RedirectResponse(f"/animals/{animal_id}", status_code=303)
+
     @router.get("/attachments/{attachment_version_id}")
     async def attachment_delivery(request: Request, attachment_version_id: str) -> Response:
         principal = principal_for(request, audit_denial=True)
@@ -5081,11 +5821,21 @@ def create_web_router(
                 },
                 status_code=404,
             )
+        linked = (
+            directory_service.linked_for(principal.household_id, profile.animal_id)
+            if directory_service is not None
+            else None
+        )
+        suggestions = (
+            directory_service.identity_suggestions(principal.household_id, linked.taxon.taxon_id)
+            if directory_service is not None and linked is not None
+            else None
+        )
         return protected_page(
             request,
             "animal_edit.html",
             principal,
-            context={"animal": profile, "errors": {}},
+            context={"animal": profile, "errors": {}, "identity_suggestions": suggestions},
         )
 
     @router.post("/animals/{animal_id}/edit", response_class=HTMLResponse)
@@ -5119,7 +5869,14 @@ def create_web_router(
                 )
             )
         except (AnimalValidationError, FormValidationError, ValueError) as error:
-            return _animal_edit_error(request, principal, animal_id, str(error), animal_service)
+            return _animal_edit_error(
+                request,
+                principal,
+                animal_id,
+                str(error),
+                animal_service,
+                directory_service,
+            )
         return RedirectResponse(
             _care_return_location(animal_id, form.get("return_to", "animal")), status_code=303
         )
@@ -5838,6 +6595,7 @@ def create_web_router(
             protected_page=protected_page,
             animal_service=animal_service,
             enclosure_service=enclosure_service,
+            animal_visual_resolver=animal_visual_resolver,
             event_types=frozenset({"animal.feeding_recorded", "animal.feeding_corrected"}),
             page_title="Feeding history",
             page_description="Effective feeding history, including accepted corrections.",
@@ -5853,6 +6611,7 @@ def create_web_router(
             protected_page=protected_page,
             animal_service=animal_service,
             enclosure_service=enclosure_service,
+            animal_visual_resolver=animal_visual_resolver,
             event_types=frozenset(
                 {
                     "animal.weight_recorded",
@@ -6195,6 +6954,7 @@ def _agenda_rows(
     timezone: ZoneInfo,
     now: datetime,
     return_context: str = "today",
+    animal_visuals: dict[UUID, AnimalVisual] | None = None,
 ) -> dict[str, tuple[dict[str, Any], ...]]:
     animal_by_id = {animal.animal_id: animal for animal in animals}
     enclosure_by_id = {enclosure.enclosure_id: enclosure for enclosure in enclosures}
@@ -6214,6 +6974,7 @@ def _agenda_rows(
         schedule_url = None
         photo_attachment_version_id = None
         photo_fallback_key = "enclosure"
+        visual: AnimalVisual | None = None
         if item.subject_type == "animal":
             animal = animal_by_id.get(item.subject_id)
             subject_name = animal.name if animal is not None else "Animal"
@@ -6225,6 +6986,7 @@ def _agenda_rows(
             photo_fallback_key = (
                 getattr(animal, "animal_type", "animal") if animal is not None else "animal"
             )
+            visual = animal_visuals.get(animal.animal_id) if animal_visuals and animal else None
             if (
                 animal is not None
                 and item.reminder_type in animal.care_action_keys
@@ -6243,6 +7005,7 @@ def _agenda_rows(
                 schedule_url = f"{subject_url}/care"
                 photo_attachment_version_id = animal.photo_attachment_version_id
                 photo_fallback_key = getattr(animal, "animal_type", "animal")
+                visual = animal_visuals.get(animal.animal_id) if animal_visuals else None
                 location_name = enclosure.name if enclosure is not None else "Enclosure"
             else:
                 subject_name = enclosure.name if enclosure is not None else "Enclosure"
@@ -6274,6 +7037,7 @@ def _agenda_rows(
                 "calendar_url": schedule_url or action_url or subject_url,
                 "photo_attachment_version_id": photo_attachment_version_id,
                 "photo_fallback_key": photo_fallback_key,
+                "visual": visual,
                 "due_label": _friendly_due(item.due_at, now=now, timezone=timezone),
                 "last_context": _last_care_context(item, timezone),
                 "explanation": item.explanation,
@@ -6289,6 +7053,7 @@ def _animal_collection_rows(
     enclosures: tuple[Any, ...],
     timezone: ZoneInfo,
     now: datetime,
+    animal_visuals: dict[UUID, AnimalVisual] | None = None,
 ) -> tuple[dict[str, Any], ...]:
     enclosure_names = {item.enclosure_id: item.name for item in enclosures}
     status_order = {"overdue": 0, "due_today": 1, "upcoming": 2}
@@ -6321,6 +7086,7 @@ def _animal_collection_rows(
                     else "No care scheduled"
                 ),
                 "care_status": next_item.status if next_item is not None else "none",
+                "visual": animal_visuals.get(animal.animal_id) if animal_visuals else None,
             }
         )
     return tuple(rows)
@@ -6333,6 +7099,7 @@ def _enclosure_collection_rows(
     *,
     timezone: ZoneInfo,
     now: datetime,
+    animal_visuals: dict[UUID, AnimalVisual] | None = None,
 ) -> tuple[dict[str, Any], ...]:
     status_order = {"overdue": 0, "due_today": 1, "upcoming": 2}
     by_enclosure: dict[UUID, list[Any]] = {}
@@ -6354,6 +7121,11 @@ def _enclosure_collection_rows(
             {
                 "enclosure": enclosure,
                 "occupants": tuple(occupants.get(enclosure.enclosure_id, ())),
+                "lead_visual": (
+                    animal_visuals.get(occupants[enclosure.enclosure_id][0].animal_id)
+                    if animal_visuals and occupants.get(enclosure.enclosure_id)
+                    else None
+                ),
                 "maintenance_label": (
                     f"{CARE_SCHEDULE_CAPABILITIES[next_item.reminder_type][0]} · "
                     f"{_friendly_due(next_item.due_at, now=now, timezone=timezone)}"
@@ -6489,6 +7261,10 @@ def _calendar_view(
         )
     previous_month = month_start - timedelta(days=1)
     next_month = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+    today_week = next(
+        (tuple(week) for week in weeks if any(day["date"] == today for day in week)),
+        (),
+    )
     return {
         "today": today,
         "month_start": month_start,
@@ -6497,6 +7273,7 @@ def _calendar_view(
         "previous_month": previous_month.strftime("%Y-%m"),
         "next_month": next_month.strftime("%Y-%m"),
         "weeks": tuple(weeks),
+        "today_week": today_week,
         "selected_date": selected_date,
         "selected_scheduled": tuple(scheduled_by_date.get(selected_date, ())),
         "selected_completed": tuple(completed_by_date.get(selected_date, ())),
@@ -6513,6 +7290,7 @@ def _animal_edit_error(
     animal_id: str,
     message: str,
     animal_service: AnimalService,
+    directory_service: SpeciesDirectoryService | None = None,
 ) -> HTMLResponse:
     try:
         animal = animal_service.profile_for(principal.household_id, UUID(animal_id))
@@ -6525,6 +7303,16 @@ def _animal_edit_error(
             {"title": "Animal not found", "message": "Return to your animal list and try again."},
             status_code=404,
         )
+    linked = (
+        directory_service.linked_for(principal.household_id, animal.animal_id)
+        if directory_service is not None
+        else None
+    )
+    suggestions = (
+        directory_service.identity_suggestions(principal.household_id, linked.taxon.taxon_id)
+        if directory_service is not None and linked is not None
+        else None
+    )
     return templates.TemplateResponse(
         request,
         "animal_edit.html",
@@ -6534,6 +7322,7 @@ def _animal_edit_error(
             "csrf_token": request.cookies.get(CSRF_COOKIE, ""),
             "command_id": str(uuid4()),
             "animal": animal,
+            "identity_suggestions": suggestions,
             "errors": {"form": message},
         },
         status_code=422,
@@ -6613,6 +7402,7 @@ def _enclosure_form_error(
             "occupants": enclosure_service.occupants(
                 principal.household_id, enclosure.enclosure_id
             ),
+            "plants": enclosure_service.plants(principal.household_id, enclosure.enclosure_id),
             "enclosure_statuses": tuple(sorted(ENCLOSURE_STATUSES)),
             "errors": {"form": message},
         },
@@ -6651,6 +7441,8 @@ def _enclosure_edit_error(
             "command_id": str(uuid4()),
             "enclosure": enclosure,
             "errors": {"form": message},
+            "enclosure_type_options": ENCLOSURE_TYPE_OPTIONS,
+            "legacy_enclosure_type": enclosure.enclosure_type not in ENCLOSURE_TYPE_OPTIONS,
         },
         status_code=422,
     )
@@ -6664,6 +7456,7 @@ def _animal_history_page(
     protected_page: Callable[..., HTMLResponse],
     animal_service: AnimalService,
     enclosure_service: EnclosureService,
+    animal_visual_resolver: AnimalVisualResolver,
     event_types: frozenset[str],
     page_title: str,
     page_description: str,
@@ -6700,6 +7493,7 @@ def _animal_history_page(
         principal,
         context={
             "animal": animal,
+            "animal_visual": animal_visual_resolver.resolve(principal.household_id, animal),
             "page_title": page_title,
             "page_description": page_description,
             "empty_message": empty_message,

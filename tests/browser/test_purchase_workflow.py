@@ -359,7 +359,7 @@ def test_add_inventory_uses_progressive_segmented_controls(tmp_path: Path) -> No
         complete_setup(client)
         page = client.get("/inventory/new")
         assert page.status_code == 200
-        assert "app.css?v=m65-c1" in page.text
+        assert "app.css?v=m66-a-owner-fidelity-v2" in page.text
         assert 'name="item_selection" value="existing" required' in page.text
         assert 'name="item_selection" value="new" required' in page.text
         assert not re.search(r'name="item_selection"[^>]* checked', page.text)

@@ -53,6 +53,19 @@ Secrets are injected at deployment and never baked into images or source. Backup
 
 Dependencies are pinned, scanned, and represented in an SBOM. Release images use pinned digests and signed artifacts. Plugins are verified trusted packages with explicit API and contract compatibility. They are not sandboxed. Missing or incompatible handlers force restricted recovery mode.
 
+## Biological reference providers
+
+Taxonomy providers are untrusted optional read integrations. Adapters use fixed HTTPS origins,
+bounded response bodies, short timeouts, explicit JSON/content/schema/string/identifier checks, and
+rate/quota-aware failures. They do not accept user-controlled fetch URLs or render provider HTML.
+Interactive lookup has no automatic retry storm. The browser never receives provider credentials.
+
+Requests contain only normalized query text and the requested biological group. They exclude user,
+account, household, Animal, enclosure, care, inventory, financial, note, and attachment data.
+Profiles use only local normalized records. Outage, quota, invalid response, and offline states fall
+back to stale cache or manual species text without weakening authorization or CSP. Remote images
+are not used unless source, creator/attribution, and an approved licence are all known.
+
 ## Security acceptance
 
 Before remote/public deployment, all RD items in the traceability matrix require reproduced evidence: proxy tests, CSP regression, cross-household authorization, session and CSRF tests, upload adversarial tests, backup confidentiality/recovery, dependency scan, and administrative audit verification.

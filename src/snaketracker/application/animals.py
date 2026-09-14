@@ -31,6 +31,7 @@ from snaketracker.domains.animals.contracts import (
     AnimalPremoltObservedV1,
     AnimalPremoltObservedV2,
     AnimalProfileCorrectedV1,
+    AnimalReferenceImagePreferenceChangedV1,
     AnimalRegisteredV2,
     AnimalShedCorrectedV1,
     AnimalShedRecordedV1,
@@ -110,6 +111,7 @@ class AnimalProfile:
     animal_type: str
     capability_profile_version: int
     stream_version: int
+    reference_image_enabled: bool = False
 
     @property
     def capability_profile_identity(self) -> str:
@@ -209,6 +211,16 @@ class SelectProfilePhotoCommand:
     actor_user_id: UUID
     animal_id: UUID
     attachment_version_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+
+
+@dataclass(frozen=True, slots=True)
+class ChangeReferenceImagePreferenceCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    animal_id: UUID
+    enabled: bool
     correlation_id: UUID
     idempotency_key: str
 
@@ -606,6 +618,28 @@ class AnimalService:
                 payload=AnimalPhotoSelectedV1(command.attachment_version_id),
                 notes=None,
                 command_hash_fields={"attachment_version_id": str(command.attachment_version_id)},
+            )
+        )
+
+    def change_reference_image_preference(
+        self, command: ChangeReferenceImagePreferenceCommand
+    ) -> AnimalEventResult:
+        if type(command.enabled) is not bool:
+            raise AnimalValidationError("Reference-image preference is invalid.")
+        return AnimalEventResult(
+            self._append_animal_event(
+                household_id=command.household_id,
+                actor_user_id=command.actor_user_id,
+                animal_id=command.animal_id,
+                correlation_id=command.correlation_id,
+                idempotency_key=command.idempotency_key,
+                operation_scope="animals.change_reference_image_preference",
+                occurred_at=datetime.now(UTC),
+                event_type="animal.reference_image_preference_changed",
+                title="Profile image preference changed",
+                payload=AnimalReferenceImagePreferenceChangedV1(command.enabled),
+                notes=None,
+                command_hash_fields={"enabled": command.enabled},
             )
         )
 

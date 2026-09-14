@@ -32,6 +32,7 @@ from snaketracker.application.readiness import PlatformReadiness
 from snaketracker.application.reminders import ReminderFactService, ReminderRuleService
 from snaketracker.application.reports import ReportService
 from snaketracker.application.search import SearchService
+from snaketracker.application.species_directory import SpeciesDirectoryService
 from snaketracker.bootstrap.compatibility import inspect_startup_compatibility
 from snaketracker.bootstrap.configuration import (
     Environment,
@@ -88,6 +89,13 @@ from snaketracker.infrastructure.purchases.projections import (
 from snaketracker.infrastructure.reminders.projections import SQLAlchemyReminderProjection
 from snaketracker.infrastructure.search.fts import SQLAlchemyFTSSearchRepository
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
+from snaketracker.infrastructure.taxonomy.inaturalist import INaturalistTaxonomyProvider
+from snaketracker.infrastructure.taxonomy.reference_images import LocalReferenceImageCache
+from snaketracker.infrastructure.taxonomy.reference_providers import (
+    GBIFImageProvider,
+    WikimediaCommonsImageProvider,
+)
+from snaketracker.infrastructure.taxonomy.repository import SQLAlchemyTaxonRepository
 from snaketracker.platform.notifications.service import NotificationIntentService
 from snaketracker.presentation.health import create_health_router
 from snaketracker.presentation.web import create_web_router
@@ -198,10 +206,26 @@ def build_application(settings: Settings) -> FastAPI:
             SQLAlchemyPurchaseCurrentProjection(engine),
             inventory_cost_projection,
         )
+        animal_projection = SQLAlchemyAnimalCurrentProjection(engine)
         animal_service = AnimalService(
             event_store,
-            SQLAlchemyAnimalCurrentProjection(engine),
+            animal_projection,
             inventory_projection=inventory_projection,
+        )
+        taxon_repository = SQLAlchemyTaxonRepository(engine)
+        directory_service = SpeciesDirectoryService(
+            taxon_repository,
+            INaturalistTaxonomyProvider(),
+            event_store=event_store,
+            animal_projection=animal_projection,
+            reference_image_cache=LocalReferenceImageCache(
+                settings.reference_image_storage_path
+                or settings.database_path.parent / "reference-images"
+            ),
+            reference_image_providers=(
+                WikimediaCommonsImageProvider(),
+                GBIFImageProvider(),
+            ),
         )
         attachment_service = AttachmentService(
             animals=animal_service,
@@ -211,7 +235,9 @@ def build_application(settings: Settings) -> FastAPI:
             ),
         )
         enclosure_service = EnclosureService(
-            event_store, SQLAlchemyEnclosureCurrentProjection(engine)
+            event_store,
+            SQLAlchemyEnclosureCurrentProjection(engine),
+            taxon_lookup=directory_service,
         )
         reminder_projection = SQLAlchemyReminderProjection(engine)
         expense_service = ExpenseService(event_store, SQLAlchemyExpenseCurrentProjection(engine))
@@ -312,6 +338,7 @@ def build_application(settings: Settings) -> FastAPI:
                 is_bootstrapped=identity_repository.has_users,
                 secure_cookie=settings.session_cookie_secure,
                 expected_origin=external_origin,
+                directory_service=directory_service,
             )
         )
     elif settings.runtime_secret is None:

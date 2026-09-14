@@ -14,7 +14,7 @@ The Pi host administrator, Docker host, and independently managed backup-key cus
 4. Presentation to application authorization
 5. Application to event/operational database
 6. Application to attachment storage
-7. Worker to external providers
+7. Application/worker to external providers
 8. Worker to backup repository and independent key management
 9. Core application to trusted plugin code
 
@@ -42,6 +42,8 @@ The Pi host administrator, Docker host, and independently managed backup-key cus
 | TM-18 | Denial of service/storage exhaustion | Limits, quotas, free-space gates, resource limits, backpressure | RD/QT |
 | TM-19 | Unsafe offline persistence | Deny-by-default drafts, low-sensitivity allow-list, expiry and clearing | RB |
 | TM-20 | Incompatible newer data opened by older code | Read-only compatibility scan and restricted recovery mode | RB |
+| TM-21 | Malicious, malformed, oversized, or misleading biological-provider data | Fixed provider hosts, HTTPS, short timeout, bounded bodies, content/schema/length/URL validation, escaping, provenance, licence allow-list, no provider HTML/scripts | RB/RD |
+| TM-22 | External taxonomy query leaks household or account context or exhausts provider/application resources | Send only taxonomy query/group, omit identifiers and care data, local-cache first, debounce/deduplicate, rate/quota handling, no credential exposure, manual fallback | RB/RD |
 
 ## Abuse cases
 
@@ -50,6 +52,10 @@ The Pi host administrator, Docker host, and independently managed backup-key cus
 - A user uploads an SVG with script: it is rejected or forced to download from a non-executable origin.
 - A plugin is removed after writing events: compatibility scan prevents normal startup until handlers return.
 - A worker sends email and crashes before completion: provider idempotency or reconciliation prevents uncontrolled duplication.
+- A taxonomy response supplies HTML, a tracking URL, an unknown image licence, or an oversized
+  document: the adapter rejects or strips it and the UI uses escaped text and a local placeholder.
+- A species lookup is observed by its provider: it contains only a bounded taxonomy query and
+  biological group, never a keeper, household, Animal, enclosure, or care-history identifier.
 - A stolen backup is obtained without the independent key: its contents remain confidential.
 
 ## Review cadence

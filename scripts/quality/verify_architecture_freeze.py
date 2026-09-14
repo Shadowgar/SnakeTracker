@@ -19,7 +19,7 @@ ACCEPTANCE_DATES = {
     "0041": "2026-08-24",
     "0042": "2026-09-10",
 }
-PROPOSED_ADRS: set[str] = set()
+PROPOSED_ADRS: set[str] = {"0043"}
 APPROVED_AMENDMENT_PATHS = {
     "docs/README.md",
     "docs/adr/README.md",
@@ -30,6 +30,7 @@ APPROVED_AMENDMENT_PATHS = {
     "docs/adr/0040-trusted-local-demo-household-provisioning.md",
     "docs/adr/0041-four-group-capability-expansion-and-neutral-molt-contracts.md",
     "docs/adr/0042-inventory-purchases-fifo-and-quantity-policy.md",
+    "docs/adr/0043-universal-species-directory.md",
     "docs/architecture/domain-catalog.md",
     "docs/architecture/database-schema.md",
     "docs/architecture/event-catalog.md",
@@ -40,7 +41,12 @@ APPROVED_AMENDMENT_PATHS = {
     "docs/requirements/traceability-matrix.md",
     "docs/roadmap/milestones.md",
     "docs/security/security-architecture.md",
+    "docs/security/threat-model.md",
     "docs/ux/information-architecture.md",
+    "docs/ux/owner-design/README.md",
+    "docs/ux/owner-design/care-keeper-owner-design-board.png",
+    "docs/ux/owner-design/reference-image-provider-policy.md",
+    "docs/ux/owner-design/visual-fidelity-audit.md",
 }
 PROTECTED_PREFIXES = (
     "docs/adr/",

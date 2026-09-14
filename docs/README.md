@@ -25,6 +25,10 @@ covering structured Inventory, Inventory-authoritative Feeding, multi-line Purch
 authority, FIFO valuation, canonical quantities, and physical counts. A1 implements only the
 structured Inventory and Feeding foundation; the financial/intelligence tranches remain pending.
 
+[ADR-0043](adr/0043-universal-species-directory.md) is the proposed M6.6-A decision for stable
+Care Keeper taxon UUIDs, normalized optional provider mappings/cache, licensing, request privacy,
+and manual/offline species behavior. M6.6 was owner-approved after M6.5 and inserted before M7.
+
 ## Document map
 
 - [Complete architecture specification](architecture/system-architecture.md)

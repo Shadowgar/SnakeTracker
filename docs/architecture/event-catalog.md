@@ -87,6 +87,8 @@ a distinct event contract identity and never rewrites an event stored under an e
 | `animal.molt_corrected` v2 | Replaces capability-neutral effective molt facts for a same-stream target event |
 | `animal.premolt_observed` v1 | Historical Spider-only premolt state; never reinterpreted or upcast |
 | `animal.premolt_observed` v2 | Records or clears a capability-neutral premolt state with keeper observation |
+| `animal.taxon_linked` v1 *(M6.6-A)* | Keeper-confirmed link/change from a same-household Animal to an internal Care Keeper taxon, with confirmed name/group/provenance snapshot |
+| `animal.reference_image_preference_changed` v1 *(M6.6-A)* | Records the keeper's per-Animal choice to use or decline an eligible global species reference image when no personal profile photo exists |
 
 Length, shed, and bath contracts require the corresponding declared capability; shed remains
 snake-specific in v1, while length and bath are also valid for `lizard.v1`. Molt and premolt v2
@@ -114,6 +116,9 @@ remain shared where the active profile permits them.
 | `enclosure.water_change_recorded` | Records water change |
 | `enclosure.misting_recorded` | Records configured watering/misting care with an optional typed animal subject |
 | `enclosure.status_changed` | Activates, retires, or quarantines enclosure |
+| `enclosure.plant_added` v1 *(M6.6-A)* | Adds one stable household plant instance to its owning Enclosure using a Care Keeper taxon link or manual identity |
+| `enclosure.plant_profile_changed` v1 *(M6.6-A)* | Corrects the current plant identity/profile without rewriting earlier facts |
+| `enclosure.plant_removed` v1 *(M6.6-A)* | Removes a plant from the active roster while preserving its history |
 
 ### Inventory
 

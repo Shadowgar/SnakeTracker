@@ -6,12 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Care Keeper{% endblock %}</title>
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/static/app.css?v=m65-c1">
+    <link rel="stylesheet" href="/static/app.css?v=m66-a-owner-fidelity-v2">
     <link rel="manifest" href="/static/manifest.webmanifest">
     <meta name="theme-color" content="#100d18">
     <script defer src="/static/vendor/chart.js/chart.umd.min.js"></script>
     <script defer src="/static/charts.js"></script>
-    <script defer src="/static/pwa.js"></script>
+    <script defer src="/static/pwa.js?v=m66-a-owner-fidelity-v2"></script>
   </head>
   <body class="{% if principal is defined %}app-body{% else %}auth-body{% endif %}">
     <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -21,7 +21,7 @@
     <div class="app-layout">
       <aside class="desktop-sidebar" aria-label="Care Keeper navigation">
         <a class="brand brand-desktop" href="/home" aria-label="Care Keeper home">
-          <span class="brand-mark" aria-hidden="true">C</span><span>Care Keeper</span>
+          <span class="brand-mark" aria-hidden="true">{{ icon('animals') }}</span><span>Care Keeper</span>
         </a>
         <nav class="sidebar-nav primary-nav" aria-label="Primary navigation">
           <p class="nav-section-label">Care</p>
@@ -49,7 +49,7 @@
       <div class="app-main">
         <header class="app-header">
           <a class="brand brand-mobile" href="/home" aria-label="Care Keeper home">
-            <span class="brand-mark" aria-hidden="true">C</span><span>Care Keeper</span>
+            <span class="brand-mark" aria-hidden="true">{{ icon('animals') }}</span><span>Care Keeper</span>
           </a>
           <div class="header-context" aria-label="Current household">
             <span>Care workspace</span><strong>{{ principal.household_name }}</strong>

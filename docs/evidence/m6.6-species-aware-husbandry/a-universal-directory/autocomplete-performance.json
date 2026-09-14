@@ -1,0 +1,10 @@
+{
+  "origin": "http://127.0.0.1:8096",
+  "sample_count": 50,
+  "unit": "milliseconds",
+  "minimum": 10.599999964237213,
+  "median": 15.299999952316284,
+  "p95": 33.10000002384186,
+  "maximum": 70.30000001192093,
+  "qualification_limit_p95": 250
+}

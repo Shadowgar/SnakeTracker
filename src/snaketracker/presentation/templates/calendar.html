@@ -8,6 +8,7 @@
     <a href="/calendar?view=month&amp;month={{ calendar.month_value }}"{% if active_view == 'month' %} aria-current="page"{% endif %}>Month</a>
   </nav>
   {% if active_view == 'agenda' %}
+  <nav class="calendar-day-strip" aria-label="Current week">{% for day in calendar.today_week %}<a href="/calendar?view=month&amp;month={{ calendar.month_value }}&amp;selected={{ day.date.isoformat() }}"{% if day.is_today %} aria-current="date"{% endif %}><span>{{ day.date.strftime('%a') }}</span><strong>{{ day.date.day }}</strong></a>{% endfor %}</nav>
   <div class="calendar-agenda-layout">
     <section class="calendar-scheduled" aria-labelledby="scheduled-title">
       <div class="section-heading"><div><p class="eyebrow">Next up</p><h2 id="scheduled-title">Scheduled care</h2></div></div>
@@ -15,7 +16,7 @@
       {% for key, label, rows in agenda_groups %}{% if rows %}{% set scheduled.has_items = true %}
       <section class="agenda-date-group" aria-labelledby="calendar-{{ key }}"><h3 id="calendar-{{ key }}"><span class="status-badge status-{% if key == 'due_today' %}today{% else %}{{ key }}{% endif %}">{{ label }}</span><span>{{ rows|length }}</span></h3>
         <ul class="calendar-agenda-list">{% for row in rows %}<li>
-          {% if row.photo_attachment_version_id %}<img class="agenda-avatar" src="/attachments/{{ row.photo_attachment_version_id }}" alt="">{% else %}<span class="agenda-avatar agenda-avatar-placeholder fallback-{{ row.photo_fallback_key }}" aria-hidden="true">{{ row.subject_name[0]|upper }}</span>{% endif %}
+          {% if row.visual %}<img class="agenda-avatar" src="{{ row.visual.url }}" alt="" width="96" height="96" loading="lazy" decoding="async">{% else %}<span class="agenda-avatar agenda-avatar-placeholder fallback-{{ row.photo_fallback_key }}" aria-hidden="true">{{ row.subject_name[0]|upper }}</span>{% endif %}
           <div class="agenda-row-copy"><strong><a href="{{ row.subject_url }}">{{ row.subject_name }}</a></strong><span>{{ row.title }}{% if row.location_name %} · {{ row.location_name }}{% endif %}</span></div>
           <div class="agenda-row-end"><span>{{ row.due_label }}</span>{% if row.action_url %}<a href="{{ row.action_url }}">{{ row.action_label }}</a>{% endif %}</div>
         </li>{% endfor %}</ul>
@@ -52,5 +53,6 @@
     </aside>
   </div>
   {% endif %}
+  <a class="quick-log-fab" href="/quick-log" aria-label="Add care"><span aria-hidden="true">+</span></a>
 </section>
 {% endblock %}
