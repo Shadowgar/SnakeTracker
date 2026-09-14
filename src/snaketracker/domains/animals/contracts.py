@@ -60,6 +60,18 @@ class AnimalProfileCorrectedV1:
 
 
 @dataclass(frozen=True, slots=True)
+class AnimalTaxonLinkedV1:
+    """Keeper-confirmed link to a Care Keeper-owned global taxon identity."""
+
+    taxon_id: UUID
+    group: str
+    accepted_scientific_name: str
+    preferred_common_name: str | None
+    provider: str
+    provider_id: str
+
+
+@dataclass(frozen=True, slots=True)
 class AnimalStatusChangedV1:
     """Lifecycle state transition owned by the Animal stream."""
 

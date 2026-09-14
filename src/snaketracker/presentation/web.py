@@ -21,6 +21,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -164,6 +165,12 @@ from snaketracker.application.search import (
     SearchService,
     SearchUnavailableError,
     SearchValidationError,
+)
+from snaketracker.application.species_directory import (
+    SUPPORTED_GROUPS,
+    DirectoryValidationError,
+    LinkAnimalTaxonCommand,
+    SpeciesDirectoryService,
 )
 from snaketracker.application.suggestion_policy import CareWindowEstimate
 from snaketracker.application.weight_measurements import (
@@ -1079,6 +1086,7 @@ def create_web_router(
     is_bootstrapped: Callable[[], bool],
     secure_cookie: bool,
     expected_origin: str | None = None,
+    directory_service: SpeciesDirectoryService | None = None,
 ) -> APIRouter:
     router = APIRouter(include_in_schema=False)
 
@@ -1299,6 +1307,11 @@ def create_web_router(
         )
         return {
             "animal": animal,
+            "linked_taxon": (
+                directory_service.linked_for(principal.household_id, animal.animal_id)
+                if directory_service is not None
+                else None
+            ),
             "enclosures": enclosures,
             "current_enclosure": current_enclosure,
             "recent_events": recent_events[:6],
@@ -1947,6 +1960,88 @@ def create_web_router(
         if principal is None:
             return RedirectResponse("/login", status_code=303)
         return protected_page(request, "more.html", principal)
+
+    @router.get("/directory", response_class=HTMLResponse)
+    async def directory(request: Request, group: str = "plant", q: str = "") -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        normalized_group = group if group in SUPPORTED_GROUPS else "plant"
+        result = None
+        error = None
+        if q.strip() and directory_service is not None:
+            try:
+                result = await run_in_threadpool(directory_service.search, q, normalized_group)
+            except DirectoryValidationError as exc:
+                error = str(exc)
+        return protected_page(
+            request,
+            "directory.html",
+            principal,
+            context={
+                "groups": tuple(sorted(SUPPORTED_GROUPS)),
+                "selected_group": normalized_group,
+                "query": q,
+                "result": result,
+                "error": error,
+                "directory_available": directory_service is not None,
+            },
+        )
+
+    @router.get("/directory/{taxon_id}", response_class=HTMLResponse)
+    async def directory_detail(request: Request, taxon_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            taxon = (
+                await run_in_threadpool(directory_service.refresh_detail, UUID(taxon_id))
+                if directory_service is not None
+                else None
+            )
+        except ValueError:
+            taxon = None
+        if taxon is None:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=404,
+                context={
+                    "title": "Directory entry not found",
+                    "message": "Return to Directory and search again.",
+                },
+            )
+        return protected_page(request, "directory_detail.html", principal, context={"taxon": taxon})
+
+    @router.get("/api/directory/search", response_class=JSONResponse)
+    async def directory_search_api(request: Request, group: str, q: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return JSONResponse({"error": "Authentication required."}, status_code=401)
+        if directory_service is None:
+            return JSONResponse({"state": "unavailable", "records": []}, status_code=503)
+        try:
+            result = await run_in_threadpool(directory_service.search, q, group)
+        except DirectoryValidationError as exc:
+            return JSONResponse({"error": str(exc), "records": []}, status_code=422)
+        return JSONResponse(
+            {
+                "state": result.state,
+                "message": result.message,
+                "records": [
+                    {
+                        "taxon_id": str(record.taxon_id),
+                        "group": record.supported_group,
+                        "common_name": record.preferred_common_name,
+                        "scientific_name": record.accepted_scientific_name,
+                        "family": record.family,
+                        "stale": record.stale,
+                    }
+                    for record in result.records
+                ],
+            }
+        )
 
     @router.get("/calendar", response_class=HTMLResponse)
     async def calendar(
@@ -4405,6 +4500,7 @@ def create_web_router(
                 "errors": {},
                 "values": {},
                 "animal_types": _animal_type_options(),
+                "directory_available": directory_service is not None,
             },
         )
 
@@ -4657,7 +4753,18 @@ def create_web_router(
             )
         }
         values["animal_type"] = str(form.get("animal_type", "snake")).strip()
+        selected_taxon_id = str(form.get("taxon_id", "")).strip()
         try:
+            selected_taxon = None
+            if selected_taxon_id:
+                if directory_service is None:
+                    raise DirectoryValidationError("Species directory is currently unavailable.")
+                selected_taxon = directory_service.get(UUID(selected_taxon_id))
+                if (
+                    selected_taxon is None
+                    or selected_taxon.supported_group != values["animal_type"]
+                ):
+                    raise DirectoryValidationError("Choose a species that matches the Animal type.")
             result = animal_service.register(
                 RegisterAnimalCommand(
                     household_id=principal.household_id,
@@ -4667,7 +4774,20 @@ def create_web_router(
                     **values,
                 )
             )
-        except AnimalValidationError as error:
+            if selected_taxon is not None and directory_service is not None:
+                await run_in_threadpool(
+                    directory_service.link_animal,
+                    LinkAnimalTaxonCommand(
+                        household_id=principal.household_id,
+                        actor_user_id=principal.user_id,
+                        animal_id=result.animal_id,
+                        taxon_id=selected_taxon.taxon_id,
+                        correlation_id=uuid4(),
+                        idempotency_key=_form_idempotency_key(form),
+                    ),
+                )
+        except (AnimalValidationError, DirectoryValidationError, ValueError) as error:
+            values["taxon_id"] = selected_taxon_id
             return protected_page(
                 request,
                 "animal_new.html",
@@ -4677,9 +4797,87 @@ def create_web_router(
                     "errors": {"form": str(error)},
                     "values": values,
                     "animal_types": _animal_type_options(),
+                    "directory_available": directory_service is not None,
                 },
             )
         return RedirectResponse(f"/animals/{result.animal_id}", status_code=303)
+
+    @router.get("/animals/{animal_id}/species", response_class=HTMLResponse)
+    async def animal_species_link(request: Request, animal_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            animal_uuid = UUID(animal_id)
+            animal = animal_service.profile_for(principal.household_id, animal_uuid)
+        except ValueError:
+            animal = None
+        if animal is None:
+            return _not_found(request, "Animal not found")
+        linked = (
+            directory_service.linked_for(principal.household_id, animal_uuid)
+            if directory_service is not None
+            else None
+        )
+        return protected_page(
+            request,
+            "animal_species_link.html",
+            principal,
+            context={
+                "animal": animal,
+                "linked_taxon": linked,
+                "errors": {},
+                "directory_available": directory_service is not None,
+            },
+        )
+
+    @router.post("/animals/{animal_id}/species", response_class=HTMLResponse)
+    async def animal_species_link_submit(request: Request, animal_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None
+        assert form is not None
+        try:
+            if directory_service is None:
+                raise DirectoryValidationError("Species directory is currently unavailable.")
+            animal_uuid = UUID(animal_id)
+            taxon_id = UUID(str(form.get("taxon_id", "")))
+            await run_in_threadpool(
+                directory_service.link_animal,
+                LinkAnimalTaxonCommand(
+                    household_id=principal.household_id,
+                    actor_user_id=principal.user_id,
+                    animal_id=animal_uuid,
+                    taxon_id=taxon_id,
+                    correlation_id=uuid4(),
+                    idempotency_key=_form_idempotency_key(form),
+                ),
+            )
+        except (DirectoryValidationError, ValueError) as error:
+            try:
+                animal = animal_service.profile_for(principal.household_id, UUID(animal_id))
+            except ValueError:
+                animal = None
+            if animal is None:
+                return _not_found(request, "Animal not found")
+            return protected_page(
+                request,
+                "animal_species_link.html",
+                principal,
+                status_code=422,
+                context={
+                    "animal": animal,
+                    "linked_taxon": directory_service.linked_for(
+                        principal.household_id, animal.animal_id
+                    )
+                    if directory_service is not None
+                    else None,
+                    "errors": {"form": str(error)},
+                    "directory_available": directory_service is not None,
+                },
+            )
+        return RedirectResponse(f"/animals/{animal_id}", status_code=303)
 
     @router.get("/animals/{animal_id}", response_class=HTMLResponse)
     async def animal_profile(request: Request, animal_id: str) -> Response:

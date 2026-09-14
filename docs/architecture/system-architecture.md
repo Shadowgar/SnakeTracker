@@ -76,6 +76,14 @@ The worker owns scheduling and backup initiation. Durable jobs use leases, heart
 
 Reminder facts, notification intent, outbox handoff, durable delivery job, delivery attempt, and provider operation are separate records with separate deduplication keys. See ADRs 0013–0014.
 
+### External biological reference integration
+
+M6.6 adds an outbound taxonomy-provider port implemented by fixed-host adapters. The application
+queries its normalized local reference cache first; bounded provider discovery may enrich that
+cache but never becomes a household system of record. Internal taxon UUIDs remain stable across
+provider changes, while provider IDs, provenance, refresh state, and permitted attribution remain
+mappings. Animal pages do not synchronously depend on providers. See ADR-0043.
+
 ## Data and storage
 
 SQLite is the v1 event store and operational database. It must use a local SSD filesystem with reliable locking. WAL, full durability, busy timeout, checkpoints, integrity checks, incremental vacuum, statistics, and FTS maintenance are governed by ADR-0010. PostgreSQL replacement is isolated behind application-owned ports and becomes mandatory before horizontal SaaS scaling.

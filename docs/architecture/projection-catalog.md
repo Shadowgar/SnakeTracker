@@ -6,6 +6,8 @@
 |---|---|---|
 | `authorization_memberships` | Current membership, roles, account/household access | Synchronous |
 | `animal_current` | Profile, registered capability profile, lifecycle, enclosure, latest applicable measurements | Synchronous |
+| `animal_taxon_current` | Keeper-confirmed current link from a household Animal to a global Care Keeper taxon | Synchronous |
+| `taxa` / `taxon_names` / provider mappings | Optional normalized global species cache with provenance and freshness | Read-only reference data, updated by bounded adapters |
 | `animal_effective_timeline` | Effective history and correction chain | Synchronous initially |
 | `molt_history` | Effective Spider/Scorpion molt and premolt history across schema v1/v2 | Synchronous initially |
 | `health_current` | Active medication and material health state | Synchronous |

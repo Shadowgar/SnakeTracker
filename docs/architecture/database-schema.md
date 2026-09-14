@@ -176,6 +176,21 @@ All tables retain household scope and bounded integer/text constraints. Asynchro
 ADR-0008 shadow generations. Historical v1 receipts become explicit unknown-cost lots; legacy
 Expenses are never inferred to be Purchases.
 
+## M6.6 universal directory reference storage
+
+Migration 0019 adds global `taxa`, `taxon_names`, `taxon_provider_mappings`, and `taxon_images`
+tables plus the household-scoped `animal_taxon_current` projection. `taxa.taxon_id` is a Care
+Keeper UUID. Provider IDs are unique only within their provider mapping and never replace that
+identity. Names are normalized into typed searchable rows; accepted-name changes retain prior
+names as synonyms. Classification fields are nullable because provider unknowns remain unknown.
+
+`taxon_images` accepts only known CC0, CC BY, or CC BY-SA metadata with source, creator,
+attribution, and licence URL. Missing or ambiguous rights produce no row. The cache records
+retrieved/refreshed timestamps. `animal_taxon_current` points to the global taxon but is keyed by
+household and Animal, stores the source link event/version and confirmed display snapshot, and can
+be reconstructed from registered `animal.taxon_linked` history. No historical event JSON or
+legacy free-text species is migrated or rewritten.
+
 ## Attachments
 
 ### `attachments`

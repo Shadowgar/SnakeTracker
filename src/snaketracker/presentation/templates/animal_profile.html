@@ -12,7 +12,7 @@
     <section class="card overview-identity" aria-labelledby="profile-facts-title">
       <div class="section-heading"><h2 id="profile-facts-title">Profile</h2><a href="/animals/{{ animal.animal_id }}/edit">Edit</a></div>
       <dl class="fact-list">
-        <div><dt>Species</dt><dd>{{ animal.species }}</dd></div>
+        <div><dt>Species</dt><dd>{% if linked_taxon %}{{ linked_taxon.taxon.display_name }}<br><i>{{ linked_taxon.taxon.accepted_scientific_name }}</i>{% else %}{{ animal.species }}{% endif %}</dd></div>
         <div><dt>Sex</dt><dd>{{ animal.sex|capitalize if animal.sex else 'Not recorded' }}</dd></div>
         <div><dt>Birth / hatch</dt><dd>{{ animal.birth_hatch_date or 'Not recorded' }}</dd></div>
         <div><dt>Acquired</dt><dd>{{ animal.acquisition_date or 'Not recorded' }}</dd></div>
@@ -39,6 +39,7 @@
         <a href="/animals/{{ animal.animal_id }}/status"><strong>Status</strong><span>Update current care status</span></a>
         <a id="care-schedule" href="/animals/{{ animal.animal_id }}/care"><strong>Care schedules</strong><span>Feeding interval · {% for schedule in care_schedules %}{{ schedule.title }}{% if not loop.last %} · {% endif %}{% endfor %}</span></a>
         <a href="/animals/{{ animal.animal_id }}/edit"><strong>Profile details</strong><span>Identity and background</span></a>
+        <a href="/animals/{{ animal.animal_id }}/species"><strong>{% if linked_taxon %}Change species link{% else %}Link species{% endif %}</strong><span>Common and scientific directory identity</span></a>
       </div>
       {% for schedule in care_schedules %}{% if schedule.enabled %}<p class="enabled-schedule">{{ schedule.title }} · Every {{ schedule.interval_days }} day{% if schedule.interval_days != 1 %}s{% endif %} after {{ schedule.source_label }}</p>{% endif %}{% endfor %}
     </section>

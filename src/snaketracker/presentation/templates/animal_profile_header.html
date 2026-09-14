@@ -10,7 +10,7 @@
     <div class="animal-hero-copy">
       <p class="page-kicker">{{ animal.type_label }} profile</p>
       <h1 id="page-title">{{ animal.name }}</h1>
-      <p>{{ animal.species }}{% if animal.morph %} · {{ animal.morph }}{% endif %}</p>
+      {% if linked_taxon %}<p><strong>{{ linked_taxon.taxon.display_name }}</strong> · <i>{{ linked_taxon.taxon.accepted_scientific_name }}</i>{% if animal.morph %} · {{ animal.morph }}{% endif %}</p>{% else %}<p>{{ animal.species }}{% if animal.morph %} · {{ animal.morph }}{% endif %}</p>{% endif %}
       <div class="animal-hero-meta">
         <a href="/animals/{{ animal.animal_id }}/status" class="status-badge status-completed">{{ animal.status|capitalize }}</a>
         <a href="/animals/{{ animal.animal_id }}/enclosure">{% if current_enclosure %}{{ current_enclosure.name }}{% else %}No enclosure{% endif %}</a>

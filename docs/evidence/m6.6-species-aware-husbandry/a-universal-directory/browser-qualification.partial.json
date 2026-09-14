@@ -1,0 +1,210 @@
+{
+  "origin": "http://127.0.0.1:8096",
+  "captures": [
+    {
+      "label": "snake-autocomplete",
+      "viewport": "390x844",
+      "overflow": false
+    },
+    {
+      "label": "snake-autocomplete",
+      "viewport": "1440x900",
+      "overflow": false
+    },
+    {
+      "label": "lizard-autocomplete",
+      "viewport": "390x844",
+      "overflow": false
+    },
+    {
+      "label": "lizard-autocomplete",
+      "viewport": "1440x900",
+      "overflow": false
+    },
+    {
+      "label": "spider-autocomplete",
+      "viewport": "390x844",
+      "overflow": false
+    },
+    {
+      "label": "spider-autocomplete",
+      "viewport": "1440x900",
+      "overflow": false
+    },
+    {
+      "label": "scorpion-autocomplete",
+      "viewport": "390x844",
+      "overflow": false
+    },
+    {
+      "label": "scorpion-autocomplete",
+      "viewport": "1440x900",
+      "overflow": false
+    },
+    {
+      "label": "manual-fallback",
+      "viewport": "390x844",
+      "overflow": false
+    },
+    {
+      "label": "manual-fallback",
+      "viewport": "1440x900",
+      "overflow": false
+    },
+    {
+      "label": "linked-animal-profile",
+      "viewport": "390x844",
+      "overflow": false
+    },
+    {
+      "label": "linked-animal-profile",
+      "viewport": "1440x900",
+      "overflow": false
+    },
+    {
+      "label": "legacy-link-species",
+      "viewport": "390x844",
+      "overflow": false
+    },
+    {
+      "label": "legacy-link-species",
+      "viewport": "1440x900",
+      "overflow": false
+    },
+    {
+      "label": "plant-search",
+      "viewport": "390x844",
+      "overflow": false
+    },
+    {
+      "label": "plant-search",
+      "viewport": "1440x900",
+      "overflow": false
+    },
+    {
+      "label": "plant-detail",
+      "viewport": "390x844",
+      "overflow": false
+    },
+    {
+      "label": "plant-detail",
+      "viewport": "1440x900",
+      "overflow": false
+    },
+    {
+      "label": "no-results",
+      "viewport": "390x844",
+      "overflow": false
+    },
+    {
+      "label": "no-results",
+      "viewport": "1440x900",
+      "overflow": false
+    }
+  ],
+  "scans": [
+    {
+      "label": "snake-autocomplete",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "snake-autocomplete",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "lizard-autocomplete",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "lizard-autocomplete",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "spider-autocomplete",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "spider-autocomplete",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "scorpion-autocomplete",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "scorpion-autocomplete",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "manual-fallback",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "manual-fallback",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "linked-animal-profile",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "linked-animal-profile",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "legacy-link-species",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "legacy-link-species",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "plant-search",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "plant-search",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "plant-detail",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "plant-detail",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "no-results",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "no-results",
+      "viewport": "1440x900",
+      "violations": []
+    }
+  ],
+  "diagnostics": [],
+  "pageErrors": [],
+  "failedRequests": []
+}

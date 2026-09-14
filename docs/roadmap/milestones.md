@@ -12,9 +12,10 @@
 
 M6 is owner-accepted and PR #8 is merged at
 `8b0c062a39453bd2a4e65cb6ce288eea6298137f`. M6.5 Inventory Intelligence and Cost Tracking was
-owner-accepted September 13, 2026. The authoritative remaining sequence is M7 deployment/recovery
-qualification, M8 release qualification, and M9 public profiles/media sharing. Early Raspberry Pi
-owner-review use is not a substitute for M7 qualification.
+owner-accepted September 13, 2026. The owner then approved inserting M6.6 Species-Aware Husbandry
+and Bioactive Care before M7. The authoritative remaining sequence is M6.6, M7
+deployment/recovery qualification, M8 release qualification, and M9 public profiles/media sharing.
+Early Raspberry Pi owner-review use is not a substitute for M7 qualification.
 
 ## Phase 0 / M0 — Architecture approved
 
@@ -333,6 +334,60 @@ derived only under the costing policy accepted during M6.5 design.
 - [x] RB Per-item reports reconcile purchased quantity/value, consumed quantity/value, current quantity, estimated stock value, consumption rate, and projected reorder need. M6.5-C was owner-accepted September 13, 2026. (`R-076`, `AT-INVINT-06`)
 - [x] RB Collection reports distinguish purchases during a period, inventory value consumed, current stock value, category spending, consumption trends, and deterministically supportable near-term supply-spending estimates. Projections are labelled estimates, never guarantees. M6.5-C was owner-accepted September 13, 2026. (`R-076`, `AT-INVINT-06`)
 - [x] RB M6.5 compatibility, migration, immutable-event, correction/compensation, authorization, reporting reconciliation, accessibility, performance, backup/restore, and owner-review evidence passes before explicit M6.5 acceptance. Final technical qualification passed and the owner explicitly accepted M6.5 on September 13, 2026. Evidence: [final M6.5 qualification](../evidence/m6.5-inventory-intelligence/final-qualification/README.md) and [owner acceptance](../evidence/m6.5-inventory-intelligence/approvals/2026-09-13-owner-acceptance.md).
+
+## Phase 6.6 / M6.6 — Species-aware husbandry and bioactive care
+
+Status: Owner-approved September 13, 2026; M6.6-A implementation-qualified September 14, 2026,
+owner review pending
+
+M6.6 was approved after M6.5 acceptance and inserted before M7 without changing any prior
+acceptance record. External sources provide optional reference knowledge; Care Keeper remains the
+authority for household Animals, enclosures, plants, schedules, reminders, history, and keeper
+decisions. M6.6 requires explicit owner acceptance after all five tranches.
+
+### M6.6-A — Universal species directory
+
+- [x] RB One Care Keeper directory searches snake, lizard, spider, scorpion, and plant taxa by
+  common/scientific/synonym names, filters by supported group, and persists normalized reference
+  records under Care Keeper-owned taxon IDs with provider provenance. (`R-086`, `AT-SPDIR-01`)
+- [x] RB Animal Add/Edit supports accessible predictive selection without mixing taxonomy with
+  morph/genetics, while manual species entry remains available through network, provider, quota,
+  malformed-response, and no-result failures. (`R-087`, `AT-SPDIR-02`)
+- [x] RB A keeper can explicitly link or change a legacy Animal's directory taxon through an
+  immutable same-household fact without rewriting historical registration/profile events or
+  auto-matching ambiguous free text. (`R-088`, `AT-SPDIR-03`)
+- [x] RB Plant directory search/detail works without introducing household plants, watering,
+  enclosure association, or care recommendations. (`R-089`, `AT-SPDIR-04`)
+- [x] RB Provider/cache behavior enforces privacy, input/response bounds, timeout/quota handling,
+  provenance, licensing/attribution, stale-cache fallback, strict CSP, and offline profile reads.
+  (`R-090`, `AT-SPDIR-05`)
+
+Owner review is required after M6.6-A. Do not begin M6.6-B until it is accepted.
+
+### M6.6-B — Sourced care guides
+
+- [ ] RB Versioned Animal and plant guide facts retain values/ranges/units, source references,
+  provider/source IDs, retrieved/reviewed dates, and support/confidence or disagreement state.
+  Guides remain reference knowledge and never silently become household facts. (`R-091`,
+  `AT-CAREGUIDE-01`)
+
+### M6.6-C — Smart care setup
+
+- [ ] RB Care Keeper may turn sufficiently supported species/life-stage facts into honestly
+  labelled suggestions, but only keeper-confirmed schedules become authoritative and integrate
+  with Today, Calendar, and reminders. (`R-092`, `AT-SMARTCARE-01`)
+
+### M6.6-D — Bioactive enclosures and plant care
+
+- [ ] RB Bioactive/non-bioactive mode belongs to the enclosure and survives Animal moves;
+  enclosure plants, maintenance/cleaning, watering history, researched guidance, defaults, and
+  overrides remain distinct, correction-safe concepts. (`R-093`, `AT-BIOACTIVE-01`)
+
+### M6.6-E — Consolidated qualification
+
+- [ ] RB Compatibility, provider failure, migration, replay, authorization, privacy/security,
+  responsive browser, accessibility, performance, backup/restore, live-data protection, and
+  owner-review evidence pass before explicit M6.6 acceptance. (`R-094`, `AT-M66-QUAL-01`)
 
 ## Phase 7 / M7 — Formal Raspberry Pi deployment and recovery qualification
 

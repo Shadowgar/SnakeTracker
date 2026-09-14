@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Link species · {{ animal.name }} · Care Keeper{% endblock %}
+{% block content %}
+<section class="form-page" aria-labelledby="page-title">
+  <div><p class="page-kicker">{{ animal.name }} · {{ animal.type_label }}</p><h1 id="page-title">{% if linked_taxon %}Change species link{% else %}Link species{% endif %}</h1><p class="lede">Confirm a directory identity without changing {{ animal.name }}'s original free-text species history.</p></div>
+  <form class="card form-stack" method="post" action="/animals/{{ animal.animal_id }}/species" data-taxon-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="idempotency_key" value="{{ command_id }}">
+    {% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+    {% if linked_taxon %}<div class="directory-current"><span>Currently linked</span><strong>{{ linked_taxon.taxon.display_name }}</strong><i>{{ linked_taxon.taxon.accepted_scientific_name }}</i></div>{% endif %}
+    <input type="hidden" name="animal_type" value="{{ animal.animal_type }}">
+    <div class="taxon-combobox" data-taxon-combobox data-group-field="animal_type">
+      <label for="species-link-search">Search {{ animal.type_label }} species</label>
+      <input id="species-link-search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="species-link-results" aria-describedby="species-link-help species-link-status">
+      <input type="hidden" name="taxon_id" data-taxon-id required>
+      <p id="species-link-help" class="field-help">Search common names, scientific names, or synonyms. Nothing is linked until you select a result and save.</p>
+      <p id="species-link-status" class="field-help" role="status" aria-live="polite" data-taxon-status>{% if not directory_available %}Directory search is temporarily unavailable.{% endif %}</p>
+      <ul id="species-link-results" class="taxon-results" role="listbox" hidden data-taxon-results></ul>
+    </div>
+    <div class="form-actions"><a href="/animals/{{ animal.animal_id }}">Cancel</a><button type="submit">Save species link</button></div>
+  </form>
+</section>
+{% endblock %}
+{% block scripts %}<script src="/static/species-directory.js" defer></script>{% endblock %}

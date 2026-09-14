@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ taxon.display_name }} · Species directory · Care Keeper{% endblock %}
+{% block content %}
+<section class="directory-detail" aria-labelledby="page-title">
+  <a class="back-link" href="/directory?group={{ taxon.supported_group }}">← Directory</a>
+  <header class="directory-hero card"><span class="taxon-placeholder fallback-{{ taxon.supported_group }}" aria-hidden="true">{{ taxon.display_name[0]|upper }}</span><div><p class="page-kicker">{{ taxon.supported_group|capitalize }} reference</p><h1 id="page-title">{{ taxon.display_name }}</h1><p class="scientific-name">{{ taxon.accepted_scientific_name }}{% if taxon.authorship %} {{ taxon.authorship }}{% endif %}</p>{% if taxon.stale %}<span class="status-badge">Saved reference · refresh pending</span>{% endif %}</div></header>
+  <div class="directory-detail-grid">
+    <section class="card"><h2>Classification</h2><dl class="fact-list">{% for label, value in [('Kingdom', taxon.kingdom), ('Phylum / division', taxon.phylum_division), ('Class', taxon.class_name), ('Order', taxon.order_name), ('Family', taxon.family), ('Genus', taxon.genus), ('Species', taxon.species), ('Infra-rank', taxon.infra_rank)] %}{% if value %}<div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>{% endif %}{% endfor %}</dl>{% if not taxon.family and not taxon.order_name %}<p class="muted">Detailed classification is not available from this saved provider result.</p>{% endif %}</section>
+    <section class="card"><h2>Names and source</h2>{% if taxon.alternative_common_names %}<h3>Other common names</h3><p>{{ taxon.alternative_common_names|join(', ') }}</p>{% endif %}{% if taxon.synonyms %}<h3>Matched names and synonyms</h3><p>{{ taxon.synonyms|join(', ') }}</p>{% endif %}<p><strong>Source:</strong> <a href="{{ taxon.source_url }}" rel="noopener noreferrer">{{ taxon.provider|capitalize }} record {{ taxon.provider_id }}</a></p><p class="muted">Refreshed {{ taxon.refreshed_at.strftime('%b %-d, %Y') }}. Provider IDs are mappings, not Care Keeper identity.</p></section>
+  </div>
+  <section class="card directory-scope-note"><h2>Reference only</h2><p>Care guides, enclosure plant ownership, and watering schedules are not part of this directory tranche.</p></section>
+</section>
+{% endblock %}

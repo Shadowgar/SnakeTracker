@@ -14,6 +14,7 @@
     {% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
     <label>Name<input name="name" value="{{ animal.name }}" required></label>
     <label>Species<input name="species" value="{{ animal.species }}" required></label>
+    <p class="field-help">Free text remains the historical profile value. <a href="/animals/{{ animal.animal_id }}/species">Link or change the verified directory species</a>.</p>
     <label>Sex
       <select name="sex">
         <option value="">Not recorded</option>

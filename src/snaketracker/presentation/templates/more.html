@@ -11,6 +11,7 @@
         {% if 'reminder.view' in principal.capabilities %}<a class="more-destination" href="/reminders">{{ icon('reminders') }}<span class="more-destination-copy"><strong>Reminders</strong><span>Manage care schedules</span></span>{{ icon('chevron', 'destination-arrow icon') }}</a>{% endif %}
         <a class="more-destination" href="/reports">{{ icon('reports') }}<span class="more-destination-copy"><strong>Reports</strong><span>Review and export records</span></span>{{ icon('chevron', 'destination-arrow icon') }}</a>
         {% if 'expense.view' in principal.capabilities %}<a class="more-destination" href="/expenses">{{ icon('expenses') }}<span class="more-destination-copy"><strong>Expenses</strong><span>Track collection costs</span></span>{{ icon('chevron', 'destination-arrow icon') }}</a>{% endif %}
+        <a class="more-destination" href="/directory">{{ icon('search') }}<span class="more-destination-copy"><strong>Species directory</strong><span>Animals and enclosure plants</span></span>{{ icon('chevron', 'destination-arrow icon') }}</a>
       </nav>
     </section>
     {% if 'inventory.view' in principal.capabilities %}<section class="more-group" aria-labelledby="supplies-heading"><h2 id="supplies-heading">Supplies</h2><nav class="more-grid" aria-label="Supply management"><a class="more-destination" href="/inventory">{{ icon('inventory') }}<span class="more-destination-copy"><strong>Inventory</strong><span>Food, equipment, and stock</span></span>{{ icon('chevron', 'destination-arrow icon') }}</a></nav></section>{% endif %}

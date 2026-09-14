@@ -87,6 +87,7 @@ a distinct event contract identity and never rewrites an event stored under an e
 | `animal.molt_corrected` v2 | Replaces capability-neutral effective molt facts for a same-stream target event |
 | `animal.premolt_observed` v1 | Historical Spider-only premolt state; never reinterpreted or upcast |
 | `animal.premolt_observed` v2 | Records or clears a capability-neutral premolt state with keeper observation |
+| `animal.taxon_linked` v1 *(M6.6-A)* | Keeper-confirmed link/change from a same-household Animal to an internal Care Keeper taxon, with confirmed name/group/provenance snapshot |
 
 Length, shed, and bath contracts require the corresponding declared capability; shed remains
 snake-specific in v1, while length and bath are also valid for `lizard.v1`. Molt and premolt v2

@@ -35,6 +35,7 @@ from snaketracker.domains.animals.contracts import (
     AnimalShedCorrectedV1,
     AnimalShedRecordedV1,
     AnimalStatusChangedV1,
+    AnimalTaxonLinkedV1,
     AnimalWeightCorrectedV1,
     AnimalWeightCorrectedV2,
     AnimalWeightRecordedV1,
@@ -420,6 +421,34 @@ def _deserialize_animal_status_changed(data: Mapping[str, object]) -> EventPaylo
     return AnimalStatusChangedV1(status)
 
 
+def _deserialize_animal_taxon_linked(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalTaxonLinkedV1, data)
+    group = data["group"]
+    scientific_name = data["accepted_scientific_name"]
+    common_name = data["preferred_common_name"]
+    provider = data["provider"]
+    provider_id = data["provider_id"]
+    if (
+        group not in {"snake", "lizard", "spider", "scorpion"}
+        or not isinstance(scientific_name, str)
+        or not scientific_name.strip()
+        or (common_name is not None and not isinstance(common_name, str))
+        or not isinstance(provider, str)
+        or not provider.strip()
+        or not isinstance(provider_id, str)
+        or not provider_id.strip()
+    ):
+        raise ValueError("Stored Animal taxon link payload is invalid.")
+    return AnimalTaxonLinkedV1(
+        taxon_id=_uuid_field(data, "taxon_id", "Animal taxon link"),
+        group=group,
+        accepted_scientific_name=scientific_name,
+        preferred_common_name=common_name,
+        provider=provider,
+        provider_id=provider_id,
+    )
+
+
 def _deserialize_animal_photo_selected(data: Mapping[str, object]) -> EventPayload:
     _require_exact_fields(AnimalPhotoSelectedV1, data)
     return AnimalPhotoSelectedV1(
@@ -466,6 +495,14 @@ ANIMAL_PROFILE_CONTRACTS = (
         owner="animals",
         payload_type=AnimalPhotoSelectedV1,
         deserialize_payload=_deserialize_animal_photo_selected,
+        subject_requirements=(SubjectRequirement("animal", "primary"),),
+    ),
+    EventContractRegistration(
+        event_type="animal.taxon_linked",
+        schema_version=1,
+        owner="animals",
+        payload_type=AnimalTaxonLinkedV1,
+        deserialize_payload=_deserialize_animal_taxon_linked,
         subject_requirements=(SubjectRequirement("animal", "primary"),),
     ),
 )
