@@ -337,8 +337,7 @@ derived only under the costing policy accepted during M6.5 design.
 
 ## Phase 6.6 / M6.6 — Species-aware husbandry and bioactive care
 
-Status: Owner-approved September 13, 2026; M6.6-A implementation-qualified September 14, 2026,
-owner review pending
+Status: Owner-approved September 13, 2026; M6.6-A owner-review correction in progress
 
 M6.6 was approved after M6.5 acceptance and inserted before M7 without changing any prior
 acceptance record. External sources provide optional reference knowledge; Care Keeper remains the
@@ -353,14 +352,22 @@ decisions. M6.6 requires explicit owner acceptance after all five tranches.
 - [x] RB Animal Add/Edit supports accessible predictive selection without mixing taxonomy with
   morph/genetics, while manual species entry remains available through network, provider, quota,
   malformed-response, and no-result failures. (`R-087`, `AT-SPDIR-02`)
+- [x] RB Morph/variant and Genetics/lineage are explained as optional individual facts; selecting a
+  species never fabricates either value, while exact prior values from the same household and same
+  Care Keeper taxon may be offered for explicit reuse. (`R-087`, `AT-SPDIR-02`)
 - [x] RB A keeper can explicitly link or change a legacy Animal's directory taxon through an
   immutable same-household fact without rewriting historical registration/profile events or
   auto-matching ambiguous free text. (`R-088`, `AT-SPDIR-03`)
-- [x] RB Plant directory search/detail works without introducing household plants, watering,
-  enclosure association, or care recommendations. (`R-089`, `AT-SPDIR-04`)
+- [x] RB Plant directory search/detail integrates with a basic household-owned plant roster inside
+  each Enclosure: directory-linked or manual identity, label, quantity, optional date/notes, and
+  immutable add/correct/remove lifecycle. Watering and care automation remain deferred.
+  (`R-089`, `AT-SPDIR-04`)
 - [x] RB Provider/cache behavior enforces privacy, input/response bounds, timeout/quota handling,
   provenance, licensing/attribution, stale-cache fallback, strict CSP, and offline profile reads.
   (`R-090`, `AT-SPDIR-05`)
+- [x] RB An Animal can opt into an approved CC0/CC BY/CC BY-SA species reference image delivered
+  from a bounded, checksum-verified local cache under `img-src 'self'`; the existing household photo
+  workflow stays discoverable and its personal image always wins. (`R-090`, `AT-SPDIR-05`)
 
 Owner review is required after M6.6-A. Do not begin M6.6-B until it is accepted.
 
@@ -380,8 +387,9 @@ Owner review is required after M6.6-A. Do not begin M6.6-B until it is accepted.
 ### M6.6-D — Bioactive enclosures and plant care
 
 - [ ] RB Bioactive/non-bioactive mode belongs to the enclosure and survives Animal moves;
-  enclosure plants, maintenance/cleaning, watering history, researched guidance, defaults, and
-  overrides remain distinct, correction-safe concepts. (`R-093`, `AT-BIOACTIVE-01`)
+  plant watering, maintenance/cleaning, researched guidance, defaults, and overrides remain
+  distinct, correction-safe concepts. Basic plant ownership/placement is already delivered by
+  M6.6-A. (`R-093`, `AT-BIOACTIVE-01`)
 
 ### M6.6-E — Consolidated qualification
 

@@ -36,6 +36,7 @@ from snaketracker.application.animals import (
     AnimalValidationError,
     AssignEnclosureCommand,
     ChangeAnimalStatusCommand,
+    ChangeReferenceImagePreferenceCommand,
     CorrectFeedingCommand,
     CorrectInventoryFeedingCommand,
     CorrectLengthCommand,
@@ -71,7 +72,10 @@ from snaketracker.application.backups import (
 )
 from snaketracker.application.dashboard import DashboardStatisticsService
 from snaketracker.application.enclosures import (
+    CUSTOM_ENCLOSURE_TYPE,
     DELETABLE_ENCLOSURE_CARE_EVENT_TYPES,
+    ENCLOSURE_TYPE_OPTIONS,
+    AddEnclosurePlantCommand,
     ChangeEnclosureStatusCommand,
     DeleteEnclosureCareRecordCommand,
     EnclosureService,
@@ -80,6 +84,8 @@ from snaketracker.application.enclosures import (
     RecordMistingCommand,
     RecordWaterChangeCommand,
     RegisterEnclosureCommand,
+    RemoveEnclosurePlantCommand,
+    UpdateEnclosurePlantCommand,
     UpdateEnclosureProfileCommand,
 )
 from snaketracker.application.expenses import (
@@ -354,6 +360,34 @@ def _form_datetime(value: object, household_timezone: str) -> datetime:
     if parsed.tzinfo is None:
         return household_local_to_utc(parsed, household_timezone)
     return parsed.astimezone(UTC)
+
+
+def _optional_form_date(value: object, label: str) -> date | None:
+    normalized = str(value).strip()
+    if not normalized:
+        return None
+    try:
+        return date.fromisoformat(normalized)
+    except ValueError as error:
+        raise FormValidationError(f"Enter a valid {label.lower()}.") from error
+
+
+def _resolved_enclosure_type(
+    choice_value: object, custom_value: object, *, current: str | None = None
+) -> str:
+    choice = str(choice_value).strip()
+    if choice == "__preserve__" and current is not None:
+        return current
+    if choice not in ENCLOSURE_TYPE_OPTIONS:
+        raise FormValidationError("Choose an enclosure type.")
+    if choice != CUSTOM_ENCLOSURE_TYPE:
+        return choice
+    custom = str(custom_value).strip()
+    if not custom:
+        raise FormValidationError("Describe the custom enclosure type.")
+    if len(custom) > 100:
+        raise FormValidationError("Custom enclosure type must be at most 100 characters.")
+    return custom
 
 
 def _required_int(value: object, label: str) -> int:
@@ -1305,13 +1339,31 @@ def create_web_router(
             )
             if item is not None
         )
+        linked_taxon = (
+            directory_service.linked_for(principal.household_id, animal.animal_id)
+            if directory_service is not None
+            else None
+        )
+        reference_taxon_available = (
+            linked_taxon.taxon
+            if linked_taxon is not None
+            and linked_taxon.taxon.image_license_code in {"cc0", "cc-by", "cc-by-sa"}
+            and linked_taxon.taxon.image_source_url
+            else None
+        )
+        reference_taxon = None
+        if (
+            reference_taxon_available is not None
+            and animal.reference_image_enabled
+            and directory_service is not None
+            and directory_service.reference_image(reference_taxon_available.taxon_id) is not None
+        ):
+            reference_taxon = reference_taxon_available
         return {
             "animal": animal,
-            "linked_taxon": (
-                directory_service.linked_for(principal.household_id, animal.animal_id)
-                if directory_service is not None
-                else None
-            ),
+            "linked_taxon": linked_taxon,
+            "reference_taxon": reference_taxon,
+            "reference_taxon_available": reference_taxon_available,
             "enclosures": enclosures,
             "current_enclosure": current_enclosure,
             "recent_events": recent_events[:6],
@@ -2037,10 +2089,56 @@ def create_web_router(
                         "scientific_name": record.accepted_scientific_name,
                         "family": record.family,
                         "stale": record.stale,
+                        "reference_image_available": bool(
+                            record.image_source_url
+                            and record.image_creator
+                            and record.image_license_code in {"cc0", "cc-by", "cc-by-sa"}
+                        ),
+                        "reference_image_url": f"/directory/reference-images/{record.taxon_id}",
+                        "image_creator": record.image_creator,
+                        "image_license_code": record.image_license_code,
                     }
                     for record in result.records
                 ],
             }
+        )
+
+    @router.get("/api/directory/{taxon_id}/identity-suggestions", response_class=JSONResponse)
+    async def directory_identity_suggestions(request: Request, taxon_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return JSONResponse({"error": "Authentication required."}, status_code=401)
+        if directory_service is None:
+            return JSONResponse({"morphs": [], "genetics": []})
+        try:
+            suggestions = directory_service.identity_suggestions(
+                principal.household_id, UUID(taxon_id)
+            )
+        except ValueError:
+            return JSONResponse({"error": "Directory entry is invalid."}, status_code=422)
+        return JSONResponse(
+            {"morphs": list(suggestions.morphs), "genetics": list(suggestions.genetics)}
+        )
+
+    @router.get("/directory/reference-images/{taxon_id}")
+    async def directory_reference_image(request: Request, taxon_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None or directory_service is None:
+            return Response(status_code=404)
+        try:
+            reference = await run_in_threadpool(directory_service.reference_image, UUID(taxon_id))
+        except ValueError:
+            reference = None
+        if reference is None:
+            return Response(status_code=404)
+        return Response(
+            reference.content,
+            media_type=reference.media_type,
+            headers={
+                "Cache-Control": "public, immutable, max-age=31536000",
+                "Content-Disposition": 'inline; filename="species-reference.webp"',
+                "Cross-Origin-Resource-Policy": "same-origin",
+            },
         )
 
     @router.get("/calendar", response_class=HTMLResponse)
@@ -4513,7 +4611,12 @@ def create_web_router(
             request,
             "enclosure_new.html",
             principal,
-            context={"errors": {}, "values": {}},
+            context={
+                "errors": {},
+                "values": {},
+                "enclosure_type_options": ENCLOSURE_TYPE_OPTIONS,
+                "custom_enclosure_type": CUSTOM_ENCLOSURE_TYPE,
+            },
         )
 
     @router.post("/enclosures", response_class=HTMLResponse)
@@ -4524,25 +4627,36 @@ def create_web_router(
         assert principal is not None
         assert form is not None
         values = {
-            name: str(form.get(name, "")).strip() for name in ("name", "enclosure_type", "notes")
+            name: str(form.get(name, "")).strip()
+            for name in ("name", "enclosure_type_choice", "custom_enclosure_type", "notes")
         }
         try:
+            enclosure_type = _resolved_enclosure_type(
+                values["enclosure_type_choice"], values["custom_enclosure_type"]
+            )
             result = enclosure_service.register(
                 RegisterEnclosureCommand(
                     household_id=principal.household_id,
                     actor_user_id=principal.user_id,
                     correlation_id=uuid4(),
                     idempotency_key=_form_idempotency_key(form),
-                    **values,
+                    name=values["name"],
+                    enclosure_type=enclosure_type,
+                    notes=values["notes"],
                 )
             )
-        except EnclosureValidationError as error:
+        except (EnclosureValidationError, FormValidationError) as error:
             return protected_page(
                 request,
                 "enclosure_new.html",
                 principal,
                 status_code=422,
-                context={"errors": {"form": str(error)}, "values": values},
+                context={
+                    "errors": {"form": str(error)},
+                    "values": values,
+                    "enclosure_type_options": ENCLOSURE_TYPE_OPTIONS,
+                    "custom_enclosure_type": CUSTOM_ENCLOSURE_TYPE,
+                },
             )
         return RedirectResponse(f"/enclosures/{result.enclosure_id}", status_code=303)
 
@@ -4578,6 +4692,7 @@ def create_web_router(
             context={
                 "enclosure": profile,
                 "occupants": enclosure_service.occupants(principal.household_id, enclosure_uuid),
+                "plants": enclosure_service.plants(principal.household_id, enclosure_uuid),
                 "enclosure_statuses": tuple(sorted(ENCLOSURE_STATUSES)),
             },
         )
@@ -4605,7 +4720,12 @@ def create_web_router(
             request,
             "enclosure_edit.html",
             principal,
-            context={"enclosure": enclosure, "errors": {}},
+            context={
+                "enclosure": enclosure,
+                "errors": {},
+                "enclosure_type_options": ENCLOSURE_TYPE_OPTIONS,
+                "legacy_enclosure_type": enclosure.enclosure_type not in ENCLOSURE_TYPE_OPTIONS,
+            },
         )
 
     @router.post("/enclosures/{enclosure_id}/edit", response_class=HTMLResponse)
@@ -4617,8 +4737,14 @@ def create_web_router(
         assert form is not None
         try:
             enclosure_uuid = UUID(enclosure_id)
-            if enclosure_service.profile_for(principal.household_id, enclosure_uuid) is None:
+            current = enclosure_service.profile_for(principal.household_id, enclosure_uuid)
+            if current is None:
                 raise FormValidationError("Enclosure not found.")
+            enclosure_type = _resolved_enclosure_type(
+                form.get("enclosure_type_choice", ""),
+                form.get("custom_enclosure_type", ""),
+                current=current.enclosure_type,
+            )
             enclosure_service.update_profile(
                 UpdateEnclosureProfileCommand(
                     household_id=principal.household_id,
@@ -4627,13 +4753,267 @@ def create_web_router(
                     correlation_id=uuid4(),
                     idempotency_key=_form_idempotency_key(form),
                     name=str(form.get("name", "")),
-                    enclosure_type=str(form.get("enclosure_type", "")),
+                    enclosure_type=enclosure_type,
                     notes=str(form.get("notes", "")),
                 )
             )
         except (EnclosureValidationError, FormValidationError, ValueError) as error:
             return _enclosure_edit_error(
                 request, principal, enclosure_id, str(error), enclosure_service
+            )
+        return RedirectResponse(f"/enclosures/{enclosure_id}", status_code=303)
+
+    @router.get("/enclosures/{enclosure_id}/plants/new", response_class=HTMLResponse)
+    async def enclosure_plant_new(request: Request, enclosure_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            enclosure = enclosure_service.profile_for(principal.household_id, UUID(enclosure_id))
+        except ValueError:
+            enclosure = None
+        if enclosure is None:
+            return _not_found(request, "Enclosure not found")
+        return protected_page(
+            request,
+            "enclosure_plant_form.html",
+            principal,
+            context={
+                "enclosure": enclosure,
+                "plant": None,
+                "values": {"quantity": "1"},
+                "errors": {},
+                "directory_available": directory_service is not None,
+            },
+        )
+
+    @router.post("/enclosures/{enclosure_id}/plants", response_class=HTMLResponse)
+    async def enclosure_plant_create(request: Request, enclosure_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None
+        assert form is not None
+        values = {
+            name: str(form.get(name, "")).strip()
+            for name in ("taxon_id", "manual_species", "label", "quantity", "date_added", "notes")
+        }
+        try:
+            enclosure_uuid = UUID(enclosure_id)
+            enclosure = enclosure_service.profile_for(principal.household_id, enclosure_uuid)
+            if enclosure is None:
+                raise FormValidationError("Enclosure not found.")
+            plant = enclosure_service.add_plant(
+                AddEnclosurePlantCommand(
+                    household_id=principal.household_id,
+                    actor_user_id=principal.user_id,
+                    enclosure_id=enclosure_uuid,
+                    correlation_id=uuid4(),
+                    idempotency_key=_form_idempotency_key(form),
+                    taxon_id=UUID(values["taxon_id"]) if values["taxon_id"] else None,
+                    manual_species=values["manual_species"],
+                    label=values["label"],
+                    quantity=_required_int(values["quantity"], "quantity"),
+                    date_added=_optional_form_date(values["date_added"], "date added"),
+                    notes=values["notes"],
+                )
+            )
+        except (EnclosureValidationError, FormValidationError, ValueError) as error:
+            try:
+                enclosure = enclosure_service.profile_for(
+                    principal.household_id, UUID(enclosure_id)
+                )
+            except ValueError:
+                enclosure = None
+            if enclosure is None:
+                return _not_found(request, "Enclosure not found")
+            return protected_page(
+                request,
+                "enclosure_plant_form.html",
+                principal,
+                status_code=422,
+                context={
+                    "enclosure": enclosure,
+                    "plant": None,
+                    "values": values,
+                    "errors": {"form": str(error)},
+                    "directory_available": directory_service is not None,
+                },
+            )
+        return RedirectResponse(
+            f"/enclosures/{enclosure_id}/plants/{plant.enclosure_plant_id}", status_code=303
+        )
+
+    @router.get("/enclosures/{enclosure_id}/plants/{plant_id}", response_class=HTMLResponse)
+    async def enclosure_plant_detail(
+        request: Request, enclosure_id: str, plant_id: str
+    ) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            enclosure_uuid = UUID(enclosure_id)
+            enclosure = enclosure_service.profile_for(principal.household_id, enclosure_uuid)
+            plant = enclosure_service.plant_for(
+                principal.household_id, enclosure_uuid, UUID(plant_id)
+            )
+        except ValueError:
+            enclosure = None
+            plant = None
+        if enclosure is None or plant is None:
+            return _not_found(request, "Enclosure plant not found")
+        return protected_page(
+            request,
+            "enclosure_plant_detail.html",
+            principal,
+            context={"enclosure": enclosure, "plant": plant},
+        )
+
+    @router.get("/enclosures/{enclosure_id}/plants/{plant_id}/edit", response_class=HTMLResponse)
+    async def enclosure_plant_edit(request: Request, enclosure_id: str, plant_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            enclosure_uuid = UUID(enclosure_id)
+            enclosure = enclosure_service.profile_for(principal.household_id, enclosure_uuid)
+            plant = enclosure_service.plant_for(
+                principal.household_id, enclosure_uuid, UUID(plant_id)
+            )
+        except ValueError:
+            enclosure = None
+            plant = None
+        if enclosure is None or plant is None or plant.status != "active":
+            return _not_found(request, "Active enclosure plant not found")
+        return protected_page(
+            request,
+            "enclosure_plant_form.html",
+            principal,
+            context={
+                "enclosure": enclosure,
+                "plant": plant,
+                "values": {},
+                "errors": {},
+                "directory_available": directory_service is not None,
+            },
+        )
+
+    @router.post("/enclosures/{enclosure_id}/plants/{plant_id}/edit", response_class=HTMLResponse)
+    async def enclosure_plant_edit_submit(
+        request: Request, enclosure_id: str, plant_id: str
+    ) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None
+        assert form is not None
+        values = {
+            name: str(form.get(name, "")).strip()
+            for name in ("taxon_id", "manual_species", "label", "quantity", "date_added", "notes")
+        }
+        try:
+            enclosure_uuid = UUID(enclosure_id)
+            enclosure = enclosure_service.profile_for(principal.household_id, enclosure_uuid)
+            if enclosure is None:
+                raise FormValidationError("Enclosure not found.")
+            plant = enclosure_service.update_plant(
+                UpdateEnclosurePlantCommand(
+                    household_id=principal.household_id,
+                    actor_user_id=principal.user_id,
+                    enclosure_id=enclosure_uuid,
+                    enclosure_plant_id=UUID(plant_id),
+                    correlation_id=uuid4(),
+                    idempotency_key=_form_idempotency_key(form),
+                    taxon_id=UUID(values["taxon_id"]) if values["taxon_id"] else None,
+                    manual_species=values["manual_species"],
+                    label=values["label"],
+                    quantity=_required_int(values["quantity"], "quantity"),
+                    date_added=_optional_form_date(values["date_added"], "date added"),
+                    notes=values["notes"],
+                )
+            )
+        except (EnclosureValidationError, FormValidationError, ValueError) as error:
+            try:
+                enclosure_uuid = UUID(enclosure_id)
+                enclosure = enclosure_service.profile_for(principal.household_id, enclosure_uuid)
+                current_plant = enclosure_service.plant_for(
+                    principal.household_id, enclosure_uuid, UUID(plant_id)
+                )
+            except ValueError:
+                enclosure = None
+                current_plant = None
+            if enclosure is None or current_plant is None:
+                return _not_found(request, "Enclosure plant not found")
+            return protected_page(
+                request,
+                "enclosure_plant_form.html",
+                principal,
+                status_code=422,
+                context={
+                    "enclosure": enclosure,
+                    "plant": current_plant,
+                    "values": values,
+                    "errors": {"form": str(error)},
+                    "directory_available": directory_service is not None,
+                },
+            )
+        return RedirectResponse(
+            f"/enclosures/{enclosure_id}/plants/{plant.enclosure_plant_id}", status_code=303
+        )
+
+    @router.get("/enclosures/{enclosure_id}/plants/{plant_id}/remove", response_class=HTMLResponse)
+    async def enclosure_plant_remove_confirm(
+        request: Request, enclosure_id: str, plant_id: str
+    ) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            enclosure_uuid = UUID(enclosure_id)
+            enclosure = enclosure_service.profile_for(principal.household_id, enclosure_uuid)
+            plant = enclosure_service.plant_for(
+                principal.household_id, enclosure_uuid, UUID(plant_id)
+            )
+        except ValueError:
+            enclosure = None
+            plant = None
+        if enclosure is None or plant is None or plant.status != "active":
+            return _not_found(request, "Active enclosure plant not found")
+        return protected_page(
+            request,
+            "enclosure_plant_remove.html",
+            principal,
+            context={"enclosure": enclosure, "plant": plant, "errors": {}},
+        )
+
+    @router.post("/enclosures/{enclosure_id}/plants/{plant_id}/remove", response_class=HTMLResponse)
+    async def enclosure_plant_remove_submit(
+        request: Request, enclosure_id: str, plant_id: str
+    ) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None
+        assert form is not None
+        try:
+            enclosure_service.remove_plant(
+                RemoveEnclosurePlantCommand(
+                    household_id=principal.household_id,
+                    actor_user_id=principal.user_id,
+                    enclosure_id=UUID(enclosure_id),
+                    enclosure_plant_id=UUID(plant_id),
+                    correlation_id=uuid4(),
+                    idempotency_key=_form_idempotency_key(form),
+                    reason=str(form.get("reason", "")),
+                )
+            )
+        except (EnclosureValidationError, ValueError) as error:
+            return protected_page(
+                request,
+                "error.html",
+                principal,
+                status_code=422,
+                context={"title": "Plant could not be removed", "message": str(error)},
             )
         return RedirectResponse(f"/enclosures/{enclosure_id}", status_code=303)
 
@@ -4754,17 +5134,30 @@ def create_web_router(
         }
         values["animal_type"] = str(form.get("animal_type", "snake")).strip()
         selected_taxon_id = str(form.get("taxon_id", "")).strip()
+        photo_preference = str(form.get("photo_preference", "none")).strip()
         try:
             selected_taxon = None
             if selected_taxon_id:
                 if directory_service is None:
-                    raise DirectoryValidationError("Species directory is currently unavailable.")
+                    raise DirectoryValidationError(
+                        "Animal & plant directory is currently unavailable."
+                    )
                 selected_taxon = directory_service.get(UUID(selected_taxon_id))
                 if (
                     selected_taxon is None
                     or selected_taxon.supported_group != values["animal_type"]
                 ):
                     raise DirectoryValidationError("Choose a species that matches the Animal type.")
+                if photo_preference not in {"none", "species_reference"}:
+                    raise DirectoryValidationError("Choose a valid profile-picture option.")
+                if photo_preference == "species_reference" and not (
+                    selected_taxon.image_source_url
+                    and selected_taxon.image_creator
+                    and selected_taxon.image_license_code in {"cc0", "cc-by", "cc-by-sa"}
+                ):
+                    raise DirectoryValidationError(
+                        "A licensed species reference image is not available."
+                    )
             result = animal_service.register(
                 RegisterAnimalCommand(
                     household_id=principal.household_id,
@@ -4786,8 +5179,19 @@ def create_web_router(
                         idempotency_key=_form_idempotency_key(form),
                     ),
                 )
+                animal_service.change_reference_image_preference(
+                    ChangeReferenceImagePreferenceCommand(
+                        household_id=principal.household_id,
+                        actor_user_id=principal.user_id,
+                        animal_id=result.animal_id,
+                        enabled=photo_preference == "species_reference",
+                        correlation_id=uuid4(),
+                        idempotency_key=_form_idempotency_key(form),
+                    )
+                )
         except (AnimalValidationError, DirectoryValidationError, ValueError) as error:
             values["taxon_id"] = selected_taxon_id
+            values["photo_preference"] = photo_preference
             return protected_page(
                 request,
                 "animal_new.html",
@@ -4840,7 +5244,7 @@ def create_web_router(
         assert form is not None
         try:
             if directory_service is None:
-                raise DirectoryValidationError("Species directory is currently unavailable.")
+                raise DirectoryValidationError("Animal & plant directory is currently unavailable.")
             animal_uuid = UUID(animal_id)
             taxon_id = UUID(str(form.get("taxon_id", "")))
             await run_in_threadpool(
@@ -5234,6 +5638,48 @@ def create_web_router(
             _care_return_location(animal_id, form.get("return_to", "animal")), status_code=303
         )
 
+    @router.post("/animals/{animal_id}/reference-photo", response_class=HTMLResponse)
+    async def animal_reference_photo_preference(request: Request, animal_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        try:
+            animal_uuid = UUID(animal_id)
+            preference = str(form.get("photo_preference", "none"))
+            if preference not in {"none", "species_reference"}:
+                raise DirectoryValidationError("Choose a valid reference-image preference.")
+            enabled = preference == "species_reference"
+            linked = (
+                directory_service.linked_for(principal.household_id, animal_uuid)
+                if directory_service is not None
+                else None
+            )
+            if enabled and not (
+                linked is not None
+                and linked.taxon.image_source_url
+                and linked.taxon.image_creator
+                and linked.taxon.image_license_code in {"cc0", "cc-by", "cc-by-sa"}
+            ):
+                raise DirectoryValidationError(
+                    "A licensed species reference image is not available."
+                )
+            animal_service.change_reference_image_preference(
+                ChangeReferenceImagePreferenceCommand(
+                    household_id=principal.household_id,
+                    actor_user_id=principal.user_id,
+                    animal_id=animal_uuid,
+                    enabled=enabled,
+                    correlation_id=uuid4(),
+                    idempotency_key=_form_idempotency_key(form),
+                )
+            )
+        except (AnimalValidationError, DirectoryValidationError, ValueError) as error:
+            return animal_management_response(
+                request, principal, animal_id, "photo", status_code=422, error=str(error)
+            )
+        return RedirectResponse(f"/animals/{animal_id}", status_code=303)
+
     @router.get("/attachments/{attachment_version_id}")
     async def attachment_delivery(request: Request, attachment_version_id: str) -> Response:
         principal = principal_for(request, audit_denial=True)
@@ -5279,11 +5725,21 @@ def create_web_router(
                 },
                 status_code=404,
             )
+        linked = (
+            directory_service.linked_for(principal.household_id, profile.animal_id)
+            if directory_service is not None
+            else None
+        )
+        suggestions = (
+            directory_service.identity_suggestions(principal.household_id, linked.taxon.taxon_id)
+            if directory_service is not None and linked is not None
+            else None
+        )
         return protected_page(
             request,
             "animal_edit.html",
             principal,
-            context={"animal": profile, "errors": {}},
+            context={"animal": profile, "errors": {}, "identity_suggestions": suggestions},
         )
 
     @router.post("/animals/{animal_id}/edit", response_class=HTMLResponse)
@@ -5317,7 +5773,14 @@ def create_web_router(
                 )
             )
         except (AnimalValidationError, FormValidationError, ValueError) as error:
-            return _animal_edit_error(request, principal, animal_id, str(error), animal_service)
+            return _animal_edit_error(
+                request,
+                principal,
+                animal_id,
+                str(error),
+                animal_service,
+                directory_service,
+            )
         return RedirectResponse(
             _care_return_location(animal_id, form.get("return_to", "animal")), status_code=303
         )
@@ -6711,6 +7174,7 @@ def _animal_edit_error(
     animal_id: str,
     message: str,
     animal_service: AnimalService,
+    directory_service: SpeciesDirectoryService | None = None,
 ) -> HTMLResponse:
     try:
         animal = animal_service.profile_for(principal.household_id, UUID(animal_id))
@@ -6723,6 +7187,16 @@ def _animal_edit_error(
             {"title": "Animal not found", "message": "Return to your animal list and try again."},
             status_code=404,
         )
+    linked = (
+        directory_service.linked_for(principal.household_id, animal.animal_id)
+        if directory_service is not None
+        else None
+    )
+    suggestions = (
+        directory_service.identity_suggestions(principal.household_id, linked.taxon.taxon_id)
+        if directory_service is not None and linked is not None
+        else None
+    )
     return templates.TemplateResponse(
         request,
         "animal_edit.html",
@@ -6732,6 +7206,7 @@ def _animal_edit_error(
             "csrf_token": request.cookies.get(CSRF_COOKIE, ""),
             "command_id": str(uuid4()),
             "animal": animal,
+            "identity_suggestions": suggestions,
             "errors": {"form": message},
         },
         status_code=422,
@@ -6811,6 +7286,7 @@ def _enclosure_form_error(
             "occupants": enclosure_service.occupants(
                 principal.household_id, enclosure.enclosure_id
             ),
+            "plants": enclosure_service.plants(principal.household_id, enclosure.enclosure_id),
             "enclosure_statuses": tuple(sorted(ENCLOSURE_STATUSES)),
             "errors": {"form": message},
         },
@@ -6849,6 +7325,8 @@ def _enclosure_edit_error(
             "command_id": str(uuid4()),
             "enclosure": enclosure,
             "errors": {"form": message},
+            "enclosure_type_options": ENCLOSURE_TYPE_OPTIONS,
+            "legacy_enclosure_type": enclosure.enclosure_type not in ENCLOSURE_TYPE_OPTIONS,
         },
         status_code=422,
     )

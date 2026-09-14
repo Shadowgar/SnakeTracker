@@ -90,6 +90,7 @@ from snaketracker.infrastructure.reminders.projections import SQLAlchemyReminder
 from snaketracker.infrastructure.search.fts import SQLAlchemyFTSSearchRepository
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 from snaketracker.infrastructure.taxonomy.inaturalist import INaturalistTaxonomyProvider
+from snaketracker.infrastructure.taxonomy.reference_images import LocalReferenceImageCache
 from snaketracker.infrastructure.taxonomy.repository import SQLAlchemyTaxonRepository
 from snaketracker.platform.notifications.service import NotificationIntentService
 from snaketracker.presentation.health import create_health_router
@@ -213,6 +214,10 @@ def build_application(settings: Settings) -> FastAPI:
             INaturalistTaxonomyProvider(),
             event_store=event_store,
             animal_projection=animal_projection,
+            reference_image_cache=LocalReferenceImageCache(
+                settings.reference_image_storage_path
+                or settings.database_path.parent / "reference-images"
+            ),
         )
         attachment_service = AttachmentService(
             animals=animal_service,
@@ -222,7 +227,9 @@ def build_application(settings: Settings) -> FastAPI:
             ),
         )
         enclosure_service = EnclosureService(
-            event_store, SQLAlchemyEnclosureCurrentProjection(engine)
+            event_store,
+            SQLAlchemyEnclosureCurrentProjection(engine),
+            taxon_lookup=directory_service,
         )
         reminder_projection = SQLAlchemyReminderProjection(engine)
         expense_service = ExpenseService(event_store, SQLAlchemyExpenseCurrentProjection(engine))

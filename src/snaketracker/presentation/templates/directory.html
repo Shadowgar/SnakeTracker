@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Species directory · Care Keeper{% endblock %}
+{% block title %}Animal & plant directory · Care Keeper{% endblock %}
 {% block content %}
 <section class="directory-page" aria-labelledby="page-title">
-  <header class="page-heading"><div><p class="page-kicker">Reference knowledge</p><h1 id="page-title">Care Keeper Directory</h1><p class="lede">Search animal species and enclosure plants. Directory knowledge never changes your household records automatically.</p></div></header>
+  <header class="page-heading"><div><p class="page-kicker">Reference knowledge</p><h1 id="page-title">Animal &amp; plant directory</h1><p class="lede">Browse animal species and plants. Directory knowledge never changes your household records automatically.</p></div></header>
   <form class="card directory-search" method="get" action="/directory">
     <label for="directory-group">Group<select id="directory-group" name="group">{% for group in groups %}<option value="{{ group }}" {% if group == selected_group %}selected{% endif %}>{{ group|capitalize }}</option>{% endfor %}</select></label>
     <label for="directory-query">Common or scientific name<input id="directory-query" name="q" value="{{ query }}" minlength="2" maxlength="100" required autocomplete="off"></label>

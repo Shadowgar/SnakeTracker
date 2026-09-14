@@ -90,6 +90,11 @@ class TaxonRecord:
     image_attribution: str | None = None
     image_license_code: str | None = None
     image_license_url: str | None = None
+    image_local_filename: str | None = None
+    image_local_media_type: str | None = None
+    image_local_byte_size: int | None = None
+    image_local_sha256: str | None = None
+    image_cached_at: datetime | None = None
 
     @property
     def display_name(self) -> str:
@@ -113,12 +118,49 @@ class DirectorySearchResult:
     message: str | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class CachedReferenceImage:
+    filename: str
+    media_type: str
+    byte_size: int
+    sha256: str
+    cached_at: datetime
+    content: bytes
+
+
+@dataclass(frozen=True, slots=True)
+class ReferenceImage:
+    taxon_id: UUID
+    content: bytes
+    media_type: str
+    creator: str
+    attribution: str
+    license_code: str
+    license_url: str
+    source_url: str
+    provider: str
+    provider_id: str
+    cached_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class IdentitySuggestions:
+    morphs: tuple[str, ...]
+    genetics: tuple[str, ...]
+
+
 class TaxonomyProvider(Protocol):
     provider_name: str
 
     def search(self, query: str, group: str, *, limit: int) -> tuple[ProviderTaxon, ...]: ...
 
     def detail(self, provider_id: str, group: str) -> ProviderTaxon: ...
+
+
+class ReferenceImageCache(Protocol):
+    def cache(self, taxon_id: UUID, source_url: str) -> CachedReferenceImage: ...
+
+    def load(self, filename: str, expected_sha256: str) -> bytes: ...
 
 
 class TaxonRepository(SynchronousProjection, Protocol):
@@ -133,6 +175,10 @@ class TaxonRepository(SynchronousProjection, Protocol):
     def linked_for(
         self, household_id: UUID, animal_id: UUID, *, stale_after: datetime
     ) -> LinkedTaxon | None: ...
+
+    def mark_image_cached(self, taxon_id: UUID, image: CachedReferenceImage) -> None: ...
+
+    def identity_suggestions(self, household_id: UUID, taxon_id: UUID) -> IdentitySuggestions: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,6 +201,7 @@ class SpeciesDirectoryService:
         *,
         event_store: EventStore,
         animal_projection: AnimalCurrentProjection,
+        reference_image_cache: ReferenceImageCache | None = None,
         cache_ttl: timedelta = timedelta(days=30),
     ) -> None:
         self._repository = repository
@@ -162,6 +209,7 @@ class SpeciesDirectoryService:
         self._event_store = event_store
         self._animal_projection = animal_projection
         self._cache_ttl = cache_ttl
+        self._reference_image_cache = reference_image_cache
 
     def search(
         self, query_value: str, group_value: str, *, limit: int = 10
@@ -205,6 +253,56 @@ class SpeciesDirectoryService:
     def linked_for(self, household_id: UUID, animal_id: UUID) -> LinkedTaxon | None:
         return self._repository.linked_for(
             household_id, animal_id, stale_after=datetime.now(UTC) - self._cache_ttl
+        )
+
+    def identity_suggestions(self, household_id: UUID, taxon_id: UUID) -> IdentitySuggestions:
+        return self._repository.identity_suggestions(household_id, taxon_id)
+
+    def reference_image(self, taxon_id: UUID) -> ReferenceImage | None:
+        taxon = self.get(taxon_id)
+        if (
+            taxon is None
+            or self._reference_image_cache is None
+            or taxon.image_source_url is None
+            or taxon.image_creator is None
+            or taxon.image_attribution is None
+            or taxon.image_license_code not in {"cc0", "cc-by", "cc-by-sa"}
+            or taxon.image_license_url is None
+        ):
+            return None
+        cached_at = taxon.image_cached_at
+        content: bytes | None = None
+        if taxon.image_local_filename and taxon.image_local_sha256 and cached_at is not None:
+            try:
+                content = self._reference_image_cache.load(
+                    taxon.image_local_filename, taxon.image_local_sha256
+                )
+            except ProviderUnavailableError:
+                content = None
+        if content is None:
+            try:
+                cached = self._reference_image_cache.cache(taxon_id, taxon.image_source_url)
+            except ProviderUnavailableError:
+                return None
+            self._repository.mark_image_cached(taxon_id, cached)
+            content = cached.content
+            cached_at = cached.cached_at
+            media_type = cached.media_type
+        else:
+            media_type = taxon.image_local_media_type or "image/webp"
+        assert cached_at is not None
+        return ReferenceImage(
+            taxon_id=taxon_id,
+            content=content,
+            media_type=media_type,
+            creator=taxon.image_creator,
+            attribution=taxon.image_attribution,
+            license_code=taxon.image_license_code,
+            license_url=taxon.image_license_url,
+            source_url=taxon.image_source_url,
+            provider=taxon.provider,
+            provider_id=taxon.provider_id,
+            cached_at=cached_at,
         )
 
     def link_animal(self, command: LinkAnimalTaxonCommand) -> LinkedTaxon:

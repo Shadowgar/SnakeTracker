@@ -1,4 +1,4 @@
-const { test, expect, chromium } = require("playwright/test");
+const { test, expect, chromium } = require("@playwright/test");
 const fs = require("node:fs");
 const path = require("node:path");
 

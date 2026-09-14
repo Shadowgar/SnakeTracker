@@ -19,6 +19,14 @@
     </ul>
     {% else %}<p class="muted">No animals are assigned here.</p>{% endif %}
   </section>
+  <section class="card" aria-labelledby="plants-title">
+    <div class="section-heading"><div><p class="page-kicker">Living collection</p><h2 id="plants-title">Plants</h2></div><a class="button-link secondary-link" href="/enclosures/{{ enclosure.enclosure_id }}/plants/new">Add plant</a></div>
+    {% if plants %}
+    <ul class="record-list">
+      {% for plant in plants %}<li><a href="/enclosures/{{ enclosure.enclosure_id }}/plants/{{ plant.enclosure_plant_id }}"><strong>{{ plant.label or plant.species_display }}</strong><span>{{ plant.species_display }}{% if plant.quantity > 1 %} · Qty {{ plant.quantity }}{% endif %}</span></a></li>{% endfor %}
+    </ul>
+    {% else %}<div class="empty-state"><h3>No plants added</h3><p>Add plants that physically live in this enclosure. Watering and plant-care reminders will arrive in a later milestone.</p><a href="/enclosures/{{ enclosure.enclosure_id }}/plants/new">Add plant</a></div>{% endif %}
+  </section>
   <section class="care-grid" aria-label="Enclosure care records">
     <form id="cleaning" class="card form-stack" method="post" action="/enclosures/{{ enclosure.enclosure_id }}/cleanings">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

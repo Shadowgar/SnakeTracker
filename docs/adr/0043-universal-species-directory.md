@@ -53,18 +53,44 @@ snapshots. Conflicting provider mappings are retained with provenance rather tha
 Unknown fields stay unknown.
 
 Only image metadata with a known source, creator/attribution, and an explicitly permitted licence
-may be retained or rendered. M6.6-A permits `CC0`, `CC BY`, and `CC BY-SA` metadata and uses a local
-placeholder for missing, incompatible, or ambiguous licences. Remote provider HTML, scripts, and
-arbitrary URLs are never rendered or proxied. The production CSP remains unchanged.
+may be retained or rendered. M6.6-A permits `CC0`, `CC BY`, and `CC BY-SA`; revoked, incompatible,
+or ambiguous rights remove the image from eligibility. Eligible bytes are fetched server-side only
+from an HTTPS hostname allow-list, without redirects, under strict timeout, response-size,
+content-type, decoded-format, pixel, and dimension limits. Care Keeper normalizes verified raster
+content to WebP in one global local cache, records its checksum/retrieval metadata, and serves it
+only from a same-origin authenticated route. Remote provider URLs are never embedded in keeper
+pages, SVG is not accepted, and the production `img-src 'self'` and `script-src 'self'` policy is
+unchanged.
+
+An Animal may append `animal.reference_image_preference_changed` to opt into or out of the linked
+taxon's eligible reference image. This household fact never duplicates the global image into the
+household attachment store. Display priority is always the existing attachment-backed photo of the
+individual Animal, then an explicitly enabled and available species reference image, then the Care
+Keeper placeholder. Uploading a personal photo neither deletes nor rewrites global reference data.
+Morph/variant and genetics/lineage remain free-text individual facts. Same-household values for the
+same Care Keeper taxon may be offered as optional suggestions, but taxonomy never selects, infers,
+normalizes, or erases them.
 
 External taxonomy is reference knowledge only. It cannot create care guidance, husbandry facts,
 schedules, reminders, or household decisions. Those boundaries require later M6.6 tranches and
 keeper confirmation.
 
+The M6.6-A owner-review amendment adds a separate household-owned plant instance inside exactly
+one Enclosure. An enclosure plant may link to a Care Keeper taxon or retain a manual species/name;
+the global provider identifier never becomes its identity. `enclosure.plant_added`,
+`enclosure.plant_profile_changed`, and `enclosure.plant_removed` facts preserve its stable UUID,
+placement, profile, and non-destructive lifecycle on the Enclosure stream. Moving an Animal does
+not move these plants. This amendment does not authorize watering, care guidance, bioactive mode,
+schedules, Today, Calendar, or reminders.
+
 ## Consequences
 
 - Animal creation and legacy linking remain usable offline or during quota/provider failure.
 - Selected taxon identity and profile display remain locally available.
+- Licensed reference imagery remains attributable and locally deliverable without weakening CSP or
+  exposing a provider URL to the browser.
+- Individual-photo attachments remain household-isolated and take display priority over global
+  reference imagery.
 - Taxonomic change is auditable without making provider history household event noise.
 - A provider migration does not require changing Animal links or making its identifiers canonical.
 - Live discovery can be less complete than a paid/specialist source; that is preferable to unclear
@@ -95,6 +121,6 @@ Rejected. A local placeholder preserves usability without assuming copyright per
 
 ## Review boundary
 
-This ADR authorizes only M6.6-A directory, caching, autocomplete, manual fallback, plant reference
-browsing, and Animal linking. It does not authorize care guides, suggested schedules, bioactive
-enclosures, plant ownership/watering, M7 work, or production acceptance.
+This ADR authorizes only M6.6-A directory, caching, autocomplete, manual fallback, Animal linking,
+and basic Enclosure-owned plant roster/lifecycle. It does not authorize care guides, suggested
+schedules, bioactive mode, plant watering/care automation, M7 work, or production acceptance.

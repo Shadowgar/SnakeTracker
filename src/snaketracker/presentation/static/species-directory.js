@@ -14,6 +14,110 @@
     let controller = null;
     let activeIndex = -1;
 
+    const referenceRoot = form.querySelector("[data-reference-photo]");
+    const referenceImage = referenceRoot?.querySelector("[data-reference-photo-image]");
+    const referencePlaceholder = referenceRoot?.querySelector("[data-reference-photo-placeholder]");
+    const referenceCopy = referenceRoot?.querySelector("[data-reference-photo-copy]");
+    const referenceOptions = referenceRoot?.querySelector("[data-reference-photo-options]");
+    const morphSuggestions = form.querySelector("[data-morph-suggestions]");
+    const geneticsSuggestions = form.querySelector("[data-genetics-suggestions]");
+    const morphSuggestionChips = form.querySelector("[data-morph-suggestion-chips]");
+    const geneticsSuggestionChips = form.querySelector("[data-genetics-suggestion-chips]");
+    const morphField = form.querySelector("[data-morph-field]");
+    const geneticsField = form.querySelector("[data-genetics-field]");
+    const morphExample = form.querySelector("[data-morph-example]");
+
+    const setIdentityOptions = (target, values) => {
+      if (!target) return;
+      target.replaceChildren(...values.map((value) => {
+        const option = document.createElement("option");
+        option.value = value;
+        return option;
+      }));
+    };
+    const setIdentityChips = (target, field, values) => {
+      if (!target || !field) return;
+      target.replaceChildren();
+      target.hidden = values.length === 0;
+      if (!values.length) return;
+      const label = document.createElement("span");
+      label.textContent = "Previously used for this species:";
+      target.append(label);
+      values.forEach((value) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "identity-suggestion-chip";
+        button.textContent = value;
+        button.addEventListener("click", () => {
+          field.value = value;
+          field.focus();
+        });
+        target.append(button);
+      });
+    };
+    const loadIdentitySuggestions = async (selectedTaxonId) => {
+      setIdentityOptions(morphSuggestions, []);
+      setIdentityOptions(geneticsSuggestions, []);
+      setIdentityChips(morphSuggestionChips, morphField, []);
+      setIdentityChips(geneticsSuggestionChips, geneticsField, []);
+      if (!selectedTaxonId || (!morphSuggestions && !geneticsSuggestions)) return;
+      try {
+        const response = await fetch(`/api/directory/${encodeURIComponent(selectedTaxonId)}/identity-suggestions`, {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok) return;
+        const payload = await response.json();
+        const morphs = Array.isArray(payload.morphs) ? payload.morphs : [];
+        const genetics = Array.isArray(payload.genetics) ? payload.genetics : [];
+        setIdentityOptions(morphSuggestions, morphs);
+        setIdentityOptions(geneticsSuggestions, genetics);
+        setIdentityChips(morphSuggestionChips, morphField, morphs);
+        setIdentityChips(geneticsSuggestionChips, geneticsField, genetics);
+      } catch (_error) {
+        // Suggestions are optional; free text remains available.
+      }
+    };
+    const resetReferencePhoto = () => {
+      if (!referenceRoot) return;
+      if (referenceImage) {
+        referenceImage.hidden = true;
+        referenceImage.removeAttribute("src");
+        referenceImage.alt = "";
+      }
+      if (referencePlaceholder) referencePlaceholder.hidden = false;
+      if (referenceOptions) referenceOptions.hidden = true;
+      if (referenceCopy) referenceCopy.textContent = "No licensed species reference image is selected. You can add your animal's own photo after creation.";
+      const noPhoto = form.querySelector('input[name="photo_preference"][value="none"]');
+      if (noPhoto) noPhoto.checked = true;
+    };
+    const showReferencePhoto = (row) => {
+      if (!referenceRoot || row.dataset.referenceImageAvailable !== "true") {
+        resetReferencePhoto();
+        return;
+      }
+      if (referenceImage) {
+        referenceImage.src = row.dataset.referenceImageUrl || "";
+        referenceImage.alt = `Species reference image for ${row.dataset.commonName || row.dataset.scientificName}`;
+        referenceImage.hidden = false;
+      }
+      if (referencePlaceholder) referencePlaceholder.hidden = true;
+      if (referenceOptions) referenceOptions.hidden = false;
+      if (referenceCopy) referenceCopy.textContent = `Species reference image · ${(row.dataset.imageLicenseCode || "").replaceAll("-", " ").toUpperCase()} · ${row.dataset.imageCreator || "attribution available"}. This is a general photo of the species, not your individual animal.`;
+    };
+    referenceImage?.addEventListener("error", resetReferencePhoto);
+
+    const updateMorphExample = () => {
+      if (!morphExample) return;
+      const examples = {
+        snake: "Examples for snakes: Banana, Pastel, Albino, Piebald.",
+        lizard: "Examples for lizards: a color/pattern morph or locality.",
+        spider: "Example for spiders: a recognized color form or locality, when applicable.",
+        scorpion: "Record a recognized form or locality only when it is meaningful.",
+      };
+      morphExample.textContent = examples[groupInput?.value] || "Record a recognized variant only when applicable.";
+    };
+
     const groupInput = form.elements.namedItem(groupField);
     const close = () => {
       list.hidden = true;
@@ -36,6 +140,8 @@
       taxonId.value = row.dataset.taxonId || "";
       input.value = row.dataset.commonName || row.dataset.scientificName || "";
       status.textContent = `Selected ${input.value}, ${row.dataset.scientificName}.`;
+      showReferencePhoto(row);
+      loadIdentitySuggestions(taxonId.value);
       close();
     };
     const render = (payload) => {
@@ -50,6 +156,10 @@
         row.dataset.taxonId = record.taxon_id;
         row.dataset.commonName = record.common_name || "";
         row.dataset.scientificName = record.scientific_name;
+        row.dataset.referenceImageAvailable = String(record.reference_image_available === true);
+        row.dataset.referenceImageUrl = record.reference_image_url || "";
+        row.dataset.imageCreator = record.image_creator || "";
+        row.dataset.imageLicenseCode = record.image_license_code || "";
         const common = document.createElement("strong");
         common.textContent = record.common_name || record.scientific_name;
         const scientific = document.createElement("i");
@@ -103,6 +213,8 @@
 
     input.addEventListener("input", () => {
       taxonId.value = "";
+      resetReferencePhoto();
+      loadIdentitySuggestions("");
       window.clearTimeout(timer);
       timer = window.setTimeout(search, 320);
     });
@@ -123,8 +235,11 @@
     input.addEventListener("blur", () => window.setTimeout(close, 120));
     groupInput?.addEventListener("change", () => {
       taxonId.value = "";
+      resetReferencePhoto();
+      updateMorphExample();
       close();
       if (input.value.trim().length >= 2) search();
     });
+    updateMorphExample();
   });
 })();

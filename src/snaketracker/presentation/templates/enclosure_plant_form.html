@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{% if plant %}Edit plant{% else %}Add plant{% endif %} · {{ enclosure.name }} · Care Keeper{% endblock %}
+{% block content %}
+<section class="form-page" aria-labelledby="page-title">
+  <header><p class="page-kicker">{{ enclosure.name }} · Plants</p><h1 id="page-title">{% if plant %}Edit plant{% else %}Add plant{% endif %}</h1><p class="lede">Keep a simple roster of the plants physically living in this enclosure.</p></header>
+  <form class="card form-stack" method="post" action="{% if plant %}/enclosures/{{ enclosure.enclosure_id }}/plants/{{ plant.enclosure_plant_id }}/edit{% else %}/enclosures/{{ enclosure.enclosure_id }}/plants{% endif %}" data-taxon-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="idempotency_key" value="{{ command_id }}">
+    <input type="hidden" name="plant_group" value="plant">
+    {% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+    <div class="taxon-combobox" data-taxon-combobox data-group-field="plant_group">
+      <label for="plant-species-search">Plant species or name</label>
+      <div class="taxon-input-results">
+        <input id="plant-species-search" name="manual_species" value="{{ values.manual_species|default(plant.species_display if plant else '') }}" required autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="plant-species-results" aria-describedby="plant-species-help plant-species-status">
+        <ul id="plant-species-results" class="taxon-results" role="listbox" hidden data-taxon-results></ul>
+      </div>
+      <input type="hidden" name="taxon_id" value="{{ values.taxon_id|default(plant.taxon_id if plant and plant.taxon_id else '') }}" data-taxon-id>
+      <p id="plant-species-help" class="field-help">Search the plant directory. Can't find it? Add the plant manually by keeping your own species or name.</p>
+      <p id="plant-species-status" class="field-help" role="status" aria-live="polite" data-taxon-status>{% if not directory_available %}Directory search is unavailable; manual plant entry still works.{% endif %}</p>
+    </div>
+    <label>Keeper label or name <span class="muted">(optional)</span><input name="label" value="{{ values.label|default(plant.label if plant and plant.label else '') }}" maxlength="256" placeholder="For example, Pothos by the hide"></label>
+    <label>Quantity<input name="quantity" type="number" min="1" max="999" step="1" value="{{ values.quantity|default(plant.quantity if plant else '1') }}" required></label>
+    <label>Date added <span class="muted">(optional)</span><input name="date_added" type="date" value="{{ values.date_added|default(plant.date_added.isoformat() if plant and plant.date_added else '') }}"></label>
+    <label>Notes <span class="muted">(optional)</span><textarea name="notes" rows="4">{{ values.notes|default(plant.notes if plant and plant.notes else '') }}</textarea></label>
+    <div class="form-actions"><a href="{% if plant %}/enclosures/{{ enclosure.enclosure_id }}/plants/{{ plant.enclosure_plant_id }}{% else %}/enclosures/{{ enclosure.enclosure_id }}{% endif %}">Cancel</a><button type="submit">{% if plant %}Save plant{% else %}Add plant{% endif %}</button></div>
+  </form>
+</section>
+{% endblock %}
+{% block scripts %}<script src="/static/species-directory.js" defer></script>{% endblock %}

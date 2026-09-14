@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ taxon.display_name }} · Species directory · Care Keeper{% endblock %}
+{% block title %}{{ taxon.display_name }} · Animal & plant directory · Care Keeper{% endblock %}
 {% block content %}
 <section class="directory-detail" aria-labelledby="page-title">
   <a class="back-link" href="/directory?group={{ taxon.supported_group }}">← Directory</a>
@@ -8,6 +8,6 @@
     <section class="card"><h2>Classification</h2><dl class="fact-list">{% for label, value in [('Kingdom', taxon.kingdom), ('Phylum / division', taxon.phylum_division), ('Class', taxon.class_name), ('Order', taxon.order_name), ('Family', taxon.family), ('Genus', taxon.genus), ('Species', taxon.species), ('Infra-rank', taxon.infra_rank)] %}{% if value %}<div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>{% endif %}{% endfor %}</dl>{% if not taxon.family and not taxon.order_name %}<p class="muted">Detailed classification is not available from this saved provider result.</p>{% endif %}</section>
     <section class="card"><h2>Names and source</h2>{% if taxon.alternative_common_names %}<h3>Other common names</h3><p>{{ taxon.alternative_common_names|join(', ') }}</p>{% endif %}{% if taxon.synonyms %}<h3>Matched names and synonyms</h3><p>{{ taxon.synonyms|join(', ') }}</p>{% endif %}<p><strong>Source:</strong> <a href="{{ taxon.source_url }}" rel="noopener noreferrer">{{ taxon.provider|capitalize }} record {{ taxon.provider_id }}</a></p><p class="muted">Refreshed {{ taxon.refreshed_at.strftime('%b %-d, %Y') }}. Provider IDs are mappings, not Care Keeper identity.</p></section>
   </div>
-  <section class="card directory-scope-note"><h2>Reference only</h2><p>Care guides, enclosure plant ownership, and watering schedules are not part of this directory tranche.</p></section>
+  <section class="card directory-scope-note"><h2>Reference directory</h2><p>Add keeper-owned plants from an Enclosure. Care guides and watering schedules remain outside this tranche.</p></section>
 </section>
 {% endblock %}

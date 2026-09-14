@@ -270,3 +270,10 @@ class AnimalPhotoSelectedV1:
     """Reference to one finalized immutable profile-photo version."""
 
     attachment_version_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class AnimalReferenceImagePreferenceChangedV1:
+    """Keeper choice to use or suppress the linked taxon's reference image."""
+
+    enabled: bool

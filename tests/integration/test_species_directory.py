@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
@@ -10,9 +11,20 @@ from alembic.config import Config
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
-from snaketracker.application.animals import AnimalService, RegisterAnimalCommand
-from snaketracker.application.household_bootstrap import BootstrapCommand, HouseholdBootstrapService
+from snaketracker.application.animals import (
+    AnimalService,
+    AnimalValidationError,
+    ChangeReferenceImagePreferenceCommand,
+    RegisterAnimalCommand,
+)
+from snaketracker.application.household_bootstrap import (
+    AccountRegistrationCommand,
+    AccountRegistrationService,
+    BootstrapCommand,
+    HouseholdBootstrapService,
+)
 from snaketracker.application.species_directory import (
+    CachedReferenceImage,
     DirectoryValidationError,
     LinkAnimalTaxonCommand,
     ProviderTaxon,
@@ -27,7 +39,7 @@ from snaketracker.infrastructure.identity.bootstrap_repository import (
 )
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 from snaketracker.infrastructure.taxonomy.repository import SQLAlchemyTaxonRepository
-from snaketracker.platform.events.store import StreamKey
+from snaketracker.platform.events.store import AtomicAppendResult, StreamKey
 
 ROOT = Path(__file__).parents[2]
 
@@ -54,6 +66,32 @@ class FixtureProvider:
                 if record.provider_id == provider_id and record.supported_group == group:
                     return record
         raise ProviderUnavailableError("fixture record missing")
+
+
+class FixtureReferenceImageCache:
+    def __init__(self) -> None:
+        self.cached: dict[str, bytes] = {}
+        self.fetch_count = 0
+        self.unavailable = False
+
+    def cache(self, taxon_id, source_url) -> CachedReferenceImage:
+        if self.unavailable:
+            raise ProviderUnavailableError("fixture reference image outage")
+        self.fetch_count += 1
+        content = b"normalized-webp"
+        result = CachedReferenceImage(
+            filename=f"{taxon_id}.webp",
+            media_type="image/webp",
+            byte_size=len(content),
+            sha256="a" * 64,
+            cached_at=datetime.now(UTC),
+            content=content,
+        )
+        self.cached[result.filename] = content
+        return result
+
+    def load(self, filename, expected_sha256) -> bytes:
+        return self.cached[filename]
 
 
 def _taxon(
@@ -164,7 +202,9 @@ def test_universal_search_cache_synonyms_groups_stale_and_name_change(tmp_path: 
         engine.dispose()
 
 
-def test_animal_link_is_household_scoped_idempotent_and_changeable(tmp_path: Path) -> None:
+def test_animal_link_is_household_scoped_idempotent_and_changeable(
+    tmp_path: Path, monkeypatch
+) -> None:
     engine = _database(tmp_path)
     repository = SQLAlchemyTaxonRepository(engine)
     provider = FixtureProvider({})
@@ -189,7 +229,8 @@ def test_animal_link_is_household_scoped_idempotent_and_changeable(tmp_path: Pat
                 correlation_id=uuid4(),
             )
         )
-        animal = AnimalService(event_store, projection).register(
+        animal_service = AnimalService(event_store, projection)
+        animal = animal_service.register(
             RegisterAnimalCommand(
                 household_id=owner.household_id,
                 actor_user_id=owner.user_id,
@@ -198,7 +239,7 @@ def test_animal_link_is_household_scoped_idempotent_and_changeable(tmp_path: Pat
                 name="Monty",
                 species="Ball python",
                 morph="Banana",
-                genetics=None,
+                genetics="100% het Clown",
                 sex=None,
                 birth_hatch_date=None,
                 acquisition_date=None,
@@ -273,11 +314,166 @@ def test_animal_link_is_household_scoped_idempotent_and_changeable(tmp_path: Pat
             uuid4(),
             "link-one",
         )
+
+        class FixedAppendStore:
+            def __init__(self, stored_animal_id: str) -> None:
+                self.stored_animal_id = stored_animal_id
+
+            def append_many(self, _request) -> AtomicAppendResult:
+                return AtomicAppendResult(
+                    stream_versions=(),
+                    event_ids=(),
+                    stored_response={"animal_id": self.stored_animal_id},
+                    stored_response_schema_version=1,
+                )
+
+        mismatch_service = SpeciesDirectoryService(
+            repository,
+            provider,
+            event_store=FixedAppendStore("different-animal"),
+            animal_projection=projection,
+        )
+        with pytest.raises(RuntimeError, match="stored response"):
+            mismatch_service.link_animal(command_one)
+        missing_projection_service = SpeciesDirectoryService(
+            repository,
+            provider,
+            event_store=FixedAppendStore(str(animal.animal_id)),
+            animal_projection=projection,
+        )
+        with pytest.raises(RuntimeError, match="did not project"):
+            missing_projection_service.link_animal(command_one)
+
         linked = service.link_animal(command_one)
         assert linked.taxon.taxon_id == first.taxon_id
+        original_get = repository._get
+        monkeypatch.setattr(repository, "_get", lambda *_args, **_kwargs: None)
+        assert (
+            repository.linked_for(
+                owner.household_id,
+                animal.animal_id,
+                stale_after=datetime.now(UTC),
+            )
+            is None
+        )
+        monkeypatch.setattr(repository, "_get", original_get)
         persisted_animal = projection.profile_for(owner.household_id, animal.animal_id)
         assert persisted_animal is not None
         assert persisted_animal.species == "Ball python"
+        assert service.identity_suggestions(owner.household_id, first.taxon_id).morphs == (
+            "Banana",
+        )
+        assert service.identity_suggestions(owner.household_id, first.taxon_id).genetics == (
+            "100% het Clown",
+        )
+        assert service.identity_suggestions(uuid4(), first.taxon_id).morphs == ()
+
+        other = AccountRegistrationService(
+            SQLAlchemyHouseholdBootstrapRepository(engine),
+            Argon2PasswordHasher.for_testing(),
+            command_hash_secret=b"directory-test-command-secret-32b",
+        ).register(
+            AccountRegistrationCommand(
+                collection_name="Other Home",
+                timezone="UTC",
+                email="other@example.test",
+                display_name="Other Keeper",
+                password="correct horse battery staple",
+                idempotency_key="other-directory-account",
+                correlation_id=uuid4(),
+            )
+        )
+        other_animal = animal_service.register(
+            RegisterAnimalCommand(
+                household_id=other.household_id,
+                actor_user_id=other.user_id,
+                correlation_id=uuid4(),
+                idempotency_key="other-household-animal",
+                name="Private",
+                species="Ball python",
+                morph="Secret Morph",
+                genetics="Secret Lineage",
+                sex=None,
+                birth_hatch_date=None,
+                acquisition_date=None,
+                breeder_source=None,
+                notes=None,
+                animal_type="snake",
+            )
+        )
+        service.link_animal(
+            LinkAnimalTaxonCommand(
+                other.household_id,
+                other.user_id,
+                other_animal.animal_id,
+                first.taxon_id,
+                uuid4(),
+                "other-household-link",
+            )
+        )
+        assert service.identity_suggestions(owner.household_id, first.taxon_id).morphs == (
+            "Banana",
+        )
+        assert service.identity_suggestions(other.household_id, first.taxon_id).morphs == (
+            "Secret Morph",
+        )
+
+        other_species_animal = animal_service.register(
+            RegisterAnimalCommand(
+                household_id=owner.household_id,
+                actor_user_id=owner.user_id,
+                correlation_id=uuid4(),
+                idempotency_key="other-species-animal",
+                name="Boa",
+                species="Common Boa",
+                morph="Hypo",
+                genetics="Sharp strain",
+                sex=None,
+                birth_hatch_date=None,
+                acquisition_date=None,
+                breeder_source=None,
+                notes=None,
+                animal_type="snake",
+            )
+        )
+        service.link_animal(
+            LinkAnimalTaxonCommand(
+                owner.household_id,
+                owner.user_id,
+                other_species_animal.animal_id,
+                second.taxon_id,
+                uuid4(),
+                "other-species-link",
+            )
+        )
+        assert service.identity_suggestions(owner.household_id, first.taxon_id).morphs == (
+            "Banana",
+        )
+        assert service.identity_suggestions(owner.household_id, second.taxon_id).morphs == ("Hypo",)
+        with pytest.raises(AnimalValidationError, match="preference is invalid"):
+            animal_service.change_reference_image_preference(
+                ChangeReferenceImagePreferenceCommand(
+                    owner.household_id,
+                    owner.user_id,
+                    animal.animal_id,
+                    1,
+                    uuid4(),
+                    "invalid-reference-image-preference",
+                )
+            )
+        animal_service.change_reference_image_preference(
+            ChangeReferenceImagePreferenceCommand(
+                owner.household_id,
+                owner.user_id,
+                animal.animal_id,
+                True,
+                uuid4(),
+                "use-reference-image",
+            )
+        )
+        with_reference = projection.profile_for(owner.household_id, animal.animal_id)
+        assert with_reference is not None
+        assert with_reference.reference_image_enabled is True
         assert service.link_animal(command_one).link_event_id == linked.link_event_id
         assert (
             service.link_animal(
@@ -304,13 +500,25 @@ def test_animal_link_is_household_scoped_idempotent_and_changeable(tmp_path: Pat
             )
         )
         assert changed.taxon.taxon_id == second.taxon_id
+        changed_profile = projection.profile_for(owner.household_id, animal.animal_id)
+        assert changed_profile is not None
+        assert (changed_profile.morph, changed_profile.genetics) == (
+            "Banana",
+            "100% het Clown",
+        )
         assert service.linked_for(uuid4(), animal.animal_id) is None
         with engine.connect() as connection:
             assert (
                 connection.execute(
                     text(
-                        "SELECT count(*) FROM domain_events WHERE event_type='animal.taxon_linked'"
-                    )
+                        "SELECT count(*) FROM domain_events "
+                        "WHERE event_type='animal.taxon_linked' "
+                        "AND household_id=:household_id AND stream_id=:animal_id"
+                    ),
+                    {
+                        "household_id": str(owner.household_id),
+                        "animal_id": str(animal.animal_id),
+                    },
                 ).scalar_one()
                 == 2
             )
@@ -356,5 +564,69 @@ def test_unknown_image_license_is_not_cached(tmp_path: Path) -> None:
         assert unknown.image_source_url is None
         assert allowed.image_license_code == "cc-by"
         assert scientific_only.display_name == "Planta scientifica"
+        cache = FixtureReferenceImageCache()
+        with pytest.raises(RuntimeError, match="metadata could not be retained"):
+            repository.mark_image_cached(
+                uuid4(),
+                CachedReferenceImage(
+                    filename=f"{uuid4()}.webp",
+                    media_type="image/webp",
+                    byte_size=1,
+                    sha256="a" * 64,
+                    cached_at=datetime.now(UTC),
+                    content=b"x",
+                ),
+            )
+        service = SpeciesDirectoryService(
+            repository,
+            FixtureProvider({}),
+            event_store=SQLAlchemyEventStore(engine),
+            animal_projection=SQLAlchemyAnimalCurrentProjection(engine),
+            reference_image_cache=cache,
+        )
+        assert service.reference_image(unknown.taxon_id) is None
+        reference = service.reference_image(allowed.taxon_id)
+        assert reference is not None
+        assert reference.content == b"normalized-webp"
+        assert reference.creator == "Fixture creator"
+        assert reference.license_code == "cc-by"
+        assert reference.provider_id == "licensed"
+        assert service.reference_image(allowed.taxon_id) is not None
+        assert cache.fetch_count == 1
+
+        timeout_taxon = repository.upsert(
+            _taxon("timeout", "plant", "Planta tarda", "Slow", image_license="cc0"),
+            observed_at=datetime.now(UTC),
+        )
+        cache.unavailable = True
+        assert service.reference_image(timeout_taxon.taxon_id) is None
+
+        changed_source = replace(
+            _taxon("licensed", "plant", "Planta aperta", "Open", image_license="cc-by"),
+            image_source_url="https://images.example.test/replacement.jpg",
+        )
+        refreshed = repository.upsert(changed_source, observed_at=datetime.now(UTC))
+        assert refreshed.image_local_filename is None
+        revoked = repository.upsert(
+            _taxon("licensed", "plant", "Planta aperta", "Open", image_license="none"),
+            observed_at=datetime.now(UTC),
+        )
+        assert revoked.image_source_url is None
+    finally:
+        engine.dispose()
+
+
+def test_taxon_upsert_fails_closed_if_persistence_cannot_be_read_back(
+    tmp_path: Path, monkeypatch
+) -> None:
+    engine = _database(tmp_path)
+    repository = SQLAlchemyTaxonRepository(engine)
+    monkeypatch.setattr(repository, "_get", lambda *_args, **_kwargs: None)
+    try:
+        with pytest.raises(RuntimeError, match="did not persist"):
+            repository.upsert(
+                _taxon("missing-readback", "plant", "Planta absens", "Absent"),
+                observed_at=datetime.now(UTC),
+            )
     finally:
         engine.dispose()

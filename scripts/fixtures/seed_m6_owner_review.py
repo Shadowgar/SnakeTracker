@@ -1004,7 +1004,11 @@ def seed_demo(
                 {
                     "idempotency_key": f"demo-enclosure-{key}",
                     "name": name,
-                    "enclosure_type": enclosure_type,
+                    "enclosure_type_choice": (
+                        "Glass terrarium"
+                        if enclosure_type in {"terrarium", "vivarium"}
+                        else enclosure_type
+                    ),
                     "notes": notes,
                 },
             )

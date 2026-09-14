@@ -11,11 +11,13 @@
     <input type="hidden" name="animal_type" value="{{ animal.animal_type }}">
     <div class="taxon-combobox" data-taxon-combobox data-group-field="animal_type">
       <label for="species-link-search">Search {{ animal.type_label }} species</label>
-      <input id="species-link-search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="species-link-results" aria-describedby="species-link-help species-link-status">
+      <div class="taxon-input-results">
+        <input id="species-link-search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="species-link-results" aria-describedby="species-link-help species-link-status">
+        <ul id="species-link-results" class="taxon-results" role="listbox" hidden data-taxon-results></ul>
+      </div>
       <input type="hidden" name="taxon_id" data-taxon-id required>
       <p id="species-link-help" class="field-help">Search common names, scientific names, or synonyms. Nothing is linked until you select a result and save.</p>
       <p id="species-link-status" class="field-help" role="status" aria-live="polite" data-taxon-status>{% if not directory_available %}Directory search is temporarily unavailable.{% endif %}</p>
-      <ul id="species-link-results" class="taxon-results" role="listbox" hidden data-taxon-results></ul>
     </div>
     <div class="form-actions"><a href="/animals/{{ animal.animal_id }}">Cancel</a><button type="submit">Save species link</button></div>
   </form>

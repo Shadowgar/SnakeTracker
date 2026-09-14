@@ -1,12 +1,18 @@
 <header class="animal-hero">
   <div class="animal-hero-main">
-    <a class="animal-hero-photo-link" href="/animals/{{ animal.animal_id }}/photo" aria-label="Change {{ animal.name }}'s profile photo">
+    <div class="animal-hero-photo-wrap">
+    <a class="animal-hero-photo-link" href="/animals/{{ animal.animal_id }}/photo" aria-label="{% if animal.photo_attachment_version_id %}Change{% else %}Add{% endif %} {{ animal.name }}'s own photo">
       {% if animal.photo_attachment_version_id %}
       <img class="animal-hero-photo" src="/attachments/{{ animal.photo_attachment_version_id }}" alt="Profile photo of {{ animal.name }}">
+      {% elif reference_taxon %}
+      <img class="animal-hero-photo" src="/directory/reference-images/{{ reference_taxon.taxon_id }}" alt="Species reference image for {{ reference_taxon.display_name }}">
       {% else %}
       <span class="animal-hero-photo animal-hero-placeholder fallback-{{ animal.animal_type }}" aria-hidden="true">{{ animal.name[0]|upper }}</span>
       {% endif %}
     </a>
+    <a class="animal-photo-action" href="/animals/{{ animal.animal_id }}/photo">{% if animal.photo_attachment_version_id %}Change photo{% elif reference_taxon %}Add my animal's photo{% else %}Add photo{% endif %}</a>
+    {% if reference_taxon and not animal.photo_attachment_version_id %}<small class="reference-attribution">Species reference image · <a href="{{ reference_taxon.image_license_url }}" rel="noreferrer">{{ reference_taxon.image_license_code|replace('-', ' ')|upper }}</a> · {{ reference_taxon.image_creator }} · <a href="{{ reference_taxon.source_url }}" rel="noreferrer">source</a></small>{% endif %}
+    </div>
     <div class="animal-hero-copy">
       <p class="page-kicker">{{ animal.type_label }} profile</p>
       <h1 id="page-title">{{ animal.name }}</h1>

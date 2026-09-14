@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ plant.label or plant.species_display }} · {{ enclosure.name }} · Care Keeper{% endblock %}
+{% block content %}
+<section class="form-page" aria-labelledby="page-title">
+  <header><p class="page-kicker">{{ enclosure.name }} · Plant</p><h1 id="page-title">{{ plant.label or plant.species_display }}</h1><p class="lede">{{ plant.species_display }}{% if plant.confirmed_scientific_name and plant.confirmed_common_name %} · <i>{{ plant.confirmed_scientific_name }}</i>{% endif %}</p></header>
+  <dl class="card detail-list">
+    <div><dt>Status</dt><dd>{{ plant.status|capitalize }}</dd></div>
+    <div><dt>Quantity</dt><dd>{{ plant.quantity }}</dd></div>
+    <div><dt>Date added</dt><dd>{{ plant.date_added.isoformat() if plant.date_added else 'Not recorded' }}</dd></div>
+    <div><dt>Directory identity</dt><dd>{% if plant.taxon_id %}<a href="/directory/{{ plant.taxon_id }}">View plant in directory</a>{% else %}Keeper-entered plant{% endif %}</dd></div>
+    <div><dt>Notes</dt><dd>{{ plant.notes or 'None' }}</dd></div>
+  </dl>
+  <div class="form-actions"><a href="/enclosures/{{ enclosure.enclosure_id }}">Back to enclosure</a>{% if plant.status == 'active' %}<a class="button-link secondary-link" href="/enclosures/{{ enclosure.enclosure_id }}/plants/{{ plant.enclosure_plant_id }}/edit">Edit plant</a><a class="button-link danger-link" href="/enclosures/{{ enclosure.enclosure_id }}/plants/{{ plant.enclosure_plant_id }}/remove">Remove plant</a>{% endif %}</div>
+</section>
+{% endblock %}

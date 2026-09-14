@@ -2,108 +2,538 @@
   "origin": "http://127.0.0.1:8096",
   "captures": [
     {
-      "label": "snake-autocomplete",
-      "viewport": "390x844",
-      "overflow": false
-    },
-    {
-      "label": "snake-autocomplete",
-      "viewport": "1440x900",
-      "overflow": false
-    },
-    {
-      "label": "lizard-autocomplete",
-      "viewport": "390x844",
-      "overflow": false
-    },
-    {
-      "label": "lizard-autocomplete",
-      "viewport": "1440x900",
-      "overflow": false
-    },
-    {
       "label": "spider-autocomplete",
       "viewport": "390x844",
-      "overflow": false
+      "overflow": false,
+      "autocompleteGeometry": {
+        "inputWidth": 338.390625,
+        "listWidth": 338.390625,
+        "topGap": 4,
+        "clearsNextField": true
+      }
     },
     {
       "label": "spider-autocomplete",
       "viewport": "1440x900",
-      "overflow": false
+      "overflow": false,
+      "autocompleteGeometry": {
+        "inputWidth": 726,
+        "listWidth": 726,
+        "topGap": 4,
+        "clearsNextField": true
+      }
+    },
+    {
+      "label": "new-animal-selected-species-reference-option",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "new-animal-selected-species-reference-option",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "morph-helper-text",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "morph-helper-text",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "genetics-helper-text",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "genetics-helper-text",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "more-identity-details",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "more-identity-details",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "animal-profile-species-reference",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "animal-profile-species-reference",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "animal-profile-reference-attribution",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "animal-profile-reference-attribution",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "add-my-animal-photo-action",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "add-my-animal-photo-action",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "animal-profile-personal-photo",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "animal-profile-personal-photo",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "morph-and-genetics-suggestions",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "morph-and-genetics-suggestions",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "new-animal-no-reference-image",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "new-animal-no-reference-image",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "snake-autocomplete",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": {
+        "inputWidth": 338.390625,
+        "listWidth": 338.390625,
+        "topGap": 4,
+        "clearsNextField": true
+      }
+    },
+    {
+      "label": "snake-autocomplete",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": {
+        "inputWidth": 726,
+        "listWidth": 726,
+        "topGap": 4,
+        "clearsNextField": true
+      }
+    },
+    {
+      "label": "lizard-autocomplete",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": {
+        "inputWidth": 338.390625,
+        "listWidth": 338.390625,
+        "topGap": 4,
+        "clearsNextField": true
+      }
+    },
+    {
+      "label": "lizard-autocomplete",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": {
+        "inputWidth": 726,
+        "listWidth": 726,
+        "topGap": 4,
+        "clearsNextField": true
+      }
     },
     {
       "label": "scorpion-autocomplete",
       "viewport": "390x844",
-      "overflow": false
+      "overflow": false,
+      "autocompleteGeometry": {
+        "inputWidth": 338.390625,
+        "listWidth": 338.390625,
+        "topGap": 4,
+        "clearsNextField": true
+      }
     },
     {
       "label": "scorpion-autocomplete",
       "viewport": "1440x900",
-      "overflow": false
+      "overflow": false,
+      "autocompleteGeometry": {
+        "inputWidth": 726,
+        "listWidth": 726,
+        "topGap": 4,
+        "clearsNextField": true
+      }
     },
     {
       "label": "manual-fallback",
       "viewport": "390x844",
-      "overflow": false
+      "overflow": false,
+      "autocompleteGeometry": null
     },
     {
       "label": "manual-fallback",
       "viewport": "1440x900",
-      "overflow": false
+      "overflow": false,
+      "autocompleteGeometry": null
     },
     {
       "label": "linked-animal-profile",
       "viewport": "390x844",
-      "overflow": false
+      "overflow": false,
+      "autocompleteGeometry": null
     },
     {
       "label": "linked-animal-profile",
       "viewport": "1440x900",
-      "overflow": false
+      "overflow": false,
+      "autocompleteGeometry": null
     },
     {
       "label": "legacy-link-species",
       "viewport": "390x844",
-      "overflow": false
+      "overflow": false,
+      "autocompleteGeometry": {
+        "inputWidth": 338.390625,
+        "listWidth": 338.390625,
+        "topGap": 4,
+        "clearsNextField": true
+      }
     },
     {
       "label": "legacy-link-species",
       "viewport": "1440x900",
-      "overflow": false
+      "overflow": false,
+      "autocompleteGeometry": {
+        "inputWidth": 726,
+        "listWidth": 726,
+        "topGap": 4,
+        "clearsNextField": true
+      }
+    },
+    {
+      "label": "legacy-animal-edit-preserved-values",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "legacy-animal-edit-preserved-values",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "add-enclosure-type-dropdown",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "add-enclosure-type-dropdown",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "enclosure-no-plants",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "enclosure-no-plants",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "custom-enclosure-type",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "custom-enclosure-type",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "legacy-enclosure-edit",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "legacy-enclosure-edit",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "add-plant",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "add-plant",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "plant-autocomplete",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": {
+        "inputWidth": 338.390625,
+        "listWidth": 338.390625,
+        "topGap": 4,
+        "clearsNextField": true
+      }
+    },
+    {
+      "label": "plant-autocomplete",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": {
+        "inputWidth": 726,
+        "listWidth": 726,
+        "topGap": 4,
+        "clearsNextField": true
+      }
+    },
+    {
+      "label": "plant-manual-fallback",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "plant-manual-fallback",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "enclosure-multiple-plants",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "enclosure-multiple-plants",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
     },
     {
       "label": "plant-search",
       "viewport": "390x844",
-      "overflow": false
+      "overflow": false,
+      "autocompleteGeometry": null
     },
     {
       "label": "plant-search",
       "viewport": "1440x900",
-      "overflow": false
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "global-animal-plant-directory",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "global-animal-plant-directory",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
     },
     {
       "label": "plant-detail",
       "viewport": "390x844",
-      "overflow": false
+      "overflow": false,
+      "autocompleteGeometry": null
     },
     {
       "label": "plant-detail",
       "viewport": "1440x900",
-      "overflow": false
+      "overflow": false,
+      "autocompleteGeometry": null
     },
     {
       "label": "no-results",
       "viewport": "390x844",
-      "overflow": false
+      "overflow": false,
+      "autocompleteGeometry": null
     },
     {
       "label": "no-results",
       "viewport": "1440x900",
-      "overflow": false
+      "overflow": false,
+      "autocompleteGeometry": null
     }
   ],
   "scans": [
     {
+      "label": "spider-autocomplete",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "spider-autocomplete",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "new-animal-selected-species-reference-option",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "new-animal-selected-species-reference-option",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "morph-helper-text",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "morph-helper-text",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "genetics-helper-text",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "genetics-helper-text",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "more-identity-details",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "more-identity-details",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "animal-profile-species-reference",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "animal-profile-species-reference",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "animal-profile-reference-attribution",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "animal-profile-reference-attribution",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "add-my-animal-photo-action",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "add-my-animal-photo-action",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "animal-profile-personal-photo",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "animal-profile-personal-photo",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "morph-and-genetics-suggestions",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "morph-and-genetics-suggestions",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "new-animal-no-reference-image",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "new-animal-no-reference-image",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
       "label": "snake-autocomplete",
       "viewport": "390x844",
       "violations": []
@@ -120,16 +550,6 @@
     },
     {
       "label": "lizard-autocomplete",
-      "viewport": "1440x900",
-      "violations": []
-    },
-    {
-      "label": "spider-autocomplete",
-      "viewport": "390x844",
-      "violations": []
-    },
-    {
-      "label": "spider-autocomplete",
       "viewport": "1440x900",
       "violations": []
     },
@@ -174,12 +594,112 @@
       "violations": []
     },
     {
+      "label": "legacy-animal-edit-preserved-values",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "legacy-animal-edit-preserved-values",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "add-enclosure-type-dropdown",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "add-enclosure-type-dropdown",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "enclosure-no-plants",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "enclosure-no-plants",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "custom-enclosure-type",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "custom-enclosure-type",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "legacy-enclosure-edit",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "legacy-enclosure-edit",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "add-plant",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "add-plant",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "plant-autocomplete",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "plant-autocomplete",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "plant-manual-fallback",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "plant-manual-fallback",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "enclosure-multiple-plants",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "enclosure-multiple-plants",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
       "label": "plant-search",
       "viewport": "390x844",
       "violations": []
     },
     {
       "label": "plant-search",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "global-animal-plant-directory",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "global-animal-plant-directory",
       "viewport": "1440x900",
       "violations": []
     },

@@ -10,7 +10,13 @@ from uuid import UUID, uuid4
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine, RowMapping
 
-from snaketracker.application.species_directory import LinkedTaxon, ProviderTaxon, TaxonRecord
+from snaketracker.application.species_directory import (
+    CachedReferenceImage,
+    IdentitySuggestions,
+    LinkedTaxon,
+    ProviderTaxon,
+    TaxonRecord,
+)
 from snaketracker.domains.animals.contracts import AnimalTaxonLinkedV1
 from snaketracker.platform.events.envelope import DomainEvent
 
@@ -190,6 +196,54 @@ class SQLAlchemyTaxonRepository:
                 stream_version=int(row["stream_version"]),
             )
 
+    def mark_image_cached(self, taxon_id: UUID, image: CachedReferenceImage) -> None:
+        with self._engine.begin() as connection:
+            changed = connection.execute(
+                text(
+                    "UPDATE taxon_images SET local_filename=:filename,"
+                    "local_media_type=:media_type,local_byte_size=:byte_size,"
+                    "local_sha256=:sha256,cached_at=:cached_at WHERE taxon_id=:taxon_id"
+                ),
+                {
+                    "taxon_id": str(taxon_id),
+                    "filename": image.filename,
+                    "media_type": image.media_type,
+                    "byte_size": image.byte_size,
+                    "sha256": image.sha256,
+                    "cached_at": image.cached_at.isoformat(timespec="microseconds"),
+                },
+            ).rowcount
+        if changed != 1:
+            raise RuntimeError("Reference image cache metadata could not be retained.")
+
+    def identity_suggestions(self, household_id: UUID, taxon_id: UUID) -> IdentitySuggestions:
+        with self._engine.connect() as connection:
+            rows = connection.execute(
+                text(
+                    "SELECT a.morph,a.genetics FROM animal_taxon_current link "
+                    "JOIN animal_current a ON a.household_id=link.household_id "
+                    "AND a.animal_id=link.animal_id WHERE link.household_id=:household_id "
+                    "AND link.taxon_id=:taxon_id ORDER BY a.name COLLATE NOCASE,a.animal_id"
+                ),
+                {"household_id": str(household_id), "taxon_id": str(taxon_id)},
+            ).all()
+        return IdentitySuggestions(
+            morphs=tuple(
+                dict.fromkeys(
+                    str(row.morph).strip()
+                    for row in rows
+                    if row.morph is not None and str(row.morph).strip()
+                )
+            ),
+            genetics=tuple(
+                dict.fromkeys(
+                    str(row.genetics).strip()
+                    for row in rows
+                    if row.genetics is not None and str(row.genetics).strip()
+                )
+            ),
+        )
+
     def apply(self, transaction: object, events: tuple[DomainEvent, ...]) -> None:
         connection = cast(Connection, transaction)
         for event in events:
@@ -234,7 +288,11 @@ class SQLAlchemyTaxonRepository:
                     "SELECT t.*,m.provider,m.provider_id,m.source_url,m.retrieved_at,"
                     "m.refreshed_at AS provider_refreshed_at,i.source_url AS image_source_url,"
                     "i.creator AS image_creator,i.attribution AS image_attribution,"
-                    "i.license_code AS image_license_code,i.license_url AS image_license_url "
+                    "i.license_code AS image_license_code,i.license_url AS image_license_url,"
+                    "i.local_filename AS image_local_filename,"
+                    "i.local_media_type AS image_local_media_type,"
+                    "i.local_byte_size AS image_local_byte_size,"
+                    "i.local_sha256 AS image_local_sha256,i.cached_at AS image_cached_at "
                     "FROM taxa t JOIN taxon_provider_mappings m ON m.taxon_id=t.taxon_id "
                     "LEFT JOIN taxon_images i ON i.taxon_id=t.taxon_id "
                     "WHERE t.taxon_id=:taxon_id ORDER BY m.provider LIMIT 1"
@@ -266,7 +324,15 @@ class SQLAlchemyTaxonRepository:
             candidate.image_license_url,
         )
         if not all(fields) or candidate.image_license_code not in IMAGE_LICENSES:
+            connection.execute(
+                text("DELETE FROM taxon_images WHERE taxon_id=:taxon_id"),
+                {"taxon_id": str(taxon_id)},
+            )
             return
+        previous_source = connection.execute(
+            text("SELECT source_url FROM taxon_images WHERE taxon_id=:taxon_id"),
+            {"taxon_id": str(taxon_id)},
+        ).scalar_one_or_none()
         connection.execute(
             text(
                 "INSERT INTO taxon_images "
@@ -285,6 +351,15 @@ class SQLAlchemyTaxonRepository:
                 "license_url": candidate.image_license_url,
             },
         )
+        if previous_source is not None and previous_source != candidate.image_source_url:
+            connection.execute(
+                text(
+                    "UPDATE taxon_images SET local_filename=NULL,local_media_type=NULL,"
+                    "local_byte_size=NULL,local_sha256=NULL,cached_at=NULL "
+                    "WHERE taxon_id=:taxon_id"
+                ),
+                {"taxon_id": str(taxon_id)},
+            )
 
 
 def _record(
@@ -319,6 +394,15 @@ def _record(
         image_attribution=_optional(row["image_attribution"]),
         image_license_code=_optional(row["image_license_code"]),
         image_license_url=_optional(row["image_license_url"]),
+        image_local_filename=_optional(row["image_local_filename"]),
+        image_local_media_type=_optional(row["image_local_media_type"]),
+        image_local_byte_size=(
+            int(row["image_local_byte_size"]) if row["image_local_byte_size"] is not None else None
+        ),
+        image_local_sha256=_optional(row["image_local_sha256"]),
+        image_cached_at=(
+            _datetime(row["image_cached_at"]) if row["image_cached_at"] is not None else None
+        ),
     )
 
 

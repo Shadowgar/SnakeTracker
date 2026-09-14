@@ -21,14 +21,31 @@
     <label>Name<input name="name" value="{{ values.name|default('') }}" required autocomplete="off"></label>
     <div class="taxon-combobox" data-taxon-combobox data-group-field="animal_type">
       <label for="species-search">Species</label>
-      <input id="species-search" name="species" value="{{ values.species|default('') }}" required
-        autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"
-        aria-controls="species-results" aria-describedby="species-help species-status">
+      <div class="taxon-input-results">
+        <input id="species-search" name="species" value="{{ values.species|default('') }}" required
+          autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"
+          aria-controls="species-results" aria-describedby="species-help species-status">
+        <ul id="species-results" class="taxon-results" role="listbox" hidden data-taxon-results></ul>
+      </div>
       <input type="hidden" name="taxon_id" value="{{ values.taxon_id|default('') }}" data-taxon-id>
       <p id="species-help" class="field-help">Type at least 2 letters to search by common or scientific name. Can't find it? Keep your species text and create the Animal manually.</p>
       <p id="species-status" class="field-help" role="status" aria-live="polite" data-taxon-status>{% if not directory_available %}Directory search is unavailable; manual species entry still works.{% endif %}</p>
-      <ul id="species-results" class="taxon-results" role="listbox" hidden data-taxon-results></ul>
     </div>
+    <section class="reference-photo-choice" data-reference-photo aria-labelledby="reference-photo-title">
+      <div class="reference-photo-preview">
+        <img data-reference-photo-image src="" alt="" hidden>
+        <span data-reference-photo-placeholder class="reference-photo-placeholder fallback-animal" aria-hidden="true">◇</span>
+      </div>
+      <div>
+        <h2 id="reference-photo-title">Profile picture</h2>
+        <p data-reference-photo-copy class="field-help">Select a Directory species to check for a licensed reference image. You can add your animal's own photo after creation.</p>
+        <fieldset data-reference-photo-options hidden>
+          <legend>Picture choice</legend>
+          <label><input type="radio" name="photo_preference" value="species_reference" {% if values.photo_preference|default('none') == 'species_reference' %}checked{% endif %}> Use species reference image for now</label>
+          <label><input type="radio" name="photo_preference" value="none" {% if values.photo_preference|default('none') != 'species_reference' %}checked{% endif %}> No photo for now</label>
+        </fieldset>
+      </div>
+    </section>
     <label>Sex
       <select name="sex">
         <option value="">Not recorded</option>
@@ -37,12 +54,23 @@
         {% endfor %}
       </select>
     </label>
-    <label>Morph<input name="morph" value="{{ values.morph|default('') }}"></label>
-    <label>Genetics<input name="genetics" value="{{ values.genetics|default('') }}"></label>
-    <label>Birth or hatch date<input name="birth_hatch_date" type="date" value="{{ values.birth_hatch_date|default('') }}"></label>
-    <label>Acquisition date<input name="acquisition_date" type="date" value="{{ values.acquisition_date|default('') }}"></label>
-    <label>Breeder or source<input name="breeder_source" value="{{ values.breeder_source|default('') }}"></label>
-    <label>Notes<textarea name="notes" rows="4">{{ values.notes|default('') }}</textarea></label>
+    <details class="form-advanced" {% if values.morph|default('') or values.genetics|default('') %}open{% endif %}>
+      <summary>More identity details</summary>
+      <div class="form-stack">
+        <label>Morph / variant<input name="morph" value="{{ values.morph|default('') }}" list="morph-suggestions" data-morph-field autocomplete="off"></label>
+        <p class="field-help">Optional color, pattern, locality, or named variant within this species. <span data-morph-example>Examples for snakes: Banana, Pastel, Albino, Piebald.</span> Nothing is inferred from species.</p>
+        <datalist id="morph-suggestions" data-morph-suggestions></datalist>
+        <div class="identity-suggestions" data-morph-suggestion-chips hidden></div>
+        <label>Genetics / lineage<input name="genetics" value="{{ values.genetics|default('') }}" list="genetics-suggestions" data-genetics-field autocomplete="off"></label>
+        <p class="field-help">Optional known genetic traits, hets, parentage, or lineage for this individual. Examples: 100% het Clown, Pastel het Pied. Care Keeper never derives this from species.</p>
+        <datalist id="genetics-suggestions" data-genetics-suggestions></datalist>
+        <div class="identity-suggestions" data-genetics-suggestion-chips hidden></div>
+        <label>Birth or hatch date<input name="birth_hatch_date" type="date" value="{{ values.birth_hatch_date|default('') }}"></label>
+        <label>Acquisition date<input name="acquisition_date" type="date" value="{{ values.acquisition_date|default('') }}"></label>
+        <label>Breeder or source<input name="breeder_source" value="{{ values.breeder_source|default('') }}"></label>
+        <label>Notes<textarea name="notes" rows="4">{{ values.notes|default('') }}</textarea></label>
+      </div>
+    </details>
     <div class="form-actions"><a href="/home">Cancel</a><button type="submit">Create animal</button></div>
   </form>
 </section>
