@@ -43,6 +43,10 @@ APPROVED_AMENDMENT_PATHS = {
     "docs/security/security-architecture.md",
     "docs/security/threat-model.md",
     "docs/ux/information-architecture.md",
+    "docs/ux/owner-design/README.md",
+    "docs/ux/owner-design/care-keeper-owner-design-board.png",
+    "docs/ux/owner-design/reference-image-provider-policy.md",
+    "docs/ux/owner-design/visual-fidelity-audit.md",
 }
 PROTECTED_PREFIXES = (
     "docs/adr/",
