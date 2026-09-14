@@ -19,6 +19,7 @@
     const referencePlaceholder = referenceRoot?.querySelector("[data-reference-photo-placeholder]");
     const referenceCopy = referenceRoot?.querySelector("[data-reference-photo-copy]");
     const referenceOptions = referenceRoot?.querySelector("[data-reference-photo-options]");
+    const referencePlaceholderInitial = referenceRoot?.querySelector("[data-reference-photo-placeholder-initial]");
     const morphSuggestions = form.querySelector("[data-morph-suggestions]");
     const geneticsSuggestions = form.querySelector("[data-genetics-suggestions]");
     const morphSuggestionChips = form.querySelector("[data-morph-suggestion-chips]");
@@ -26,6 +27,7 @@
     const morphField = form.querySelector("[data-morph-field]");
     const geneticsField = form.querySelector("[data-genetics-field]");
     const morphExample = form.querySelector("[data-morph-example]");
+    const nameInput = form.elements.namedItem("name");
 
     const setIdentityOptions = (target, values) => {
       if (!target) return;
@@ -78,7 +80,16 @@
         // Suggestions are optional; free text remains available.
       }
     };
-    const resetReferencePhoto = () => {
+    const updateReferencePlaceholder = () => {
+      if (!referencePlaceholder) return;
+      const group = groupInput?.value || "animal";
+      referencePlaceholder.className = `reference-photo-placeholder fallback-${group}`;
+      if (referencePlaceholderInitial) {
+        const name = nameInput instanceof HTMLInputElement ? nameInput.value.trim() : "";
+        referencePlaceholderInitial.textContent = name ? name.charAt(0).toUpperCase() : "A";
+      }
+    };
+    const resetReferencePhoto = (copy = "Reference images are available when a supported Directory species is linked. You can add a photo of your animal after creation.") => {
       if (!referenceRoot) return;
       if (referenceImage) {
         referenceImage.hidden = true;
@@ -86,14 +97,18 @@
         referenceImage.alt = "";
       }
       if (referencePlaceholder) referencePlaceholder.hidden = false;
+      updateReferencePlaceholder();
       if (referenceOptions) referenceOptions.hidden = true;
-      if (referenceCopy) referenceCopy.textContent = "No licensed species reference image is selected. You can add your animal's own photo after creation.";
+      if (referenceCopy) referenceCopy.textContent = copy;
       const noPhoto = form.querySelector('input[name="photo_preference"][value="none"]');
       if (noPhoto) noPhoto.checked = true;
     };
+    const showUnavailableReferencePhoto = () => resetReferencePhoto(
+      "No licensed species reference image is available for this Directory record. You can add a photo of your animal after creation."
+    );
     const showReferencePhoto = (row) => {
       if (!referenceRoot || row.dataset.referenceImageAvailable !== "true") {
-        resetReferencePhoto();
+        showUnavailableReferencePhoto();
         return;
       }
       if (referenceImage) {
@@ -103,9 +118,9 @@
       }
       if (referencePlaceholder) referencePlaceholder.hidden = true;
       if (referenceOptions) referenceOptions.hidden = false;
-      if (referenceCopy) referenceCopy.textContent = `Species reference image · ${(row.dataset.imageLicenseCode || "").replaceAll("-", " ").toUpperCase()} · ${row.dataset.imageCreator || "attribution available"}. This is a general photo of the species, not your individual animal.`;
+      if (referenceCopy) referenceCopy.textContent = `Species reference image available · ${(row.dataset.imageLicenseCode || "").replaceAll("-", " ").toUpperCase()} · ${row.dataset.imageCreator || "attribution available"}. This is a general photo of the species, not your individual animal.`;
     };
-    referenceImage?.addEventListener("error", resetReferencePhoto);
+    referenceImage?.addEventListener("error", showUnavailableReferencePhoto);
 
     const updateMorphExample = () => {
       if (!morphExample) return;
@@ -240,6 +255,10 @@
       close();
       if (input.value.trim().length >= 2) search();
     });
+    if (nameInput instanceof HTMLInputElement) {
+      nameInput.addEventListener("input", updateReferencePlaceholder);
+    }
+    updateReferencePlaceholder();
     updateMorphExample();
   });
 })();

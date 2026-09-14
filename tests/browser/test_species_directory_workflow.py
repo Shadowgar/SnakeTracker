@@ -107,6 +107,35 @@ def _cache(
     )
 
 
+def _install_reference_image(
+    client: TestClient, tmp_path: Path, taxon: TaxonRecord, *, color: str
+) -> bytes:
+    image_output = BytesIO()
+    Image.new("RGB", (80, 60), color).save(image_output, format="WEBP")
+    image_content = image_output.getvalue()
+    reference_root = tmp_path / "reference-images"
+    reference_root.mkdir(exist_ok=True)
+    reference_filename = f"{taxon.taxon_id}.webp"
+    (reference_root / reference_filename).write_bytes(image_content)
+    application = cast(FastAPI, client.app)
+    with application.state.database_engine.begin() as connection:
+        connection.execute(
+            text(
+                "UPDATE taxon_images SET local_filename=:filename,"
+                "local_media_type='image/webp',local_byte_size=:byte_size,"
+                "local_sha256=:sha256,cached_at=:cached_at WHERE taxon_id=:taxon_id"
+            ),
+            {
+                "filename": reference_filename,
+                "byte_size": len(image_content),
+                "sha256": hashlib.sha256(image_content).hexdigest(),
+                "cached_at": datetime.now(UTC).isoformat(),
+                "taxon_id": str(taxon.taxon_id),
+            },
+        )
+    return image_content
+
+
 def test_directory_animal_selection_manual_fallback_and_legacy_link(tmp_path: Path) -> None:
     with _client(tmp_path) as client:
         _setup(client)
@@ -121,31 +150,22 @@ def test_directory_animal_selection_manual_fallback_and_legacy_link(tmp_path: Pa
         unlicensed = _cache(
             client, "snake-unlicensed", "snake", "Python bivittatus", "Burmese Python"
         )
-        plant = _cache(client, "plant-1", "plant", "Epipremnum aureum", "Golden Pothos")
+        plant = _cache(
+            client,
+            "plant-1",
+            "plant",
+            "Epipremnum aureum",
+            "Golden Pothos",
+            image_license="cc-by",
+        )
+        plant_without_image = _cache(
+            client, "plant-2", "plant", "Nephrolepis exaltata", "Boston Fern"
+        )
 
-        image_output = BytesIO()
-        Image.new("RGB", (80, 60), "brown").save(image_output, format="WEBP")
-        image_content = image_output.getvalue()
-        reference_root = tmp_path / "reference-images"
-        reference_root.mkdir()
+        image_content = _install_reference_image(client, tmp_path, snake, color="brown")
+        plant_image_content = _install_reference_image(client, tmp_path, plant, color="green")
         reference_filename = f"{snake.taxon_id}.webp"
-        (reference_root / reference_filename).write_bytes(image_content)
         application = cast(FastAPI, client.app)
-        with application.state.database_engine.begin() as connection:
-            connection.execute(
-                text(
-                    "UPDATE taxon_images SET local_filename=:filename,"
-                    "local_media_type='image/webp',local_byte_size=:byte_size,"
-                    "local_sha256=:sha256,cached_at=:cached_at WHERE taxon_id=:taxon_id"
-                ),
-                {
-                    "filename": reference_filename,
-                    "byte_size": len(image_content),
-                    "sha256": hashlib.sha256(image_content).hexdigest(),
-                    "cached_at": datetime.now(UTC).isoformat(),
-                    "taxon_id": str(snake.taxon_id),
-                },
-            )
 
         form = client.get("/animals/new")
         assert 'role="combobox"' in form.text
@@ -156,6 +176,12 @@ def test_directory_animal_selection_manual_fallback_and_legacy_link(tmp_path: Pa
         assert "Nothing is inferred from species" in form.text
         assert "Care Keeper never derives this from species" in form.text
         assert "More identity details" in form.text
+        assert "◇" not in form.text
+        assert (
+            "Reference images are available when a supported Directory species is linked"
+            in form.text
+        )
+        assert "/static/species-directory.js?v=m66-a-owner-c3" in form.text
         suggestions = client.get("/api/directory/search?group=snake&q=ball+p")
         assert suggestions.status_code == 200
         assert suggestions.json()["records"][0]["scientific_name"] == "Python regius"
@@ -372,5 +398,76 @@ def test_directory_animal_selection_manual_fallback_and_legacy_link(tmp_path: Pa
         detail = client.get(f"/directory/{plant.taxon_id}")
         assert "Epipremnum aureum" in detail.text
         assert "Araceae" in detail.text
+        assert f"/directory/reference-images/{plant.taxon_id}" in detail.text
+        assert "Reference photo" in detail.text
+        assert "Jane Doe" in detail.text
+        plant_image = client.get(f"/directory/reference-images/{plant.taxon_id}")
+        assert plant_image.content == plant_image_content
         assert "Reference directory" in detail.text
         assert "Add keeper-owned plants from an Enclosure" in detail.text
+        detail_without_image = client.get(f"/directory/{plant_without_image.taxon_id}")
+        assert "plant-placeholder" in detail_without_image.text
+        missing_plant_image_path = f"/directory/reference-images/{plant_without_image.taxon_id}"
+        assert missing_plant_image_path not in detail_without_image.text
+
+        enclosure_form = client.get("/enclosures/new")
+        enclosure_created = client.post(
+            "/enclosures",
+            data={
+                "csrf_token": _csrf(enclosure_form.text),
+                "idempotency_key": "directory-plant-image-enclosure",
+                "name": "Image review enclosure",
+                "enclosure_type_choice": "Glass terrarium",
+                "custom_enclosure_type": "",
+                "notes": "",
+            },
+            follow_redirects=False,
+        )
+        assert enclosure_created.status_code == 303
+        enclosure_url = enclosure_created.headers["location"]
+        plant_form = client.get(f"{enclosure_url}/plants/new")
+        linked_plant = client.post(
+            f"{enclosure_url}/plants",
+            data={
+                "csrf_token": _csrf(plant_form.text),
+                "idempotency_key": "directory-plant-image-linked",
+                "taxon_id": str(plant.taxon_id),
+                "manual_species": "Golden Pothos",
+                "label": "Pothos by the hide",
+                "quantity": "2",
+                "date_added": "",
+                "notes": "",
+            },
+            follow_redirects=False,
+        )
+        assert linked_plant.status_code == 303
+        linked_detail = client.get(linked_plant.headers["location"])
+        assert f"/directory/reference-images/{plant.taxon_id}" in linked_detail.text
+        assert "Species reference" in linked_detail.text
+        assert "Jane Doe" in linked_detail.text
+
+        manual_plant = client.post(
+            f"{enclosure_url}/plants",
+            data={
+                "csrf_token": _csrf(plant_form.text),
+                "idempotency_key": "directory-plant-image-manual",
+                "taxon_id": "",
+                "manual_species": "Unidentified fern",
+                "label": "",
+                "quantity": "1",
+                "date_added": "",
+                "notes": "",
+            },
+            follow_redirects=False,
+        )
+        assert manual_plant.status_code == 303
+        manual_detail = client.get(manual_plant.headers["location"])
+        assert "plant-placeholder" in manual_detail.text
+        assert "/directory/reference-images/" not in manual_detail.text
+
+        roster = client.get(enclosure_url)
+        assert "plant-roster-media" in roster.text
+        assert f"/directory/reference-images/{plant.taxon_id}" in roster.text
+        assert "Pothos by the hide" in roster.text
+        assert "Qty 2" in roster.text
+        assert "Unidentified fern" in roster.text

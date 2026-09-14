@@ -1,8 +1,16 @@
 {% extends "base.html" %}
+{% from "icons.html" import icon %}
 {% block title %}{{ plant.label or plant.species_display }} · {{ enclosure.name }} · Care Keeper{% endblock %}
 {% block content %}
 <section class="form-page" aria-labelledby="page-title">
-  <header><p class="page-kicker">{{ enclosure.name }} · Plant</p><h1 id="page-title">{{ plant.label or plant.species_display }}</h1><p class="lede">{{ plant.species_display }}{% if plant.confirmed_scientific_name and plant.confirmed_common_name %} · <i>{{ plant.confirmed_scientific_name }}</i>{% endif %}</p></header>
+  <header class="plant-profile-identity">
+    {% if reference_taxon %}
+    <span class="taxon-reference-media"><img src="/directory/reference-images/{{ reference_taxon.taxon_id }}" alt="Species reference image for {{ reference_taxon.display_name }}"><small class="reference-attribution">Species reference · <a href="{{ reference_taxon.image_license_url }}" rel="noopener noreferrer">{{ reference_taxon.image_license_code|replace('-', ' ')|upper }}</a> · {{ reference_taxon.image_creator }} · <a href="{{ reference_taxon.source_url }}" rel="noopener noreferrer">source</a></small></span>
+    {% else %}
+    <span class="taxon-placeholder plant-placeholder" aria-hidden="true">{{ icon('plant') }}</span>
+    {% endif %}
+    <div><p class="page-kicker">{{ enclosure.name }} · Plant</p><h1 id="page-title">{{ plant.label or plant.species_display }}</h1><p class="lede">{{ plant.species_display }}{% if plant.confirmed_scientific_name and plant.confirmed_common_name %} · <i>{{ plant.confirmed_scientific_name }}</i>{% endif %}</p>{% if reference_taxon %}<span class="status-badge">Species reference</span>{% endif %}</div>
+  </header>
   <dl class="card detail-list">
     <div><dt>Status</dt><dd>{{ plant.status|capitalize }}</dd></div>
     <div><dt>Quantity</dt><dd>{{ plant.quantity }}</dd></div>

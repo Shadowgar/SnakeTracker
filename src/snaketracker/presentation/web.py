@@ -177,6 +177,7 @@ from snaketracker.application.species_directory import (
     DirectoryValidationError,
     LinkAnimalTaxonCommand,
     SpeciesDirectoryService,
+    TaxonRecord,
 )
 from snaketracker.application.suggestion_policy import CareWindowEstimate
 from snaketracker.application.weight_measurements import (
@@ -1193,6 +1194,22 @@ def create_web_router(
             rows.append({"item": item, "cost_status": cost_status})
         return tuple(rows)
 
+    def available_plant_reference_taxon(taxon_id: UUID | None) -> TaxonRecord | None:
+        if taxon_id is None or directory_service is None:
+            return None
+        taxon = directory_service.get(taxon_id)
+        if taxon is None or taxon.supported_group != "plant":
+            return None
+        return taxon if directory_service.reference_image(taxon_id) is not None else None
+
+    def available_plant_reference_taxa(plants: tuple[Any, ...]) -> dict[UUID, TaxonRecord]:
+        references: dict[UUID, TaxonRecord] = {}
+        for plant in plants:
+            taxon = available_plant_reference_taxon(plant.taxon_id)
+            if taxon is not None:
+                references[taxon.taxon_id] = taxon
+        return references
+
     async def protected_form(
         request: Request,
         *,
@@ -2064,7 +2081,17 @@ def create_web_router(
                     "message": "Return to Directory and search again.",
                 },
             )
-        return protected_page(request, "directory_detail.html", principal, context={"taxon": taxon})
+        reference_taxon = (
+            await run_in_threadpool(available_plant_reference_taxon, taxon.taxon_id)
+            if taxon.supported_group == "plant"
+            else None
+        )
+        return protected_page(
+            request,
+            "directory_detail.html",
+            principal,
+            context={"taxon": taxon, "reference_taxon": reference_taxon},
+        )
 
     @router.get("/api/directory/search", response_class=JSONResponse)
     async def directory_search_api(request: Request, group: str, q: str) -> Response:
@@ -4685,6 +4712,8 @@ def create_web_router(
                 status_code=404,
             )
         assert enclosure_uuid is not None
+        plants = enclosure_service.plants(principal.household_id, enclosure_uuid)
+        plant_reference_taxa = await run_in_threadpool(available_plant_reference_taxa, plants)
         return protected_page(
             request,
             "enclosure_profile.html",
@@ -4692,7 +4721,8 @@ def create_web_router(
             context={
                 "enclosure": profile,
                 "occupants": enclosure_service.occupants(principal.household_id, enclosure_uuid),
-                "plants": enclosure_service.plants(principal.household_id, enclosure_uuid),
+                "plants": plants,
+                "plant_reference_taxa": plant_reference_taxa,
                 "enclosure_statuses": tuple(sorted(ENCLOSURE_STATUSES)),
             },
         )
@@ -4862,11 +4892,16 @@ def create_web_router(
             plant = None
         if enclosure is None or plant is None:
             return _not_found(request, "Enclosure plant not found")
+        reference_taxon = await run_in_threadpool(available_plant_reference_taxon, plant.taxon_id)
         return protected_page(
             request,
             "enclosure_plant_detail.html",
             principal,
-            context={"enclosure": enclosure, "plant": plant},
+            context={
+                "enclosure": enclosure,
+                "plant": plant,
+                "reference_taxon": reference_taxon,
+            },
         )
 
     @router.get("/enclosures/{enclosure_id}/plants/{plant_id}/edit", response_class=HTMLResponse)

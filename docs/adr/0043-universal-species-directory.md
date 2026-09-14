@@ -71,6 +71,18 @@ Morph/variant and genetics/lineage remain free-text individual facts. Same-house
 same Care Keeper taxon may be offered as optional suggestions, but taxonomy never selects, infers,
 normalizes, or erases them.
 
+A linked Enclosure Plant does not use the Animal-specific opt-in preference. When its global taxon
+has an eligible, verified local reference image, Plant Directory detail, Enclosure Plant detail,
+and the compact Enclosure roster may display that image automatically with attribution and a clear
+species-reference label. Manual or image-ineligible plants use the Care Keeper plant placeholder.
+This remains global reference imagery and is not evidence that the pictured specimen is the
+keeper's individual plant.
+
+Keeper-facing static assets that implement this flow use a release-specific URL key. The PWA shell
+uses the same asset generation, installs it before activation, takes control without requiring a
+manual cache clear, and deletes older Care Keeper shell generations. Cache-first delivery is safe
+only for URLs whose key changes when their bytes or behavior change.
+
 External taxonomy is reference knowledge only. It cannot create care guidance, husbandry facts,
 schedules, reminders, or household decisions. Those boundaries require later M6.6 tranches and
 keeper confirmation.
@@ -91,6 +103,8 @@ schedules, Today, Calendar, or reminders.
   exposing a provider URL to the browser.
 - Individual-photo attachments remain household-isolated and take display priority over global
   reference imagery.
+- Linked plants gain compact, attributable visual identity without a new downloader, attachment
+  model, household preference event, or CSP allowance.
 - Taxonomic change is auditable without making provider history household event noise.
 - A provider migration does not require changing Animal links or making its identifiers canonical.
 - Live discovery can be less complete than a paid/specialist source; that is preferable to unclear

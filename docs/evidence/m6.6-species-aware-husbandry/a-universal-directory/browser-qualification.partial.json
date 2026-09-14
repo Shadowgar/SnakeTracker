@@ -1,13 +1,39 @@
 {
   "origin": "http://127.0.0.1:8096",
+  "cacheUpgrade": {
+    "before": [
+      "snaketracker-shell-v5"
+    ],
+    "after": {
+      "caches": [
+        "snaketracker-shell-m66-a-owner-c3"
+      ],
+      "serviceWorkerUrl": "http://127.0.0.1:8096/service-worker.js?v=m66-a-owner-c3",
+      "stylesheetUrl": "/static/app.css?v=m66-a-owner-c3",
+      "stylesheetSha256": "0304f9ddf9a2fc21971c7be56f05f912ecedf84f5f29e7e969d64e60dfd8f0e2"
+    }
+  },
   "captures": [
     {
       "label": "spider-autocomplete",
       "viewport": "390x844",
       "overflow": false,
       "autocompleteGeometry": {
+        "position": "static",
         "inputWidth": 338.390625,
         "listWidth": 338.390625,
+        "input": {
+          "left": 25.796875,
+          "right": 364.1875,
+          "top": 420.734375,
+          "bottom": 469.765625
+        },
+        "list": {
+          "left": 25.796875,
+          "right": 364.1875,
+          "top": 473.765625,
+          "bottom": 580.5
+        },
         "topGap": 4,
         "clearsNextField": true
       }
@@ -17,11 +43,36 @@
       "viewport": "1440x900",
       "overflow": false,
       "autocompleteGeometry": {
+        "position": "static",
         "inputWidth": 726,
         "listWidth": 726,
+        "input": {
+          "left": 325,
+          "right": 1051,
+          "top": 458.4375,
+          "bottom": 507.46875
+        },
+        "list": {
+          "left": 325,
+          "right": 1051,
+          "top": 511.46875,
+          "bottom": 618.203125
+        },
         "topGap": 4,
         "clearsNextField": true
       }
+    },
+    {
+      "label": "selected-species-after-list-closes",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "selected-species-after-list-closes",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
     },
     {
       "label": "new-animal-selected-species-reference-option",
@@ -148,8 +199,21 @@
       "viewport": "390x844",
       "overflow": false,
       "autocompleteGeometry": {
+        "position": "static",
         "inputWidth": 338.390625,
         "listWidth": 338.390625,
+        "input": {
+          "left": 25.796875,
+          "right": 364.1875,
+          "top": 420.734375,
+          "bottom": 469.765625
+        },
+        "list": {
+          "left": 25.796875,
+          "right": 364.1875,
+          "top": 473.765625,
+          "bottom": 580.5
+        },
         "topGap": 4,
         "clearsNextField": true
       }
@@ -159,8 +223,21 @@
       "viewport": "1440x900",
       "overflow": false,
       "autocompleteGeometry": {
+        "position": "static",
         "inputWidth": 726,
         "listWidth": 726,
+        "input": {
+          "left": 325,
+          "right": 1051,
+          "top": 458.4375,
+          "bottom": 507.46875
+        },
+        "list": {
+          "left": 325,
+          "right": 1051,
+          "top": 511.46875,
+          "bottom": 618.203125
+        },
         "topGap": 4,
         "clearsNextField": true
       }
@@ -170,8 +247,21 @@
       "viewport": "390x844",
       "overflow": false,
       "autocompleteGeometry": {
+        "position": "static",
         "inputWidth": 338.390625,
         "listWidth": 338.390625,
+        "input": {
+          "left": 25.796875,
+          "right": 364.1875,
+          "top": 420.734375,
+          "bottom": 469.765625
+        },
+        "list": {
+          "left": 25.796875,
+          "right": 364.1875,
+          "top": 473.765625,
+          "bottom": 777.765625
+        },
         "topGap": 4,
         "clearsNextField": true
       }
@@ -181,8 +271,21 @@
       "viewport": "1440x900",
       "overflow": false,
       "autocompleteGeometry": {
+        "position": "static",
         "inputWidth": 726,
         "listWidth": 726,
+        "input": {
+          "left": 325,
+          "right": 1051,
+          "top": 458.4375,
+          "bottom": 507.46875
+        },
+        "list": {
+          "left": 325,
+          "right": 1051,
+          "top": 511.46875,
+          "bottom": 815.46875
+        },
         "topGap": 4,
         "clearsNextField": true
       }
@@ -192,8 +295,21 @@
       "viewport": "390x844",
       "overflow": false,
       "autocompleteGeometry": {
+        "position": "static",
         "inputWidth": 338.390625,
         "listWidth": 338.390625,
+        "input": {
+          "left": 25.796875,
+          "right": 364.1875,
+          "top": 420.734375,
+          "bottom": 469.765625
+        },
+        "list": {
+          "left": 25.796875,
+          "right": 364.1875,
+          "top": 473.765625,
+          "bottom": 580.5
+        },
         "topGap": 4,
         "clearsNextField": true
       }
@@ -203,8 +319,21 @@
       "viewport": "1440x900",
       "overflow": false,
       "autocompleteGeometry": {
+        "position": "static",
         "inputWidth": 726,
         "listWidth": 726,
+        "input": {
+          "left": 325,
+          "right": 1051,
+          "top": 458.4375,
+          "bottom": 507.46875
+        },
+        "list": {
+          "left": 325,
+          "right": 1051,
+          "top": 511.46875,
+          "bottom": 618.203125
+        },
         "topGap": 4,
         "clearsNextField": true
       }
@@ -238,8 +367,21 @@
       "viewport": "390x844",
       "overflow": false,
       "autocompleteGeometry": {
+        "position": "static",
         "inputWidth": 338.390625,
         "listWidth": 338.390625,
+        "input": {
+          "left": 25.796875,
+          "right": 364.1875,
+          "top": 229.671875,
+          "bottom": 278.703125
+        },
+        "list": {
+          "left": 25.796875,
+          "right": 364.1875,
+          "top": 282.703125,
+          "bottom": 389.4375
+        },
         "topGap": 4,
         "clearsNextField": true
       }
@@ -249,8 +391,21 @@
       "viewport": "1440x900",
       "overflow": false,
       "autocompleteGeometry": {
+        "position": "static",
         "inputWidth": 726,
         "listWidth": 726,
+        "input": {
+          "left": 325,
+          "right": 1051,
+          "top": 291.375,
+          "bottom": 340.40625
+        },
+        "list": {
+          "left": 325,
+          "right": 1051,
+          "top": 344.40625,
+          "bottom": 451.140625
+        },
         "topGap": 4,
         "clearsNextField": true
       }
@@ -332,8 +487,21 @@
       "viewport": "390x844",
       "overflow": false,
       "autocompleteGeometry": {
+        "position": "static",
         "inputWidth": 338.390625,
         "listWidth": 338.390625,
+        "input": {
+          "left": 25.796875,
+          "right": 364.1875,
+          "top": 229.671875,
+          "bottom": 278.703125
+        },
+        "list": {
+          "left": 25.796875,
+          "right": 364.1875,
+          "top": 282.703125,
+          "bottom": 389.4375
+        },
         "topGap": 4,
         "clearsNextField": true
       }
@@ -343,13 +511,38 @@
       "viewport": "1440x900",
       "overflow": false,
       "autocompleteGeometry": {
+        "position": "static",
         "inputWidth": 726,
         "listWidth": 726,
+        "input": {
+          "left": 325,
+          "right": 1051,
+          "top": 267.375,
+          "bottom": 316.40625
+        },
+        "list": {
+          "left": 325,
+          "right": 1051,
+          "top": 320.40625,
+          "bottom": 427.140625
+        },
         "topGap": 4,
         "clearsNextField": true
       }
     },
     {
+      "label": "enclosure-plant-detail-with-reference-image",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "enclosure-plant-detail-with-reference-image",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
       "label": "plant-manual-fallback",
       "viewport": "390x844",
       "overflow": false,
@@ -357,6 +550,18 @@
     },
     {
       "label": "plant-manual-fallback",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "enclosure-plant-detail-without-linked-image",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "enclosure-plant-detail-without-linked-image",
       "viewport": "1440x900",
       "overflow": false,
       "autocompleteGeometry": null
@@ -398,16 +603,76 @@
       "autocompleteGeometry": null
     },
     {
-      "label": "plant-detail",
+      "label": "plant-directory-detail-with-reference-image",
       "viewport": "390x844",
       "overflow": false,
       "autocompleteGeometry": null
     },
     {
-      "label": "plant-detail",
+      "label": "plant-directory-detail-with-reference-image",
       "viewport": "1440x900",
       "overflow": false,
       "autocompleteGeometry": null
+    },
+    {
+      "label": "plant-directory-detail-without-reference-image",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "plant-directory-detail-without-reference-image",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": null
+    },
+    {
+      "label": "upgraded-service-worker-current-assets",
+      "viewport": "390x844",
+      "overflow": false,
+      "autocompleteGeometry": {
+        "position": "static",
+        "inputWidth": 338.390625,
+        "listWidth": 338.390625,
+        "input": {
+          "left": 25.796875,
+          "right": 364.1875,
+          "top": 420.734375,
+          "bottom": 469.765625
+        },
+        "list": {
+          "left": 25.796875,
+          "right": 364.1875,
+          "top": 473.765625,
+          "bottom": 580.5
+        },
+        "topGap": 4,
+        "clearsNextField": true
+      }
+    },
+    {
+      "label": "upgraded-service-worker-current-assets",
+      "viewport": "1440x900",
+      "overflow": false,
+      "autocompleteGeometry": {
+        "position": "static",
+        "inputWidth": 726,
+        "listWidth": 726,
+        "input": {
+          "left": 325,
+          "right": 1051,
+          "top": 458.4375,
+          "bottom": 507.46875
+        },
+        "list": {
+          "left": 325,
+          "right": 1051,
+          "top": 511.46875,
+          "bottom": 618.203125
+        },
+        "topGap": 4,
+        "clearsNextField": true
+      }
     },
     {
       "label": "no-results",
@@ -434,6 +699,16 @@
       "violations": []
     },
     {
+      "label": "selected-species-after-list-closes",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "selected-species-after-list-closes",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
       "label": "new-animal-selected-species-reference-option",
       "viewport": "390x844",
       "violations": []
@@ -664,12 +939,32 @@
       "violations": []
     },
     {
+      "label": "enclosure-plant-detail-with-reference-image",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "enclosure-plant-detail-with-reference-image",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
       "label": "plant-manual-fallback",
       "viewport": "390x844",
       "violations": []
     },
     {
       "label": "plant-manual-fallback",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "enclosure-plant-detail-without-linked-image",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "enclosure-plant-detail-without-linked-image",
       "viewport": "1440x900",
       "violations": []
     },
@@ -704,12 +999,32 @@
       "violations": []
     },
     {
-      "label": "plant-detail",
+      "label": "plant-directory-detail-with-reference-image",
       "viewport": "390x844",
       "violations": []
     },
     {
-      "label": "plant-detail",
+      "label": "plant-directory-detail-with-reference-image",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "plant-directory-detail-without-reference-image",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "plant-directory-detail-without-reference-image",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "upgraded-service-worker-current-assets",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "upgraded-service-worker-current-assets",
       "viewport": "1440x900",
       "violations": []
     },
@@ -726,5 +1041,8 @@
   ],
   "diagnostics": [],
   "pageErrors": [],
-  "failedRequests": []
+  "failedRequests": [],
+  "navigationArtifacts": [
+    "GET http://127.0.0.1:8096/static/favicon.svg · net::ERR_ABORTED"
+  ]
 }

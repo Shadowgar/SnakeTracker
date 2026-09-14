@@ -34,11 +34,11 @@
     <section class="reference-photo-choice" data-reference-photo aria-labelledby="reference-photo-title">
       <div class="reference-photo-preview">
         <img data-reference-photo-image src="" alt="" hidden>
-        <span data-reference-photo-placeholder class="reference-photo-placeholder fallback-animal" aria-hidden="true">◇</span>
+        <span data-reference-photo-placeholder class="reference-photo-placeholder fallback-{{ values.animal_type|default('snake') }}" aria-hidden="true"><span data-reference-photo-placeholder-initial>{{ values.name[0]|upper if values.name|default('') else 'A' }}</span></span>
       </div>
       <div>
         <h2 id="reference-photo-title">Profile picture</h2>
-        <p data-reference-photo-copy class="field-help">Select a Directory species to check for a licensed reference image. You can add your animal's own photo after creation.</p>
+        <p data-reference-photo-copy class="field-help">Reference images are available when a supported Directory species is linked. You can add a photo of your animal after creation.</p>
         <fieldset data-reference-photo-options hidden>
           <legend>Picture choice</legend>
           <label><input type="radio" name="photo_preference" value="species_reference" {% if values.photo_preference|default('none') == 'species_reference' %}checked{% endif %}> Use species reference image for now</label>
@@ -75,4 +75,4 @@
   </form>
 </section>
 {% endblock %}
-{% block scripts %}<script src="/static/species-directory.js" defer></script>{% endblock %}
+{% block scripts %}<script src="/static/species-directory.js?v=m66-a-owner-c3" defer></script>{% endblock %}

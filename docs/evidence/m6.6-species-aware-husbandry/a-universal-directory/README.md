@@ -57,12 +57,33 @@ and revalidates the checksum on local delivery. Unknown or revoked licences, uns
 timeouts, invalid/oversized content, and unavailable cache bytes resolve to the placeholder. Keeper
 pages contain only the authenticated same-origin image route; CSP remains `img-src 'self'`.
 
+Plant reference imagery reuses that same cache and security boundary. An eligible linked taxon is
+shown automatically on Plant Directory detail, Enclosure Plant detail, and compact Enclosure roster
+thumbnails, with source/licence/creator attribution and a species-reference label. Manual plants and
+taxa without eligible or verified bytes use a semantic leaf placeholder. No Plant attachment system,
+household preference event, hotlink, or new provider fetcher was introduced.
+
 The keeper may opt into or decline a species reference per Animal. The existing attachment-backed
 personal photo always wins and remains discoverable as **Add photo**, **Add my animal's photo**, or
 **Change photo**. Uploading one does not delete global cache metadata. Morph/variant and
 Genetics/lineage are explained as optional individual facts under progressive disclosure. Exact
 previous values are suggested only for the same household and linked Care Keeper taxon, remain
 free-text and explicitly selected, and are never inferred, normalized, or erased by species choice.
+
+Owner correction #3 traced the apparently reverted autocomplete to stale asset identity rather
+than the corrected layout rule: `base.html` still requested `/static/app.css?v=m65-c1`, while shell
+cache `v5` precached `/static/app.css?v=m61-corrections`. The correction advances CSS, PWA bootstrap,
+species-directory JavaScript, and service-worker registration to `m66-a-owner-c3`; the shell cache is
+now `snaketracker-shell-m66-a-owner-c3`, installs those exact URLs, calls `skipWaiting`, claims
+clients, and removes all older prefix-matching generations. The new-animal diamond was literal
+template content; it is replaced by the entered Animal's initial over the existing type-specific
+fallback treatment. Selected-image, selected-without-image, and manual-entry copy are now mutually
+accurate states.
+
+iNaturalist taxon `32093` explains the reported Boa placeholder: its current default photo
+`588689904` is `CC BY-NC`. Care Keeper correctly excludes it because non-commercial media is not in
+the approved licence set; the provider hostname and metadata were otherwise valid, and no security
+or licensing rule was weakened.
 
 ## Deterministic automated qualification
 
@@ -71,12 +92,13 @@ September 14, 2026:
 
 - formatting, Ruff, architecture freeze, documentation links, strict mypy, Compose validation,
   generated-artifact checks, dependency audit, and diff checks passed;
-- 652 tests passed, including deterministic five-group, common/scientific/synonym, filter,
+- 654 tests passed, including deterministic five-group, common/scientific/synonym, filter,
   provider-ID separation, legacy/change/idempotency/isolation, accepted-name, cache/outage,
   timeout/`429`/malformed/oversized, licence, image SSRF/redirect/decode/dimension/integrity,
   keeper image preference, personal-photo priority, identity-suggestion isolation, migration,
   backup, and replay coverage;
-- the enforced 90-percent total and 85-percent branch coverage gates passed; and
+- total coverage reached 92.62 percent, with 94.50-percent line and 85.08-percent branch coverage,
+  passing the enforced 90-percent total and 85-percent branch gates; and
 - the dependency audit reported no known vulnerabilities.
 
 The deterministic browser/API performance test also makes 20 authenticated cached autocomplete
@@ -98,11 +120,11 @@ legacy identity-value retention.
 The outage capture reused that database on an internal-only Docker network with the provider host
 mapped to loopback. No qualification account or browser write targeted live data.
 
-All 60 correction captures across 30 states were visually inspected at 390×844 and 1440×900. The result list starts
+All 70 correction captures across 35 states were visually inspected at 390×844 and 1440×900. The result list starts
 4 px beneath its Species input, matches the input width, participates in normal flow, and clears the
 next form field at both viewports. Common and scientific names remain readable, mobile controls and
 result rows are touch-friendly, manual fallback remains visible, and neither viewport overflows.
-Sixty axe scans found zero WCAG 2.2 A/AA violations. The browser recorded zero application
+Seventy axe scans found zero WCAG 2.2 A/AA violations. The browser recorded zero application
 console diagnostics, zero page errors, and zero failed requests in the connected journey; the
 isolated outage journey also recorded zero console or page errors. Axe injection used only the test
 context's CSP bypass. Production CSP was not changed and both local and public responses retain
@@ -123,6 +145,32 @@ includes [reference choice on mobile](screenshots/mobile-390x844-new-animal-sele
 [Morph/Genetics suggestions on desktop](screenshots/desktop-1440x900-morph-and-genetics-suggestions.png),
 and [exact legacy identity values on mobile](screenshots/mobile-390x844-legacy-animal-edit-preserved-values.png). The screenshot
 directory contains both viewports for every required review state.
+
+Correction #3 evidence includes [selected Animal without an eligible image](screenshots/mobile-390x844-new-animal-no-reference-image.png),
+[Plant Directory reference image](screenshots/desktop-1440x900-plant-directory-detail-with-reference-image.png),
+[Plant Directory placeholder](screenshots/mobile-390x844-plant-directory-detail-without-reference-image.png),
+[Enclosure Plant reference image](screenshots/mobile-390x844-enclosure-plant-detail-with-reference-image.png),
+[Enclosure Plant manual placeholder](screenshots/desktop-1440x900-enclosure-plant-detail-without-linked-image.png),
+[dense roster thumbnails](screenshots/mobile-390x844-enclosure-multiple-plants.png), and the
+[upgraded shell/autocomplete state](screenshots/desktop-1440x900-upgraded-service-worker-current-assets.png).
+The browser began with a synthetic `snaketracker-shell-v5` cache containing the obsolete
+`m65-c1` overlay rule. Normal service-worker activation removed it and activated only
+`snaketracker-shell-m66-a-owner-c3`, serving `/static/app.css?v=m66-a-owner-c3` at SHA-256
+`0304f9ddf9a2fc21971c7be56f05f912ecedf84f5f29e7e969d64e60dfd8f0e2` without manual cache or
+site-storage clearing. Fourteen responsive autocomplete geometry observations reported CSS
+`position: static`, an exact 4 px input-to-list gap, zero width delta, and clearance from subsequent
+fields. One successfully served favicon was cancelled with `net::ERR_ABORTED` by the harness's
+intentional rapid navigation; it is recorded separately from the zero application request failures.
+
+The final [public cache qualification](public-cache-qualification.json) independently loaded the
+promoted public origin with fresh authenticated browser contexts at both required viewports. Public
+HTML requested `/static/app.css?v=m66-a-owner-c3`; public and direct-origin responses both matched
+SHA-256 `0304f9ddf9a2fc21971c7be56f05f912ecedf84f5f29e7e969d64e60dfd8f0e2`. Snake and Spider
+results were `position: static`, exactly 4 px below the input, exactly the input width, clear of the
+Profile Picture and Sex fields by at least 164.78 px, and caused no horizontal overflow. Cloudflare
+injected its Browser Insights beacon and paired inline loaders into public responses; Care Keeper's
+unchanged `script-src 'self'` blocked them. Those external-platform diagnostics are not
+Care Keeper-owned script failures, and no CSP allowance was added.
 
 ## Migration, backup, restore, and live-data preservation
 
@@ -162,11 +210,37 @@ household. The 40-file Attachment tree remains byte-identical at
 
 ## ARM64 deployment
 
-Native image `snaketracker:m66-a-owner-correction-2` is Linux ARM64, SHA-256
-`b2f78d427dfe4f58b6f9492da245b1c614efefaddb38ba35cb540ea27f2dc71a`. The migrate container
-exited zero. Web and worker run as UID/GID `1001:1001`; web, worker, and Nginx are healthy; local
-and public `/health/ready` return `ready`; and exactly one `snaketracker` Compose project with three
-active services remains. `SnakeTracker.code-workspace` remains untracked and untouched.
+Correction #3 took a new non-overwriting encrypted backup before promotion: request
+`93f1757e-afaf-432b-b8f5-f0f02545abb7`, run
+`de8ba1f0-8666-470c-89b7-40f495eeffe0`. The encrypted manifest checksum is
+`e78502c8a84cc3e165b8909b989428038fb6d8bbea5407e741960634c3ab21d0`; the encrypted database
+SHA-256 is `52c91c94db1b6de8d28e9fb8a0d046119d21f88fc5d1d1b8ce6a46524af1eadf`.
+Restore verification completed with status `verified`, 33 referenced Attachments, and matching
+revision, integrity, FK status, event count, and ordered event checksum in the isolated host-backed
+target `/tmp/carekeeper-m66a-owner-c3-restore.IbHQEE`. The active database was never a restore
+target. An earlier isolated container-overlay target exhausted its own available space and was
+removed only after its resolved path was proven distinct from every active runtime path.
+
+Immediately before correction #3 deployment, the active runtime was at `0021_reference_images`
+with integrity `ok`, zero FK violations, 818 events, ordered checksum hash
+`34dae0b2cc38d13f92acbaf1a24a644238dc3af4b084c4b60de904dc040ae41f`, 44 Animals, 30
+Enclosures, one Enclosure Plant, 30 Inventory balances, four Purchases, 14 Expenses, four users,
+four households, and 39 Attachment versions. The same values and checksum remained exact after
+deployment. During the explicitly required public computed-style check, a concurrent Edge 153
+keeper session—not the HeadlessChrome 145 qualification session—submitted one legitimate
+`enclosure.plant_added` event at 09:10:56 UTC. Server access logs distinguish its POST and user
+agent from the qualification's login, GET, and autocomplete requests. The final live state therefore
+has 819 events and two Enclosure Plants; qualification did not create, edit, delete, reset, reseed,
+or restore any household record. All first 818 event checksums remain identical to the pre-deploy
+baseline. The 40-file Attachment tree remained byte-identical before and after at SHA-256
+`d9c69298591f8d42adb9ca6a43174ac17a3925d718bf8034866e79444e375fab`.
+
+Native image `snaketracker:m66-a-owner-c3` is Linux ARM64, SHA-256
+`94f6b00c17497a6ac458a82ea5f888a55d30031ef3715ee2092abbf3c0c2135b`. The migration one-shot
+exited zero at existing head `0021_reference_images`. Web and worker run as UID/GID `1001:1001`;
+web, worker, and Nginx are healthy; local and public `/health/ready` return `ready`; and exactly one
+`snaketracker` Compose project with three active services remains. `SnakeTracker.code-workspace`
+remains untracked and untouched.
 
 ## Boundaries
 

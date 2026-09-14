@@ -191,7 +191,11 @@ def _image_fields(
         or attribution is None
     ):
         return None, None, None, None, None
-    creator = _bounded_string(data.get("name"), 256) or attribution
+    creator = (
+        _bounded_string(data.get("attribution_name"), 256)
+        or _bounded_string(data.get("name"), 256)
+        or attribution
+    )
     license_url = {
         "cc0": "https://creativecommons.org/publicdomain/zero/1.0/",
         "cc-by": "https://creativecommons.org/licenses/by/4.0/",

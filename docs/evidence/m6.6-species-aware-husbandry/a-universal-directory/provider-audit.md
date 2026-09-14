@@ -29,3 +29,13 @@ registration dependency.
 
 No provider image is copied merely because its URL is returned. Unknown/unlicensed and
 non-commercial-only media use a Care Keeper placeholder. No provider terms caused a CSP change.
+
+## Owner-review Boa verification
+
+On September 14, 2026, Care Keeper's live cache and the iNaturalist detail response for taxon
+`32093` (`Boa constrictor`) were compared. The provider supplied default photo `588689904` from an
+approved iNaturalist image hostname, but marked it `cc-by-nc`. The non-commercial restriction is
+outside M6.6-A's approved `CC0`/`CC BY`/`CC BY-SA` set, so normalization intentionally removed all
+eligible image fields and Care Keeper correctly offered the placeholder. This was not a missing
+photo, hostname rejection, malformed record, or download/cache failure. Licensing and origin rules
+were not loosened to make the Boa display an image.

@@ -120,6 +120,28 @@ def test_today_reports_search_and_read_only_pwa_shell_are_browser_visible(tmp_pa
         assert "indexedDB" not in pwa.text
 
 
+def test_m66_static_assets_advance_and_retire_previous_shell_cache(tmp_path: Path) -> None:
+    with client_for(tmp_path) as client:
+        complete_setup(client)
+        page = client.get("/animals/new")
+        worker = client.get("/service-worker.js")
+        pwa = client.get("/static/pwa.js")
+
+        assert "/static/app.css?v=m66-a-owner-c3" in page.text
+        assert "/static/pwa.js?v=m66-a-owner-c3" in page.text
+        assert "/static/species-directory.js?v=m66-a-owner-c3" in page.text
+        assert 'const ASSET_VERSION = "m66-a-owner-c3"' in worker.text
+        assert "`/static/app.css?v=${ASSET_VERSION}`" in worker.text
+        assert "`/static/species-directory.js?v=${ASSET_VERSION}`" in worker.text
+        assert "name.startsWith(CACHE_PREFIX) && name !== CACHE" in worker.text
+        assert "caches.delete(name)" in worker.text
+        assert "self.skipWaiting()" in worker.text
+        assert "self.clients.claim()" in worker.text
+        assert "/service-worker.js?v=m66-a-owner-c3" in pwa.text
+        assert "m65-c1" not in page.text
+        assert "m61-corrections" not in worker.text
+
+
 def test_analytics_explains_estimates_and_passed_windows_in_plain_language(tmp_path) -> None:
     with client_for(tmp_path) as client:
         complete_setup(client)

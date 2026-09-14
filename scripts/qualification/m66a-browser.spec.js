@@ -21,13 +21,63 @@ test("M6.6-A owner flows and evidence", async () => {
   const diagnostics = [];
   const pageErrors = [];
   const failedRequests = [];
+  const navigationArtifacts = [];
+  const scans = [];
+  const captures = [];
+  const cacheUpgrade = {};
+
+  await page.route("**/static/pwa.js*", async (route) => {
+    await route.fulfill({ contentType: "application/javascript", body: '"use strict";' });
+  });
+  await page.goto(`${origin}/setup`);
+  cacheUpgrade.before = await page.evaluate(async () => {
+    const stale = await caches.open("snaketracker-shell-v5");
+    await stale.put(
+      "/static/app.css?v=m65-c1",
+      new Response(".taxon-results{position:absolute;top:100%}", {
+        headers: { "Content-Type": "text/css" },
+      })
+    );
+    return caches.keys();
+  });
+  await page.unroute("**/static/pwa.js*");
+  await page.reload();
+  await page.waitForFunction(async () => {
+    if (!("serviceWorker" in navigator)) return false;
+    const registration = await navigator.serviceWorker.ready;
+    const names = await caches.keys();
+    return Boolean(
+      registration.active?.scriptURL.includes("m66-a-owner-c3")
+      && names.includes("snaketracker-shell-m66-a-owner-c3")
+      && !names.includes("snaketracker-shell-v5")
+    );
+  });
+  cacheUpgrade.after = await page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.ready;
+    const stylesheet = document.querySelector('link[rel="stylesheet"][href*="app.css"]');
+    const stylesheetUrl = new URL(stylesheet.href);
+    const response = await fetch(stylesheet.href, { cache: "reload" });
+    const bytes = await response.arrayBuffer();
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    return {
+      caches: await caches.keys(),
+      serviceWorkerUrl: registration.active?.scriptURL || "",
+      stylesheetUrl: `${stylesheetUrl.pathname}${stylesheetUrl.search}`,
+      stylesheetSha256: Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join(""),
+    };
+  });
   page.on("console", (message) => {
     if (["error", "warning"].includes(message.type())) diagnostics.push(message.text());
   });
   page.on("pageerror", (error) => pageErrors.push(error.message));
-  page.on("requestfailed", (request) => failedRequests.push(`${request.method()} ${request.url()}`));
-  const scans = [];
-  const captures = [];
+  page.on("requestfailed", (request) => {
+    const detail = `${request.method()} ${request.url()} · ${request.failure()?.errorText || "unknown"}`;
+    if (new URL(request.url()).pathname === "/static/favicon.svg" && request.failure()?.errorText === "net::ERR_ABORTED") {
+      navigationArtifacts.push(detail);
+      return;
+    }
+    failedRequests.push(detail);
+  });
 
   async function capture(label, focusSelector = null) {
     for (const viewport of [
@@ -55,9 +105,13 @@ test("M6.6-A owner flows and evidence", async () => {
         const inputBox = input.getBoundingClientRect();
         const listBox = list.getBoundingClientRect();
         const nextBox = next?.closest("label")?.getBoundingClientRect();
+        const style = getComputedStyle(list);
         return {
+          position: style.position,
           inputWidth: inputBox.width,
           listWidth: listBox.width,
+          input: { left: inputBox.left, right: inputBox.right, top: inputBox.top, bottom: inputBox.bottom },
+          list: { left: listBox.left, right: listBox.right, top: listBox.top, bottom: listBox.bottom },
           topGap: listBox.top - inputBox.bottom,
           clearsNextField: nextBox ? listBox.bottom <= nextBox.top : true,
         };
@@ -77,6 +131,7 @@ test("M6.6-A owner flows and evidence", async () => {
       expect(overflow).toBe(false);
       expect(violations).toEqual([]);
       if (autocompleteGeometry) {
+        expect(autocompleteGeometry.position).toBe("static");
         expect(Math.abs(autocompleteGeometry.inputWidth - autocompleteGeometry.listWidth)).toBeLessThan(2);
         expect(autocompleteGeometry.topGap).toBeGreaterThanOrEqual(0);
         expect(autocompleteGeometry.topGap).toBeLessThanOrEqual(8);
@@ -85,7 +140,6 @@ test("M6.6-A owner flows and evidence", async () => {
     }
   }
 
-  await page.goto(`${origin}/setup`);
   if (new URL(page.url()).pathname === "/setup") {
     await page.locator('[name="household_name"]').fill("M6.6 Directory Qualification");
     await page.locator('[name="timezone"]').fill("America/New_York");
@@ -113,9 +167,12 @@ test("M6.6-A owner flows and evidence", async () => {
     await species.press("ArrowDown");
     await species.press("Enter");
     await expect(page.locator('[name="taxon_id"]')).not.toHaveValue("");
+    await expect(page.locator("[data-taxon-results]")).toBeHidden();
     if (options.reference) {
       await expect(page.locator("[data-reference-photo-options]")).toBeVisible();
+      await expect(page.locator("[data-reference-photo-copy]")).toContainText("Species reference image available");
       await expect(page.locator("[data-reference-photo-copy]")).toContainText("not your individual animal");
+      await capture("selected-species-after-list-closes", "[data-reference-photo]");
       await capture("new-animal-selected-species-reference-option", "[data-reference-photo]");
       await page.locator("details.form-advanced > summary").click();
       await capture("morph-helper-text", "[data-morph-field]");
@@ -199,6 +256,10 @@ test("M6.6-A owner flows and evidence", async () => {
   await noReferenceSpecies.press("Enter");
   await expect(page.locator("[data-reference-photo-options]")).toBeHidden();
   await expect(page.locator("[data-reference-photo-placeholder]")).toBeVisible();
+  await expect(page.locator("[data-reference-photo-placeholder]")).not.toContainText("◇");
+  await expect(page.locator("[data-reference-photo-copy]")).toContainText(
+    "No licensed species reference image is available for this Directory record"
+  );
   await capture("new-animal-no-reference-image", "[data-reference-photo]");
 
   await addAnimal("snake", "ball p", "Atlas");
@@ -262,16 +323,30 @@ test("M6.6-A owner flows and evidence", async () => {
 
   await page.goto(`${enclosureProfile}/plants/new`);
   await capture("add-plant");
+  const eligiblePlant = await page.evaluate(async () => {
+    for (const query of ["golden pothos", "common reed", "monstera", "boston fern"]) {
+      const response = await fetch(`/api/directory/search?group=plant&q=${encodeURIComponent(query)}`);
+      const payload = await response.json();
+      const record = payload.records?.find((candidate) => candidate.reference_image_available);
+      if (record) return record;
+    }
+    return null;
+  });
+  expect(eligiblePlant).not.toBeNull();
   const plantSearch = page.getByLabel("Plant species or name");
-  await plantSearch.fill("golden pothos");
+  await plantSearch.fill(eligiblePlant.common_name || eligiblePlant.scientific_name);
   await expect(page.locator('[role="option"]').first()).toBeVisible({ timeout: 12000 });
   await capture("plant-autocomplete");
-  await page.locator('[role="option"]').filter({ hasText: "Golden Pothos" }).first().click();
+  await page.locator('[role="option"]').filter({ hasText: eligiblePlant.scientific_name }).first().click();
   await page.getByLabel("Keeper label or name (optional)").fill("Pothos by the hide");
   await page.getByLabel("Quantity").fill("2");
   await page.getByLabel("Date added (optional)").fill("2026-09-14");
   await page.getByRole("button", { name: "Add plant" }).click();
   await page.waitForURL(/\/enclosures\/[0-9a-f-]+\/plants\/[0-9a-f-]+$/);
+  const linkedPlantDetail = page.url();
+  await expect(page.getByAltText(/Species reference image for/)).toBeVisible({ timeout: 12000 });
+  await expect(page.getByText("Species reference", { exact: true })).toBeVisible();
+  await capture("enclosure-plant-detail-with-reference-image");
 
   await page.goto(`${enclosureProfile}/plants/new`);
   const manualPlant = page.getByLabel("Plant species or name");
@@ -281,18 +356,47 @@ test("M6.6-A owner flows and evidence", async () => {
   await manualPlant.fill("Unidentified fern");
   await page.getByRole("button", { name: "Add plant" }).click();
   await page.waitForURL(/\/enclosures\/[0-9a-f-]+\/plants\/[0-9a-f-]+$/);
+  await expect(page.locator(".plant-placeholder")).toBeVisible();
+  await expect(page.getByAltText(/Species reference image for/)).toHaveCount(0);
+  await capture("enclosure-plant-detail-without-linked-image");
   await page.goto(enclosureProfile);
   await expect(page.getByText("Pothos by the hide", { exact: true })).toBeVisible();
   await expect(page.getByText("Unidentified fern", { exact: true }).first()).toBeVisible();
+  await expect(page.locator(`a[href="${new URL(linkedPlantDetail).pathname}"] img`)).toBeVisible();
+  await expect(page.locator(".plant-roster-media .plant-placeholder")).toBeVisible();
   await capture("enclosure-multiple-plants");
 
-  await page.goto(`${origin}/directory?group=plant&q=pothos`);
-  await expect(page.getByText("Golden Pothos", { exact: true })).toBeVisible({ timeout: 12000 });
+  await page.goto(`${origin}/directory?group=plant&q=${encodeURIComponent(eligiblePlant.scientific_name)}`);
+  await expect(page.getByText(eligiblePlant.scientific_name, { exact: true }).first()).toBeVisible({ timeout: 12000 });
   await capture("plant-search");
   await capture("global-animal-plant-directory");
-  await page.getByText("Golden Pothos", { exact: true }).click();
-  await expect(page.getByText("Epipremnum aureum", { exact: true }).first()).toBeVisible({ timeout: 12000 });
-  await capture("plant-detail");
+  await page.goto(`${origin}/directory/${eligiblePlant.taxon_id}`);
+  await expect(page.getByAltText(/Species reference image for/)).toBeVisible({ timeout: 12000 });
+  await expect(page.getByText(/Reference photo/)).toBeVisible();
+  await capture("plant-directory-detail-with-reference-image");
+
+  const plantWithoutImage = await page.evaluate(async () => {
+    for (const query of ["sphagnum", "duckweed", "air plant", "prickly pear"]) {
+      const response = await fetch(`/api/directory/search?group=plant&q=${encodeURIComponent(query)}`);
+      const payload = await response.json();
+      const record = payload.records?.find((candidate) => !candidate.reference_image_available);
+      if (record) return record;
+    }
+    return null;
+  });
+  expect(plantWithoutImage).not.toBeNull();
+  await page.goto(`${origin}/directory/${plantWithoutImage.taxon_id}`);
+  await expect(page.locator(".directory-hero .plant-placeholder")).toBeVisible();
+  await expect(page.getByAltText(/Species reference image for/)).toHaveCount(0);
+  await capture("plant-directory-detail-without-reference-image");
+
+  await page.goto(`${origin}/animals/new`);
+  await page.getByLabel("Animal type").selectOption("spider");
+  await page.getByLabel("Name").fill("Cache Upgrade");
+  const upgradedSpecies = page.getByLabel("Species", { exact: true });
+  await upgradedSpecies.fill("rose hair tarantula");
+  await expect(page.locator('[role="option"]').first()).toBeVisible({ timeout: 12000 });
+  await capture("upgraded-service-worker-current-assets");
 
   await page.goto(`${origin}/directory?group=plant&q=zzzzqwertynotataxon`);
   await expect(page.getByRole("heading", { name: "No matching species" })).toBeVisible({ timeout: 12000 });
@@ -300,7 +404,7 @@ test("M6.6-A owner flows and evidence", async () => {
 
   fs.writeFileSync(
     path.join(evidence, "browser-qualification.partial.json"),
-    JSON.stringify({ origin, captures, scans, diagnostics, pageErrors, failedRequests }, null, 2) + "\n"
+    JSON.stringify({ origin, cacheUpgrade, captures, scans, diagnostics, pageErrors, failedRequests, navigationArtifacts }, null, 2) + "\n"
   );
   expect(pageErrors).toEqual([]);
   expect(failedRequests).toEqual([]);

@@ -360,10 +360,14 @@ decisions. M6.6 requires explicit owner acceptance after all five tranches.
   auto-matching ambiguous free text. (`R-088`, `AT-SPDIR-03`)
 - [x] RB Plant directory search/detail integrates with a basic household-owned plant roster inside
   each Enclosure: directory-linked or manual identity, label, quantity, optional date/notes, and
-  immutable add/correct/remove lifecycle. Watering and care automation remain deferred.
+  immutable add/correct/remove lifecycle. Eligible global plant reference images appear
+  automatically with compact attribution on Directory detail, Enclosure Plant detail, and dense
+  roster thumbnails; manual/ineligible plants retain a polished placeholder. Watering and care
+  automation remain deferred.
   (`R-089`, `AT-SPDIR-04`)
 - [x] RB Provider/cache behavior enforces privacy, input/response bounds, timeout/quota handling,
-  provenance, licensing/attribution, stale-cache fallback, strict CSP, and offline profile reads.
+  provenance, licensing/attribution, stale-cache fallback, strict CSP, offline profile reads, and
+  release-keyed static/PWA cache upgrades that remove obsolete shell generations.
   (`R-090`, `AT-SPDIR-05`)
 - [x] RB An Animal can opt into an approved CC0/CC BY/CC BY-SA species reference image delivered
   from a bounded, checksum-verified local cache under `img-src 'self'`; the existing household photo

@@ -258,3 +258,38 @@ def test_provider_detail_ignores_invalid_optional_classification_and_image(
 
     assert detail.family is None
     assert detail.image_source_url is None
+
+
+def test_provider_rejects_noncommercial_reference_photo_license(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {
+        "results": [
+            {
+                "id": 32093,
+                "name": "Boa constrictor",
+                "rank": "species",
+                "preferred_common_name": "Boa Constrictor",
+                "ancestor_ids": [85553],
+                "default_photo": {
+                    "medium_url": (
+                        "https://inaturalist-open-data.s3.amazonaws.com/photos/588689904/medium.jpg"
+                    ),
+                    "attribution": "Nicolas Burnel, some rights reserved (CC BY-NC)",
+                    "attribution_name": "Nicolas Burnel",
+                    "license_code": "cc-by-nc",
+                },
+            }
+        ]
+    }
+    monkeypatch.setattr(
+        inaturalist,
+        "urlopen",
+        lambda *_args, **_kwargs: Response(json.dumps(payload).encode()),
+    )
+
+    detail = INaturalistTaxonomyProvider().detail("32093", "snake")
+
+    assert detail.image_source_url is None
+    assert detail.image_creator is None
+    assert detail.image_license_code is None

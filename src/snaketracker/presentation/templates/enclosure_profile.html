@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "icons.html" import icon %}
 {% block title %}{{ enclosure.name }} · Care Keeper{% endblock %}
 {% block content %}
 <section class="animal-profile" aria-labelledby="page-title">
@@ -23,7 +24,7 @@
     <div class="section-heading"><div><p class="page-kicker">Living collection</p><h2 id="plants-title">Plants</h2></div><a class="button-link secondary-link" href="/enclosures/{{ enclosure.enclosure_id }}/plants/new">Add plant</a></div>
     {% if plants %}
     <ul class="record-list">
-      {% for plant in plants %}<li><a href="/enclosures/{{ enclosure.enclosure_id }}/plants/{{ plant.enclosure_plant_id }}"><strong>{{ plant.label or plant.species_display }}</strong><span>{{ plant.species_display }}{% if plant.quantity > 1 %} · Qty {{ plant.quantity }}{% endif %}</span></a></li>{% endfor %}
+      {% for plant in plants %}{% set reference_taxon = plant_reference_taxa.get(plant.taxon_id) if plant.taxon_id else none %}<li><a class="plant-roster-link" href="/enclosures/{{ enclosure.enclosure_id }}/plants/{{ plant.enclosure_plant_id }}"><span class="plant-roster-media">{% if reference_taxon %}<img src="/directory/reference-images/{{ reference_taxon.taxon_id }}" alt="">{% else %}<span class="plant-placeholder" aria-hidden="true">{{ icon('plant') }}</span>{% endif %}</span><span class="plant-roster-copy"><strong>{{ plant.label or plant.species_display }}</strong><span>{% if plant.confirmed_scientific_name %}<i>{{ plant.confirmed_scientific_name }}</i>{% else %}{{ plant.species_display }}{% endif %}</span></span>{% if plant.quantity > 1 %}<span class="plant-roster-quantity">Qty {{ plant.quantity }}</span>{% endif %}</a></li>{% endfor %}
     </ul>
     {% else %}<div class="empty-state"><h3>No plants added</h3><p>Add plants that physically live in this enclosure. Watering and plant-care reminders will arrive in a later milestone.</p><a href="/enclosures/{{ enclosure.enclosure_id }}/plants/new">Add plant</a></div>{% endif %}
   </section>
