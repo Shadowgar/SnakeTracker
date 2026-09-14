@@ -189,7 +189,7 @@ def test_directory_animal_selection_manual_fallback_and_legacy_link(
             "Reference images are available when a supported Directory species is linked"
             in form.text
         )
-        assert "/static/species-directory.js?v=m66-a-owner-fidelity" in form.text
+        assert "/static/species-directory.js?v=m66-a-owner-fidelity-v2" in form.text
         suggestions = client.get("/api/directory/search?group=snake&q=ball+p")
         assert suggestions.status_code == 200
         assert suggestions.json()["records"][0]["scientific_name"] == "Python regius"

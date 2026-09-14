@@ -12,6 +12,7 @@
     <a href="#home-overdue"><strong>{{ agenda_counts.overdue }}</strong><span>Overdue</span></a>
     <a href="#home-due_today"><strong>{{ agenda_counts.due_today }}</strong><span>Due today</span></a>
     <a href="#home-upcoming"><strong>{{ agenda_counts.upcoming }}</strong><span>Upcoming</span></a>
+    <a href="/calendar?view=agenda"><strong>{{ agenda_counts.overdue + agenda_counts.due_today + agenda_counts.upcoming }}</strong><span>All tasks</span></a>
   </div>
   {% set agenda = namespace(has_items=false) %}
   <div class="today-columns">
@@ -36,5 +37,6 @@
     <span><strong id="collection-summary">Your collection</strong>{% if collection_statistics %}<span>{{ collection_statistics.animals }} animals · {{ collection_statistics.enclosures }} enclosures</span>{% else %}<span>Collection statistics are catching up.</span>{% endif %}</span>
     <span aria-hidden="true">View animals →</span>
   </a>
+  <a class="quick-log-fab" href="/quick-log" aria-label="Add care"><span aria-hidden="true">+</span></a>
 </section>
 {% endblock %}

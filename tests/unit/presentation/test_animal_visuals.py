@@ -28,7 +28,7 @@ def test_visual_resolver_prioritizes_personal_photo_and_resolves_all() -> None:
     assert visuals[with_photo.animal_id].kind == "personal_photo"
     assert visuals[with_photo.animal_id].url == f"/attachments/{photo_id}"
     assert visuals[fallback.animal_id].kind == "group_fallback"
-    assert visuals[fallback.animal_id].url.endswith("/lizard.webp")
+    assert "/lizard.webp?v=m66-a-owner-fidelity-v2" in visuals[fallback.animal_id].url
 
 
 def test_visual_resolver_uses_reference_photo_metadata() -> None:
@@ -84,7 +84,7 @@ def test_visual_resolver_uses_species_illustration_then_safe_group_fallback(
         uuid4(), _animal(animal_type="unknown")
     )
     assert unknown.kind == "group_fallback"
-    assert unknown.url.endswith("/snake.webp")
+    assert unknown.url == ("/static/animal-fallbacks/snake.webp?v=m66-a-owner-fidelity-v2")
 
 
 def test_species_illustration_manifest_rejects_non_mapping(monkeypatch) -> None:

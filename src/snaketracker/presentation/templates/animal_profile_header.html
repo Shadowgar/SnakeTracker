@@ -1,21 +1,19 @@
 <header class="animal-hero">
-  <div class="animal-hero-main">
-    <div class="animal-hero-photo-wrap">
+  <div class="animal-hero-copy">
+    <p class="page-kicker">{{ animal.type_label }} profile</p>
+    <h1 id="page-title">{{ animal.name }}</h1>
+    {% if linked_taxon %}<p><strong>{{ linked_taxon.taxon.display_name }}</strong> · <i>{{ linked_taxon.taxon.accepted_scientific_name }}</i>{% if animal.morph %} · {{ animal.morph }}{% endif %}</p>{% else %}<p>{{ animal.species }}{% if animal.morph %} · {{ animal.morph }}{% endif %}</p>{% endif %}
+    <div class="animal-hero-meta">
+      <a href="/animals/{{ animal.animal_id }}/status" class="status-badge status-completed">{{ animal.status|capitalize }}</a>
+      <a href="/animals/{{ animal.animal_id }}/enclosure">{% if current_enclosure %}{{ current_enclosure.name }}{% else %}No enclosure{% endif %}</a>
+    </div>
+  </div>
+  <div class="animal-hero-photo-wrap">
     <a class="animal-hero-photo-link" href="/animals/{{ animal.animal_id }}/photo" aria-label="{% if animal.photo_attachment_version_id %}Change{% else %}Add{% endif %} {{ animal.name }}'s own photo">
       <img class="animal-hero-photo" src="{{ animal_visual.url }}" alt="{{ animal_visual.alt }}" width="1200" height="800" decoding="async" fetchpriority="high">
     </a>
     <a class="animal-photo-action" href="/animals/{{ animal.animal_id }}/photo">{% if animal.photo_attachment_version_id %}Change photo{% elif reference_taxon %}Add my animal's photo{% else %}Add photo{% endif %}</a>
     {% if animal_visual.kind == 'species_photo' %}<small class="reference-attribution">Species reference · Photo: {{ animal_visual.creator }} · <a href="{{ animal_visual.license_url }}" rel="noreferrer">{{ animal_visual.license_code|replace('cc-', 'CC ')|upper }}</a> · <a href="{{ animal_visual.source_page_url }}" rel="noreferrer">{{ 'iNaturalist' if animal_visual.provider == 'inaturalist' else animal_visual.provider|replace('_', ' ')|title }}</a></small>{% elif animal_visual.kind == 'species_illustration' %}<small class="reference-attribution">Care Keeper species reference illustration · not a photo of this individual.</small>{% elif animal_visual.kind == 'group_fallback' %}<small class="reference-attribution">Group illustration · add your animal's photo for a personal profile.</small>{% endif %}
-    </div>
-    <div class="animal-hero-copy">
-      <p class="page-kicker">{{ animal.type_label }} profile</p>
-      <h1 id="page-title">{{ animal.name }}</h1>
-      {% if linked_taxon %}<p><strong>{{ linked_taxon.taxon.display_name }}</strong> · <i>{{ linked_taxon.taxon.accepted_scientific_name }}</i>{% if animal.morph %} · {{ animal.morph }}{% endif %}</p>{% else %}<p>{{ animal.species }}{% if animal.morph %} · {{ animal.morph }}{% endif %}</p>{% endif %}
-      <div class="animal-hero-meta">
-        <a href="/animals/{{ animal.animal_id }}/status" class="status-badge status-completed">{{ animal.status|capitalize }}</a>
-        <a href="/animals/{{ animal.animal_id }}/enclosure">{% if current_enclosure %}{{ current_enclosure.name }}{% else %}No enclosure{% endif %}</a>
-      </div>
-    </div>
   </div>
   <div class="animal-next-care{% if next_care %} next-care-{{ next_care.item.status }}{% endif %}">
     <span>Next care</span>

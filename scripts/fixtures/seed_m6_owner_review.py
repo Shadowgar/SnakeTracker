@@ -16,7 +16,7 @@ from pathlib import Path
 from uuid import UUID
 
 from fastapi.testclient import TestClient
-from PIL import Image, ImageDraw
+from PIL import Image, ImageOps
 from pydantic import SecretStr
 
 from snaketracker.application.household_bootstrap import DEMO_EMAIL, DEMO_HOUSEHOLD_ID
@@ -112,16 +112,22 @@ class DemoSeedResult:
     animal_ids: dict[str, str]
 
 
-def _profile_photo(key: str, name: str) -> bytes:
-    """Return a deterministic, visibly distinct fictional profile card."""
-    image = Image.new("RGB", (640, 480), PHOTO_COLORS[key])
-    draw = ImageDraw.Draw(image)
-    draw.rounded_rectangle((80, 80, 560, 400), radius=64, fill=(19, 32, 27), width=8)
-    draw.ellipse((250, 135, 390, 275), fill=(181, 234, 77))
-    draw.text((270, 300), name, fill=(245, 248, 240), anchor="ma")
-    draw.text((320, 360), "FICTIONAL DEMO", fill=(181, 234, 77), anchor="mm")
+def _profile_photo(key: str, animal_type: str) -> bytes:
+    """Return deterministic fictional imagery without placeholder-card artifacts."""
+    source = ROOT / "src" / "snaketracker" / "presentation" / "static" / "animal-fallbacks"
+    digest = hashlib.sha256(key.encode()).digest()
+    center_x = 0.42 + (digest[0] / 255) * 0.16
+    with Image.open(source / f"{animal_type}.webp") as opened:
+        image = ImageOps.fit(
+            opened.convert("RGB"),
+            (640, 480),
+            method=Image.Resampling.LANCZOS,
+            centering=(center_x, 0.5),
+        )
+    tint = Image.new("RGB", image.size, PHOTO_COLORS[key])
+    image = Image.blend(image, tint, 0.035 + (digest[1] / 255) * 0.045)
     output = BytesIO()
-    image.save(output, format="PNG", optimize=False)
+    image.save(output, format="WEBP", quality=82, method=4)
     return output.getvalue()
 
 
@@ -187,7 +193,7 @@ def _register_animal(
         client,
         f"{location}/photo",
         {"idempotency_key": f"demo-photo-{key}"},
-        files={"photo": (f"{key}.png", _profile_photo(key, name), "image/png")},
+        files={"photo": (f"{key}.webp", _profile_photo(key, animal_type), "image/webp")},
     )
     return location.rsplit("/", 1)[-1]
 

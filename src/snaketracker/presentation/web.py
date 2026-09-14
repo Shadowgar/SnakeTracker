@@ -2266,12 +2266,21 @@ def create_web_router(
             for animal in animals
             if animal.animal_type == animal_type
         )
+        quick_log_recent = _completed_care_rows(
+            household_id=principal.household_id,
+            animals=animals,
+            enclosures=enclosure_service.list_profiles(principal.household_id),
+            animal_service=animal_service,
+            enclosure_service=enclosure_service,
+            timezone=ZoneInfo(principal.household_timezone),
+        )[:4]
         return protected_page(
             request,
             "quick_log.html",
             principal,
             context={
                 "quick_log_animals": quick_log_animals,
+                "quick_log_recent": quick_log_recent,
                 "quick_log_groups": tuple(
                     (
                         animal_capability_registry.require(f"{animal_type}.v1").label,
@@ -7252,6 +7261,10 @@ def _calendar_view(
         )
     previous_month = month_start - timedelta(days=1)
     next_month = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+    today_week = next(
+        (tuple(week) for week in weeks if any(day["date"] == today for day in week)),
+        (),
+    )
     return {
         "today": today,
         "month_start": month_start,
@@ -7260,6 +7273,7 @@ def _calendar_view(
         "previous_month": previous_month.strftime("%Y-%m"),
         "next_month": next_month.strftime("%Y-%m"),
         "weeks": tuple(weeks),
+        "today_week": today_week,
         "selected_date": selected_date,
         "selected_scheduled": tuple(scheduled_by_date.get(selected_date, ())),
         "selected_completed": tuple(completed_by_date.get(selected_date, ())),

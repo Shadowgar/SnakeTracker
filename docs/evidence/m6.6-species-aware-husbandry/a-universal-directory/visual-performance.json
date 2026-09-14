@@ -1,0 +1,96 @@
+{
+  "origin": "http://127.0.0.1:8096",
+  "viewport": "1440x900",
+  "limits": {
+    "elapsedMs": 3000,
+    "layoutShift": 0.1,
+    "imageTransferBytes": 5242880,
+    "largestImageTransferBytes": 1048576
+  },
+  "samples": [
+    {
+      "label": "Today",
+      "route": "/home",
+      "elapsedMs": 1472.3728590000005,
+      "domContentLoadedMs": 673.2000000476837,
+      "loadMs": 673.8000000119209,
+      "layoutShift": 0,
+      "imageRequests": 11,
+      "imageTransferBytes": 620924,
+      "largestImageTransferBytes": 62494,
+      "visibleImageCount": 14,
+      "incompleteVisibleImages": 0
+    },
+    {
+      "label": "Animals",
+      "route": "/animals",
+      "elapsedMs": 1131.7150300000003,
+      "domContentLoadedMs": 216,
+      "loadMs": 220.39999997615814,
+      "layoutShift": 0,
+      "imageRequests": 21,
+      "imageTransferBytes": 1171372,
+      "largestImageTransferBytes": 62890,
+      "visibleImageCount": 12,
+      "incompleteVisibleImages": 0
+    },
+    {
+      "label": "Animal Profile",
+      "route": "/animals/d8b89b91-f6df-4798-bb4f-c76b76e4357c",
+      "elapsedMs": 726.7976420000005,
+      "domContentLoadedMs": 185.30000001192093,
+      "loadMs": 185.89999997615814,
+      "layoutShift": 0,
+      "imageRequests": 1,
+      "imageTransferBytes": 51746,
+      "largestImageTransferBytes": 51746,
+      "visibleImageCount": 1,
+      "incompleteVisibleImages": 0
+    },
+    {
+      "label": "Enclosures",
+      "route": "/enclosures",
+      "elapsedMs": 1045.8065530000003,
+      "domContentLoadedMs": 228.39999997615814,
+      "loadMs": 229.0999999642372,
+      "layoutShift": 0,
+      "imageRequests": 15,
+      "imageTransferBytes": 844608,
+      "largestImageTransferBytes": 62700,
+      "visibleImageCount": 9,
+      "incompleteVisibleImages": 0
+    }
+  ],
+  "consoleDiagnostics": [],
+  "harnessDiagnostics": [
+    {
+      "type": "warning",
+      "text": "Service Worker registration blocked by Playwright"
+    },
+    {
+      "type": "warning",
+      "text": "Service Worker registration blocked by Playwright"
+    },
+    {
+      "type": "warning",
+      "text": "Service Worker registration blocked by Playwright"
+    },
+    {
+      "type": "warning",
+      "text": "Service Worker registration blocked by Playwright"
+    },
+    {
+      "type": "warning",
+      "text": "Service Worker registration blocked by Playwright"
+    },
+    {
+      "type": "warning",
+      "text": "Service Worker registration blocked by Playwright"
+    },
+    {
+      "type": "warning",
+      "text": "Service Worker registration blocked by Playwright"
+    }
+  ],
+  "pageErrors": []
+}

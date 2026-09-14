@@ -34,6 +34,7 @@ test("M6.6-A owner visual fidelity and reference image coverage", async () => {
   const consoleDiagnostics = [];
   const pageErrors = [];
   const requestFailures = [];
+  const lazyImageNavigationAborts = [];
   const scans = [];
   const captures = [];
 
@@ -44,6 +45,13 @@ test("M6.6-A owner visual fidelity and reference image coverage", async () => {
   });
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("requestfailed", (request) => {
+    if (
+      request.resourceType() === "image" &&
+      request.failure()?.errorText === "net::ERR_ABORTED"
+    ) {
+      lazyImageNavigationAborts.push(`${request.method()} ${request.url()}`);
+      return;
+    }
     if (
       new URL(request.url()).pathname === "/static/favicon.svg" &&
       request.failure()?.errorText === "net::ERR_ABORTED"
@@ -135,6 +143,19 @@ test("M6.6-A owner visual fidelity and reference image coverage", async () => {
     const response = await page.goto(route.startsWith("http") ? route : `${origin}${route}`);
     expect(response.status()).toBe(200);
     await page.waitForLoadState("networkidle");
+    await page.evaluate(async () => {
+      const visibleImages = [...document.images].filter((candidate) => {
+        const bounds = candidate.getBoundingClientRect();
+        return candidate.currentSrc && bounds.bottom >= 0 && bounds.top <= window.innerHeight;
+      });
+      await Promise.all(visibleImages.map((candidate) => {
+        if (candidate.complete) return Promise.resolve();
+        return new Promise((resolve) => {
+          candidate.addEventListener("load", resolve, { once: true });
+          candidate.addEventListener("error", resolve, { once: true });
+        });
+      }));
+    });
     const csp = response.headers()["content-security-policy"] || "";
     expect(csp).toContain("script-src 'self'");
     expect(csp).toContain("img-src 'self'");
@@ -188,6 +209,7 @@ test("M6.6-A owner visual fidelity and reference image coverage", async () => {
     consoleDiagnostics,
     pageErrors,
     requestFailures,
+    lazyImageNavigationAborts,
   };
   fs.writeFileSync(
     path.join(evidence, "owner-fidelity-qualification.json"),

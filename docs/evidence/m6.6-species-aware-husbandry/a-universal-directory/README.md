@@ -22,6 +22,7 @@ Architecture: [ADR-0043](../../../adr/0043-universal-species-directory.md)
 - [Browser results](browser-qualification.partial.json) and
   [provider-outage results](browser-outage-qualification.json)
 - [Autocomplete performance](autocomplete-performance.json)
+- [Photo-rich surface performance](visual-performance.json)
 - [Owner-review screenshots](screenshots/)
 
 ## Architecture and behavior
@@ -118,14 +119,22 @@ CC BY-NC. The full provider/creator/licence/source metadata for all ten results 
 presentations show a tiny readable attribution line immediately below the image; dense linked cards
 defer full credit to the profile/detail view.
 
-The isolated ARM64 browser runtime was
-`/tmp/carekeeper-m66a-fidelity-runtime.wg2eTc`, with its own database, attachments, and reference
-cache. At 390×844 it captured Today, Animals, the attributed Animal profile, Calendar, Quick Log,
+The final isolated ARM64 browser runtime was
+`/tmp/carekeeper-m66a-fidelity-final.Jjo32x`, with its own database, attachments, and reference
+cache. It was migrated from zero through `0022_reference_image_provenance`, seeded with the exact
+20-animal/16-enclosure owner-review fixture, and mounted only into the one-off container running
+qualified image `sha256:2c7f66d0baaac69c6a29cd3eff9b24332e0a4d6742677aec584efd84c4c0070c`.
+One additional Boa Animal existed only in this disposable runtime to prove the reference-photo
+profile path; the source fixture remains exactly 20 Animals.
+
+At 390×844 the runtime captured Today, Animals, the attributed Animal profile, Calendar, Quick Log,
 and Enclosures; at 1440×900 it captured Today, Animals, the attributed profile, and Enclosures. All
 ten captures had no horizontal overflow, zero axe violations, zero application console diagnostics,
-zero page errors, and zero request failures. Every response retained `script-src 'self'` and
-`img-src 'self'`; CSP and the downloader's SSRF, redirect, decode, byte, pixel, and dimension
-controls were not weakened.
+zero page errors, and zero application request failures. Four below-fold lazy attachment requests
+were canceled when the harness immediately navigated to its next capture; these exact
+`net::ERR_ABORTED` image-navigation artifacts are recorded separately rather than represented as
+application failures. Every response retained `script-src 'self'` and `img-src 'self'`; CSP and the
+downloader's SSRF, redirect, decode, byte, pixel, and dimension controls were not weakened.
 
 ## Deterministic automated qualification
 
@@ -147,6 +156,18 @@ The deterministic browser/API performance test also makes 20 authenticated cache
 requests and requires p95 below 250 ms. Native Chromium correction qualification measured a
 separate 50-call sample at 33.1 ms p95 (15.3 ms median, 70.3 ms maximum) on the isolated ARM64
 runtime.
+
+The final [photo-rich surface measurement](visual-performance.json) used the deployed ARM64 image
+at 1440×900 with representative imagery and a cleared HTTP cache before each surface. Network-idle
+elapsed time was 1.47 seconds for Today, 1.13 seconds for Animals, 0.73 seconds for an Animal
+profile, and 1.05 seconds for Enclosures. All four reported zero layout shift and zero incomplete
+visible images. The largest transferred image was approximately 62 KiB; total image transfer was
+approximately 0.62 MiB, 1.17 MiB, 0.05 MiB, and 0.84 MiB respectively, below the 5 MiB total-image
+and 1 MiB single-image budgets. Playwright's expected service-worker-blocked warning is retained
+separately from zero application console diagnostics. The fixture's twenty 640×480 WebP profile
+derivatives total approximately 1.2 MiB, down from 9.7 MiB for the temporary PNG form, while
+production upload processing still normalizes originals to a bounded 1600-pixel web derivative and
+serves immutable local bytes.
 
 ## Browser, responsive, and accessibility qualification
 
@@ -336,6 +357,64 @@ The required owner-review captures are
 [desktop Animals](screenshots/desktop-1440x900-animals.png),
 [desktop profile](screenshots/desktop-1440x900-animal-profile-reference.png), and
 [desktop Enclosures](screenshots/desktop-1440x900-enclosures.png).
+
+## Owner visual-fidelity reset final correction
+
+The completed [human visual audit](../../../ux/owner-design/visual-fidelity-audit.md) compares every
+required capture with the preserved owner board and records what changed, what now matches,
+intentional capability-driven differences, and remaining gaps. The final design uses compact
+four-part Today metrics, dense thumbnail-led care rows, a two/four-column photo-first Animals grid,
+edge-to-edge mobile and three-part desktop profile heroes, a Calendar week strip, Quick Log recent
+actions, image-led Enclosure rows/grids, a fixed mobile care action, and the established bottom-nav/
+sidebar shell. The reviewed captures are immediately recognizable as the same product design; no
+major visual gap remains. Real supported data replaces concept-only telemetry, health, and handling
+examples.
+
+The four final group fallbacks were generated as new raster illustrations specifically for Care
+Keeper, then center-cropped to 1200×800 and stored as WebP quality 82. Their shared prompt requested
+a generic non-species-specific snake, lizard, spider, or scorpion in a dark natural terrarium,
+premium natural-history editorial treatment, crop-safe composition, and no text, logo, watermark,
+neon UI, human, or species-distinctive claim. Exact prompts and mode are retained beside the assets.
+They are used only after personal photo, licensed reference photo, and species illustration.
+
+The exact frozen authoritative path passed after the final code change: `uv sync --frozen`, then
+`./scripts/quality/check.sh`. All 676 tests passed; total coverage was 92.57 percent, line coverage
+94.45 percent, and branch coverage 85.08 percent. Formatting, Ruff, strict mypy, architecture
+freeze, documentation links, generated-artifact checks, dependency audit with no known
+vulnerabilities, Compose validation, and diff checks passed. The final native ARM64 browser run
+against the built image produced ten screenshots, ten zero-violation axe scans, zero application
+console diagnostics, zero page errors, zero application request failures, and verified useful local
+WebP photos for all ten representative common taxa. The requested Boa was iNaturalist photo
+`588689904`, `CC BY-NC`, with tiny linked attribution.
+
+Promotion used native Linux ARM64 image `snaketracker:m66-a-owner-fidelity-v2`, SHA-256
+`2c7f66d0baaac69c6a29cd3eff9b24332e0a4d6742677aec584efd84c4c0070c`. The migration one-shot
+exited zero at existing head `0022_reference_image_provenance`; no schema or event contract was
+changed. Web and worker run as UID/GID `1001:1001`; web, worker, and Nginx are healthy; local and
+public readiness return `ready`; and exactly one Care Keeper Compose project with three active
+services remains.
+
+Before and after promotion, the active database remained at 822 events/high-water 822 with ordered
+position/identity/checksum hash
+`77ba9d8bed05fae676044592b4bc919f89772ad2f25c1fa2c629c0e309fb07c1`. Counts remained four
+households/users/memberships, 45 Animals, 30 Enclosures, two Enclosure Plants, 30 Inventory
+balances, four Purchases, 14 Expenses, 39 Attachment versions, 35 taxa, and seven taxon-image
+records. SQLite integrity remained `ok`, foreign-key violations remained zero, and the 40-file
+Attachment tree remained byte-identical at
+`0ce316009a1127871bbe3101849b76df5b898b1c0d3386ec815e570659110c73`. Three owner events had
+legitimately advanced the earlier saved evidence from 819 to 822 before this promotion;
+qualification issued no live household command.
+
+The most recent non-overwriting encrypted backup remains request
+`6d7cb65c-02b6-44eb-acbb-0ae0c60f3316`, run
+`86c35fe9-1e79-4323-82b3-f22ed66f29cf`, manifest SHA-256
+`b6ee25f40b2a7d8bea2bedd60006fdfb1f366e056b5614888a00b76c2fcb9d5b`, and encrypted database
+SHA-256 `8a7bd856f0afb1f2f343dbae85951ab1057742e65fc2538c3492a21fd9985789`. It was already restored
+and verified with all 33 referenced Attachments only at
+`/tmp/carekeeper-m66a-fidelity-postrestore.KHJFL0`; it was never restored over active data. All
+destructive browser, migration-from-zero, fixture, and image-coverage work used
+`/tmp/carekeeper-m66a-fidelity-final.Jjo32x`, explicitly outside the live database, Attachment, and
+reference-image paths.
 
 ## Boundaries
 

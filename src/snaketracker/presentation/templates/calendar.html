@@ -8,6 +8,7 @@
     <a href="/calendar?view=month&amp;month={{ calendar.month_value }}"{% if active_view == 'month' %} aria-current="page"{% endif %}>Month</a>
   </nav>
   {% if active_view == 'agenda' %}
+  <nav class="calendar-day-strip" aria-label="Current week">{% for day in calendar.today_week %}<a href="/calendar?view=month&amp;month={{ calendar.month_value }}&amp;selected={{ day.date.isoformat() }}"{% if day.is_today %} aria-current="date"{% endif %}><span>{{ day.date.strftime('%a') }}</span><strong>{{ day.date.day }}</strong></a>{% endfor %}</nav>
   <div class="calendar-agenda-layout">
     <section class="calendar-scheduled" aria-labelledby="scheduled-title">
       <div class="section-heading"><div><p class="eyebrow">Next up</p><h2 id="scheduled-title">Scheduled care</h2></div></div>
@@ -52,5 +53,6 @@
     </aside>
   </div>
   {% endif %}
+  <a class="quick-log-fab" href="/quick-log" aria-label="Add care"><span aria-hidden="true">+</span></a>
 </section>
 {% endblock %}

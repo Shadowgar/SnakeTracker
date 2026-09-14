@@ -11,6 +11,8 @@ from uuid import UUID
 from snaketracker.application.animals import AnimalProfile
 from snaketracker.application.species_directory import SpeciesDirectoryService
 
+FALLBACK_ASSET_VERSION = "m66-a-owner-fidelity-v2"
+
 
 @dataclass(frozen=True, slots=True)
 class AnimalVisual:
@@ -89,7 +91,7 @@ class AnimalVisualResolver:
             else "snake"
         )
         return AnimalVisual(
-            url=f"/static/animal-fallbacks/{group}.webp",
+            url=f"/static/animal-fallbacks/{group}.webp?v={FALLBACK_ASSET_VERSION}",
             alt=f"{animal.type_label} group illustration for {animal.name}",
             kind="group_fallback",
         )

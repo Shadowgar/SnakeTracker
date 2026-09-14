@@ -16,5 +16,6 @@ absence of overflow do not supersede this visual target.
 
 The board governs presentation, not domain facts. Care Keeper must not fabricate telemetry,
 handling records, health classifications, or other facts merely because an example appears in the
-board. See the [pre-implementation visual audit](visual-fidelity-audit.md) for the explicit mapping
-between its examples and Care Keeper's real capabilities.
+board. See the [completed visual-fidelity audit](visual-fidelity-audit.md) for the explicit mapping
+between its examples, the deployed owner-review captures, intentional differences, and Care
+Keeper's real capabilities.

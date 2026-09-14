@@ -14,7 +14,11 @@
       </div>
       <div class="quick-log-actions" aria-label="Care actions for {{ row.animal.name }}">{% for action in row.actions %}<a href="{{ action.href }}">{{ action.title|replace('Record ', '') }}</a>{% endfor %}</div>
     </section>{% endfor %}
+    <section class="quick-log-recent" aria-labelledby="quick-log-recent-title">
+      <header><h2 id="quick-log-recent-title">Recent actions</h2><a href="/calendar?view=agenda">View history</a></header>
+      {% if quick_log_recent %}<ol>{% for row in quick_log_recent %}<li><time datetime="{{ row.event.occurred_at.isoformat() }}">{{ row.occurred_label }}</time><strong>{{ row.subject_name }}</strong><span>{{ row.title }}</span></li>{% endfor %}</ol>{% else %}<p>Completed care will appear here.</p>{% endif %}
+    </section>
   </div>{% else %}<div class="empty-state"><h2>No animals available</h2><p>Add an animal before recording care.</p><a class="button-link" href="/animals/new">Add animal</a></div>{% endif %}
 </section>
 {% endblock %}
-{% block scripts %}<script src="/static/quick-log.js?v=m66-a-owner-fidelity" defer></script>{% endblock %}
+{% block scripts %}<script src="/static/quick-log.js?v=m66-a-owner-fidelity-v2" defer></script>{% endblock %}

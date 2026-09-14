@@ -1,38 +1,49 @@
 # Owner design-board visual fidelity audit
 
-Audit date: September 14, 2026. Baseline head:
-`5c76800ce781117bdf65ec4957712c792fe43a0b`.
+Final comparison date: September 14, 2026. Correction base:
+`f3298aa19b0acccbf3c840f5db232b2570418fa8`. Qualified ARM64 image:
+`sha256:2c7f66d0baaac69c6a29cd3eff9b24332e0a4d6742677aec584efd84c4c0070c`.
 
-This comparison used the preserved [owner design board](care-keeper-owner-design-board.png) and
-the actual 390×844/1440×900 browser captures from the accepted M6 passes and current M6.6-A
-qualification. It is a photographic audit, not a source-only review.
+This is a human visual comparison of the preserved [owner design
+board](care-keeper-owner-design-board.png) with the final real application captures. It evaluates
+image prominence, density, hierarchy, desktop space use, mobile card behavior, navigation
+character, and polish. Automated geometry and axe results are supporting evidence only.
 
-| Surface | Approved design | Current product | Gap | Correction |
+## Required owner-review surfaces
+
+| Surface | What changed | What now matches the board | Intentional difference and why | Remaining visual gap |
 | --- | --- | --- | --- | --- |
-| Today | Compact status summary, three care groups, animal thumbnails, floating quick action | Dark three-group layout and dense cards already align; most animals show generic marks | Animal identity is inconsistent and desktop cards are visually flatter | Route every subject through the unified Animal visual resolver; tighten thumbnail/card treatment and retain real due facts only |
-| Animals | Photo-first two-column mobile and multi-column desktop collection | Responsive 2/4-column grid exists, but most linked animals show green-dot/initial placeholders | Image prominence exists structurally but not in content | Use personal photo → licensed reference → species illustration → group fallback on every card |
-| Animal Profile | Large image-led mobile header and wide desktop hero | Strong facts/navigation exist; visual is a small square beside text | Hero lacks the board's visual weight | Introduce a responsive wide hero while retaining next-care, care tabs, provenance, and owner-photo actions |
-| Calendar | Compact date context and thumbnail-led agenda rows | Agenda/month structure is dense and readable | Generic identity marks weaken scanning; desktop composition is mostly list-like | Reuse resolved thumbnails and refine compact event-card grouping without inventing dates or statuses |
-| Quick Log | Focused animal picker, action tile grid, recent actions | Animal-grouped cards expose real supported actions | Cards are tall, text-heavy, and frequently lack imagery | Add resolved thumbnails and a denser action-tile composition; do not invent unsupported actions or a new recent-actions model |
-| Enclosures | Prominent habitat/occupant imagery with compact facts | Responsive grid, occupants, type, status, and maintenance facts exist | Cards read as database rows and mostly show generic marks | Use lead-occupant resolved imagery, enlarge visual region, retain only real occupancy/plant/type/maintenance facts |
-| Inventory | Compact stock cards and dashboard-like summary | Current mobile/desktop cards already use strong hierarchy and real stock facts | Less image-led than animal surfaces, appropriately | Preserve M6.5 accepted semantics; only normalize shared headings/status/card polish |
-| Reports | Visual summaries with strong metrics and compact navigation | Current report entry cards and detailed charts are already visually structured | Entry page has more unused space than board examples | Preserve charts and real totals; align shared density without inventing insights |
-| More | Compact grouped utility navigation | Grouped dark action rows and account card already align | Minor spacing/typography variance | Retain structure; normalize reusable action-tile and section-heading styling |
-| Onboarding/setup | Six short, progressive steps with one clear action | Real setup checklist and recommended next step exist | One long workspace page is less guided than the board's staged examples | Preserve non-linear real setup semantics while tightening cards and focused desktop width; do not invent completed steps |
+| [Today mobile](../../evidence/m6.6-species-aware-husbandry/a-universal-directory/screenshots/mobile-390x844-today.png) | Added four compact workload metrics, richer thumbnail-led care cards, tighter typography, and a floating Add Care action | Strong branded header, immediate date context, Overdue/Due today/Upcoming grouping, dense scannable rows, purple status/action language, and fixed bottom navigation | Buttons name the real supported action rather than using the board's overflow menus | Real care-action labels make some cards slightly wider/taller than the concept; no major fidelity blocker remains |
+| [Today desktop](../../evidence/m6.6-species-aware-husbandry/a-universal-directory/screenshots/desktop-1440x900-today.png) | Rebalanced the wide canvas into three parallel care columns and a four-part summary | Fixed sidebar, useful horizontal composition, dashboard metrics, compact photo rows, and visible status hierarchy | The board's speculative Insights strip is omitted because those cross-animal facts are not an accepted current capability | The real workload can extend below one viewport; no stretched-mobile presentation remains |
+| [Animals mobile](../../evidence/m6.6-species-aware-husbandry/a-universal-directory/screenshots/mobile-390x844-animals.png) | Replaced tall placeholder cards with a compact two-column photo grid and compact filter/add controls | Photo-first identity, comparable image-to-copy balance, subtle type/status metadata, dark cards, and mobile density | Scientific names are retained because they are useful Directory identity; filters scroll instead of using a single mock dropdown | Long names truncate in the dense grid and open fully on profile; no ordinary common-species placeholder gap remains |
+| [Animals desktop](../../evidence/m6.6-species-aware-husbandry/a-universal-directory/screenshots/desktop-1440x900-animals.png) | Built a true four-column collection grid with large upper-card imagery and compact lower metadata | Wide desktop canvas, card rhythm, image prominence, category filters, sidebar navigation, and restrained purple accents | Real next-care state replaces the board's illustrative sex/health icons when more actionable | The 21-item qualification collection continues below the viewport, as expected for real collection size |
+| [Animal Profile mobile](../../evidence/m6.6-species-aware-husbandry/a-universal-directory/screenshots/mobile-390x844-animal-profile-reference.png) | Promoted the visual to an edge-to-edge hero, moved identity/status/next care directly beneath it, and tightened tabs/actions | Substantial photography, name/species hierarchy, compact next-care panel, Overview/History/Trends/Care navigation, and quick care actions | Reference photos carry a tiny attribution and owner-photo action because they must not be presented as the keeper's individual animal | The deliberately long qualification name wraps more than the short board example; normal names retain the intended balance |
+| [Animal Profile desktop](../../evidence/m6.6-species-aware-husbandry/a-universal-directory/screenshots/desktop-1440x900-animal-profile-reference.png) | Rebuilt the hero as identity/photo/next-care columns spanning the content width | Wide photographic hero, left identity, right next-care focus, horizontal tabs, action tiles, and two-column detail content | No health classification, telemetry, or handling facts are invented; exact reference attribution stays below the photo | The long test name occupies more vertical space than “Bob”; no structural desktop gap remains |
+| [Calendar mobile](../../evidence/m6.6-species-aware-husbandry/a-universal-directory/screenshots/mobile-390x844-calendar.png) | Added the compact current-week strip, tightened agenda grouping, propagated animal thumbnails, and added the floating care action | Date-first agenda, thumbnail-led rows, due-state grouping, one-handed action, and bottom navigation closely match the board | Existing Agenda/Month modes and actual reminder dates replace the board's illustrative August data | Month mode is intentionally outside this capture; Agenda has no major remaining visual gap |
+| [Quick Log mobile](../../evidence/m6.6-species-aware-husbandry/a-universal-directory/screenshots/mobile-390x844-quick-log.png) | Added a selected-animal visual, compact two-column capability grid, and real recent-action list | Focused one-handed flow, clear animal selection, action tiles, recent activity, premium dark panel, and bottom navigation | Available actions are derived from the animal type; recent items use real stored care records rather than the board's fixed examples | Some animals expose five rather than eight actions because unsupported actions are not fabricated |
+| [Enclosures mobile](../../evidence/m6.6-species-aware-husbandry/a-universal-directory/screenshots/mobile-390x844-enclosures.png) | Converted plain rows into compact image-led habitat cards using the lead occupant visual | Prominent visual identity, occupant count, type, real next-care fact, dense rows, and fixed navigation | Temperature/humidity and enclosure photography are omitted because neither is stored; occupant imagery is the approved practical fallback | Repeated lead-occupant group imagery can occur for unlinked animals, but it is meaningful and polished rather than an empty mark |
+| [Enclosures desktop](../../evidence/m6.6-species-aware-husbandry/a-universal-directory/screenshots/desktop-1440x900-enclosures.png) | Rebuilt the list as a three-column visual grid with broad image regions and compact facts | True desktop grid, habitat-card rhythm, large visuals, occupancy/type/status hierarchy, and strong wide-canvas use | Occupant imagery substitutes for future enclosure photos; no telemetry is fabricated | A dedicated keeper-uploaded enclosure-photo capability remains future scope, not a fidelity blocker for this tranche |
 
-## Intentional differences
+## Other audited surfaces
 
-- The board's temperature, humidity, health, handling, and other example facts are omitted unless
-  Care Keeper already stores them.
-- Quick Log continues to expose capability-driven animal actions rather than the board's fixed
-  example action set.
-- Onboarding remains resumable and non-linear because existing requirements permit setup in any
-  order.
-- Reference visuals are marked accessibly as species references and never represented as a
-  keeper-owned photograph.
+| Surface | Board comparison and disposition |
+| --- | --- |
+| Inventory | The accepted M6.5 card/summary hierarchy already matches the shared dark product language. It remains stock-fact-first rather than artificially photo-led. |
+| Reports | Existing chart-led reports and real totals already provide stronger factual visualization than the board's small examples. Shared width, headings, cards, and navigation remain consistent. |
+| More | Compact grouped utility rows and account treatment already align with the board's navigation character; no unrelated redesign was introduced. |
+| Onboarding/setup | Existing setup is resumable and non-linear by requirement. Focused cards and one clear next action preserve the board's progressive character without fabricating completed steps or forcing a rigid wizard. |
 
-## Acceptance lens
+## Cross-product imagery and fidelity result
 
-Final comparison must use new application captures beside the same board and judge image
-prominence, density, hierarchy, desktop space use, mobile card behavior, navigation character, and
-overall polish. Axe and geometry results are supporting evidence only.
+One Animal visual resolver now supplies Animals, Today, Calendar, profiles, Quick Log, Enclosures,
+and search using keeper photo → licensed reference photo → reviewed species illustration → polished
+group fallback. The final 20-animal fixture uses deterministic 640×480 WebP derivatives derived
+from the checked-in group visuals, replacing the previous lime/initial placeholders while retaining
+twenty distinct attachment hashes. Common linked species resolve through iNaturalist, Wikimedia
+Commons, or GBIF; the requested Boa photo is retained as a CC BY-NC species reference with a tiny
+attribution line.
+
+The final captures and the board are immediately recognizable as the same product design. The
+remaining differences are deliberate consequences of real Care Keeper data and capabilities, not
+major visual omissions. No temperature, humidity, health, handling, enclosure-photo, or other
+unsupported fact was fabricated to imitate concept content.
