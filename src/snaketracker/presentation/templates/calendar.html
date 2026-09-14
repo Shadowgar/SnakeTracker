@@ -15,7 +15,7 @@
       {% for key, label, rows in agenda_groups %}{% if rows %}{% set scheduled.has_items = true %}
       <section class="agenda-date-group" aria-labelledby="calendar-{{ key }}"><h3 id="calendar-{{ key }}"><span class="status-badge status-{% if key == 'due_today' %}today{% else %}{{ key }}{% endif %}">{{ label }}</span><span>{{ rows|length }}</span></h3>
         <ul class="calendar-agenda-list">{% for row in rows %}<li>
-          {% if row.photo_attachment_version_id %}<img class="agenda-avatar" src="/attachments/{{ row.photo_attachment_version_id }}" alt="">{% else %}<span class="agenda-avatar agenda-avatar-placeholder fallback-{{ row.photo_fallback_key }}" aria-hidden="true">{{ row.subject_name[0]|upper }}</span>{% endif %}
+          {% if row.visual %}<img class="agenda-avatar" src="{{ row.visual.url }}" alt="" width="96" height="96" loading="lazy" decoding="async">{% else %}<span class="agenda-avatar agenda-avatar-placeholder fallback-{{ row.photo_fallback_key }}" aria-hidden="true">{{ row.subject_name[0]|upper }}</span>{% endif %}
           <div class="agenda-row-copy"><strong><a href="{{ row.subject_url }}">{{ row.subject_name }}</a></strong><span>{{ row.title }}{% if row.location_name %} · {{ row.location_name }}{% endif %}</span></div>
           <div class="agenda-row-end"><span>{{ row.due_label }}</span>{% if row.action_url %}<a href="{{ row.action_url }}">{{ row.action_label }}</a>{% endif %}</div>
         </li>{% endfor %}</ul>

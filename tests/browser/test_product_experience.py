@@ -127,17 +127,17 @@ def test_m66_static_assets_advance_and_retire_previous_shell_cache(tmp_path: Pat
         worker = client.get("/service-worker.js")
         pwa = client.get("/static/pwa.js")
 
-        assert "/static/app.css?v=m66-a-owner-c3" in page.text
-        assert "/static/pwa.js?v=m66-a-owner-c3" in page.text
-        assert "/static/species-directory.js?v=m66-a-owner-c3" in page.text
-        assert 'const ASSET_VERSION = "m66-a-owner-c3"' in worker.text
+        assert "/static/app.css?v=m66-a-owner-fidelity" in page.text
+        assert "/static/pwa.js?v=m66-a-owner-fidelity" in page.text
+        assert "/static/species-directory.js?v=m66-a-owner-fidelity" in page.text
+        assert 'const ASSET_VERSION = "m66-a-owner-fidelity"' in worker.text
         assert "`/static/app.css?v=${ASSET_VERSION}`" in worker.text
         assert "`/static/species-directory.js?v=${ASSET_VERSION}`" in worker.text
         assert "name.startsWith(CACHE_PREFIX) && name !== CACHE" in worker.text
         assert "caches.delete(name)" in worker.text
         assert "self.skipWaiting()" in worker.text
         assert "self.clients.claim()" in worker.text
-        assert "/service-worker.js?v=m66-a-owner-c3" in pwa.text
+        assert "/service-worker.js?v=m66-a-owner-fidelity" in pwa.text
         assert "m65-c1" not in page.text
         assert "m61-corrections" not in worker.text
 

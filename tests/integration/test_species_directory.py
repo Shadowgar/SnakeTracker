@@ -29,6 +29,7 @@ from snaketracker.application.species_directory import (
     LinkAnimalTaxonCommand,
     ProviderTaxon,
     ProviderUnavailableError,
+    ReferenceImageCandidate,
     SpeciesDirectoryService,
 )
 from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
@@ -92,6 +93,17 @@ class FixtureReferenceImageCache:
 
     def load(self, filename, expected_sha256) -> bytes:
         return self.cached[filename]
+
+
+class FixtureImageProvider:
+    def __init__(self, provider_name: str, candidate: ReferenceImageCandidate | None) -> None:
+        self.provider_name = provider_name
+        self.candidate = candidate
+        self.calls = 0
+
+    def find(self, taxon) -> ReferenceImageCandidate | None:
+        self.calls += 1
+        return self.candidate
 
 
 def _taxon(
@@ -549,6 +561,16 @@ def test_unknown_image_license_is_not_cached(tmp_path: Path) -> None:
             _taxon("licensed", "plant", "Planta aperta", "Open", image_license="cc-by"),
             observed_at=datetime.now(UTC),
         )
+        noncommercial = repository.upsert(
+            _taxon(
+                "licensed-nc",
+                "plant",
+                "Planta noncommercialis",
+                "Noncommercial",
+                image_license="cc-by-nc",
+            ),
+            observed_at=datetime.now(UTC),
+        )
         scientific_only = repository.upsert(
             ProviderTaxon(
                 provider="fixture",
@@ -563,6 +585,7 @@ def test_unknown_image_license_is_not_cached(tmp_path: Path) -> None:
         )
         assert unknown.image_source_url is None
         assert allowed.image_license_code == "cc-by"
+        assert noncommercial.image_license_code == "cc-by-nc"
         assert scientific_only.display_name == "Planta scientifica"
         cache = FixtureReferenceImageCache()
         with pytest.raises(RuntimeError, match="metadata could not be retained"):
@@ -593,6 +616,9 @@ def test_unknown_image_license_is_not_cached(tmp_path: Path) -> None:
         assert reference.provider_id == "licensed"
         assert service.reference_image(allowed.taxon_id) is not None
         assert cache.fetch_count == 1
+        noncommercial_reference = service.reference_image(noncommercial.taxon_id)
+        assert noncommercial_reference is not None
+        assert noncommercial_reference.license_code == "cc-by-nc"
 
         timeout_taxon = repository.upsert(
             _taxon("timeout", "plant", "Planta tarda", "Slow", image_license="cc0"),
@@ -628,5 +654,50 @@ def test_taxon_upsert_fails_closed_if_persistence_cannot_be_read_back(
                 _taxon("missing-readback", "plant", "Planta absens", "Absent"),
                 observed_at=datetime.now(UTC),
             )
+    finally:
+        engine.dispose()
+
+
+def test_reference_image_provider_cascade_persists_provenance(tmp_path: Path) -> None:
+    engine = _database(tmp_path)
+    repository = SQLAlchemyTaxonRepository(engine)
+    taxon = repository.upsert(
+        _taxon("cascade", "snake", "Boa constrictor", "Boa Constrictor"),
+        observed_at=datetime.now(UTC),
+    )
+    first = FixtureImageProvider("wikimedia_commons", None)
+    candidate = ReferenceImageCandidate(
+        provider="gbif",
+        provider_record_id="42:0:image",
+        download_url="https://api.gbif.org/v1/image/cache/1200x/example",
+        source_page_url="https://www.gbif.org/occurrence/42",
+        creator="Fixture photographer",
+        attribution="Fixture photographer · GBIF occurrence 42",
+        license_code="cc-by-nc-sa",
+        license_url="https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        retrieved_at=datetime.now(UTC),
+    )
+    second = FixtureImageProvider("gbif", candidate)
+    cache = FixtureReferenceImageCache()
+    service = SpeciesDirectoryService(
+        repository,
+        FixtureProvider({}),
+        event_store=SQLAlchemyEventStore(engine),
+        animal_projection=SQLAlchemyAnimalCurrentProjection(engine),
+        reference_image_cache=cache,
+        reference_image_providers=(first, second),
+    )
+    try:
+        reference = service.reference_image(taxon.taxon_id)
+        assert reference is not None
+        assert reference.provider == "gbif"
+        assert reference.provider_id == "42:0:image"
+        assert reference.license_code == "cc-by-nc-sa"
+        assert reference.source_page_url == "https://www.gbif.org/occurrence/42"
+        assert (first.calls, second.calls, cache.fetch_count) == (1, 1, 1)
+        retained = repository.get(taxon.taxon_id, stale_after=datetime.now(UTC))
+        assert retained is not None
+        assert retained.image_provider == "gbif"
+        assert retained.image_creator == "Fixture photographer"
     finally:
         engine.dispose()

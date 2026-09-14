@@ -5,7 +5,7 @@
 <section class="form-page" aria-labelledby="page-title">
   <header class="plant-profile-identity">
     {% if reference_taxon %}
-    <span class="taxon-reference-media"><img src="/directory/reference-images/{{ reference_taxon.taxon_id }}" alt="Species reference image for {{ reference_taxon.display_name }}"><small class="reference-attribution">Species reference · <a href="{{ reference_taxon.image_license_url }}" rel="noopener noreferrer">{{ reference_taxon.image_license_code|replace('-', ' ')|upper }}</a> · {{ reference_taxon.image_creator }} · <a href="{{ reference_taxon.source_url }}" rel="noopener noreferrer">source</a></small></span>
+    <span class="taxon-reference-media"><img src="/directory/reference-images/{{ reference_taxon.taxon_id }}" alt="Species reference image for {{ reference_taxon.display_name }}" width="1200" height="800" decoding="async"><small class="reference-attribution">Species reference · Photo: {{ reference_taxon.image_creator }} · <a href="{{ reference_taxon.image_license_url }}" rel="noopener noreferrer">{{ reference_taxon.image_license_code|replace('cc-', 'CC ')|upper }}</a> · <a href="{{ reference_taxon.image_source_page_url or reference_taxon.source_url }}" rel="noopener noreferrer">{{ 'iNaturalist' if (reference_taxon.image_provider or reference_taxon.provider) == 'inaturalist' else (reference_taxon.image_provider or reference_taxon.provider)|replace('_', ' ')|title }}</a></small></span>
     {% else %}
     <span class="taxon-placeholder plant-placeholder" aria-hidden="true">{{ icon('plant') }}</span>
     {% endif %}

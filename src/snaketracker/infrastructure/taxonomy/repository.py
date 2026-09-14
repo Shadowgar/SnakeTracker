@@ -11,16 +11,18 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine, RowMapping
 
 from snaketracker.application.species_directory import (
+    REFERENCE_IMAGE_LICENSES,
     CachedReferenceImage,
     IdentitySuggestions,
     LinkedTaxon,
     ProviderTaxon,
+    ReferenceImageCandidate,
     TaxonRecord,
 )
 from snaketracker.domains.animals.contracts import AnimalTaxonLinkedV1
 from snaketracker.platform.events.envelope import DomainEvent
 
-IMAGE_LICENSES = frozenset({"cc0", "cc-by", "cc-by-sa"})
+IMAGE_LICENSES = REFERENCE_IMAGE_LICENSES
 
 
 class SQLAlchemyTaxonRepository:
@@ -216,6 +218,102 @@ class SQLAlchemyTaxonRepository:
         if changed != 1:
             raise RuntimeError("Reference image cache metadata could not be retained.")
 
+    def store_image_candidate(
+        self, taxon_id: UUID, candidate: ReferenceImageCandidate
+    ) -> TaxonRecord:
+        if (
+            candidate.provider not in {"inaturalist", "wikimedia_commons", "gbif"}
+            or not candidate.provider_record_id
+            or len(candidate.provider_record_id) > 256
+            or not candidate.download_url.startswith("https://")
+            or not candidate.source_page_url.startswith("https://")
+            or candidate.license_code not in IMAGE_LICENSES
+            or candidate.kind not in {"photograph", "illustration"}
+        ):
+            raise ValueError("Reference image candidate is invalid.")
+        timestamp = candidate.retrieved_at.astimezone(UTC).isoformat(timespec="microseconds")
+        with self._engine.begin() as connection:
+            exists = connection.execute(
+                text("SELECT 1 FROM taxa WHERE taxon_id=:taxon_id"),
+                {"taxon_id": str(taxon_id)},
+            ).scalar_one_or_none()
+            if exists is None:
+                raise ValueError("Reference image taxon is invalid.")
+            connection.execute(
+                text(
+                    "INSERT INTO taxon_images "
+                    "(taxon_id,source_url,creator,attribution,license_code,license_url,"
+                    "provider,provider_record_id,source_page_url,retrieved_at,image_kind) "
+                    "VALUES (:taxon_id,:source_url,:creator,:attribution,:license_code,"
+                    ":license_url,:provider,:provider_record_id,:source_page_url,:retrieved_at,"
+                    ":image_kind) ON CONFLICT(taxon_id) DO UPDATE SET "
+                    "source_url=excluded.source_url,creator=excluded.creator,"
+                    "attribution=excluded.attribution,license_code=excluded.license_code,"
+                    "license_url=excluded.license_url,provider=excluded.provider,"
+                    "provider_record_id=excluded.provider_record_id,"
+                    "source_page_url=excluded.source_page_url,retrieved_at=excluded.retrieved_at,"
+                    "image_kind=excluded.image_kind,local_filename=NULL,local_media_type=NULL,"
+                    "local_byte_size=NULL,local_sha256=NULL,cached_at=NULL"
+                ),
+                {
+                    "taxon_id": str(taxon_id),
+                    "source_url": candidate.download_url,
+                    "creator": candidate.creator,
+                    "attribution": candidate.attribution,
+                    "license_code": candidate.license_code,
+                    "license_url": candidate.license_url,
+                    "provider": candidate.provider,
+                    "provider_record_id": candidate.provider_record_id,
+                    "source_page_url": candidate.source_page_url,
+                    "retrieved_at": timestamp,
+                    "image_kind": candidate.kind,
+                },
+            )
+            connection.execute(
+                text(
+                    "UPDATE taxa SET image_resolution_state='available',"
+                    "image_checked_at=:checked_at WHERE taxon_id=:taxon_id"
+                ),
+                {"taxon_id": str(taxon_id), "checked_at": timestamp},
+            )
+            record = self._get(connection, taxon_id, datetime.now(UTC) - timedelta(days=30))
+        if record is None:
+            raise RuntimeError("Reference image candidate could not be retained.")
+        return record
+
+    def mark_image_resolution(self, taxon_id: UUID, state: str, checked_at: datetime) -> None:
+        if state not in {"no_match", "unavailable"}:
+            raise ValueError("Reference image resolution state is invalid.")
+        with self._engine.begin() as connection:
+            connection.execute(
+                text(
+                    "UPDATE taxa SET image_resolution_state=:state,image_checked_at=:checked_at "
+                    "WHERE taxon_id=:taxon_id"
+                ),
+                {
+                    "taxon_id": str(taxon_id),
+                    "state": state,
+                    "checked_at": checked_at.astimezone(UTC).isoformat(timespec="microseconds"),
+                },
+            )
+
+    def discard_image_candidate(self, taxon_id: UUID, source_url: str) -> None:
+        with self._engine.begin() as connection:
+            removed = connection.execute(
+                text(
+                    "DELETE FROM taxon_images WHERE taxon_id=:taxon_id AND source_url=:source_url"
+                ),
+                {"taxon_id": str(taxon_id), "source_url": source_url},
+            ).rowcount
+            if removed:
+                connection.execute(
+                    text(
+                        "UPDATE taxa SET image_resolution_state=NULL,image_checked_at=NULL "
+                        "WHERE taxon_id=:taxon_id"
+                    ),
+                    {"taxon_id": str(taxon_id)},
+                )
+
     def identity_suggestions(self, household_id: UUID, taxon_id: UUID) -> IdentitySuggestions:
         with self._engine.connect() as connection:
             rows = connection.execute(
@@ -293,6 +391,10 @@ class SQLAlchemyTaxonRepository:
                     "i.local_media_type AS image_local_media_type,"
                     "i.local_byte_size AS image_local_byte_size,"
                     "i.local_sha256 AS image_local_sha256,i.cached_at AS image_cached_at "
+                    ",i.provider AS image_provider,"
+                    "i.provider_record_id AS image_provider_record_id,"
+                    "i.source_page_url AS image_source_page_url,"
+                    "i.retrieved_at AS image_retrieved_at,i.image_kind AS image_kind "
                     "FROM taxa t JOIN taxon_provider_mappings m ON m.taxon_id=t.taxon_id "
                     "LEFT JOIN taxon_images i ON i.taxon_id=t.taxon_id "
                     "WHERE t.taxon_id=:taxon_id ORDER BY m.provider LIMIT 1"
@@ -324,10 +426,15 @@ class SQLAlchemyTaxonRepository:
             candidate.image_license_url,
         )
         if not all(fields) or candidate.image_license_code not in IMAGE_LICENSES:
-            connection.execute(
-                text("DELETE FROM taxon_images WHERE taxon_id=:taxon_id"),
+            existing_provider = connection.execute(
+                text("SELECT provider FROM taxon_images WHERE taxon_id=:taxon_id"),
                 {"taxon_id": str(taxon_id)},
-            )
+            ).scalar_one_or_none()
+            if existing_provider in {None, candidate.provider}:
+                connection.execute(
+                    text("DELETE FROM taxon_images WHERE taxon_id=:taxon_id"),
+                    {"taxon_id": str(taxon_id)},
+                )
             return
         previous_source = connection.execute(
             text("SELECT source_url FROM taxon_images WHERE taxon_id=:taxon_id"),
@@ -336,11 +443,16 @@ class SQLAlchemyTaxonRepository:
         connection.execute(
             text(
                 "INSERT INTO taxon_images "
-                "(taxon_id,source_url,creator,attribution,license_code,license_url) "
-                "VALUES (:taxon_id,:source_url,:creator,:attribution,:license_code,:license_url) "
+                "(taxon_id,source_url,creator,attribution,license_code,license_url,provider,"
+                "provider_record_id,source_page_url,retrieved_at,image_kind) "
+                "VALUES (:taxon_id,:source_url,:creator,:attribution,:license_code,:license_url,"
+                ":provider,:provider_record_id,:source_page_url,:retrieved_at,'photograph') "
                 "ON CONFLICT(taxon_id) DO UPDATE SET source_url=excluded.source_url,"
                 "creator=excluded.creator,attribution=excluded.attribution,"
-                "license_code=excluded.license_code,license_url=excluded.license_url"
+                "license_code=excluded.license_code,license_url=excluded.license_url,"
+                "provider=excluded.provider,provider_record_id=excluded.provider_record_id,"
+                "source_page_url=excluded.source_page_url,retrieved_at=excluded.retrieved_at,"
+                "image_kind=excluded.image_kind"
             ),
             {
                 "taxon_id": str(taxon_id),
@@ -349,6 +461,20 @@ class SQLAlchemyTaxonRepository:
                 "attribution": candidate.image_attribution,
                 "license_code": candidate.image_license_code,
                 "license_url": candidate.image_license_url,
+                "provider": candidate.provider,
+                "provider_record_id": (candidate.image_provider_record_id or candidate.provider_id),
+                "source_page_url": candidate.image_source_page_url or candidate.source_url,
+                "retrieved_at": datetime.now(UTC).isoformat(timespec="microseconds"),
+            },
+        )
+        connection.execute(
+            text(
+                "UPDATE taxa SET image_resolution_state='available',image_checked_at=:checked_at "
+                "WHERE taxon_id=:taxon_id"
+            ),
+            {
+                "taxon_id": str(taxon_id),
+                "checked_at": datetime.now(UTC).isoformat(timespec="microseconds"),
             },
         )
         if previous_source is not None and previous_source != candidate.image_source_url:
@@ -402,6 +528,17 @@ def _record(
         image_local_sha256=_optional(row["image_local_sha256"]),
         image_cached_at=(
             _datetime(row["image_cached_at"]) if row["image_cached_at"] is not None else None
+        ),
+        image_provider=_optional(row["image_provider"]),
+        image_provider_record_id=_optional(row["image_provider_record_id"]),
+        image_source_page_url=_optional(row["image_source_page_url"]),
+        image_retrieved_at=(
+            _datetime(row["image_retrieved_at"]) if row["image_retrieved_at"] is not None else None
+        ),
+        image_kind=_optional(row["image_kind"]) or "photograph",
+        image_resolution_state=_optional(row["image_resolution_state"]),
+        image_checked_at=(
+            _datetime(row["image_checked_at"]) if row["image_checked_at"] is not None else None
         ),
     )
 

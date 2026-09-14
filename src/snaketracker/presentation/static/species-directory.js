@@ -120,6 +120,28 @@
       if (referenceOptions) referenceOptions.hidden = false;
       if (referenceCopy) referenceCopy.textContent = `Species reference image available · ${(row.dataset.imageLicenseCode || "").replaceAll("-", " ").toUpperCase()} · ${row.dataset.imageCreator || "attribution available"}. This is a general photo of the species, not your individual animal.`;
     };
+    const loadReferencePhoto = async (row) => {
+      if (!referenceRoot) return;
+      if (referenceCopy) referenceCopy.textContent = "Finding a licensed species image…";
+      try {
+        const response = await fetch(`/api/directory/${encodeURIComponent(row.dataset.taxonId || "")}/reference-image`, {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        const payload = await response.json();
+        if (!response.ok || payload.available !== true) {
+          showUnavailableReferencePhoto();
+          return;
+        }
+        row.dataset.referenceImageAvailable = "true";
+        row.dataset.referenceImageUrl = payload.url || "";
+        row.dataset.imageCreator = payload.creator || "";
+        row.dataset.imageLicenseCode = payload.license_code || "";
+        showReferencePhoto(row);
+      } catch (_error) {
+        showUnavailableReferencePhoto();
+      }
+    };
     referenceImage?.addEventListener("error", showUnavailableReferencePhoto);
 
     const updateMorphExample = () => {
@@ -155,7 +177,7 @@
       taxonId.value = row.dataset.taxonId || "";
       input.value = row.dataset.commonName || row.dataset.scientificName || "";
       status.textContent = `Selected ${input.value}, ${row.dataset.scientificName}.`;
-      showReferencePhoto(row);
+      loadReferencePhoto(row);
       loadIdentitySuggestions(taxonId.value);
       close();
     };

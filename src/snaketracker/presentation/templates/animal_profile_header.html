@@ -2,16 +2,10 @@
   <div class="animal-hero-main">
     <div class="animal-hero-photo-wrap">
     <a class="animal-hero-photo-link" href="/animals/{{ animal.animal_id }}/photo" aria-label="{% if animal.photo_attachment_version_id %}Change{% else %}Add{% endif %} {{ animal.name }}'s own photo">
-      {% if animal.photo_attachment_version_id %}
-      <img class="animal-hero-photo" src="/attachments/{{ animal.photo_attachment_version_id }}" alt="Profile photo of {{ animal.name }}">
-      {% elif reference_taxon %}
-      <img class="animal-hero-photo" src="/directory/reference-images/{{ reference_taxon.taxon_id }}" alt="Species reference image for {{ reference_taxon.display_name }}">
-      {% else %}
-      <span class="animal-hero-photo animal-hero-placeholder fallback-{{ animal.animal_type }}" aria-hidden="true">{{ animal.name[0]|upper }}</span>
-      {% endif %}
+      <img class="animal-hero-photo" src="{{ animal_visual.url }}" alt="{{ animal_visual.alt }}" width="1200" height="800" decoding="async" fetchpriority="high">
     </a>
     <a class="animal-photo-action" href="/animals/{{ animal.animal_id }}/photo">{% if animal.photo_attachment_version_id %}Change photo{% elif reference_taxon %}Add my animal's photo{% else %}Add photo{% endif %}</a>
-    {% if reference_taxon and not animal.photo_attachment_version_id %}<small class="reference-attribution">Species reference image · <a href="{{ reference_taxon.image_license_url }}" rel="noreferrer">{{ reference_taxon.image_license_code|replace('-', ' ')|upper }}</a> · {{ reference_taxon.image_creator }} · <a href="{{ reference_taxon.source_url }}" rel="noreferrer">source</a></small>{% endif %}
+    {% if animal_visual.kind == 'species_photo' %}<small class="reference-attribution">Species reference · Photo: {{ animal_visual.creator }} · <a href="{{ animal_visual.license_url }}" rel="noreferrer">{{ animal_visual.license_code|replace('cc-', 'CC ')|upper }}</a> · <a href="{{ animal_visual.source_page_url }}" rel="noreferrer">{{ 'iNaturalist' if animal_visual.provider == 'inaturalist' else animal_visual.provider|replace('_', ' ')|title }}</a></small>{% elif animal_visual.kind == 'species_illustration' %}<small class="reference-attribution">Care Keeper species reference illustration · not a photo of this individual.</small>{% elif animal_visual.kind == 'group_fallback' %}<small class="reference-attribution">Group illustration · add your animal's photo for a personal profile.</small>{% endif %}
     </div>
     <div class="animal-hero-copy">
       <p class="page-kicker">{{ animal.type_label }} profile</p>

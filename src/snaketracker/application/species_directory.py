@@ -22,6 +22,7 @@ from snaketracker.platform.events.store import (
 
 SUPPORTED_GROUPS = frozenset({"snake", "lizard", "spider", "scorpion", "plant"})
 ANIMAL_GROUPS = SUPPORTED_GROUPS - {"plant"}
+REFERENCE_IMAGE_LICENSES = frozenset({"cc0", "cc-by", "cc-by-sa", "cc-by-nc", "cc-by-nc-sa"})
 
 
 class DirectoryValidationError(ValueError):
@@ -58,6 +59,24 @@ class ProviderTaxon:
     image_attribution: str | None = None
     image_license_code: str | None = None
     image_license_url: str | None = None
+    image_provider_record_id: str | None = None
+    image_source_page_url: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ReferenceImageCandidate:
+    """A policy-eligible licensed image proposed by a bounded external provider."""
+
+    provider: str
+    provider_record_id: str
+    download_url: str
+    source_page_url: str
+    creator: str
+    attribution: str
+    license_code: str
+    license_url: str
+    retrieved_at: datetime
+    kind: str = "photograph"
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,6 +114,13 @@ class TaxonRecord:
     image_local_byte_size: int | None = None
     image_local_sha256: str | None = None
     image_cached_at: datetime | None = None
+    image_provider: str | None = None
+    image_provider_record_id: str | None = None
+    image_source_page_url: str | None = None
+    image_retrieved_at: datetime | None = None
+    image_kind: str = "photograph"
+    image_resolution_state: str | None = None
+    image_checked_at: datetime | None = None
 
     @property
     def display_name(self) -> str:
@@ -141,6 +167,9 @@ class ReferenceImage:
     provider: str
     provider_id: str
     cached_at: datetime
+    source_page_url: str
+    retrieved_at: datetime
+    kind: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,6 +184,12 @@ class TaxonomyProvider(Protocol):
     def search(self, query: str, group: str, *, limit: int) -> tuple[ProviderTaxon, ...]: ...
 
     def detail(self, provider_id: str, group: str) -> ProviderTaxon: ...
+
+
+class ReferenceImageProvider(Protocol):
+    provider_name: str
+
+    def find(self, taxon: TaxonRecord) -> ReferenceImageCandidate | None: ...
 
 
 class ReferenceImageCache(Protocol):
@@ -177,6 +212,14 @@ class TaxonRepository(SynchronousProjection, Protocol):
     ) -> LinkedTaxon | None: ...
 
     def mark_image_cached(self, taxon_id: UUID, image: CachedReferenceImage) -> None: ...
+
+    def store_image_candidate(
+        self, taxon_id: UUID, candidate: ReferenceImageCandidate
+    ) -> TaxonRecord: ...
+
+    def mark_image_resolution(self, taxon_id: UUID, state: str, checked_at: datetime) -> None: ...
+
+    def discard_image_candidate(self, taxon_id: UUID, source_url: str) -> None: ...
 
     def identity_suggestions(self, household_id: UUID, taxon_id: UUID) -> IdentitySuggestions: ...
 
@@ -202,6 +245,7 @@ class SpeciesDirectoryService:
         event_store: EventStore,
         animal_projection: AnimalCurrentProjection,
         reference_image_cache: ReferenceImageCache | None = None,
+        reference_image_providers: tuple[ReferenceImageProvider, ...] = (),
         cache_ttl: timedelta = timedelta(days=30),
     ) -> None:
         self._repository = repository
@@ -210,6 +254,7 @@ class SpeciesDirectoryService:
         self._animal_projection = animal_projection
         self._cache_ttl = cache_ttl
         self._reference_image_cache = reference_image_cache
+        self._reference_image_providers = reference_image_providers
 
     def search(
         self, query_value: str, group_value: str, *, limit: int = 10
@@ -260,16 +305,52 @@ class SpeciesDirectoryService:
 
     def reference_image(self, taxon_id: UUID) -> ReferenceImage | None:
         taxon = self.get(taxon_id)
-        if (
-            taxon is None
-            or self._reference_image_cache is None
-            or taxon.image_source_url is None
-            or taxon.image_creator is None
-            or taxon.image_attribution is None
-            or taxon.image_license_code not in {"cc0", "cc-by", "cc-by-sa"}
-            or taxon.image_license_url is None
-        ):
+        if taxon is None or self._reference_image_cache is None:
             return None
+        now = datetime.now(UTC)
+        if (
+            not _has_approved_image(taxon)
+            and _image_lookup_due(taxon, now)
+            and taxon.provider == self._provider.provider_name
+        ):
+            taxon = self.refresh_detail(taxon_id) or taxon
+        if _has_approved_image(taxon):
+            cached = self._load_or_cache(taxon)
+            if cached is not None:
+                return _reference_image(taxon, cached)
+            assert taxon.image_source_url is not None
+            self._repository.discard_image_candidate(taxon_id, taxon.image_source_url)
+            taxon = self.get(taxon_id)
+            if taxon is None:
+                return None
+        lookup_due = _image_lookup_due(taxon, now)
+        if lookup_due:
+            unavailable = False
+            for provider in self._reference_image_providers:
+                try:
+                    candidate = provider.find(taxon)
+                except ProviderUnavailableError:
+                    unavailable = True
+                    continue
+                if candidate is None:
+                    continue
+                try:
+                    cached = self._reference_image_cache.cache(taxon_id, candidate.download_url)
+                except ProviderUnavailableError:
+                    unavailable = True
+                    continue
+                taxon = self._repository.store_image_candidate(taxon_id, candidate)
+                self._repository.mark_image_cached(taxon_id, cached)
+                return _reference_image(taxon, cached)
+            else:
+                self._repository.mark_image_resolution(
+                    taxon_id, "unavailable" if unavailable else "no_match", now
+                )
+        return None
+
+    def _load_or_cache(self, taxon: TaxonRecord) -> CachedReferenceImage | None:
+        assert self._reference_image_cache is not None
+        assert taxon.image_source_url is not None
         cached_at = taxon.image_cached_at
         content: bytes | None = None
         if taxon.image_local_filename and taxon.image_local_sha256 and cached_at is not None:
@@ -281,28 +362,19 @@ class SpeciesDirectoryService:
                 content = None
         if content is None:
             try:
-                cached = self._reference_image_cache.cache(taxon_id, taxon.image_source_url)
+                cached = self._reference_image_cache.cache(taxon.taxon_id, taxon.image_source_url)
             except ProviderUnavailableError:
                 return None
-            self._repository.mark_image_cached(taxon_id, cached)
-            content = cached.content
-            cached_at = cached.cached_at
-            media_type = cached.media_type
-        else:
-            media_type = taxon.image_local_media_type or "image/webp"
+            self._repository.mark_image_cached(taxon.taxon_id, cached)
+            return cached
         assert cached_at is not None
-        return ReferenceImage(
-            taxon_id=taxon_id,
-            content=content,
-            media_type=media_type,
-            creator=taxon.image_creator,
-            attribution=taxon.image_attribution,
-            license_code=taxon.image_license_code,
-            license_url=taxon.image_license_url,
-            source_url=taxon.image_source_url,
-            provider=taxon.provider,
-            provider_id=taxon.provider_id,
+        return CachedReferenceImage(
+            filename=taxon.image_local_filename or f"{taxon.taxon_id}.webp",
+            media_type=taxon.image_local_media_type or "image/webp",
+            byte_size=len(content),
+            sha256=taxon.image_local_sha256 or "",
             cached_at=cached_at,
+            content=content,
         )
 
     def link_animal(self, command: LinkAnimalTaxonCommand) -> LinkedTaxon:
@@ -395,3 +467,55 @@ def _validated_search(query_value: str, group_value: str, limit: int) -> tuple[s
     if len(query) > 100 or limit < 1 or limit > 20:
         raise DirectoryValidationError("Species search is too large.")
     return query, group
+
+
+def _has_approved_image(taxon: TaxonRecord) -> bool:
+    return bool(
+        taxon.image_source_url
+        and taxon.image_creator
+        and taxon.image_attribution
+        and taxon.image_license_code in REFERENCE_IMAGE_LICENSES
+        and taxon.image_license_url
+    )
+
+
+def _image_lookup_due(taxon: TaxonRecord, now: datetime) -> bool:
+    return bool(
+        not _has_approved_image(taxon)
+        and (
+            taxon.image_checked_at is None
+            or taxon.image_resolution_state is None
+            or (
+                taxon.image_resolution_state == "no_match"
+                and taxon.image_checked_at < now - timedelta(days=30)
+            )
+            or (
+                taxon.image_resolution_state == "unavailable"
+                and taxon.image_checked_at < now - timedelta(hours=1)
+            )
+        )
+    )
+
+
+def _reference_image(taxon: TaxonRecord, cached: CachedReferenceImage) -> ReferenceImage:
+    assert taxon.image_source_url is not None
+    assert taxon.image_creator is not None
+    assert taxon.image_attribution is not None
+    assert taxon.image_license_code in REFERENCE_IMAGE_LICENSES
+    assert taxon.image_license_url is not None
+    return ReferenceImage(
+        taxon_id=taxon.taxon_id,
+        content=cached.content,
+        media_type=cached.media_type,
+        creator=taxon.image_creator,
+        attribution=taxon.image_attribution,
+        license_code=taxon.image_license_code,
+        license_url=taxon.image_license_url,
+        source_url=taxon.image_source_url,
+        provider=taxon.image_provider or taxon.provider,
+        provider_id=taxon.image_provider_record_id or taxon.provider_id,
+        cached_at=cached.cached_at,
+        source_page_url=taxon.image_source_page_url or taxon.source_url,
+        retrieved_at=taxon.image_retrieved_at or taxon.retrieved_at,
+        kind=taxon.image_kind,
+    )

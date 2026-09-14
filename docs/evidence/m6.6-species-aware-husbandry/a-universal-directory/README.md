@@ -15,6 +15,9 @@ Architecture: [ADR-0043](../../../adr/0043-universal-species-directory.md)
 ## Evidence index
 
 - [Provider and licensing audit](provider-audit.md)
+- [Owner design source and visual-fidelity audit](../../../ux/owner-design/README.md)
+- [Reference-image provider policy](../../../ux/owner-design/reference-image-provider-policy.md)
+- [Owner-fidelity browser results](owner-fidelity-qualification.json)
 - [ADR-0043](../../../adr/0043-universal-species-directory.md)
 - [Browser results](browser-qualification.partial.json) and
   [provider-outage results](browser-outage-qualification.json)
@@ -49,7 +52,8 @@ and notes; removing it preserves immutable history and removes it only from the 
 roster. Watering, bioactive behavior, care guidance, schedules, and Today/Calendar integration
 remain deferred.
 
-Eligible CC0, CC BY, and CC BY-SA reference images are global Directory assets, not household
+Eligible CC0, CC BY, CC BY-SA, CC BY-NC, and CC BY-NC-SA reference images are global Directory
+assets, not household
 attachments. Care Keeper fetches only allow-listed iNaturalist HTTPS image origins server-side,
 rejects redirects, applies a three-second timeout and 10 MiB response cap, requires JPEG/PNG/WebP,
 decodes under 25-megapixel/8192-pixel limits, normalizes to WebP, stores checksum/cache metadata,
@@ -80,10 +84,48 @@ template content; it is replaced by the entered Animal's initial over the existi
 fallback treatment. Selected-image, selected-without-image, and manual-entry copy are now mutually
 accurate states.
 
-iNaturalist taxon `32093` explains the reported Boa placeholder: its current default photo
-`588689904` is `CC BY-NC`. Care Keeper correctly excludes it because non-commercial media is not in
-the approved licence set; the provider hostname and metadata were otherwise valid, and no security
-or licensing rule was weakened.
+iNaturalist taxon `32093` explains the formerly reported Boa placeholder: its current default photo
+`588689904` is `CC BY-NC`. The owner-confirmed noncommercial policy now permits that licence, so the
+photo is selected after its provider metadata, hostname, bytes, dimensions, decoder, and checksum
+pass the existing validation boundary. Its creator, source, provider record, licence code, and
+licence URL remain cached for attribution and later business-model review.
+
+## Owner visual-fidelity reset and guaranteed imagery
+
+The owner-supplied design board is preserved byte-for-byte at
+[care-keeper-owner-design-board.png](../../../ux/owner-design/care-keeper-owner-design-board.png),
+with its checksum and authority recorded in the adjacent README. The completed
+[screen-by-screen audit](../../../ux/owner-design/visual-fidelity-audit.md) maps the board's Today,
+Animals, profile, Calendar, Quick Log, Enclosures, desktop shell, and onboarding principles to the
+implemented product. This bounded reset restores image-led collection cards, compact mobile
+navigation and actions, profile hero hierarchy, visual enclosure rows, and a two-stage Quick Log
+flow without changing event or household semantics.
+
+Every animal presentation now resolves through the same hierarchy: keeper photo, licensed species
+photograph, reviewed species illustration, then a local biological-group illustration. The four
+last-resort snake, lizard, spider, and scorpion illustrations are checked-in WebP assets generated
+specifically for Care Keeper; their prompt, mode, dimensions, and non-photographic purpose are
+recorded with the assets. They are visual group fallbacks, never a false claim about the animal's
+species or individual appearance. A keeper upload immediately becomes primary and carries no
+provider credit.
+
+The image provider cascade is iNaturalist, Wikimedia Commons, then GBIF. It achieved verified local
+photographic coverage for Ball Python, Boa Constrictor, Corn Snake, Kingsnake, Leopard Gecko,
+Crested Gecko, Bearded Dragon, Bold Jumping Spider, a representative tarantula, and Emperor
+Scorpion. The Boa result is the specifically requested iNaturalist photo `588689904` under
+CC BY-NC. The full provider/creator/licence/source metadata for all ten results is retained in
+[owner-fidelity-qualification.json](owner-fidelity-qualification.json). Major reference-image
+presentations show a tiny readable attribution line immediately below the image; dense linked cards
+defer full credit to the profile/detail view.
+
+The isolated ARM64 browser runtime was
+`/tmp/carekeeper-m66a-fidelity-runtime.wg2eTc`, with its own database, attachments, and reference
+cache. At 390×844 it captured Today, Animals, the attributed Animal profile, Calendar, Quick Log,
+and Enclosures; at 1440×900 it captured Today, Animals, the attributed profile, and Enclosures. All
+ten captures had no horizontal overflow, zero axe violations, zero application console diagnostics,
+zero page errors, and zero request failures. Every response retained `script-src 'self'` and
+`img-src 'self'`; CSP and the downloader's SSRF, redirect, decode, byte, pixel, and dimension
+controls were not weakened.
 
 ## Deterministic automated qualification
 
@@ -92,12 +134,12 @@ September 14, 2026:
 
 - formatting, Ruff, architecture freeze, documentation links, strict mypy, Compose validation,
   generated-artifact checks, dependency audit, and diff checks passed;
-- 654 tests passed, including deterministic five-group, common/scientific/synonym, filter,
+- 676 tests passed, including deterministic five-group, common/scientific/synonym, filter,
   provider-ID separation, legacy/change/idempotency/isolation, accepted-name, cache/outage,
   timeout/`429`/malformed/oversized, licence, image SSRF/redirect/decode/dimension/integrity,
   keeper image preference, personal-photo priority, identity-suggestion isolation, migration,
   backup, and replay coverage;
-- total coverage reached 92.62 percent, with 94.50-percent line and 85.08-percent branch coverage,
+- total coverage reached 92.57 percent, with 94.45-percent line and 85.08-percent branch coverage,
   passing the enforced 90-percent total and 85-percent branch gates; and
 - the dependency audit reported no known vulnerabilities.
 
@@ -241,6 +283,59 @@ exited zero at existing head `0021_reference_images`. Web and worker run as UID/
 web, worker, and Nginx are healthy; local and public `/health/ready` return `ready`; and exactly one
 `snaketracker` Compose project with three active services remains. `SnakeTracker.code-workspace`
 remains untracked and untouched.
+
+## Owner-fidelity correction final promotion
+
+The exact frozen authoritative command, `uv sync --frozen` followed by
+`./scripts/quality/check.sh`, completed successfully after the owner-fidelity correction. All 676
+tests passed. Enforced coverage was 94.45 percent lines, 85.08 percent branches, and 92.57 percent
+total. Formatting, Ruff, strict mypy, architecture freeze, documentation links, generated-artifact
+checks, dependency audit (no known vulnerabilities), Compose validation, and diff checks passed.
+
+Before this qualification, encrypted backup request
+`c70efed4-e85c-4776-a491-9620dce9b652` completed as run
+`7b5847b5-01e6-4a59-848c-e3fa400cc9d4`; manifest SHA-256 is
+`9919dd08ad5453e5313d7edf26243e44bdbb81acb1b1f44bd3c4d0014473fc0e` and encrypted database
+SHA-256 is `6a7dfa719ae87aaab7b9964ca60261d46f4e686e529b6c2a8cba55fabaeeba60`.
+Its restore was verified outside all active paths at
+`/tmp/carekeeper-m66a-fidelity-restore.vWgAii`. A copy at
+`/tmp/carekeeper-m66a-fidelity-upgrade.VAVMSE` rehearsed 0021→0022 with integrity `ok`, zero FK
+violations, all 819 events, and exact ordered event checksum
+`66f4f49ebaece8bf6adf73115a2578262ef5f97da88a8508568d6568378f8c83`.
+
+Promotion applied only `0022_reference_image_provenance` to the active database. Before/after
+business state is exact: 819 events and the checksum above, four households/users/memberships, 44
+Animals, 30 Enclosures, two Enclosure Plants, 30 Inventory balances, four Purchases, 14 Expenses,
+39 Attachment versions, 35 taxa, and five taxon-image records. SQLite integrity is `ok`, FK
+violations are zero, and the 40-file Attachment tree is byte-identical at
+`d9c69298591f9646ccd0f6b214f191db58b9d57794ecced6eb223d2836dbd7`. No live household record was
+created, edited, deleted, reset, reseeded, replaced, or used as a qualification fixture.
+
+The final non-overwriting encrypted backup is request
+`6d7cb65c-02b6-44eb-acbb-0ae0c60f3316`, run
+`86c35fe9-1e79-4323-82b3-f22ed66f29cf`, manifest SHA-256
+`b6ee25f40b2a7d8bea2bedd60006fdfb1f366e056b5614888a00b76c2fcb9d5b`, and encrypted database
+SHA-256 `8a7bd856f0afb1f2f343dbae85951ab1057742e65fc2538c3492a21fd9985789`.
+It restored with status `verified` and all 33 referenced Attachments only into
+`/tmp/carekeeper-m66a-fidelity-postrestore.KHJFL0`; that restored database is at 0022 with
+integrity `ok`, zero FK violations, 819 events, and the exact ordered checksum above.
+
+Final native image `snaketracker:m66-a-owner-fidelity` is Linux ARM64, SHA-256
+`4e79df1ca7f3dbd5783c102871e77d40229bf93493a6d412bab3b6c3b6fe2934`. Web and worker run as
+UID/GID `1001:1001`; web, worker, and Nginx are healthy; both local and public readiness return
+`ready`; and exactly one Care Keeper Compose stack is active.
+
+The required owner-review captures are
+[mobile Today](screenshots/mobile-390x844-today.png),
+[mobile Animals](screenshots/mobile-390x844-animals.png),
+[mobile profile](screenshots/mobile-390x844-animal-profile-reference.png),
+[mobile Calendar](screenshots/mobile-390x844-calendar.png),
+[mobile Quick Log](screenshots/mobile-390x844-quick-log.png),
+[mobile Enclosures](screenshots/mobile-390x844-enclosures.png),
+[desktop Today](screenshots/desktop-1440x900-today.png),
+[desktop Animals](screenshots/desktop-1440x900-animals.png),
+[desktop profile](screenshots/desktop-1440x900-animal-profile-reference.png), and
+[desktop Enclosures](screenshots/desktop-1440x900-enclosures.png).
 
 ## Boundaries
 

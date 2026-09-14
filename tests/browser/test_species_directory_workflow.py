@@ -20,6 +20,10 @@ from sqlalchemy import text
 from snaketracker.application.species_directory import ProviderTaxon, TaxonRecord
 from snaketracker.bootstrap.application import build_application
 from snaketracker.bootstrap.configuration import Environment, Settings
+from snaketracker.infrastructure.taxonomy.reference_providers import (
+    GBIFImageProvider,
+    WikimediaCommonsImageProvider,
+)
 from snaketracker.infrastructure.taxonomy.repository import SQLAlchemyTaxonRepository
 
 ROOT = Path(__file__).parents[2]
@@ -136,7 +140,11 @@ def _install_reference_image(
     return image_content
 
 
-def test_directory_animal_selection_manual_fallback_and_legacy_link(tmp_path: Path) -> None:
+def test_directory_animal_selection_manual_fallback_and_legacy_link(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(WikimediaCommonsImageProvider, "find", lambda *_args: None)
+    monkeypatch.setattr(GBIFImageProvider, "find", lambda *_args: None)
     with _client(tmp_path) as client:
         _setup(client)
         snake = _cache(
@@ -145,7 +153,7 @@ def test_directory_animal_selection_manual_fallback_and_legacy_link(tmp_path: Pa
             "snake",
             "Python regius",
             "Ball Python",
-            image_license="cc-by",
+            image_license="cc-by-nc",
         )
         unlicensed = _cache(
             client, "snake-unlicensed", "snake", "Python bivittatus", "Burmese Python"
@@ -181,7 +189,7 @@ def test_directory_animal_selection_manual_fallback_and_legacy_link(tmp_path: Pa
             "Reference images are available when a supported Directory species is linked"
             in form.text
         )
-        assert "/static/species-directory.js?v=m66-a-owner-c3" in form.text
+        assert "/static/species-directory.js?v=m66-a-owner-fidelity" in form.text
         suggestions = client.get("/api/directory/search?group=snake&q=ball+p")
         assert suggestions.status_code == 200
         assert suggestions.json()["records"][0]["scientific_name"] == "Python regius"
@@ -224,10 +232,10 @@ def test_directory_animal_selection_manual_fallback_and_legacy_link(tmp_path: Pa
         assert "Python regius" in profile.text
         assert "Banana" in profile.text
         assert "Change species link" in profile.text
-        assert "Species reference image" in profile.text
+        assert "Species reference · Photo:" in profile.text
         assert "not your individual animal" not in profile.text
         assert "Add my animal's photo" in profile.text
-        assert "CC BY" in profile.text
+        assert "CC BY-NC" in profile.text
         reference = client.get(f"/directory/reference-images/{snake.taxon_id}")
         assert reference.status_code == 200
         assert reference.headers["content-type"] == "image/webp"
@@ -235,6 +243,11 @@ def test_directory_animal_selection_manual_fallback_and_legacy_link(tmp_path: Pa
         assert "img-src &#39;self&#39;" not in profile.text
         assert profile.headers["content-security-policy"].split("; ")[3] == "img-src 'self'"
         assert "static.inaturalist.org" not in profile.text
+        collection = client.get("/animals")
+        quick_log = client.get("/quick-log")
+        reference_route = f"/directory/reference-images/{snake.taxon_id}"
+        assert reference_route in collection.text
+        assert reference_route in quick_log.text
         identity_suggestions = client.get(
             f"/api/directory/{snake.taxon_id}/identity-suggestions"
         ).json()
@@ -264,8 +277,8 @@ def test_directory_animal_selection_manual_fallback_and_legacy_link(tmp_path: Pa
         )
         assert disabled.status_code == 303
         disabled_profile = client.get(created.headers["location"])
-        assert "Species reference image for Ball Python" not in disabled_profile.text
-        assert "Add photo" in disabled_profile.text
+        assert "Ball Python species reference for Monty" in disabled_profile.text
+        assert "Add my animal's photo" in disabled_profile.text
 
         photo_form = client.get(f"{created.headers['location']}/photo")
         enabled = client.post(
@@ -295,7 +308,7 @@ def test_directory_animal_selection_manual_fallback_and_legacy_link(tmp_path: Pa
         personal_profile = client.get(created.headers["location"])
         assert "Profile photo of Monty" in personal_profile.text
         assert "Change photo" in personal_profile.text
-        assert "Species reference image ·" not in personal_profile.text
+        assert "Species reference · Photo:" not in personal_profile.text
         with application.state.database_engine.connect() as connection:
             assert (
                 connection.execute(
@@ -353,8 +366,8 @@ def test_directory_animal_selection_manual_fallback_and_legacy_link(tmp_path: Pa
         )
         assert declined.status_code == 303
         declined_profile = client.get(declined.headers["location"])
-        assert "Species reference image for Ball Python" not in declined_profile.text
-        assert "Add photo" in declined_profile.text
+        assert "Ball Python species reference for No Reference" in declined_profile.text
+        assert "Add my animal's photo" in declined_profile.text
 
         unavailable_form = client.get("/animals/new")
         unavailable = client.post(
@@ -399,7 +412,7 @@ def test_directory_animal_selection_manual_fallback_and_legacy_link(tmp_path: Pa
         assert "Epipremnum aureum" in detail.text
         assert "Araceae" in detail.text
         assert f"/directory/reference-images/{plant.taxon_id}" in detail.text
-        assert "Reference photo" in detail.text
+        assert "Species reference" in detail.text
         assert "Jane Doe" in detail.text
         plant_image = client.get(f"/directory/reference-images/{plant.taxon_id}")
         assert plant_image.content == plant_image_content

@@ -91,6 +91,10 @@ from snaketracker.infrastructure.search.fts import SQLAlchemyFTSSearchRepository
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 from snaketracker.infrastructure.taxonomy.inaturalist import INaturalistTaxonomyProvider
 from snaketracker.infrastructure.taxonomy.reference_images import LocalReferenceImageCache
+from snaketracker.infrastructure.taxonomy.reference_providers import (
+    GBIFImageProvider,
+    WikimediaCommonsImageProvider,
+)
 from snaketracker.infrastructure.taxonomy.repository import SQLAlchemyTaxonRepository
 from snaketracker.platform.notifications.service import NotificationIntentService
 from snaketracker.presentation.health import create_health_router
@@ -217,6 +221,10 @@ def build_application(settings: Settings) -> FastAPI:
             reference_image_cache=LocalReferenceImageCache(
                 settings.reference_image_storage_path
                 or settings.database_path.parent / "reference-images"
+            ),
+            reference_image_providers=(
+                WikimediaCommonsImageProvider(),
+                GBIFImageProvider(),
             ),
         )
         attachment_service = AttachmentService(

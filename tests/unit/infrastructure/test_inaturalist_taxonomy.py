@@ -101,6 +101,40 @@ def test_provider_ignores_malformed_rows_and_stops_at_limit(
     assert results[0].provider_id == "32158"
 
 
+def test_provider_accepts_noncommercial_photo_and_retains_photo_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {
+        "results": [
+            {
+                "id": 32093,
+                "name": "Boa constrictor",
+                "rank": "species",
+                "preferred_common_name": "Boa Constrictor",
+                "ancestor_ids": [85553],
+                "default_photo": {
+                    "id": 588689904,
+                    "medium_url": "https://static.inaturalist.org/photos/588689904/medium.jpg",
+                    "attribution": "Owner supplied creator, CC BY-NC",
+                    "attribution_name": "Owner supplied creator",
+                    "license_code": "cc-by-nc",
+                },
+            }
+        ]
+    }
+    monkeypatch.setattr(
+        inaturalist,
+        "urlopen",
+        lambda *_args, **_kwargs: Response(json.dumps(payload).encode()),
+    )
+
+    result = INaturalistTaxonomyProvider().search("boa constrictor", "snake", limit=5)[0]
+
+    assert result.image_license_code == "cc-by-nc"
+    assert result.image_provider_record_id == "588689904"
+    assert result.image_source_page_url == "https://www.inaturalist.org/photos/588689904"
+
+
 @pytest.mark.parametrize(
     ("response", "expected"),
     [
@@ -260,7 +294,7 @@ def test_provider_detail_ignores_invalid_optional_classification_and_image(
     assert detail.image_source_url is None
 
 
-def test_provider_rejects_noncommercial_reference_photo_license(
+def test_provider_accepts_noncommercial_reference_photo_without_optional_photo_id(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     payload = {
@@ -290,6 +324,7 @@ def test_provider_rejects_noncommercial_reference_photo_license(
 
     detail = INaturalistTaxonomyProvider().detail("32093", "snake")
 
-    assert detail.image_source_url is None
-    assert detail.image_creator is None
-    assert detail.image_license_code is None
+    assert detail.image_source_url is not None
+    assert detail.image_creator == "Nicolas Burnel"
+    assert detail.image_license_code == "cc-by-nc"
+    assert detail.image_provider_record_id is None

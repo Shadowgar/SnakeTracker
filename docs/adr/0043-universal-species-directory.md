@@ -23,13 +23,15 @@ The household fact that an Animal is linked to an internal taxon is an append-on
 provider provenance. A later keeper-confirmed link supersedes current projected state without
 rewriting earlier registrations or links. No legacy free-text species is matched automatically.
 
-One provider port returns normalized, validated search/detail results. M6.6-A uses iNaturalist's
+One taxonomy-provider port returns normalized, validated search/detail results. M6.6-A uses iNaturalist's
 public taxon autocomplete as its live discovery adapter because it provides useful common-name,
 scientific-name, synonym-match, and broad-group results. Requests send only query text and the
 selected biological group; they never send identity, household, Animal, enclosure, care, financial,
 attachment, or account data. Catalogue of Life/ChecklistBank and GBIF remain eligible open
-backbone/enrichment adapters after mapping and relevance qualification. Care Keeper continues to
-work with only its cache and manual species text.
+backbone/enrichment adapters after mapping and relevance qualification. A separate image-provider
+port tries the selected iNaturalist taxon's eligible default photo, Wikimedia Commons, then GBIF.
+It retains the provider record, source page, creator, licence, retrieval time, and normalized local
+bytes. Care Keeper continues to work with only its cache and manual species text.
 
 Reptile Database, World Spider Catalog, Trefle, Perenual, Kindwise plant.id, and Kew POWO are not
 required for M6.6-A. Their adapters remain disabled unless API access, licence, attribution,
@@ -53,8 +55,11 @@ snapshots. Conflicting provider mappings are retained with provenance rather tha
 Unknown fields stay unknown.
 
 Only image metadata with a known source, creator/attribution, and an explicitly permitted licence
-may be retained or rendered. M6.6-A permits `CC0`, `CC BY`, and `CC BY-SA`; revoked, incompatible,
-or ambiguous rights remove the image from eligibility. Eligible bytes are fetched server-side only
+may be retained or rendered. In its current noncommercial deployment, M6.6-A permits `CC0`,
+`CC BY`, `CC BY-SA`, `CC BY-NC`, and `CC BY-NC-SA`. All Rights Reserved, unknown, and `ND`
+licences remain ineligible; local normalization may be a derivative, so no-derivatives terms need
+separate evaluation before use. Revoked, incompatible, or ambiguous rights remove the image from
+eligibility. Eligible bytes are fetched server-side only
 from an HTTPS hostname allow-list, without redirects, under strict timeout, response-size,
 content-type, decoded-format, pixel, and dimension limits. Care Keeper normalizes verified raster
 content to WebP in one global local cache, records its checksum/retrieval metadata, and serves it
@@ -62,11 +67,13 @@ only from a same-origin authenticated route. Remote provider URLs are never embe
 pages, SVG is not accepted, and the production `img-src 'self'` and `script-src 'self'` policy is
 unchanged.
 
-An Animal may append `animal.reference_image_preference_changed` to opt into or out of the linked
-taxon's eligible reference image. This household fact never duplicates the global image into the
-household attachment store. Display priority is always the existing attachment-backed photo of the
-individual Animal, then an explicitly enabled and available species reference image, then the Care
-Keeper placeholder. Uploading a personal photo neither deletes nor rewrites global reference data.
+Legacy Animal streams may contain `animal.reference_image_preference_changed`; those facts remain
+valid history and are not rewritten. The owner-approved display policy now guarantees one visual
+decision everywhere: the existing attachment-backed photo of the individual Animal, then an
+eligible licensed species photograph, then a species illustration when one is available, then an
+honestly labeled local biological-group illustration. A linked animal is no longer visually reduced
+to an initial because a legacy preference is false. Uploading a personal photo immediately takes
+priority and neither deletes nor rewrites global reference data.
 Morph/variant and genetics/lineage remain free-text individual facts. Same-household values for the
 same Care Keeper taxon may be offered as optional suggestions, but taxonomy never selects, infers,
 normalizes, or erases them.
@@ -82,6 +89,11 @@ Keeper-facing static assets that implement this flow use a release-specific URL 
 uses the same asset generation, installs it before activation, takes control without requiring a
 manual cache clear, and deletes older Care Keeper shell generations. Cache-first delivery is safe
 only for URLs whose key changes when their bytes or behavior change.
+
+The noncommercial allowance is a business-model condition, not a permanent assumption. Before a
+paid, subscription-supported, ad-supported, commercially distributed, or otherwise monetized
+release, every cached `cc-by-nc` and `cc-by-nc-sa` image must be located through retained licence
+metadata and re-evaluated or removed before that change ships.
 
 External taxonomy is reference knowledge only. It cannot create care guidance, husbandry facts,
 schedules, reminders, or household decisions. Those boundaries require later M6.6 tranches and
@@ -103,6 +115,8 @@ schedules, Today, Calendar, or reminders.
   exposing a provider URL to the browser.
 - Individual-photo attachments remain household-isolated and take display priority over global
   reference imagery.
+- Common linked species gain stable visual coverage without a browser dependency on a third-party
+  host; unavailable providers degrade to a local, non-species-specific group illustration.
 - Linked plants gain compact, attributable visual identity without a new downloader, attachment
   model, household preference event, or CSP allowance.
 - Taxonomic change is auditable without making provider history household event noise.

@@ -20,7 +20,7 @@ ANCESTOR_BY_GROUP = {
     "scorpion": 48894,
     "plant": 47126,
 }
-IMAGE_LICENSES = frozenset({"cc0", "cc-by", "cc-by-sa"})
+IMAGE_LICENSES = frozenset({"cc0", "cc-by", "cc-by-sa", "cc-by-nc", "cc-by-nc-sa"})
 
 
 class INaturalistTaxonomyProvider:
@@ -129,6 +129,7 @@ def _parse_taxon(raw: object, group: str, ancestor_id: int) -> ProviderTaxon | N
     matched = _bounded_string(data.get("matched_term"), 256)
     synonyms = () if matched is None or matched in {name, common} else (matched,)
     image = _image_fields(data.get("default_photo"))
+    photo_id = image[5]
     genus = name.split(" ", 1)[0] if " " in name else None
     return ProviderTaxon(
         provider="inaturalist",
@@ -148,6 +149,10 @@ def _parse_taxon(raw: object, group: str, ancestor_id: int) -> ProviderTaxon | N
         image_attribution=image[2],
         image_license_code=image[3],
         image_license_url=image[4],
+        image_provider_record_id=photo_id,
+        image_source_page_url=(
+            f"https://www.inaturalist.org/photos/{photo_id}" if photo_id is not None else None
+        ),
     )
 
 
@@ -177,9 +182,9 @@ def _parse_detail(raw: object, group: str, ancestor_id: int) -> ProviderTaxon | 
 
 def _image_fields(
     photo: object,
-) -> tuple[str | None, str | None, str | None, str | None, str | None]:
+) -> tuple[str | None, str | None, str | None, str | None, str | None, str | None]:
     if not isinstance(photo, dict):
-        return None, None, None, None, None
+        return None, None, None, None, None, None
     data = cast(dict[str, Any], photo)
     code = _bounded_string(data.get("license_code"), 32)
     url = _bounded_string(data.get("medium_url"), 1024)
@@ -190,7 +195,7 @@ def _image_fields(
         or not url.startswith("https://")
         or attribution is None
     ):
-        return None, None, None, None, None
+        return None, None, None, None, None, None
     creator = (
         _bounded_string(data.get("attribution_name"), 256)
         or _bounded_string(data.get("name"), 256)
@@ -200,8 +205,12 @@ def _image_fields(
         "cc0": "https://creativecommons.org/publicdomain/zero/1.0/",
         "cc-by": "https://creativecommons.org/licenses/by/4.0/",
         "cc-by-sa": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "cc-by-nc": "https://creativecommons.org/licenses/by-nc/4.0/",
+        "cc-by-nc-sa": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
     }[code]
-    return url, creator, attribution, code, license_url
+    photo_id = data.get("id")
+    bounded_photo_id = str(photo_id) if type(photo_id) is int and photo_id > 0 else None
+    return url, creator, attribution, code, license_url, bounded_photo_id
 
 
 def _bounded_string(value: object, maximum: int) -> str | None:

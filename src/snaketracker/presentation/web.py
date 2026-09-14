@@ -173,6 +173,7 @@ from snaketracker.application.search import (
     SearchValidationError,
 )
 from snaketracker.application.species_directory import (
+    REFERENCE_IMAGE_LICENSES,
     SUPPORTED_GROUPS,
     DirectoryValidationError,
     LinkAnimalTaxonCommand,
@@ -229,6 +230,7 @@ from snaketracker.presentation.animal_care_views import (
     present_care_events,
     present_effective_care_events,
 )
+from snaketracker.presentation.animal_visuals import AnimalVisual, AnimalVisualResolver
 
 SESSION_COOKIE = "snaketracker_session"
 CSRF_COOKIE = "snaketracker_csrf"
@@ -1124,6 +1126,7 @@ def create_web_router(
     directory_service: SpeciesDirectoryService | None = None,
 ) -> APIRouter:
     router = APIRouter(include_in_schema=False)
+    animal_visual_resolver = AnimalVisualResolver(directory_service)
 
     def principal_for(request: Request, *, audit_denial: bool = False) -> Principal | None:
         token = request.cookies.get(SESSION_COOKIE)
@@ -1194,13 +1197,19 @@ def create_web_router(
             rows.append({"item": item, "cost_status": cost_status})
         return tuple(rows)
 
-    def available_plant_reference_taxon(taxon_id: UUID | None) -> TaxonRecord | None:
+    def available_reference_taxon(taxon_id: UUID | None) -> TaxonRecord | None:
         if taxon_id is None or directory_service is None:
             return None
         taxon = directory_service.get(taxon_id)
-        if taxon is None or taxon.supported_group != "plant":
+        if taxon is None:
             return None
-        return taxon if directory_service.reference_image(taxon_id) is not None else None
+        if directory_service.reference_image(taxon_id) is None:
+            return None
+        return directory_service.get(taxon_id)
+
+    def available_plant_reference_taxon(taxon_id: UUID | None) -> TaxonRecord | None:
+        taxon = available_reference_taxon(taxon_id)
+        return taxon if taxon is not None and taxon.supported_group == "plant" else None
 
     def available_plant_reference_taxa(plants: tuple[Any, ...]) -> dict[UUID, TaxonRecord]:
         references: dict[UUID, TaxonRecord] = {}
@@ -1356,6 +1365,7 @@ def create_web_router(
             )
             if item is not None
         )
+        animal_visual = animal_visual_resolver.resolve(principal.household_id, animal)
         linked_taxon = (
             directory_service.linked_for(principal.household_id, animal.animal_id)
             if directory_service is not None
@@ -1363,24 +1373,15 @@ def create_web_router(
         )
         reference_taxon_available = (
             linked_taxon.taxon
-            if linked_taxon is not None
-            and linked_taxon.taxon.image_license_code in {"cc0", "cc-by", "cc-by-sa"}
-            and linked_taxon.taxon.image_source_url
+            if linked_taxon is not None and animal_visual.is_species_reference
             else None
         )
-        reference_taxon = None
-        if (
-            reference_taxon_available is not None
-            and animal.reference_image_enabled
-            and directory_service is not None
-            and directory_service.reference_image(reference_taxon_available.taxon_id) is not None
-        ):
-            reference_taxon = reference_taxon_available
         return {
             "animal": animal,
             "linked_taxon": linked_taxon,
-            "reference_taxon": reference_taxon,
+            "reference_taxon": reference_taxon_available,
             "reference_taxon_available": reference_taxon_available,
+            "animal_visual": animal_visual,
             "enclosures": enclosures,
             "current_enclosure": current_enclosure,
             "recent_events": recent_events[:6],
@@ -1923,6 +1924,7 @@ def create_web_router(
             )
             csrf_token = issued.csrf_token
         animals = animal_service.list_profiles(principal.household_id)
+        animal_visuals = animal_visual_resolver.resolve_all(principal.household_id, animals)
         enclosures = enclosure_service.list_profiles(principal.household_id)
         now = datetime.now(UTC)
         household_zone = ZoneInfo(principal.household_timezone)
@@ -1933,6 +1935,7 @@ def create_web_router(
             enclosures=enclosures,
             timezone=household_zone,
             now=now,
+            animal_visuals=animal_visuals,
         )
         try:
             collection_statistics = dashboard_statistics_service.collection(principal.household_id)
@@ -1979,6 +1982,7 @@ def create_web_router(
         if principal is None:
             return RedirectResponse("/login", status_code=303)
         animals = animal_service.list_profiles(principal.household_id)
+        animal_visuals = animal_visual_resolver.resolve_all(principal.household_id, animals)
         enclosures = enclosure_service.list_profiles(principal.household_id)
         now = datetime.now(UTC)
         animal_types = {
@@ -2007,6 +2011,7 @@ def create_web_router(
                     enclosures=enclosures,
                     timezone=ZoneInfo(principal.household_timezone),
                     now=now,
+                    animal_visuals=animal_visuals,
                 ),
                 "selected_kind": selected_kind,
                 "animal_filters": (
@@ -2081,11 +2086,7 @@ def create_web_router(
                     "message": "Return to Directory and search again.",
                 },
             )
-        reference_taxon = (
-            await run_in_threadpool(available_plant_reference_taxon, taxon.taxon_id)
-            if taxon.supported_group == "plant"
-            else None
-        )
+        reference_taxon = await run_in_threadpool(available_reference_taxon, taxon.taxon_id)
         return protected_page(
             request,
             "directory_detail.html",
@@ -2119,7 +2120,7 @@ def create_web_router(
                         "reference_image_available": bool(
                             record.image_source_url
                             and record.image_creator
-                            and record.image_license_code in {"cc0", "cc-by", "cc-by-sa"}
+                            and record.image_license_code in REFERENCE_IMAGE_LICENSES
                         ),
                         "reference_image_url": f"/directory/reference-images/{record.taxon_id}",
                         "image_creator": record.image_creator,
@@ -2145,6 +2146,33 @@ def create_web_router(
             return JSONResponse({"error": "Directory entry is invalid."}, status_code=422)
         return JSONResponse(
             {"morphs": list(suggestions.morphs), "genetics": list(suggestions.genetics)}
+        )
+
+    @router.get("/api/directory/{taxon_id}/reference-image", response_class=JSONResponse)
+    async def directory_reference_image_metadata(request: Request, taxon_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return JSONResponse({"error": "Authentication required."}, status_code=401)
+        if directory_service is None:
+            return JSONResponse({"available": False})
+        try:
+            reference = await run_in_threadpool(directory_service.reference_image, UUID(taxon_id))
+        except ValueError:
+            return JSONResponse({"error": "Directory entry is invalid."}, status_code=422)
+        if reference is None:
+            return JSONResponse({"available": False})
+        return JSONResponse(
+            {
+                "available": True,
+                "url": f"/directory/reference-images/{taxon_id}",
+                "creator": reference.creator,
+                "license_code": reference.license_code,
+                "license_url": reference.license_url,
+                "provider": reference.provider,
+                "provider_record_id": reference.provider_id,
+                "source_page_url": reference.source_page_url,
+                "kind": reference.kind,
+            }
         )
 
     @router.get("/directory/reference-images/{taxon_id}")
@@ -2176,6 +2204,7 @@ def create_web_router(
         if principal is None:
             return RedirectResponse("/login", status_code=303)
         animals = animal_service.list_profiles(principal.household_id)
+        animal_visuals = animal_visual_resolver.resolve_all(principal.household_id, animals)
         enclosures = enclosure_service.list_profiles(principal.household_id)
         now = datetime.now(UTC)
         household_zone = ZoneInfo(principal.household_timezone)
@@ -2186,6 +2215,7 @@ def create_web_router(
             enclosures=enclosures,
             timezone=household_zone,
             now=now,
+            animal_visuals=animal_visuals,
         )
         completed = _completed_care_rows(
             household_id=principal.household_id,
@@ -2224,17 +2254,33 @@ def create_web_router(
         if principal is None:
             return RedirectResponse("/login", status_code=303)
         animals = animal_service.list_profiles(principal.household_id)
+        animal_visuals = animal_visual_resolver.resolve_all(principal.household_id, animals)
         type_order = ("snake", "spider", "lizard", "scorpion")
+        quick_log_animals = tuple(
+            {
+                "animal": animal,
+                "actions": _care_action_rows(animal),
+                "visual": animal_visuals[animal.animal_id],
+            }
+            for animal_type in type_order
+            for animal in animals
+            if animal.animal_type == animal_type
+        )
         return protected_page(
             request,
             "quick_log.html",
             principal,
             context={
+                "quick_log_animals": quick_log_animals,
                 "quick_log_groups": tuple(
                     (
                         animal_capability_registry.require(f"{animal_type}.v1").label,
                         tuple(
-                            {"animal": animal, "actions": _care_action_rows(animal)}
+                            {
+                                "animal": animal,
+                                "actions": _care_action_rows(animal),
+                                "visual": animal_visuals[animal.animal_id],
+                            }
                             for animal in animals
                             if animal.animal_type == animal_type
                         ),
@@ -2260,21 +2306,25 @@ def create_web_router(
         except SearchUnavailableError:
             unavailable = True
         animals = animal_service.list_profiles(principal.household_id)
+        animal_visuals = animal_visual_resolver.resolve_all(principal.household_id, animals)
         animal_by_route = {f"/animals/{animal.animal_id}": animal for animal in animals}
-        result_rows = tuple(
-            {
-                "result": result,
-                "animal": next(
-                    (
-                        animal
-                        for route, animal in animal_by_route.items()
-                        if result.route == route or result.route.startswith(f"{route}/")
-                    ),
-                    None,
+        result_rows = []
+        for result in results:
+            animal = next(
+                (
+                    item
+                    for route, item in animal_by_route.items()
+                    if result.route == route or result.route.startswith(f"{route}/")
                 ),
-            }
-            for result in results
-        )
+                None,
+            )
+            result_rows.append(
+                {
+                    "result": result,
+                    "animal": animal,
+                    "visual": animal_visuals.get(animal.animal_id) if animal else None,
+                }
+            )
         return protected_page(
             request,
             "search.html",
@@ -2282,7 +2332,7 @@ def create_web_router(
             status_code=422 if error is not None else 200,
             context={
                 "query": q,
-                "results": result_rows,
+                "results": tuple(result_rows),
                 "error": error,
                 "search_unavailable": unavailable,
             },
@@ -2641,6 +2691,7 @@ def create_web_router(
             return RedirectResponse("/login", status_code=303)
         enclosures = enclosure_service.list_profiles(principal.household_id)
         animals = animal_service.list_profiles(principal.household_id)
+        animal_visuals = animal_visual_resolver.resolve_all(principal.household_id, animals)
         now = datetime.now(UTC)
         return protected_page(
             request,
@@ -2653,6 +2704,7 @@ def create_web_router(
                     reminder_fact_service.agenda_for(principal.household_id, now=now),
                     timezone=ZoneInfo(principal.household_timezone),
                     now=now,
+                    animal_visuals=animal_visuals,
                 )
             },
         )
@@ -5188,7 +5240,7 @@ def create_web_router(
                 if photo_preference == "species_reference" and not (
                     selected_taxon.image_source_url
                     and selected_taxon.image_creator
-                    and selected_taxon.image_license_code in {"cc0", "cc-by", "cc-by-sa"}
+                    and selected_taxon.image_license_code in REFERENCE_IMAGE_LICENSES
                 ):
                     raise DirectoryValidationError(
                         "A licensed species reference image is not available."
@@ -5694,7 +5746,7 @@ def create_web_router(
                 linked is not None
                 and linked.taxon.image_source_url
                 and linked.taxon.image_creator
-                and linked.taxon.image_license_code in {"cc0", "cc-by", "cc-by-sa"}
+                and linked.taxon.image_license_code in REFERENCE_IMAGE_LICENSES
             ):
                 raise DirectoryValidationError(
                     "A licensed species reference image is not available."
@@ -6534,6 +6586,7 @@ def create_web_router(
             protected_page=protected_page,
             animal_service=animal_service,
             enclosure_service=enclosure_service,
+            animal_visual_resolver=animal_visual_resolver,
             event_types=frozenset({"animal.feeding_recorded", "animal.feeding_corrected"}),
             page_title="Feeding history",
             page_description="Effective feeding history, including accepted corrections.",
@@ -6549,6 +6602,7 @@ def create_web_router(
             protected_page=protected_page,
             animal_service=animal_service,
             enclosure_service=enclosure_service,
+            animal_visual_resolver=animal_visual_resolver,
             event_types=frozenset(
                 {
                     "animal.weight_recorded",
@@ -6891,6 +6945,7 @@ def _agenda_rows(
     timezone: ZoneInfo,
     now: datetime,
     return_context: str = "today",
+    animal_visuals: dict[UUID, AnimalVisual] | None = None,
 ) -> dict[str, tuple[dict[str, Any], ...]]:
     animal_by_id = {animal.animal_id: animal for animal in animals}
     enclosure_by_id = {enclosure.enclosure_id: enclosure for enclosure in enclosures}
@@ -6910,6 +6965,7 @@ def _agenda_rows(
         schedule_url = None
         photo_attachment_version_id = None
         photo_fallback_key = "enclosure"
+        visual: AnimalVisual | None = None
         if item.subject_type == "animal":
             animal = animal_by_id.get(item.subject_id)
             subject_name = animal.name if animal is not None else "Animal"
@@ -6921,6 +6977,7 @@ def _agenda_rows(
             photo_fallback_key = (
                 getattr(animal, "animal_type", "animal") if animal is not None else "animal"
             )
+            visual = animal_visuals.get(animal.animal_id) if animal_visuals and animal else None
             if (
                 animal is not None
                 and item.reminder_type in animal.care_action_keys
@@ -6939,6 +6996,7 @@ def _agenda_rows(
                 schedule_url = f"{subject_url}/care"
                 photo_attachment_version_id = animal.photo_attachment_version_id
                 photo_fallback_key = getattr(animal, "animal_type", "animal")
+                visual = animal_visuals.get(animal.animal_id) if animal_visuals else None
                 location_name = enclosure.name if enclosure is not None else "Enclosure"
             else:
                 subject_name = enclosure.name if enclosure is not None else "Enclosure"
@@ -6970,6 +7028,7 @@ def _agenda_rows(
                 "calendar_url": schedule_url or action_url or subject_url,
                 "photo_attachment_version_id": photo_attachment_version_id,
                 "photo_fallback_key": photo_fallback_key,
+                "visual": visual,
                 "due_label": _friendly_due(item.due_at, now=now, timezone=timezone),
                 "last_context": _last_care_context(item, timezone),
                 "explanation": item.explanation,
@@ -6985,6 +7044,7 @@ def _animal_collection_rows(
     enclosures: tuple[Any, ...],
     timezone: ZoneInfo,
     now: datetime,
+    animal_visuals: dict[UUID, AnimalVisual] | None = None,
 ) -> tuple[dict[str, Any], ...]:
     enclosure_names = {item.enclosure_id: item.name for item in enclosures}
     status_order = {"overdue": 0, "due_today": 1, "upcoming": 2}
@@ -7017,6 +7077,7 @@ def _animal_collection_rows(
                     else "No care scheduled"
                 ),
                 "care_status": next_item.status if next_item is not None else "none",
+                "visual": animal_visuals.get(animal.animal_id) if animal_visuals else None,
             }
         )
     return tuple(rows)
@@ -7029,6 +7090,7 @@ def _enclosure_collection_rows(
     *,
     timezone: ZoneInfo,
     now: datetime,
+    animal_visuals: dict[UUID, AnimalVisual] | None = None,
 ) -> tuple[dict[str, Any], ...]:
     status_order = {"overdue": 0, "due_today": 1, "upcoming": 2}
     by_enclosure: dict[UUID, list[Any]] = {}
@@ -7050,6 +7112,11 @@ def _enclosure_collection_rows(
             {
                 "enclosure": enclosure,
                 "occupants": tuple(occupants.get(enclosure.enclosure_id, ())),
+                "lead_visual": (
+                    animal_visuals.get(occupants[enclosure.enclosure_id][0].animal_id)
+                    if animal_visuals and occupants.get(enclosure.enclosure_id)
+                    else None
+                ),
                 "maintenance_label": (
                     f"{CARE_SCHEDULE_CAPABILITIES[next_item.reminder_type][0]} · "
                     f"{_friendly_due(next_item.due_at, now=now, timezone=timezone)}"
@@ -7375,6 +7442,7 @@ def _animal_history_page(
     protected_page: Callable[..., HTMLResponse],
     animal_service: AnimalService,
     enclosure_service: EnclosureService,
+    animal_visual_resolver: AnimalVisualResolver,
     event_types: frozenset[str],
     page_title: str,
     page_description: str,
@@ -7411,6 +7479,7 @@ def _animal_history_page(
         principal,
         context={
             "animal": animal,
+            "animal_visual": animal_visual_resolver.resolve(principal.household_id, animal),
             "page_title": page_title,
             "page_description": page_description,
             "empty_message": empty_message,

@@ -1,0 +1,292 @@
+{
+  "origin": "http://127.0.0.1:8096",
+  "coverage": [
+    {
+      "label": "Ball Python",
+      "scientificName": "Python regius",
+      "taxonId": "7f8ca406-b7ef-49b9-bcbd-688870bf9fdc",
+      "searchState": "cached",
+      "mediaType": "image/webp",
+      "byteCount": 30232,
+      "available": true,
+      "url": "/directory/reference-images/7f8ca406-b7ef-49b9-bcbd-688870bf9fdc",
+      "creator": "Stanislava Kamencayová",
+      "license_code": "cc-by-sa",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+      "provider": "wikimedia_commons",
+      "provider_record_id": "95968376",
+      "source_page_url": "https://commons.wikimedia.org/wiki/File:Python_Regius.jpg",
+      "kind": "photograph"
+    },
+    {
+      "label": "Boa Constrictor",
+      "scientificName": "Boa constrictor",
+      "taxonId": "afe043bc-d9f7-497b-8e60-7dfaab3093a3",
+      "searchState": "cached",
+      "mediaType": "image/webp",
+      "byteCount": 29408,
+      "available": true,
+      "url": "/directory/reference-images/afe043bc-d9f7-497b-8e60-7dfaab3093a3",
+      "creator": "nicolas burnel",
+      "license_code": "cc-by-nc",
+      "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "provider": "inaturalist",
+      "provider_record_id": "588689904",
+      "source_page_url": "https://www.inaturalist.org/photos/588689904",
+      "kind": "photograph"
+    },
+    {
+      "label": "Corn Snake",
+      "scientificName": "Pantherophis guttatus",
+      "taxonId": "72246ae6-8394-4fa8-9d62-63d2c7bebeb6",
+      "searchState": "cached",
+      "mediaType": "image/webp",
+      "byteCount": 223020,
+      "available": true,
+      "url": "/directory/reference-images/72246ae6-8394-4fa8-9d62-63d2c7bebeb6",
+      "creator": "Peter Wilson",
+      "license_code": "cc-by-nc",
+      "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "provider": "gbif",
+      "provider_record_id": "5938135213:0:64d07a81d6a2c7fa14139e9b7c125db5",
+      "source_page_url": "https://www.inaturalist.org/photos/605174603",
+      "kind": "photograph"
+    },
+    {
+      "label": "Kingsnake",
+      "scientificName": "Lampropeltis getula",
+      "taxonId": "efe6605e-1aa3-4dec-846b-eb0bb0c0d3be",
+      "searchState": "cached",
+      "mediaType": "image/webp",
+      "byteCount": 80954,
+      "available": true,
+      "url": "/directory/reference-images/efe6605e-1aa3-4dec-846b-eb0bb0c0d3be",
+      "creator": "en:User:Dawson",
+      "license_code": "cc-by-sa",
+      "license_url": "https://creativecommons.org/licenses/by-sa/2.5",
+      "provider": "wikimedia_commons",
+      "provider_record_id": "1518737",
+      "source_page_url": "https://commons.wikimedia.org/wiki/File:Lampropeltis_getula_getula.jpg",
+      "kind": "photograph"
+    },
+    {
+      "label": "Leopard Gecko",
+      "scientificName": "Eublepharis macularius",
+      "taxonId": "0a26d5fb-66a5-4432-adac-4123708845be",
+      "searchState": "cached",
+      "mediaType": "image/webp",
+      "byteCount": 46704,
+      "available": true,
+      "url": "/directory/reference-images/0a26d5fb-66a5-4432-adac-4123708845be",
+      "creator": "stevewalternature",
+      "license_code": "cc-by-nc",
+      "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "provider": "inaturalist",
+      "provider_record_id": "107932713",
+      "source_page_url": "https://www.inaturalist.org/photos/107932713",
+      "kind": "photograph"
+    },
+    {
+      "label": "Crested Gecko",
+      "scientificName": "Correlophus ciliatus",
+      "taxonId": "d565fe6a-ae24-4317-88de-5aaacfe6403b",
+      "searchState": "cached",
+      "mediaType": "image/webp",
+      "byteCount": 18850,
+      "available": true,
+      "url": "/directory/reference-images/d565fe6a-ae24-4317-88de-5aaacfe6403b",
+      "creator": "Lennart Hudel",
+      "license_code": "cc-by",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "provider": "inaturalist",
+      "provider_record_id": "33606417",
+      "source_page_url": "https://www.inaturalist.org/photos/33606417",
+      "kind": "photograph"
+    },
+    {
+      "label": "Bearded Dragon",
+      "scientificName": "Pogona vitticeps",
+      "taxonId": "64b5fb5c-d764-4d2c-9608-db3be24fb381",
+      "searchState": "cached",
+      "mediaType": "image/webp",
+      "byteCount": 55912,
+      "available": true,
+      "url": "/directory/reference-images/64b5fb5c-d764-4d2c-9608-db3be24fb381",
+      "creator": "duke_n",
+      "license_code": "cc-by-nc",
+      "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "provider": "inaturalist",
+      "provider_record_id": "135000962",
+      "source_page_url": "https://www.inaturalist.org/photos/135000962",
+      "kind": "photograph"
+    },
+    {
+      "label": "Bold Jumping Spider",
+      "scientificName": "Phidippus audax",
+      "taxonId": "e7455d97-91e6-4d89-b98f-36300e46d6b7",
+      "searchState": "cached",
+      "mediaType": "image/webp",
+      "byteCount": 113410,
+      "available": true,
+      "url": "/directory/reference-images/e7455d97-91e6-4d89-b98f-36300e46d6b7",
+      "creator": "galetrial",
+      "license_code": "cc-by-nc",
+      "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "provider": "gbif",
+      "provider_record_id": "5938053276:0:bd77ac6dbe1b24f8bce8421d99bf3bef",
+      "source_page_url": "https://www.inaturalist.org/photos/604805417",
+      "kind": "photograph"
+    },
+    {
+      "label": "Tarantula",
+      "scientificName": "Grammostola rosea",
+      "taxonId": "09085554-bd92-43f6-8e32-ad916d05f7f6",
+      "searchState": "cached",
+      "mediaType": "image/webp",
+      "byteCount": 42724,
+      "available": true,
+      "url": "/directory/reference-images/09085554-bd92-43f6-8e32-ad916d05f7f6",
+      "creator": "Nicolás Garcés",
+      "license_code": "cc0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "provider": "inaturalist",
+      "provider_record_id": "617608472",
+      "source_page_url": "https://www.inaturalist.org/photos/617608472",
+      "kind": "photograph"
+    },
+    {
+      "label": "Emperor Scorpion",
+      "scientificName": "Pandinus imperator",
+      "taxonId": "00d90895-bec6-4896-b560-f3e5aa8e2415",
+      "searchState": "cached",
+      "mediaType": "image/webp",
+      "byteCount": 37430,
+      "available": true,
+      "url": "/directory/reference-images/00d90895-bec6-4896-b560-f3e5aa8e2415",
+      "creator": "Johnston, Harry Hamilton, Sir, 1858-1927",
+      "license_code": "cc0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "provider": "wikimedia_commons",
+      "provider_record_id": "9838760",
+      "source_page_url": "https://commons.wikimedia.org/wiki/File:Pandinus_imperator-1906.jpg",
+      "kind": "photograph"
+    }
+  ],
+  "captures": [
+    {
+      "label": "today",
+      "viewport": "390x844",
+      "overflow": false,
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+    },
+    {
+      "label": "animals",
+      "viewport": "390x844",
+      "overflow": false,
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+    },
+    {
+      "label": "animal-profile-reference",
+      "viewport": "390x844",
+      "overflow": false,
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+    },
+    {
+      "label": "calendar",
+      "viewport": "390x844",
+      "overflow": false,
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+    },
+    {
+      "label": "quick-log",
+      "viewport": "390x844",
+      "overflow": false,
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+    },
+    {
+      "label": "enclosures",
+      "viewport": "390x844",
+      "overflow": false,
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+    },
+    {
+      "label": "today",
+      "viewport": "1440x900",
+      "overflow": false,
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+    },
+    {
+      "label": "animals",
+      "viewport": "1440x900",
+      "overflow": false,
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+    },
+    {
+      "label": "animal-profile-reference",
+      "viewport": "1440x900",
+      "overflow": false,
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+    },
+    {
+      "label": "enclosures",
+      "viewport": "1440x900",
+      "overflow": false,
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+    }
+  ],
+  "accessibilityScans": [
+    {
+      "label": "today",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "animals",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "animal-profile-reference",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "calendar",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "quick-log",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "enclosures",
+      "viewport": "390x844",
+      "violations": []
+    },
+    {
+      "label": "today",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "animals",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "animal-profile-reference",
+      "viewport": "1440x900",
+      "violations": []
+    },
+    {
+      "label": "enclosures",
+      "viewport": "1440x900",
+      "violations": []
+    }
+  ],
+  "consoleDiagnostics": [],
+  "pageErrors": [],
+  "requestFailures": []
+}

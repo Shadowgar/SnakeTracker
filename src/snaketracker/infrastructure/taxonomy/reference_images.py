@@ -26,7 +26,12 @@ MAX_REFERENCE_IMAGE_BYTES = 10 * 1024 * 1024
 MAX_REFERENCE_IMAGE_PIXELS = 25_000_000
 MAX_REFERENCE_IMAGE_DIMENSION = 8_192
 ALLOWED_REFERENCE_IMAGE_HOSTS = frozenset(
-    {"static.inaturalist.org", "inaturalist-open-data.s3.amazonaws.com"}
+    {
+        "api.gbif.org",
+        "static.inaturalist.org",
+        "inaturalist-open-data.s3.amazonaws.com",
+        "upload.wikimedia.org",
+    }
 )
 ALLOWED_MEDIA_TYPES = frozenset({"image/jpeg", "image/png", "image/webp"})
 

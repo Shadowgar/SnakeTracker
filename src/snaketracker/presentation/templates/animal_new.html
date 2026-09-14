@@ -39,11 +39,8 @@
       <div>
         <h2 id="reference-photo-title">Profile picture</h2>
         <p data-reference-photo-copy class="field-help">Reference images are available when a supported Directory species is linked. You can add a photo of your animal after creation.</p>
-        <fieldset data-reference-photo-options hidden>
-          <legend>Picture choice</legend>
-          <label><input type="radio" name="photo_preference" value="species_reference" {% if values.photo_preference|default('none') == 'species_reference' %}checked{% endif %}> Use species reference image for now</label>
-          <label><input type="radio" name="photo_preference" value="none" {% if values.photo_preference|default('none') != 'species_reference' %}checked{% endif %}> No photo for now</label>
-        </fieldset>
+        <p class="field-help">Care Keeper uses your animal's own photo first, then a licensed species reference, then an honest group illustration.</p>
+        <input type="hidden" name="photo_preference" value="species_reference">
       </div>
     </section>
     <label>Sex
@@ -75,4 +72,4 @@
   </form>
 </section>
 {% endblock %}
-{% block scripts %}<script src="/static/species-directory.js?v=m66-a-owner-c3" defer></script>{% endblock %}
+{% block scripts %}<script src="/static/species-directory.js?v=m66-a-owner-fidelity" defer></script>{% endblock %}
