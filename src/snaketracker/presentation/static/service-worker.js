@@ -1,11 +1,12 @@
 "use strict";
 
 const CACHE_PREFIX = "snaketracker-shell-";
-const ASSET_VERSION = "m66-a-phase2-final";
+const ASSET_VERSION = "m66-a-interaction-c1";
 const CACHE = `${CACHE_PREFIX}${ASSET_VERSION}`;
 const SHELL = [
   `/static/app.css?v=${ASSET_VERSION}`,
   `/static/pwa.js?v=${ASSET_VERSION}`,
+  `/static/overflow-menu.js?v=${ASSET_VERSION}`,
   `/static/species-directory.js?v=${ASSET_VERSION}`,
   `/static/quick-log.js?v=${ASSET_VERSION}`,
   `/static/animal-fallbacks/snake.webp?v=${ASSET_VERSION}`,

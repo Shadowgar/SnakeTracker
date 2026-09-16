@@ -30,9 +30,9 @@
     {% endif %}
   </div>
 
-  <details class="overflow-menu profile-overflow">
-    <summary aria-label="Manage {{ animal.name }}" aria-expanded="false">⋮</summary>
-    <nav aria-label="Profile actions">
+  <span class="overflow-menu profile-overflow">
+    <button class="overflow-trigger" type="button" popovertarget="profile-menu-{{ animal.animal_id }}" aria-controls="profile-menu-{{ animal.animal_id }}" aria-haspopup="menu" aria-expanded="false" aria-label="More actions for {{ animal.name }}">⋮</button>
+    <nav id="profile-menu-{{ animal.animal_id }}" popover="auto" aria-label="Profile secondary actions">
       <a href="/animals/{{ animal.animal_id }}/edit">Edit profile</a>
       <a href="/animals/{{ animal.animal_id }}/photo">Change photo</a>
       <a href="/animals/{{ animal.animal_id }}/care">Schedules</a>
@@ -40,7 +40,7 @@
       <a href="/animals/{{ animal.animal_id }}/status">Update status</a>
       <a href="/animals/{{ animal.animal_id }}/species">{% if linked_taxon %}Change species link{% else %}Link species{% endif %}</a>
     </nav>
-  </details>
+  </span>
 </header>
 <nav class="animal-section-nav" aria-label="{{ animal.name }} profile sections">
   <a href="/animals/{{ animal.animal_id }}"{% if active_section == 'overview' %} aria-current="page"{% endif %}>Overview</a>

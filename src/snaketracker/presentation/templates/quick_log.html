@@ -6,7 +6,7 @@
   <header class="quick-log-heading"><span aria-hidden="true"></span><h1 id="page-title">Log Care</h1><a href="/home">Cancel</a></header>
   {% if quick_log_animals %}<div class="quick-log-workspace">
     <label class="quick-log-picker" for="quick-log-animal"><span>Select animal</span>
-      <select id="quick-log-animal" data-quick-log-selector>{% for row in quick_log_animals %}<option value="{{ row.animal.animal_id }}">{{ row.animal.name }} · {{ row.animal.species }}</option>{% endfor %}</select>
+      <select id="quick-log-animal" data-quick-log-selector aria-label="Select animal for quick log">{% for row in quick_log_animals %}<option value="{{ row.animal.animal_id }}">{{ row.animal.name }} · {{ row.animal.species }}</option>{% endfor %}</select>
     </label>
     {% for row in quick_log_animals %}<section class="quick-log-focus" data-quick-log-animal="{{ row.animal.animal_id }}"{% if not loop.first %} hidden{% endif %} aria-labelledby="quick-log-name-{{ row.animal.animal_id }}">
       <div class="quick-log-selected" aria-hidden="true">
@@ -24,4 +24,4 @@
   </div>{% else %}<div class="empty-state"><h2>No animals available</h2><p>Add an animal before recording care.</p><a class="button-link" href="/animals/new">Add animal</a></div>{% endif %}
 </section>
 {% endblock %}
-{% block scripts %}<script src="/static/quick-log.js?v=m66-a-phase2-final" defer></script>{% endblock %}
+{% block scripts %}<script src="/static/quick-log.js?v=m66-a-interaction-c1" defer></script>{% endblock %}

@@ -1350,20 +1350,21 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
 .card { border-radius: var(--radius-md); padding: .85rem; background: var(--color-surface); box-shadow: none; }
 .section-heading h2 { font-size: 1rem; }
 
-/* Compact reusable secondary-action menu. */
-.overflow-menu { position: relative; z-index: 12; }
-.overflow-menu summary { position: relative; display: grid; width: 2.75rem; height: 2.75rem; place-items: center; list-style: none; border-radius: 50%; color: var(--color-text-secondary); cursor: pointer; font-size: 1.2rem; line-height: 1; }
-.overflow-menu summary::-webkit-details-marker { display: none; }
-.overflow-menu summary::before { position: absolute; width: 1.9rem; height: 1.9rem; border: 1px solid rgba(255,255,255,.08); border-radius: 50%; background: rgba(8,7,12,.72); content: ""; }
-.overflow-menu summary::after { position: relative; content: "⋮"; }
-.overflow-menu[open] summary, .overflow-menu summary:hover { color: white; }
-.overflow-menu > nav { position: absolute; top: calc(100% - .25rem); right: 0; z-index: 60; display: grid; min-width: 10rem; overflow: hidden; border: 1px solid var(--color-border); border-radius: .65rem; background: #17151e; box-shadow: var(--shadow-overlay); }
+/* Compact secondary-action trigger with a native top-layer popover. */
+.overflow-menu { position: relative; display: block; width: 2.75rem; height: 2.75rem; }
+.overflow-trigger { display: grid; width: 2.75rem; height: 2.75rem; place-items: center; border: 0; border-radius: .4rem; padding: 0; color: var(--color-text-muted); background: transparent; cursor: pointer; font: inherit; font-size: 1.05rem; line-height: 1; }
+.overflow-trigger:hover, .overflow-trigger[aria-expanded="true"] { color: white; background: rgba(255,255,255,.055); }
+.overflow-trigger:active { background: rgba(255,255,255,.09); }
+.overflow-trigger:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -5px; }
+.overflow-menu > nav[popover] { position: fixed; inset: auto; width: max-content; min-width: 10rem; max-width: min(18rem, calc(100vw - 1rem)); max-height: calc(100vh - 1rem); margin: 0; overflow: auto; border: 1px solid var(--color-border); border-radius: .65rem; padding: 0; color: var(--color-text); background: #17151e; box-shadow: var(--shadow-overlay); }
+.overflow-menu > nav[popover]:not(:popover-open) { display: none; }
+.overflow-menu > nav[popover]:popover-open { display: grid; }
+.overflow-menu > nav[popover]::backdrop { background: transparent; }
 .overflow-menu > nav a { display: flex; min-height: 2.75rem; align-items: center; padding: .55rem .75rem; color: var(--color-text-secondary); text-decoration: none; font-size: .76rem; font-weight: 700; }
 .overflow-menu > nav a + a { border-top: 1px solid var(--color-border-subtle); }
 .overflow-menu > nav a:hover, .overflow-menu > nav a:focus-visible { color: white; background: var(--color-surface-hover); }
 .visual-card-wrap { position: relative; min-width: 0; }
 .card-overflow { position: absolute; top: .1rem; right: .1rem; }
-.card-overflow > nav { top: 2.5rem; }
 
 /* Today */
 .today-heading h1 { font-size: 1.45rem; }
@@ -1377,14 +1378,19 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
 .today-column-heading { min-height: 1.8rem; padding-bottom: .25rem; }
 .today-column-heading h2 { font-size: .88rem; }
 .today-column-heading > span { min-width: 1.25rem; height: 1.25rem; font-size: .6rem; background: transparent; }
-.today-care-card { grid-template-columns: 2.5rem minmax(0, 1fr) 2.75rem; min-height: 3.9rem; gap: .5rem; border: 0; border-radius: .5rem; padding: .35rem .15rem .35rem .45rem; background: #121118; box-shadow: none; }
+.today-care-card { position: relative; display: block; min-height: 3.9rem; overflow: visible; border: 0; border-radius: .5rem; padding: 0; background: #121118; box-shadow: none; }
 .today-care-card::before { width: .12rem; }
+.today-care-primary { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); min-height: 3.9rem; align-items: center; gap: .5rem; border-radius: .5rem; padding: .35rem 3rem .35rem .45rem; color: inherit; text-decoration: none; cursor: pointer; }
+.today-care-primary:hover { background: rgba(255,255,255,.035); }
+.today-care-primary:active { background: rgba(255,255,255,.065); }
+.today-care-primary:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
 .care-avatar { width: 2.5rem; height: 2.5rem; border-radius: .45rem; }
+.today-care-copy { display: grid; min-width: 0; gap: .02rem; }
 .today-care-copy .eyebrow { font-size: .5rem; }
-.today-care-copy h3 { font-size: .82rem; }
+.today-care-copy strong { font-size: .82rem; }
 .care-context { margin-top: .04rem; font-size: .56rem; }
 .care-context span:nth-child(n+3) { display: none; }
-.care-row-menu { justify-self: end; }
+.care-row-menu { position: absolute; top: 50%; right: .05rem; transform: translateY(-50%); }
 .column-more { font-size: .68rem; }
 .column-empty { padding: .8rem; font-size: .75rem; }
 
@@ -1403,6 +1409,8 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
 .collection-filter > nav a[aria-current="page"] { color: var(--color-primary); background: var(--color-primary-soft); }
 .animal-list { gap: .5rem; }
 .animal-collection-card { border-color: var(--color-border-subtle); border-radius: .55rem; background: var(--color-surface); box-shadow: none; }
+.animal-collection-card:active, .enclosure-card:active { background: var(--color-surface-hover); transform: none; }
+.animal-collection-card:focus-visible, .enclosure-card:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .animal-card-photo, .animal-card-placeholder, .animal-collection-card .animal-card-photo, .animal-collection-card .animal-card-placeholder { height: 6.55rem; }
 .animal-card-copy, .animal-collection-card .animal-card-copy { position: relative; min-height: 3.05rem; gap: .02rem; padding: .38rem .5rem .42rem; }
 .animal-card-copy strong { font-size: .8rem; }
@@ -1441,7 +1449,6 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
 .profile-next-care > small { color: var(--color-text-muted); font-size: .58rem; }
 .profile-next-action { grid-column: 2; grid-row: 1 / span 3; align-self: center; display: grid; width: 2rem; height: 2rem; place-items: center; border-radius: 50%; color: var(--color-primary); background: var(--color-primary-soft); text-decoration: none; font-size: 1.2rem; }
 .profile-overflow { position: absolute; top: .25rem; right: .25rem; z-index: 15; }
-.profile-overflow > nav { top: 2.5rem; }
 .animal-section-nav { gap: 0; }
 .animal-section-nav a { flex: 1; min-width: 0; padding: .55rem .35rem; font-size: .65rem; }
 .animal-overview-layout { grid-template-columns: 1fr; grid-template-areas: "recent" "identity" "care" "manage"; gap: .65rem; }
@@ -1475,12 +1482,16 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
 .agenda-date-group { gap: .25rem; }
 .agenda-date-group > h3 { font-size: .6rem; }
 .calendar-agenda-list { overflow: hidden; border: 1px solid var(--color-border-subtle); border-radius: .55rem; background: var(--color-surface); }
-.calendar-agenda-list li { grid-template-columns: 2.45rem minmax(0,1fr) auto; min-height: 3.35rem; gap: .5rem; border-bottom-color: var(--color-border-subtle); padding: .3rem .45rem; }
+.calendar-agenda-list li { position: relative; display: block; min-height: 3.35rem; border-bottom-color: var(--color-border-subtle); padding: 0; }
+.agenda-primary { display: grid; grid-template-columns: 2.45rem minmax(0,1fr) auto; min-height: 3.35rem; align-items: center; gap: .5rem; padding: .3rem 3.1rem .3rem .45rem; color: inherit; text-decoration: none; cursor: pointer; }
+.agenda-primary:hover { background: rgba(255,255,255,.035); }
+.agenda-primary:active { background: rgba(255,255,255,.065); }
+.agenda-primary:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
 .agenda-avatar { width: 2.45rem; height: 2.45rem; border-radius: .4rem; }
 .agenda-row-copy strong { font-size: .72rem; }
 .calendar-agenda-list li span { font-size: .58rem; }
-.agenda-row-end { display: flex !important; align-items: center; gap: .1rem; }
-.agenda-row-menu > nav { top: 2.5rem; }
+.agenda-primary-due { justify-self: end; color: var(--color-text-muted); text-align: right; }
+.agenda-row-menu { position: absolute; top: 50%; right: .05rem; transform: translateY(-50%); }
 .completed-care-list { overflow: hidden; border: 1px solid var(--color-border-subtle); border-radius: .55rem; background: var(--color-surface); }
 .completed-care-list li { grid-template-columns: 1rem minmax(0,1fr); min-height: 3rem; align-items: center; gap: .4rem; padding: .32rem .45rem; }
 .completed-care-list li > div { grid-template-columns: minmax(0,1fr) auto; gap: .02rem .5rem; }
