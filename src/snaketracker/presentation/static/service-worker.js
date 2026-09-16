@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "snaketracker-shell-";
-const ASSET_VERSION = "m66-a-owner-fidelity-v2";
+const ASSET_VERSION = "m66-a-phase2-final";
 const CACHE = `${CACHE_PREFIX}${ASSET_VERSION}`;
 const SHELL = [
   `/static/app.css?v=${ASSET_VERSION}`,

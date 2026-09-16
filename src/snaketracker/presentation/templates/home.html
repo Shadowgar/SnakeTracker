@@ -5,7 +5,7 @@
   <header class="page-heading today-heading">
     <div><h1 id="page-title">Today</h1>
     <p class="lede today-date">{{ today_label }} · care across your collection</p></div>
-    <a class="button-link today-add-care" href="/quick-log">Add care</a>
+    <a class="button-link today-add-care" href="/quick-log" aria-label="Add care"><span aria-hidden="true">+</span><span class="today-add-label">Add care</span></a>
   </header>
   {% if not onboarding.onboarding_complete %}<aside class="onboarding-nudge" aria-label="Collection setup"><div><strong>Finish setting up your collection</strong><span>{{ onboarding.onboarding_next_label }}</span></div><a href="/onboarding">Continue setup</a></aside>{% endif %}
   <div class="today-summary" aria-label="Care summary">
@@ -24,7 +24,7 @@
         {% for row in rows[:6] %}<li class="today-care-card status-edge-{{ key }}">
           {% if row.visual %}<img class="care-avatar" src="{{ row.visual.url }}" alt="" width="96" height="96" loading="lazy" decoding="async">{% else %}<span class="care-avatar care-avatar-placeholder fallback-{{ row.photo_fallback_key }}" aria-hidden="true">{{ row.subject_name[0]|upper }}</span>{% endif %}
           <div class="today-care-copy"><p class="eyebrow">{{ row.title }}</p><h3><a href="{{ row.subject_url }}">{{ row.subject_name }}</a></h3><p class="care-context"><span class="due-language">{{ row.due_label }}</span><span>{{ row.last_context }}</span>{% if row.location_name %}<span class="care-location-inline">{{ row.location_name }}</span>{% endif %}</p></div>
-          {% if row.action_url %}<a class="compact-action" href="{{ row.action_url }}">{{ row.action_label }}</a>{% endif %}
+          {% if row.action_url %}<details class="overflow-menu care-row-menu"><summary aria-label="Actions for {{ row.subject_name }} {{ row.title }}" aria-expanded="false">⋮</summary><nav aria-label="Care actions"><a href="{{ row.action_url }}">{{ row.action_label }}</a><a href="{{ row.subject_url }}">Open profile</a></nav></details>{% endif %}
         </li>{% endfor %}
       </ul>
       {% if rows|length > 6 %}<a class="column-more" href="/calendar?view=agenda">View all {{ rows|length }}</a>{% endif %}

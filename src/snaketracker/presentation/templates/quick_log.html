@@ -1,24 +1,27 @@
 {% extends "base.html" %}
-{% block title %}Add care · Care Keeper{% endblock %}
+{% from "icons.html" import icon %}
+{% block title %}Log care · Care Keeper{% endblock %}
 {% block content %}
 <section class="quick-log-page" aria-labelledby="page-title">
-  <header class="page-heading"><div><p class="page-kicker">Quick log</p><h1 id="page-title">Add care</h1><p class="lede">Pick an animal, then choose the care you completed.</p></div></header>
+  <header class="quick-log-heading"><span aria-hidden="true"></span><h1 id="page-title">Log Care</h1><a href="/home">Cancel</a></header>
   {% if quick_log_animals %}<div class="quick-log-workspace">
-    <label class="quick-log-picker" for="quick-log-animal">Select animal
+    <label class="quick-log-picker" for="quick-log-animal"><span>Select animal</span>
       <select id="quick-log-animal" data-quick-log-selector>{% for row in quick_log_animals %}<option value="{{ row.animal.animal_id }}">{{ row.animal.name }} · {{ row.animal.species }}</option>{% endfor %}</select>
     </label>
     {% for row in quick_log_animals %}<section class="quick-log-focus" data-quick-log-animal="{{ row.animal.animal_id }}"{% if not loop.first %} hidden{% endif %} aria-labelledby="quick-log-name-{{ row.animal.animal_id }}">
-      <div class="quick-log-selected">
-        <img class="quick-log-photo" src="{{ row.visual.url }}" alt="{{ row.visual.alt }}" width="320" height="240" decoding="async">
-        <div class="quick-log-identity"><strong id="quick-log-name-{{ row.animal.animal_id }}">{{ row.animal.name }}</strong><span>{{ row.animal.species }} · {{ row.animal.type_label }}</span></div>
+      <div class="quick-log-selected" aria-hidden="true">
+        <img class="quick-log-photo" src="{{ row.visual.url }}" alt="" width="320" height="240" decoding="async">
+        <div class="quick-log-identity"><strong id="quick-log-name-{{ row.animal.animal_id }}">{{ row.animal.name }}</strong><span>{{ row.animal.species }}</span></div>
+        <span class="quick-log-chevron">›</span>
       </div>
-      <div class="quick-log-actions" aria-label="Care actions for {{ row.animal.name }}">{% for action in row.actions %}<a href="{{ action.href }}">{{ action.title|replace('Record ', '') }}</a>{% endfor %}</div>
+      <p class="quick-log-label">Select action</p>
+      <div class="quick-log-actions" aria-label="Care actions for {{ row.animal.name }}">{% for action in row.actions %}<a href="{{ action.href }}">{{ icon(action.key, 'action-icon') }}<span>{{ action.title|replace('Record ', '')|replace(' observation', '') }}</span></a>{% endfor %}</div>
     </section>{% endfor %}
     <section class="quick-log-recent" aria-labelledby="quick-log-recent-title">
-      <header><h2 id="quick-log-recent-title">Recent actions</h2><a href="/calendar?view=agenda">View history</a></header>
-      {% if quick_log_recent %}<ol>{% for row in quick_log_recent %}<li><time datetime="{{ row.event.occurred_at.isoformat() }}">{{ row.occurred_label }}</time><strong>{{ row.subject_name }}</strong><span>{{ row.title }}</span></li>{% endfor %}</ol>{% else %}<p>Completed care will appear here.</p>{% endif %}
+      <header><h2 id="quick-log-recent-title">Recent actions</h2><a href="/calendar?view=agenda">View all</a></header>
+      {% if quick_log_recent %}<ol>{% for row in quick_log_recent %}<li><time datetime="{{ row.event.occurred_at.isoformat() }}">{{ row.occurred_label }}</time><strong>{{ row.subject_name }}</strong><span>{{ row.title|replace(' recorded', '') }}</span></li>{% endfor %}</ol>{% else %}<p>Completed care will appear here.</p>{% endif %}
     </section>
   </div>{% else %}<div class="empty-state"><h2>No animals available</h2><p>Add an animal before recording care.</p><a class="button-link" href="/animals/new">Add animal</a></div>{% endif %}
 </section>
 {% endblock %}
-{% block scripts %}<script src="/static/quick-log.js?v=m66-a-owner-fidelity-v2" defer></script>{% endblock %}
+{% block scripts %}<script src="/static/quick-log.js?v=m66-a-phase2-final" defer></script>{% endblock %}

@@ -23,6 +23,7 @@ Architecture: [ADR-0043](../../../adr/0043-universal-species-directory.md)
   [provider-outage results](browser-outage-qualification.json)
 - [Autocomplete performance](autocomplete-performance.json)
 - [Photo-rich surface performance](visual-performance.json)
+- [Phase 2 independent visual reconstruction](visual-rebuild/README.md)
 - [Owner-review screenshots](screenshots/)
 
 ## Architecture and behavior
@@ -415,6 +416,33 @@ and verified with all 33 referenced Attachments only at
 destructive browser, migration-from-zero, fixture, and image-coverage work used
 `/tmp/carekeeper-m66a-fidelity-final.Jjo32x`, explicitly outside the live database, Attachment, and
 reference-image paths.
+
+## Phase 2 independent visual reconstruction
+
+The accepted independent audit became the authoritative baseline for a second, bounded visual
+reconstruction. The [before/after matrix and deployed evidence](visual-rebuild/README.md) records
+all ten required surfaces. Mobile Animals, Quick Log, and Enclosures plus desktop Animals, Animal
+Profile, and Enclosures now rate `MATCH`; the two Today views, mobile Animal Profile, and mobile
+Calendar rate `MINOR GAP` only because truthful fixture identity/agenda volume differs from the
+fictional board. No required surface remains `NOT CLOSE` or `MAJOR GAP`.
+
+The reconstruction removes redundant global chrome, makes the profile hero one integrated
+composition, restores compact typography and density, uses image-led cards/rows throughout, and
+adds one reusable accessible overflow control for secondary actions. Every fixture species now
+resolves through the shared personal-photo, Directory reference, integrity-checked local reference,
+illustration, and group-fallback hierarchy. The rendered product contains real licensed imagery,
+not generated demo-seed art masquerading as keeper photos.
+
+The final public HTTPS browser run passed all ten required 390×844 and 1440×900 captures with zero
+axe violations, horizontal overflows, broken images, Care Keeper console errors, page errors, or
+request failures. Performance stayed within all established budgets. Cloudflare's injected Browser
+Insights code remained blocked by the unchanged `script-src 'self'` CSP; no third-party, inline,
+or eval allowance was added.
+
+The exact frozen quality path passed with 680 tests, 94.41-percent line coverage,
+85.02-percent branch coverage, and 92.52-percent total coverage. The native ARM64 image and live
+integrity/backup/restore evidence are recorded with the visual matrix. Schema remains
+`0022_reference_image_provenance`; ADR-0043 remains Proposed; owner acceptance remains pending.
 
 ## Boundaries
 

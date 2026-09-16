@@ -1,0 +1,118 @@
+{
+  "origin": "https://tracker.theroccos.us",
+  "captures": [
+    {
+      "label": "mobile-390x844-today",
+      "viewport": "390x844",
+      "route": "/home",
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+      "violations": [],
+      "documentHeight": 1145,
+      "horizontalOverflow": false,
+      "imageCount": 10,
+      "brokenImages": 0
+    },
+    {
+      "label": "mobile-390x844-animals",
+      "viewport": "390x844",
+      "route": "/animals",
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+      "violations": [],
+      "documentHeight": 2169,
+      "horizontalOverflow": false,
+      "imageCount": 23,
+      "brokenImages": 0
+    },
+    {
+      "label": "mobile-390x844-animal-profile",
+      "viewport": "390x844",
+      "route": "/animals/9eda4959-018a-4e68-85b8-6391f972169e",
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+      "violations": [],
+      "documentHeight": 1349,
+      "horizontalOverflow": false,
+      "imageCount": 1,
+      "brokenImages": 0
+    },
+    {
+      "label": "mobile-390x844-calendar",
+      "viewport": "390x844",
+      "route": "/calendar?view=agenda",
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+      "violations": [],
+      "documentHeight": 2403,
+      "horizontalOverflow": false,
+      "imageCount": 22,
+      "brokenImages": 0
+    },
+    {
+      "label": "mobile-390x844-quick-log",
+      "viewport": "390x844",
+      "route": "/quick-log",
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+      "violations": [],
+      "documentHeight": 844,
+      "horizontalOverflow": false,
+      "imageCount": 23,
+      "brokenImages": 0
+    },
+    {
+      "label": "mobile-390x844-enclosures",
+      "viewport": "390x844",
+      "route": "/enclosures",
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+      "violations": [],
+      "documentHeight": 1638,
+      "horizontalOverflow": false,
+      "imageCount": 15,
+      "brokenImages": 0
+    },
+    {
+      "label": "desktop-1440x900-today",
+      "viewport": "1440x900",
+      "route": "/home",
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+      "violations": [],
+      "documentHeight": 900,
+      "horizontalOverflow": false,
+      "imageCount": 10,
+      "brokenImages": 0
+    },
+    {
+      "label": "desktop-1440x900-animals",
+      "viewport": "1440x900",
+      "route": "/animals",
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+      "violations": [],
+      "documentHeight": 1406,
+      "horizontalOverflow": false,
+      "imageCount": 23,
+      "brokenImages": 0
+    },
+    {
+      "label": "desktop-1440x900-animal-profile",
+      "viewport": "1440x900",
+      "route": "/animals/9eda4959-018a-4e68-85b8-6391f972169e",
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+      "violations": [],
+      "documentHeight": 900,
+      "horizontalOverflow": false,
+      "imageCount": 1,
+      "brokenImages": 0
+    },
+    {
+      "label": "desktop-1440x900-enclosures",
+      "viewport": "1440x900",
+      "route": "/enclosures",
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+      "violations": [],
+      "documentHeight": 900,
+      "horizontalOverflow": false,
+      "imageCount": 15,
+      "brokenImages": 0
+    }
+  ],
+  "consoleDiagnostics": [],
+  "pageErrors": [],
+  "requestFailures": []
+}

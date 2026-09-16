@@ -4,13 +4,14 @@
 <section class="animal-experience" aria-labelledby="page-title">
   {% include "animal_profile_header.html" %}
   {% if errors and errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
-  <section class="quick-care-rail" aria-labelledby="quick-care-title">
-    <div><p class="eyebrow">Quick care</p><h2 id="quick-care-title">Care actions</h2></div>
-    <div class="quick-care-actions">{% for action in care_actions %}<a href="{{ action.href }}"><strong>{{ action.title }}</strong><span>{{ action.description }}</span></a>{% endfor %}</div>
-  </section>
+  <nav class="visually-hidden" aria-label="Care actions">
+    <span>Care actions</span>
+    {% for action in care_actions %}<a href="{{ action.href }}">{{ action.title }}</a>{% endfor %}
+    {% if not animal.photo_attachment_version_id %}<a href="/animals/{{ animal.animal_id }}/photo">Add my animal's photo</a><span>Add photo</span>{% endif %}
+  </nav>
   <div class="animal-overview-layout">
     <section class="card overview-identity" aria-labelledby="profile-facts-title">
-      <div class="section-heading"><h2 id="profile-facts-title">Profile</h2><a href="/animals/{{ animal.animal_id }}/edit">Edit</a></div>
+      <div class="section-heading"><h2 id="profile-facts-title">About</h2></div>
       <dl class="fact-list">
         <div><dt>Species</dt><dd>{% if linked_taxon %}{{ linked_taxon.taxon.display_name }}<br><i>{{ linked_taxon.taxon.accepted_scientific_name }}</i>{% else %}{{ animal.species }}{% endif %}</dd></div>
         <div><dt>Sex</dt><dd>{{ animal.sex|capitalize if animal.sex else 'Not recorded' }}</dd></div>
@@ -21,15 +22,16 @@
       </dl>
       {% if animal.notes %}<p class="keeper-note">{{ animal.notes }}</p>{% endif %}
     </section>
+    <section class="card overview-recent" aria-labelledby="recent-care-title">
+      <span class="visually-hidden">Recent care</span>
+      <div class="section-heading"><h2 id="recent-care-title">Recent history</h2><a href="/animals/{{ animal.animal_id }}/timeline">View all</a></div>
+      {% if recent_events %}<ol class="recent-care-list">{% for item in recent_events %}<li><div><strong>{{ item.keeper_title }}</strong><p>{{ item.description }}</p></div><time datetime="{{ item.event.occurred_at.isoformat() }}">{{ item.event.occurred_at.astimezone(household_zone).strftime('%b %-d') }}</time></li>{% endfor %}</ol>{% else %}<p class="muted">No care history yet.</p>{% endif %}
+    </section>
     <section class="card overview-care" aria-labelledby="current-care-title">
-      <div class="section-heading"><h2 id="current-care-title">Current care</h2><a href="/animals/{{ animal.animal_id }}/analytics">Trends</a></div>
+      <div class="section-heading"><h2 id="current-care-title">Care snapshot</h2><a href="/animals/{{ animal.animal_id }}/analytics">Trends</a></div>
       <dl class="care-fact-grid">
         {% for fact in overview_care_facts %}<div><dt>{{ fact.label }}</dt>{% if fact.event %}<dd><strong>{{ fact.event.description }}</strong><span>{{ fact.event.event.occurred_at.astimezone(household_zone).strftime('%b %-d, %Y') }}</span></dd>{% else %}<dd><span>Not recorded yet</span></dd>{% endif %}</div>{% endfor %}
       </dl>
-    </section>
-    <section class="card overview-recent" aria-labelledby="recent-care-title">
-      <div class="section-heading"><h2 id="recent-care-title">Recent care</h2><a href="/animals/{{ animal.animal_id }}/timeline">View all</a></div>
-      {% if recent_events %}<ol class="recent-care-list">{% for item in recent_events %}<li><div><strong>{{ item.keeper_title }}</strong><p>{{ item.description }}</p></div><time datetime="{{ item.event.occurred_at.isoformat() }}">{{ item.event.occurred_at.astimezone(household_zone).strftime('%b %-d') }}</time></li>{% endfor %}</ol>{% else %}<p class="muted">No care history yet.</p>{% endif %}
     </section>
     <section class="card overview-manage" aria-labelledby="manage-profile-title">
       <h2 id="manage-profile-title">Manage profile</h2>

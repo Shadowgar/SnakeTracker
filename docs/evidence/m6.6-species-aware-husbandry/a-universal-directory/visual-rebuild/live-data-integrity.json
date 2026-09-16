@@ -1,0 +1,44 @@
+{
+  "active_paths": {
+    "database": "/home/rocco/SnakeTracker/runtime/phase2/snaketracker.sqlite3",
+    "attachments": "/home/rocco/SnakeTracker/runtime/phase2/attachments",
+    "reference_images": "/home/rocco/SnakeTracker/runtime/phase2/reference-images",
+    "backups": "/home/rocco/SnakeTracker/runtime/phase2/backups"
+  },
+  "isolated_qualification_database_root": "/tmp/carekeeper-phase2-visual.bPDtFk",
+  "isolated_restore_root": "/tmp/carekeeper-m66a-phase2-restore.gSBNYO",
+  "before_and_after": {
+    "revision": "0022_reference_image_provenance",
+    "integrity": "ok",
+    "foreign_key_violations": 0,
+    "event_count": 822,
+    "event_high_water": 822,
+    "ordered_position_identity_checksum_sha256": "1b4f71266ce60c897c78a837cc153912925f88cde4d11293d98c51ada8c5a98c",
+    "attachment_file_count": 40,
+    "attachment_tree_sha256": "0ce316009a1127871bbe3101849b76df5b898b1c0d3386ec815e570659110c73",
+    "counts": {
+      "users": 4,
+      "households": 4,
+      "memberships": 4,
+      "animals": 45,
+      "enclosures": 30,
+      "enclosure_plants": 2,
+      "inventory_balances": 30,
+      "purchases": 4,
+      "expenses": 14,
+      "attachment_versions": 39,
+      "taxa": 35,
+      "taxon_images": 7
+    }
+  },
+  "backup": {
+    "request_id": "b1043d6a-6a5e-47c6-b950-63ad1eb510eb",
+    "run_id": "cefb1358-17b4-464b-bc39-a8c0fa37de04",
+    "status": "completed",
+    "manifest_sha256": "9c17d4c23982ceb730a955bf32be89eba2f1c0e4818503150fd9cf64bee28557",
+    "encrypted_database_sha256": "e35ad50e903bbd8e4a17fbf937d07d2f737010c02885a72d3a3f82dac5e5faf3",
+    "restore_status": "verified",
+    "restored_attachment_count": 33
+  },
+  "qualification_mutated_live_household_data": false
+}

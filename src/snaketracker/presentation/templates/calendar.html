@@ -2,7 +2,7 @@
 {% block title %}Calendar · Care Keeper{% endblock %}
 {% block content %}
 <section class="calendar-page" aria-labelledby="page-title">
-  <header class="page-heading calendar-heading"><div><p class="page-kicker">Care planning</p><h1 id="page-title">Calendar</h1><p class="lede">Scheduled care and completed records, together.</p></div></header>
+  <header class="calendar-screen-heading"><a href="/home" aria-label="Back to Today">‹</a><div><span class="visually-hidden">Calendar · </span><h1 id="page-title">{{ calendar.month_label }}</h1></div><span aria-hidden="true">▣</span></header>
   <nav class="view-switcher" aria-label="Calendar view">
     <a href="/calendar?view=agenda&amp;month={{ calendar.month_value }}"{% if active_view == 'agenda' %} aria-current="page"{% endif %}>Agenda</a>
     <a href="/calendar?view=month&amp;month={{ calendar.month_value }}"{% if active_view == 'month' %} aria-current="page"{% endif %}>Month</a>
@@ -18,7 +18,7 @@
         <ul class="calendar-agenda-list">{% for row in rows %}<li>
           {% if row.visual %}<img class="agenda-avatar" src="{{ row.visual.url }}" alt="" width="96" height="96" loading="lazy" decoding="async">{% else %}<span class="agenda-avatar agenda-avatar-placeholder fallback-{{ row.photo_fallback_key }}" aria-hidden="true">{{ row.subject_name[0]|upper }}</span>{% endif %}
           <div class="agenda-row-copy"><strong><a href="{{ row.subject_url }}">{{ row.subject_name }}</a></strong><span>{{ row.title }}{% if row.location_name %} · {{ row.location_name }}{% endif %}</span></div>
-          <div class="agenda-row-end"><span>{{ row.due_label }}</span>{% if row.action_url %}<a href="{{ row.action_url }}">{{ row.action_label }}</a>{% endif %}</div>
+          <div class="agenda-row-end"><span>{{ row.due_label }}</span>{% if row.action_url %}<details class="overflow-menu agenda-row-menu"><summary aria-label="Actions for {{ row.subject_name }} {{ row.title }}" aria-expanded="false">⋮</summary><nav aria-label="Care actions"><a href="{{ row.action_url }}">{{ row.action_label }}</a><a href="{{ row.subject_url }}">Open profile</a></nav></details>{% endif %}</div>
         </li>{% endfor %}</ul>
       </section>{% endif %}{% endfor %}
       {% if not scheduled.has_items %}<div class="empty-state"><h3>No scheduled care</h3><p>Add a care schedule from an animal profile.</p></div>{% endif %}
@@ -32,7 +32,7 @@
   </div>
   {% else %}
   <section class="calendar-legend" aria-labelledby="calendar-legend-title">
-    <h2 id="calendar-legend-title" class="visually-hidden">Calendar marker key</h2>
+    <h2 id="calendar-legend-title" class="visually-hidden">Scheduled care calendar marker key</h2>
     <span aria-label="Completed care"><i class="month-marker completed-marker" aria-hidden="true">✓</i> Completed</span>
     <span aria-label="Overdue care"><i class="month-marker overdue-marker" aria-hidden="true">!</i> Overdue</span>
     <span aria-label="Care due today"><i class="month-marker due-marker" aria-hidden="true">D</i> Due</span>

@@ -2714,6 +2714,15 @@ def create_web_router(
                     timezone=ZoneInfo(principal.household_timezone),
                     now=now,
                     animal_visuals=animal_visuals,
+                    plant_counts={
+                        enclosure.enclosure_id: sum(
+                            plant.quantity
+                            for plant in enclosure_service.plants(
+                                principal.household_id, enclosure.enclosure_id
+                            )
+                        )
+                        for enclosure in enclosures
+                    },
                 )
             },
         )
@@ -7100,6 +7109,7 @@ def _enclosure_collection_rows(
     timezone: ZoneInfo,
     now: datetime,
     animal_visuals: dict[UUID, AnimalVisual] | None = None,
+    plant_counts: dict[UUID, int] | None = None,
 ) -> tuple[dict[str, Any], ...]:
     status_order = {"overdue": 0, "due_today": 1, "upcoming": 2}
     by_enclosure: dict[UUID, list[Any]] = {}
@@ -7133,6 +7143,7 @@ def _enclosure_collection_rows(
                     else "No care due"
                 ),
                 "maintenance_status": next_item.status if next_item is not None else "none",
+                "plant_count": (plant_counts or {}).get(enclosure.enclosure_id, 0),
             }
         )
     return tuple(rows)
