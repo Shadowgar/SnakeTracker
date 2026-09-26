@@ -15,7 +15,7 @@
       {% set scheduled = namespace(has_items=false) %}
       {% for key, label, rows in agenda_groups %}{% if rows %}{% set scheduled.has_items = true %}
       <section class="agenda-date-group" aria-labelledby="calendar-{{ key }}"><h3 id="calendar-{{ key }}"><span class="status-badge status-{% if key == 'due_today' %}today{% else %}{{ key }}{% endif %}">{{ label }}</span><span>{{ rows|length }}</span></h3>
-        <ul class="calendar-agenda-list">{% for row in rows %}<li>
+        <ul class="calendar-agenda-list">{% for row in rows %}<li class="agenda-care-row status-edge-{{ key }}">
           <a class="agenda-primary" href="{{ row.action_url or row.subject_url }}" aria-label="{{ row.action_label or 'Open profile for' }} {{ row.subject_name }} · {{ row.title }}">
             {% if row.visual %}<img class="agenda-avatar" src="{{ row.visual.url }}" alt="" width="96" height="96" loading="lazy" decoding="async">{% else %}<span class="agenda-avatar agenda-avatar-placeholder fallback-{{ row.photo_fallback_key }}" aria-hidden="true">{{ row.subject_name[0]|upper }}</span>{% endif %}
             <span class="agenda-row-copy"><strong>{{ row.subject_name }}</strong><span>{{ row.title }}{% if row.location_name %} · {{ row.location_name }}{% endif %}</span></span>

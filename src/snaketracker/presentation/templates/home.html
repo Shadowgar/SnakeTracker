@@ -35,10 +35,19 @@
   {% endfor %}
   </div>
   {% if not agenda.has_items %}<section class="empty-state calm-state"><h2>Nothing needs attention today</h2><p>Upcoming care will appear here from the schedules you set.</p></section>{% endif %}
-  <a class="card collection-summary-link" href="/animals" aria-labelledby="collection-summary">
+  <a class="card collection-summary-link today-mobile-collection" href="/animals" aria-labelledby="collection-summary">
     <span><strong id="collection-summary">Your collection</strong>{% if collection_statistics %}<span>{{ collection_statistics.animals }} animals · {{ collection_statistics.enclosures }} enclosures</span>{% else %}<span>Collection statistics are catching up.</span>{% endif %}</span>
     <span aria-hidden="true">View animals →</span>
   </a>
+  {% set insight = namespace(next_care=none) %}
+  {% for key, label, rows in agenda_groups %}{% if key == 'upcoming' and rows %}{% set insight.next_care = rows[0] %}{% endif %}{% endfor %}
+  {% if insight.next_care is none %}{% for key, label, rows in agenda_groups %}{% if key == 'due_today' and rows %}{% set insight.next_care = rows[0] %}{% endif %}{% endfor %}{% endif %}
+  <section class="today-insights" aria-label="Collection insights">
+    <a class="today-insight" href="/animals"><span>Total animals</span><strong>{% if collection_statistics %}{{ collection_statistics.animals }}{% else %}—{% endif %}</strong><small>{% if collection_statistics %}Across {{ collection_statistics.enclosures }} enclosure{% if collection_statistics.enclosures != 1 %}s{% endif %}{% else %}Statistics are catching up{% endif %}</small></a>
+    <a class="today-insight" href="/enclosures"><span>Total enclosures</span><strong>{% if collection_statistics %}{{ collection_statistics.enclosures }}{% else %}—{% endif %}</strong><small>Collection habitats</small></a>
+    <a class="today-insight" href="/calendar?view=agenda"><span>Needs attention</span><strong>{{ agenda_counts.overdue + agenda_counts.due_today }}</strong><small>{{ agenda_counts.overdue }} overdue · {{ agenda_counts.due_today }} due today</small></a>
+    {% if insight.next_care %}<a class="today-insight" href="{{ insight.next_care.action_url or insight.next_care.subject_url }}"><span>Next scheduled care</span><strong>{{ insight.next_care.subject_name }}</strong><small>{{ insight.next_care.title }} · {{ insight.next_care.due_label }}</small></a>{% else %}<a class="today-insight" href="/calendar?view=agenda"><span>Next scheduled care</span><strong>None scheduled</strong><small>Care schedules will appear here</small></a>{% endif %}
+  </section>
   <a class="quick-log-fab" href="/quick-log" aria-label="Add care"><span aria-hidden="true">+</span></a>
 </section>
 {% endblock %}
