@@ -106,7 +106,7 @@ def _create_enclosure(client: TestClient, name: str) -> str:
             "csrf_token": _csrf(form.text),
             "idempotency_key": f"m55-enclosure-{name.lower().replace(' ', '-')}",
             "name": name,
-            "enclosure_type": "terrarium",
+            "enclosure_type_choice": "Glass terrarium",
             "notes": "Mixed household qualification fixture.",
         },
         follow_redirects=False,

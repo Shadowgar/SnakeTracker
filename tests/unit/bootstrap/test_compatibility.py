@@ -17,7 +17,7 @@ from snaketracker.bootstrap.compatibility import (
     ("metadata", "database_is_empty", "expected_mode"),
     [
         (
-            {"manifest_version": 1, "relational_schema_version": 18},
+            {"manifest_version": 1, "relational_schema_version": 22},
             False,
             CompatibilityMode.NORMAL,
         ),
@@ -34,7 +34,7 @@ from snaketracker.bootstrap.compatibility import (
             CompatibilityMode.RECOVERY_REQUIRED,
         ),
         (
-            {"manifest_version": 1, "relational_schema_version": 19},
+            {"manifest_version": 1, "relational_schema_version": 23},
             False,
             CompatibilityMode.RECOVERY_REQUIRED,
         ),
@@ -75,7 +75,7 @@ def test_known_alembic_revision_is_compatible(tmp_path) -> None:
         with engine.begin() as connection:
             connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
             connection.execute(
-                text("INSERT INTO alembic_version VALUES ('0018_inventory_stock_roles')")
+                text("INSERT INTO alembic_version VALUES ('0022_reference_image_provenance')")
             )
 
         assert inspect_database_compatibility(engine).mode is CompatibilityMode.NORMAL
@@ -170,7 +170,7 @@ def test_startup_compatibility_accepts_supported_runtime_and_schema(tmp_path) ->
         with engine.begin() as connection:
             connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
             connection.execute(
-                text("INSERT INTO alembic_version VALUES ('0018_inventory_stock_roles')")
+                text("INSERT INTO alembic_version VALUES ('0022_reference_image_provenance')")
             )
             connection.execute(
                 text(
@@ -199,7 +199,7 @@ def test_unknown_non_household_contract_requires_restricted_recovery(tmp_path) -
         with engine.begin() as connection:
             connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
             connection.execute(
-                text("INSERT INTO alembic_version VALUES ('0018_inventory_stock_roles')")
+                text("INSERT INTO alembic_version VALUES ('0022_reference_image_provenance')")
             )
             connection.execute(
                 text(

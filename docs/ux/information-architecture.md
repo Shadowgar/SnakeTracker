@@ -46,7 +46,21 @@ Animal profile sections:
 - Documents/photos
 - Profile and lifecycle settings
 
+M6.6-A adds a compact linked-species identity (preferred common name plus italic scientific name)
+and a **Link species** / **Change species link** action. It does not place full taxonomy or care
+guides on the profile. Animal Add/Edit uses one group-filtered, keyboard-operable combobox with a
+plain manual-species fallback; morph/genetics remain separate fields.
+
 Husbandry and health remain coherent feature slices within one animal experience. Corrections display the current effective value and offer authorized access to history.
+
+## Care Keeper Directory
+
+One Directory entry point covers snake, lizard, spider, scorpion, and plant references. Search
+results prioritize common name, show scientific name and family, identify stale/cached state when
+material, and provide explicit empty, ambiguous, provider-unavailable, and manual-fallback states.
+Plant detail in M6.6-A is reference-only: names, classification, synonyms, provider provenance,
+and a licensed image or local placeholder. Household plants, watering, enclosure placement, and
+care advice are later tranches.
 
 ## Enclosures, inventory, reports, and administration
 

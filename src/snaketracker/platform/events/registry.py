@@ -30,11 +30,13 @@ from snaketracker.domains.animals.contracts import (
     AnimalPremoltObservedV1,
     AnimalPremoltObservedV2,
     AnimalProfileCorrectedV1,
+    AnimalReferenceImagePreferenceChangedV1,
     AnimalRegisteredV1,
     AnimalRegisteredV2,
     AnimalShedCorrectedV1,
     AnimalShedRecordedV1,
     AnimalStatusChangedV1,
+    AnimalTaxonLinkedV1,
     AnimalWeightCorrectedV1,
     AnimalWeightCorrectedV2,
     AnimalWeightRecordedV1,
@@ -44,6 +46,9 @@ from snaketracker.domains.enclosures.contracts import (
     ENCLOSURE_STATUSES,
     EnclosureCleaningRecordedV1,
     EnclosureMistingRecordedV1,
+    EnclosurePlantAddedV1,
+    EnclosurePlantProfileChangedV1,
+    EnclosurePlantRemovedV1,
     EnclosureProfileChangedV1,
     EnclosureRegisteredV1,
     EnclosureStatusChangedV1,
@@ -420,11 +425,49 @@ def _deserialize_animal_status_changed(data: Mapping[str, object]) -> EventPaylo
     return AnimalStatusChangedV1(status)
 
 
+def _deserialize_animal_taxon_linked(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalTaxonLinkedV1, data)
+    group = data["group"]
+    scientific_name = data["accepted_scientific_name"]
+    common_name = data["preferred_common_name"]
+    provider = data["provider"]
+    provider_id = data["provider_id"]
+    if (
+        group not in {"snake", "lizard", "spider", "scorpion"}
+        or not isinstance(scientific_name, str)
+        or not scientific_name.strip()
+        or (common_name is not None and not isinstance(common_name, str))
+        or not isinstance(provider, str)
+        or not provider.strip()
+        or not isinstance(provider_id, str)
+        or not provider_id.strip()
+    ):
+        raise ValueError("Stored Animal taxon link payload is invalid.")
+    return AnimalTaxonLinkedV1(
+        taxon_id=_uuid_field(data, "taxon_id", "Animal taxon link"),
+        group=group,
+        accepted_scientific_name=scientific_name,
+        preferred_common_name=common_name,
+        provider=provider,
+        provider_id=provider_id,
+    )
+
+
 def _deserialize_animal_photo_selected(data: Mapping[str, object]) -> EventPayload:
     _require_exact_fields(AnimalPhotoSelectedV1, data)
     return AnimalPhotoSelectedV1(
         attachment_version_id=_uuid_field(data, "attachment_version_id", "photo selection")
     )
+
+
+def _deserialize_animal_reference_image_preference(
+    data: Mapping[str, object],
+) -> EventPayload:
+    _require_exact_fields(AnimalReferenceImagePreferenceChangedV1, data)
+    enabled = data["enabled"]
+    if type(enabled) is not bool:
+        raise ValueError("Stored Animal reference-image preference is invalid.")
+    return AnimalReferenceImagePreferenceChangedV1(enabled)
 
 
 ANIMAL_PROFILE_CONTRACTS = (
@@ -466,6 +509,22 @@ ANIMAL_PROFILE_CONTRACTS = (
         owner="animals",
         payload_type=AnimalPhotoSelectedV1,
         deserialize_payload=_deserialize_animal_photo_selected,
+        subject_requirements=(SubjectRequirement("animal", "primary"),),
+    ),
+    EventContractRegistration(
+        event_type="animal.reference_image_preference_changed",
+        schema_version=1,
+        owner="animals",
+        payload_type=AnimalReferenceImagePreferenceChangedV1,
+        deserialize_payload=_deserialize_animal_reference_image_preference,
+        subject_requirements=(SubjectRequirement("animal", "primary"),),
+    ),
+    EventContractRegistration(
+        event_type="animal.taxon_linked",
+        schema_version=1,
+        owner="animals",
+        payload_type=AnimalTaxonLinkedV1,
+        deserialize_payload=_deserialize_animal_taxon_linked,
         subject_requirements=(SubjectRequirement("animal", "primary"),),
     ),
 )
@@ -1078,6 +1137,58 @@ def _deserialize_enclosure_misting(data: Mapping[str, object]) -> EventPayload:
     return EnclosureMistingRecordedV1(duration, observation)
 
 
+def _deserialize_enclosure_plant_profile(
+    data: Mapping[str, object],
+    payload_type: type[EnclosurePlantAddedV1] | type[EnclosurePlantProfileChangedV1],
+) -> EventPayload:
+    _require_exact_fields(payload_type, data)
+    plant_id = _uuid_field(data, "enclosure_plant_id", "enclosure plant")
+    taxon_raw = data["taxon_id"]
+    taxon_id = None if taxon_raw is None else _uuid_field(data, "taxon_id", "enclosure plant")
+    scientific = data["confirmed_scientific_name"]
+    common = data["confirmed_common_name"]
+    manual = data["manual_species"]
+    label = data["label"]
+    quantity = data["quantity"]
+    date_added = data["date_added"]
+    notes = data["notes"]
+    optional_strings = (scientific, common, manual, label, date_added, notes)
+    if any(value is not None and not isinstance(value, str) for value in optional_strings):
+        raise ValueError("Stored enclosure plant profile payload is invalid.")
+    if type(quantity) is not int or not 1 <= quantity <= 999:
+        raise ValueError("Stored enclosure plant quantity is invalid.")
+    if (taxon_id is None) == (manual is None):
+        raise ValueError("Stored enclosure plant identity is invalid.")
+    return payload_type(
+        plant_id,
+        taxon_id,
+        cast(str | None, scientific),
+        cast(str | None, common),
+        cast(str | None, manual),
+        cast(str | None, label),
+        quantity,
+        cast(str | None, date_added),
+        cast(str | None, notes),
+    )
+
+
+def _deserialize_enclosure_plant_added(data: Mapping[str, object]) -> EventPayload:
+    return _deserialize_enclosure_plant_profile(data, EnclosurePlantAddedV1)
+
+
+def _deserialize_enclosure_plant_changed(data: Mapping[str, object]) -> EventPayload:
+    return _deserialize_enclosure_plant_profile(data, EnclosurePlantProfileChangedV1)
+
+
+def _deserialize_enclosure_plant_removed(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(EnclosurePlantRemovedV1, data)
+    plant_id = _uuid_field(data, "enclosure_plant_id", "enclosure plant removal")
+    reason = data["reason"]
+    if reason is not None and not isinstance(reason, str):
+        raise ValueError("Stored enclosure plant removal payload is invalid.")
+    return EnclosurePlantRemovedV1(plant_id, reason)
+
+
 ENCLOSURE_CONTRACTS = (
     EventContractRegistration(
         event_type="enclosure.registered",
@@ -1132,6 +1243,39 @@ ENCLOSURE_CONTRACTS = (
             SubjectRequirement("animal", "related"),
         ),
         correction=CorrectionCapabilities(voidable=True, reinstatable=True, required_role="owner"),
+    ),
+    EventContractRegistration(
+        event_type="enclosure.plant_added",
+        schema_version=1,
+        owner="enclosures.plants",
+        payload_type=EnclosurePlantAddedV1,
+        deserialize_payload=_deserialize_enclosure_plant_added,
+        subject_requirements=(
+            SubjectRequirement("enclosure", "primary"),
+            SubjectRequirement("enclosure-plant", "related"),
+        ),
+    ),
+    EventContractRegistration(
+        event_type="enclosure.plant_profile_changed",
+        schema_version=1,
+        owner="enclosures.plants",
+        payload_type=EnclosurePlantProfileChangedV1,
+        deserialize_payload=_deserialize_enclosure_plant_changed,
+        subject_requirements=(
+            SubjectRequirement("enclosure", "primary"),
+            SubjectRequirement("enclosure-plant", "related"),
+        ),
+    ),
+    EventContractRegistration(
+        event_type="enclosure.plant_removed",
+        schema_version=1,
+        owner="enclosures.plants",
+        payload_type=EnclosurePlantRemovedV1,
+        deserialize_payload=_deserialize_enclosure_plant_removed,
+        subject_requirements=(
+            SubjectRequirement("enclosure", "primary"),
+            SubjectRequirement("enclosure-plant", "related"),
+        ),
     ),
 )
 

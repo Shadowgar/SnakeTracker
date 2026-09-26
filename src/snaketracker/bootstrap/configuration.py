@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     environment: Environment = Environment.DEVELOPMENT
     database_path: Path = Path("data/snaketracker.sqlite3")
     attachment_storage_path: Path | None = None
+    reference_image_storage_path: Path | None = None
     backup_storage_path: Path | None = None
     external_origin: HttpUrl | None = None
     runtime_secret: SecretStr | None = None
@@ -106,6 +107,12 @@ class Settings(BaseSettings):
             raise ValueError("production attachment storage path must be absolute")
         if (
             self.environment is Environment.PRODUCTION
+            and self.reference_image_storage_path is not None
+            and not self.reference_image_storage_path.is_absolute()
+        ):
+            raise ValueError("production reference-image storage path must be absolute")
+        if (
+            self.environment is Environment.PRODUCTION
             and self.backup_storage_path is not None
             and not self.backup_storage_path.is_absolute()
         ):
@@ -143,6 +150,7 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         "SNAKETRACKER_ENVIRONMENT": "environment",
         "SNAKETRACKER_DATABASE_PATH": "database_path",
         "SNAKETRACKER_ATTACHMENT_STORAGE_PATH": "attachment_storage_path",
+        "SNAKETRACKER_REFERENCE_IMAGE_STORAGE_PATH": "reference_image_storage_path",
         "SNAKETRACKER_BACKUP_STORAGE_PATH": "backup_storage_path",
         "SNAKETRACKER_BACKUP_ENCRYPTION_KEY_ID": "backup_encryption_key_id",
         "SNAKETRACKER_EXTERNAL_ORIGIN": "external_origin",

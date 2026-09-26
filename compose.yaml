@@ -10,6 +10,7 @@ x-app-common: &app-common
     SNAKETRACKER_ENVIRONMENT: development
     SNAKETRACKER_DATABASE_PATH: /var/lib/snaketracker/snaketracker.sqlite3
     SNAKETRACKER_ATTACHMENT_STORAGE_PATH: /var/lib/snaketracker/attachments
+    SNAKETRACKER_REFERENCE_IMAGE_STORAGE_PATH: /var/lib/snaketracker/reference-images
     SNAKETRACKER_BACKUP_STORAGE_PATH: /var/lib/snaketracker/backups
     SNAKETRACKER_BACKUP_ENCRYPTION_KEY_ID: ${SNAKETRACKER_BACKUP_ENCRYPTION_KEY_ID:-local-development-v1}
     SNAKETRACKER_EXTERNAL_ORIGIN: ${SNAKETRACKER_EXTERNAL_ORIGIN:-http://localhost:8081}

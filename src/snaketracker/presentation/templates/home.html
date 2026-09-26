@@ -5,13 +5,14 @@
   <header class="page-heading today-heading">
     <div><h1 id="page-title">Today</h1>
     <p class="lede today-date">{{ today_label }} · care across your collection</p></div>
-    <a class="button-link today-add-care" href="/quick-log">Add care</a>
+    <a class="button-link today-add-care" href="/quick-log" aria-label="Add care"><span aria-hidden="true">+</span><span class="today-add-label">Add care</span></a>
   </header>
   {% if not onboarding.onboarding_complete %}<aside class="onboarding-nudge" aria-label="Collection setup"><div><strong>Finish setting up your collection</strong><span>{{ onboarding.onboarding_next_label }}</span></div><a href="/onboarding">Continue setup</a></aside>{% endif %}
   <div class="today-summary" aria-label="Care summary">
     <a href="#home-overdue"><strong>{{ agenda_counts.overdue }}</strong><span>Overdue</span></a>
     <a href="#home-due_today"><strong>{{ agenda_counts.due_today }}</strong><span>Due today</span></a>
     <a href="#home-upcoming"><strong>{{ agenda_counts.upcoming }}</strong><span>Upcoming</span></a>
+    <a href="/calendar?view=agenda"><strong>{{ agenda_counts.overdue + agenda_counts.due_today + agenda_counts.upcoming }}</strong><span>All tasks</span></a>
   </div>
   {% set agenda = namespace(has_items=false) %}
   <div class="today-columns">
@@ -21,9 +22,11 @@
       {% if rows %}{% set agenda.has_items = true %}
       <ul class="today-list">
         {% for row in rows[:6] %}<li class="today-care-card status-edge-{{ key }}">
-          {% if row.photo_attachment_version_id %}<img class="care-avatar" src="/attachments/{{ row.photo_attachment_version_id }}" alt="">{% else %}<span class="care-avatar care-avatar-placeholder fallback-{{ row.photo_fallback_key }}" aria-hidden="true">{{ row.subject_name[0]|upper }}</span>{% endif %}
-          <div class="today-care-copy"><p class="eyebrow">{{ row.title }}</p><h3><a href="{{ row.subject_url }}">{{ row.subject_name }}</a></h3><p class="care-context"><span class="due-language">{{ row.due_label }}</span><span>{{ row.last_context }}</span>{% if row.location_name %}<span class="care-location-inline">{{ row.location_name }}</span>{% endif %}</p></div>
-          {% if row.action_url %}<a class="compact-action" href="{{ row.action_url }}">{{ row.action_label }}</a>{% endif %}
+          <a class="today-care-primary" href="{{ row.action_url or row.subject_url }}" aria-label="{{ row.action_label or 'Open profile for' }} {{ row.subject_name }} · {{ row.title }}">
+            {% if row.visual %}<img class="care-avatar" src="{{ row.visual.url }}" alt="" width="96" height="96" loading="lazy" decoding="async">{% else %}<span class="care-avatar care-avatar-placeholder fallback-{{ row.photo_fallback_key }}" aria-hidden="true">{{ row.subject_name[0]|upper }}</span>{% endif %}
+            <span class="today-care-copy"><span class="eyebrow">{{ row.title }}</span><strong>{{ row.subject_name }}</strong><span class="care-context"><span class="due-language">{{ row.due_label }}</span><span>{{ row.last_context }}</span>{% if row.location_name %}<span class="care-location-inline">{{ row.location_name }}</span>{% endif %}</span></span>
+          </a>
+          <span class="overflow-menu care-row-menu"><button class="overflow-trigger" type="button" popovertarget="today-menu-{{ key }}-{{ loop.index }}" aria-controls="today-menu-{{ key }}-{{ loop.index }}" aria-haspopup="menu" aria-expanded="false" aria-label="More actions for {{ row.subject_name }} {{ row.title }}">⋮</button><nav id="today-menu-{{ key }}-{{ loop.index }}" popover="auto" aria-label="Secondary care actions"><a href="{{ row.subject_url }}">View profile</a></nav></span>
         </li>{% endfor %}
       </ul>
       {% if rows|length > 6 %}<a class="column-more" href="/calendar?view=agenda">View all {{ rows|length }}</a>{% endif %}
@@ -32,9 +35,19 @@
   {% endfor %}
   </div>
   {% if not agenda.has_items %}<section class="empty-state calm-state"><h2>Nothing needs attention today</h2><p>Upcoming care will appear here from the schedules you set.</p></section>{% endif %}
-  <a class="card collection-summary-link" href="/animals" aria-labelledby="collection-summary">
+  <a class="card collection-summary-link today-mobile-collection" href="/animals" aria-labelledby="collection-summary">
     <span><strong id="collection-summary">Your collection</strong>{% if collection_statistics %}<span>{{ collection_statistics.animals }} animals · {{ collection_statistics.enclosures }} enclosures</span>{% else %}<span>Collection statistics are catching up.</span>{% endif %}</span>
     <span aria-hidden="true">View animals →</span>
   </a>
+  {% set insight = namespace(next_care=none) %}
+  {% for key, label, rows in agenda_groups %}{% if key == 'upcoming' and rows %}{% set insight.next_care = rows[0] %}{% endif %}{% endfor %}
+  {% if insight.next_care is none %}{% for key, label, rows in agenda_groups %}{% if key == 'due_today' and rows %}{% set insight.next_care = rows[0] %}{% endif %}{% endfor %}{% endif %}
+  <section class="today-insights" aria-label="Collection insights">
+    <a class="today-insight" href="/animals"><span>Total animals</span><strong>{% if collection_statistics %}{{ collection_statistics.animals }}{% else %}—{% endif %}</strong><small>{% if collection_statistics %}Across {{ collection_statistics.enclosures }} enclosure{% if collection_statistics.enclosures != 1 %}s{% endif %}{% else %}Statistics are catching up{% endif %}</small></a>
+    <a class="today-insight" href="/enclosures"><span>Total enclosures</span><strong>{% if collection_statistics %}{{ collection_statistics.enclosures }}{% else %}—{% endif %}</strong><small>Collection habitats</small></a>
+    <a class="today-insight" href="/calendar?view=agenda"><span>Needs attention</span><strong>{{ agenda_counts.overdue + agenda_counts.due_today }}</strong><small>{{ agenda_counts.overdue }} overdue · {{ agenda_counts.due_today }} due today</small></a>
+    {% if insight.next_care %}<a class="today-insight" href="{{ insight.next_care.action_url or insight.next_care.subject_url }}"><span>Next scheduled care</span><strong>{{ insight.next_care.subject_name }}</strong><small>{{ insight.next_care.title }} · {{ insight.next_care.due_label }}</small></a>{% else %}<a class="today-insight" href="/calendar?view=agenda"><span>Next scheduled care</span><strong>None scheduled</strong><small>Care schedules will appear here</small></a>{% endif %}
+  </section>
+  <a class="quick-log-fab" href="/quick-log" aria-label="Add care"><span aria-hidden="true">+</span></a>
 </section>
 {% endblock %}

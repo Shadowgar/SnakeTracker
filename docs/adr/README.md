@@ -11,6 +11,10 @@ decisions.
 M6.5-A1 implements its structured Inventory and Inventory-authoritative Feeding foundation;
 Purchase, FIFO, costing, counting, and intelligence remain later M6.5 tranches.
 
+[ADR-0043](0043-universal-species-directory.md) is **Proposed for M6.6-A owner review**. It records
+Care Keeper-owned taxon identity, provider/cache boundaries, licensing, privacy, and offline
+behavior before the M6.6-A production-provider implementation.
+
 | ADR | Decision |
 |---|---|
 | [0001](0001-modular-monolith.md) | Modular monolith |
@@ -55,3 +59,4 @@ Purchase, FIFO, costing, counting, and intelligence remain later M6.5 tranches.
 | [0040](0040-trusted-local-demo-household-provisioning.md) | Trusted local demo-household provisioning |
 | [0041](0041-four-group-capability-expansion-and-neutral-molt-contracts.md) | Four-group capability expansion and neutral molt contracts |
 | [0042](0042-inventory-purchases-fifo-and-quantity-policy.md) | Structured Inventory, Inventory-authoritative Feeding, multi-line Purchases, FIFO valuation, canonical quantities, and physical counts |
+| [0043](0043-universal-species-directory.md) | Care Keeper-owned taxon identity, normalized provider mappings/cache, licensing, privacy, and offline species discovery |

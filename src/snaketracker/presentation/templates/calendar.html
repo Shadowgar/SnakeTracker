@@ -2,22 +2,26 @@
 {% block title %}Calendar · Care Keeper{% endblock %}
 {% block content %}
 <section class="calendar-page" aria-labelledby="page-title">
-  <header class="page-heading calendar-heading"><div><p class="page-kicker">Care planning</p><h1 id="page-title">Calendar</h1><p class="lede">Scheduled care and completed records, together.</p></div></header>
+  <header class="calendar-screen-heading"><a href="/home" aria-label="Back to Today">‹</a><div><span class="visually-hidden">Calendar · </span><h1 id="page-title">{{ calendar.month_label }}</h1></div><span aria-hidden="true">▣</span></header>
   <nav class="view-switcher" aria-label="Calendar view">
     <a href="/calendar?view=agenda&amp;month={{ calendar.month_value }}"{% if active_view == 'agenda' %} aria-current="page"{% endif %}>Agenda</a>
     <a href="/calendar?view=month&amp;month={{ calendar.month_value }}"{% if active_view == 'month' %} aria-current="page"{% endif %}>Month</a>
   </nav>
   {% if active_view == 'agenda' %}
+  <nav class="calendar-day-strip" aria-label="Current week">{% for day in calendar.today_week %}<a href="/calendar?view=month&amp;month={{ calendar.month_value }}&amp;selected={{ day.date.isoformat() }}"{% if day.is_today %} aria-current="date"{% endif %}><span>{{ day.date.strftime('%a') }}</span><strong>{{ day.date.day }}</strong></a>{% endfor %}</nav>
   <div class="calendar-agenda-layout">
     <section class="calendar-scheduled" aria-labelledby="scheduled-title">
       <div class="section-heading"><div><p class="eyebrow">Next up</p><h2 id="scheduled-title">Scheduled care</h2></div></div>
       {% set scheduled = namespace(has_items=false) %}
       {% for key, label, rows in agenda_groups %}{% if rows %}{% set scheduled.has_items = true %}
       <section class="agenda-date-group" aria-labelledby="calendar-{{ key }}"><h3 id="calendar-{{ key }}"><span class="status-badge status-{% if key == 'due_today' %}today{% else %}{{ key }}{% endif %}">{{ label }}</span><span>{{ rows|length }}</span></h3>
-        <ul class="calendar-agenda-list">{% for row in rows %}<li>
-          {% if row.photo_attachment_version_id %}<img class="agenda-avatar" src="/attachments/{{ row.photo_attachment_version_id }}" alt="">{% else %}<span class="agenda-avatar agenda-avatar-placeholder fallback-{{ row.photo_fallback_key }}" aria-hidden="true">{{ row.subject_name[0]|upper }}</span>{% endif %}
-          <div class="agenda-row-copy"><strong><a href="{{ row.subject_url }}">{{ row.subject_name }}</a></strong><span>{{ row.title }}{% if row.location_name %} · {{ row.location_name }}{% endif %}</span></div>
-          <div class="agenda-row-end"><span>{{ row.due_label }}</span>{% if row.action_url %}<a href="{{ row.action_url }}">{{ row.action_label }}</a>{% endif %}</div>
+        <ul class="calendar-agenda-list">{% for row in rows %}<li class="agenda-care-row status-edge-{{ key }}">
+          <a class="agenda-primary" href="{{ row.action_url or row.subject_url }}" aria-label="{{ row.action_label or 'Open profile for' }} {{ row.subject_name }} · {{ row.title }}">
+            {% if row.visual %}<img class="agenda-avatar" src="{{ row.visual.url }}" alt="" width="96" height="96" loading="lazy" decoding="async">{% else %}<span class="agenda-avatar agenda-avatar-placeholder fallback-{{ row.photo_fallback_key }}" aria-hidden="true">{{ row.subject_name[0]|upper }}</span>{% endif %}
+            <span class="agenda-row-copy"><strong>{{ row.subject_name }}</strong><span>{{ row.title }}{% if row.location_name %} · {{ row.location_name }}{% endif %}</span></span>
+            <span class="agenda-primary-due">{{ row.due_label }}</span>
+          </a>
+          <span class="overflow-menu agenda-row-menu"><button class="overflow-trigger" type="button" popovertarget="calendar-menu-{{ key }}-{{ loop.index }}" aria-controls="calendar-menu-{{ key }}-{{ loop.index }}" aria-haspopup="menu" aria-expanded="false" aria-label="More actions for {{ row.subject_name }} {{ row.title }}">⋮</button><nav id="calendar-menu-{{ key }}-{{ loop.index }}" popover="auto" aria-label="Secondary care actions"><a href="{{ row.subject_url }}">View profile</a></nav></span>
         </li>{% endfor %}</ul>
       </section>{% endif %}{% endfor %}
       {% if not scheduled.has_items %}<div class="empty-state"><h3>No scheduled care</h3><p>Add a care schedule from an animal profile.</p></div>{% endif %}
@@ -31,7 +35,7 @@
   </div>
   {% else %}
   <section class="calendar-legend" aria-labelledby="calendar-legend-title">
-    <h2 id="calendar-legend-title" class="visually-hidden">Calendar marker key</h2>
+    <h2 id="calendar-legend-title" class="visually-hidden">Scheduled care calendar marker key</h2>
     <span aria-label="Completed care"><i class="month-marker completed-marker" aria-hidden="true">✓</i> Completed</span>
     <span aria-label="Overdue care"><i class="month-marker overdue-marker" aria-hidden="true">!</i> Overdue</span>
     <span aria-label="Care due today"><i class="month-marker due-marker" aria-hidden="true">D</i> Due</span>
@@ -52,5 +56,6 @@
     </aside>
   </div>
   {% endif %}
+  <a class="quick-log-fab" href="/quick-log" aria-label="Add care"><span aria-hidden="true">+</span></a>
 </section>
 {% endblock %}

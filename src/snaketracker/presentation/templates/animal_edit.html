@@ -14,6 +14,7 @@
     {% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
     <label>Name<input name="name" value="{{ animal.name }}" required></label>
     <label>Species<input name="species" value="{{ animal.species }}" required></label>
+    <p class="field-help">Free text remains the historical profile value. <a href="/animals/{{ animal.animal_id }}/species">Link or change the verified directory species</a>.</p>
     <label>Sex
       <select name="sex">
         <option value="">Not recorded</option>
@@ -23,8 +24,12 @@
       </select>
     </label>
     <details class="form-advanced"><summary>Background and advanced details</summary><div class="form-stack">
-      <label>Morph<input name="morph" value="{{ animal.morph or '' }}"></label>
-      <label>Genetics<input name="genetics" value="{{ animal.genetics or '' }}"></label>
+      <label>Morph / variant<input name="morph" value="{{ animal.morph or '' }}" list="edit-morph-suggestions" autocomplete="off"></label>
+      <p class="field-help">An optional color, pattern, locality, or named variant within the species. Changing a species link does not change this individual fact.</p>
+      <datalist id="edit-morph-suggestions">{% if identity_suggestions %}{% for value in identity_suggestions.morphs %}<option value="{{ value }}"></option>{% endfor %}{% endif %}</datalist>
+      <label>Genetics / lineage<input name="genetics" value="{{ animal.genetics or '' }}" list="edit-genetics-suggestions" autocomplete="off"></label>
+      <p class="field-help">Optional known genetic traits, hets, parentage, or lineage for this individual. Care Keeper never infers genetics from species.</p>
+      <datalist id="edit-genetics-suggestions">{% if identity_suggestions %}{% for value in identity_suggestions.genetics %}<option value="{{ value }}"></option>{% endfor %}{% endif %}</datalist>
       <label>Birth or hatch date<input name="birth_hatch_date" type="date" value="{{ animal.birth_hatch_date or '' }}"></label>
       <label>Acquisition date<input name="acquisition_date" type="date" value="{{ animal.acquisition_date or '' }}"></label>
       <label>Breeder or source<input name="breeder_source" value="{{ animal.breeder_source or '' }}"></label>

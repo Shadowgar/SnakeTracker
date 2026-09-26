@@ -8,13 +8,20 @@
     <p class="lede">Correct the current enclosure profile without rewriting its history.</p>
   </header>
   {% if errors and errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
-  <form class="card form-stack" method="post" action="/enclosures/{{ enclosure.enclosure_id }}/edit">
+  <form class="card form-stack" method="post" action="/enclosures/{{ enclosure.enclosure_id }}/edit" data-enclosure-type-form>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="idempotency_key" value="{{ command_id }}-profile">
     <label>Name<input name="name" value="{{ enclosure.name }}" required maxlength="200"></label>
-    <label>Type<input name="enclosure_type" value="{{ enclosure.enclosure_type }}" required maxlength="200"></label>
+    <label>Enclosure type
+      <select name="enclosure_type_choice" required data-enclosure-type-choice>
+        {% if legacy_enclosure_type %}<option value="__preserve__" selected>Keep current: {{ enclosure.enclosure_type }}</option>{% endif %}
+        {% for option in enclosure_type_options %}<option value="{{ option }}" {% if not legacy_enclosure_type and enclosure.enclosure_type == option %}selected{% endif %}>{{ option }}</option>{% endfor %}
+      </select>
+    </label>
+    <label data-custom-enclosure-type hidden>Describe enclosure type<input name="custom_enclosure_type" maxlength="100"></label>
     <label>Notes<textarea name="notes" rows="4">{{ enclosure.notes or '' }}</textarea></label>
     <div class="form-actions"><a href="/enclosures/{{ enclosure.enclosure_id }}">Cancel</a><button type="submit">Save enclosure</button></div>
   </form>
 </section>
 {% endblock %}
+{% block scripts %}<script src="/static/enclosure-type.js" defer></script>{% endblock %}

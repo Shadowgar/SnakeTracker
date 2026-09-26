@@ -13,6 +13,7 @@ from PIL import Image
 from PIL.TiffImagePlugin import IFDRational
 from sqlalchemy import text
 
+from snaketracker.application.enclosures import ENCLOSURE_TYPE_OPTIONS
 from snaketracker.bootstrap.application import build_application
 from snaketracker.bootstrap.configuration import Environment, Settings
 from tests.support.inventory import create_food_inventory, inventory_feeding_fields
@@ -180,7 +181,7 @@ def test_authenticated_keeper_can_track_animal_care_and_enclosure_workflow(
             data={
                 "csrf_token": csrf_from(enclosure_form.text),
                 "name": "Rack A-03",
-                "enclosure_type": "tub",
+                "enclosure_type_choice": "Rack tub",
                 "notes": "Warm rack.",
             },
             follow_redirects=False,
@@ -453,7 +454,7 @@ def test_enclosure_reassignment_is_identified_and_only_current_occupancy_is_show
                     "csrf_token": csrf_from(enclosure_form.text),
                     "idempotency_key": f"browser-enclosure-reassignment-create-{index}",
                     "name": name,
-                    "enclosure_type": "vivarium",
+                    "enclosure_type_choice": "Glass terrarium",
                     "notes": "",
                 },
                 follow_redirects=False,
@@ -592,7 +593,7 @@ def test_authenticated_keeper_can_edit_and_archive_an_enclosure(tmp_path: Path) 
             data={
                 "csrf_token": csrf_from(new_enclosure.text),
                 "name": "Rack A-03",
-                "enclosure_type": "tub",
+                "enclosure_type_choice": "Rack tub",
                 "notes": "Initial setup.",
             },
             follow_redirects=False,
@@ -607,7 +608,7 @@ def test_authenticated_keeper_can_edit_and_archive_an_enclosure(tmp_path: Path) 
                 "csrf_token": csrf_from(edit.text),
                 "idempotency_key": "browser-enclosure-update",
                 "name": "Rack A-04",
-                "enclosure_type": "vivarium",
+                "enclosure_type_choice": "Glass terrarium",
                 "notes": "Upgraded habitat.",
             },
             follow_redirects=False,
@@ -1647,7 +1648,11 @@ def test_phase4_forms_return_accessible_validation_errors(tmp_path: Path) -> Non
         enclosure_form = client.get("/enclosures/new")
         invalid_enclosure = client.post(
             "/enclosures",
-            data={"csrf_token": csrf_from(enclosure_form.text), "name": "", "enclosure_type": ""},
+            data={
+                "csrf_token": csrf_from(enclosure_form.text),
+                "name": "",
+                "enclosure_type_choice": "",
+            },
         )
         assert invalid_enclosure.status_code == 422
         created_enclosure = client.post(
@@ -1656,7 +1661,7 @@ def test_phase4_forms_return_accessible_validation_errors(tmp_path: Path) -> Non
                 "csrf_token": csrf_from(enclosure_form.text),
                 "idempotency_key": "validation-enclosure",
                 "name": "Rack A-03",
-                "enclosure_type": "tub",
+                "enclosure_type_choice": "Rack tub",
             },
             follow_redirects=False,
         )
@@ -1675,7 +1680,7 @@ def test_phase4_forms_return_accessible_validation_errors(tmp_path: Path) -> Non
                 {"occurred_at": occurred_value, "blue_state": "maybe", "completed": "true"},
             ),
             (f"{animal_url}/baths", {"occurred_at": occurred_value, "duration_minutes": "x"}),
-            (f"{enclosure_url}/edit", {"name": "", "enclosure_type": "tub"}),
+            (f"{enclosure_url}/edit", {"name": "", "enclosure_type_choice": "Rack tub"}),
             (f"{enclosure_url}/status", {"status": "unknown"}),
             (f"{enclosure_url}/cleanings", {"occurred_at": "bad"}),
             (f"{enclosure_url}/water-changes", {"occurred_at": "bad"}),
@@ -1735,3 +1740,348 @@ def test_phase4_forms_return_accessible_validation_errors(tmp_path: Path) -> Non
 
         assert animal_id
         assert enclosure_id
+
+
+def test_enclosure_type_and_plant_roster_browser_workflow(tmp_path: Path) -> None:
+    with client_for(tmp_path) as client:
+        setup_and_sign_in(client)
+
+        animal_form = client.get("/animals/new")
+        assert 'class="taxon-input-results"' in animal_form.text
+        assert animal_form.text.index('id="species-results"') < animal_form.text.index(
+            'id="species-help"'
+        )
+
+        enclosure_form = client.get("/enclosures/new")
+        assert "Enclosure type" in enclosure_form.text
+        assert "Glass terrarium" in enclosure_form.text
+        assert "Custom / other" in enclosure_form.text
+        assert 'name="enclosure_type"' not in enclosure_form.text
+        catalog_types = tuple(
+            enclosure_type
+            for enclosure_type in ENCLOSURE_TYPE_OPTIONS
+            if enclosure_type != "Custom / other"
+        )
+        catalog_enclosure_ids: list[str] = []
+        for index, enclosure_type in enumerate(catalog_types):
+            catalog_result = client.post(
+                "/enclosures",
+                data={
+                    "csrf_token": csrf_from(enclosure_form.text),
+                    "idempotency_key": f"catalog-enclosure-browser-{index}",
+                    "name": f"Catalog enclosure {index}",
+                    "enclosure_type_choice": enclosure_type,
+                    "custom_enclosure_type": "",
+                    "notes": "",
+                },
+                follow_redirects=False,
+            )
+            assert catalog_result.status_code == 303
+            catalog_enclosure_ids.append(catalog_result.headers["location"].rsplit("/", 1)[-1])
+        with client.app.state.database_engine.connect() as connection:
+            saved_types = tuple(
+                connection.execute(
+                    text(
+                        "SELECT enclosure_type FROM enclosure_current "
+                        "WHERE enclosure_id=:enclosure_id"
+                    ),
+                    {"enclosure_id": enclosure_id},
+                ).scalar_one()
+                for enclosure_id in catalog_enclosure_ids
+            )
+        assert saved_types == catalog_types
+
+        for index, (choice, custom, expected) in enumerate(
+            (
+                ("", "", "Choose an enclosure type."),
+                ("Custom / other", "", "Describe the custom enclosure type."),
+                (
+                    "Custom / other",
+                    "x" * 101,
+                    "Custom enclosure type must be at most 100 characters.",
+                ),
+            )
+        ):
+            invalid_type = client.post(
+                "/enclosures",
+                data={
+                    "csrf_token": csrf_from(enclosure_form.text),
+                    "idempotency_key": f"invalid-enclosure-type-browser-{index}",
+                    "name": "Invalid enclosure",
+                    "enclosure_type_choice": choice,
+                    "custom_enclosure_type": custom,
+                    "notes": "",
+                },
+            )
+            assert invalid_type.status_code == 422
+            assert expected in invalid_type.text
+
+        created = client.post(
+            "/enclosures",
+            data={
+                "csrf_token": csrf_from(enclosure_form.text),
+                "idempotency_key": "custom-enclosure-browser",
+                "name": "Tropical display",
+                "enclosure_type_choice": "Custom / other",
+                "custom_enclosure_type": "Converted cabinet",
+                "notes": "",
+            },
+            follow_redirects=False,
+        )
+        assert created.status_code == 303
+        enclosure_url = created.headers["location"]
+        enclosure = client.get(enclosure_url)
+        assert "No plants added" in enclosure.text
+        assert "Add plant" in enclosure.text
+
+        edit = client.get(f"{enclosure_url}/edit")
+        assert "Keep current: Converted cabinet" in edit.text
+        preserved = client.post(
+            f"{enclosure_url}/edit",
+            data={
+                "csrf_token": csrf_from(edit.text),
+                "idempotency_key": "preserve-legacy-enclosure",
+                "name": "Tropical display",
+                "enclosure_type_choice": "__preserve__",
+                "notes": "",
+            },
+            follow_redirects=False,
+        )
+        assert preserved.status_code == 303
+        assert "Converted cabinet" in client.get(enclosure_url).text
+
+        taxon_id = "4d5a83ee-62a4-4ba4-8d8d-c7f58a9fa241"
+        now = datetime.now(UTC).isoformat()
+        with client.app.state.database_engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO taxa (taxon_id,supported_group,accepted_scientific_name,"
+                    "preferred_common_name,taxonomic_status,future_guide_available,created_at,"
+                    "refreshed_at) VALUES (:id,'plant','Epipremnum aureum','Golden Pothos',"
+                    "'accepted',0,:now,:now)"
+                ),
+                {"id": taxon_id, "now": now},
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO taxon_provider_mappings "
+                    "(taxon_id,provider,provider_id,source_url,retrieved_at,refreshed_at) "
+                    "VALUES (:id,'inat','plant-1','https://example.invalid/plant-1',:now,:now)"
+                ),
+                {"id": taxon_id, "now": now},
+            )
+
+        plant_form = client.get(f"{enclosure_url}/plants/new")
+        assert plant_form.status_code == 200
+        assert 'value="plant"' in plant_form.text
+        linked = client.post(
+            f"{enclosure_url}/plants",
+            data={
+                "csrf_token": csrf_from(plant_form.text),
+                "idempotency_key": "linked-plant-browser",
+                "taxon_id": taxon_id,
+                "manual_species": "Golden Pothos",
+                "label": "Pothos by the hide",
+                "quantity": "2",
+                "date_added": "2026-09-14",
+                "notes": "Established cutting.",
+            },
+            follow_redirects=False,
+        )
+        assert linked.status_code == 303
+        linked_url = linked.headers["location"]
+        assert "View plant in directory" in client.get(linked_url).text
+
+        invalid_plant_values = (
+            ({"manual_species": "", "quantity": "1", "date_added": ""}, "Choose a plant"),
+            (
+                {"manual_species": "Fern", "quantity": "0", "date_added": ""},
+                "Plant quantity must be between 1 and 999.",
+            ),
+            (
+                {"manual_species": "Fern", "quantity": "not-a-number", "date_added": ""},
+                "Enter a whole-number quantity.",
+            ),
+            (
+                {"manual_species": "Fern", "quantity": "1", "date_added": "not-a-date"},
+                "Enter a valid date added.",
+            ),
+            (
+                {
+                    "taxon_id": "00000000-0000-0000-0000-000000000001",
+                    "manual_species": "Fern",
+                    "quantity": "1",
+                    "date_added": "",
+                },
+                "Choose a valid plant from the directory.",
+            ),
+        )
+        for index, (overrides, expected) in enumerate(invalid_plant_values):
+            invalid_plant = client.post(
+                f"{enclosure_url}/plants",
+                data={
+                    "csrf_token": csrf_from(plant_form.text),
+                    "idempotency_key": f"invalid-plant-browser-{index}",
+                    "taxon_id": "",
+                    "manual_species": "",
+                    "label": "",
+                    "quantity": "1",
+                    "date_added": "",
+                    "notes": "",
+                    **overrides,
+                },
+            )
+            assert invalid_plant.status_code == 422
+            assert expected in invalid_plant.text
+
+        linked_edit = client.get(f"{linked_url}/edit")
+        invalid_edit = client.post(
+            f"{linked_url}/edit",
+            data={
+                "csrf_token": csrf_from(linked_edit.text),
+                "idempotency_key": "invalid-linked-plant-edit-browser",
+                "taxon_id": taxon_id,
+                "manual_species": "Golden Pothos",
+                "label": "Pothos by the hide",
+                "quantity": "0",
+                "date_added": "2026-09-14",
+                "notes": "",
+            },
+        )
+        assert invalid_edit.status_code == 422
+        assert "Plant quantity must be between 1 and 999." in invalid_edit.text
+        corrected = client.post(
+            f"{linked_url}/edit",
+            data={
+                "csrf_token": csrf_from(linked_edit.text),
+                "idempotency_key": "linked-plant-edit-browser",
+                "taxon_id": taxon_id,
+                "manual_species": "Golden Pothos",
+                "label": "Main pothos",
+                "quantity": "3",
+                "date_added": "2026-09-13",
+                "notes": "Corrected quantity.",
+            },
+            follow_redirects=False,
+        )
+        assert corrected.status_code == 303
+        assert "Main pothos" in client.get(linked_url).text
+
+        manual_form = client.get(f"{enclosure_url}/plants/new")
+        manual = client.post(
+            f"{enclosure_url}/plants",
+            data={
+                "csrf_token": csrf_from(manual_form.text),
+                "idempotency_key": "manual-plant-browser",
+                "taxon_id": "",
+                "manual_species": "Unidentified fern",
+                "label": "",
+                "quantity": "1",
+                "date_added": "",
+                "notes": "",
+            },
+            follow_redirects=False,
+        )
+        assert manual.status_code == 303
+        manual_url = manual.headers["location"]
+        roster = client.get(enclosure_url)
+        assert "Main pothos" in roster.text
+        assert "Unidentified fern" in roster.text
+        remove_form = client.get(f"{manual_url}/remove")
+        assert remove_form.status_code == 200
+        removed = client.post(
+            f"{manual_url}/remove",
+            data={
+                "csrf_token": csrf_from(remove_form.text),
+                "idempotency_key": "manual-plant-remove-browser",
+                "reason": "Moved to another enclosure.",
+            },
+            follow_redirects=False,
+        )
+        assert removed.status_code == 303
+        assert "Unidentified fern" not in client.get(enclosure_url).text
+        assert client.get(f"{manual_url}/edit").status_code == 404
+        removed_edit = client.post(
+            f"{manual_url}/edit",
+            data={
+                "csrf_token": csrf_from(remove_form.text),
+                "idempotency_key": "removed-plant-edit-browser",
+                "taxon_id": "",
+                "manual_species": "Unidentified fern",
+                "label": "",
+                "quantity": "1",
+                "date_added": "",
+                "notes": "",
+            },
+        )
+        assert removed_edit.status_code == 422
+        assert "Active enclosure plant was not found." in removed_edit.text
+        removed_again = client.post(
+            f"{manual_url}/remove",
+            data={
+                "csrf_token": csrf_from(remove_form.text),
+                "idempotency_key": "removed-plant-remove-browser",
+                "reason": "Already removed.",
+            },
+        )
+        assert removed_again.status_code == 422
+        assert "Active enclosure plant was not found." in removed_again.text
+
+        invalid_enclosure_plant_paths = (
+            "/enclosures/not-a-uuid/plants/new",
+            "/enclosures/not-a-uuid/plants/not-a-uuid",
+            "/enclosures/not-a-uuid/plants/not-a-uuid/edit",
+            "/enclosures/not-a-uuid/plants/not-a-uuid/remove",
+        )
+        for path in invalid_enclosure_plant_paths:
+            assert client.get(path).status_code == 404
+        invalid_enclosure_plant_create = client.post(
+            "/enclosures/not-a-uuid/plants",
+            data={
+                "csrf_token": csrf_from(plant_form.text),
+                "idempotency_key": "invalid-enclosure-plant-create-browser",
+                "taxon_id": "",
+                "manual_species": "Fern",
+                "quantity": "1",
+                "date_added": "",
+            },
+        )
+        assert invalid_enclosure_plant_create.status_code == 404
+        invalid_enclosure_plant_edit = client.post(
+            "/enclosures/not-a-uuid/plants/not-a-uuid/edit",
+            data={
+                "csrf_token": csrf_from(plant_form.text),
+                "idempotency_key": "invalid-enclosure-plant-edit-browser",
+                "taxon_id": "",
+                "manual_species": "Fern",
+                "quantity": "1",
+                "date_added": "",
+            },
+        )
+        assert invalid_enclosure_plant_edit.status_code == 404
+        invalid_enclosure_plant_remove = client.post(
+            "/enclosures/not-a-uuid/plants/not-a-uuid/remove",
+            data={
+                "csrf_token": csrf_from(plant_form.text),
+                "idempotency_key": "invalid-enclosure-plant-remove-browser",
+                "reason": "Invalid identifiers.",
+            },
+        )
+        assert invalid_enclosure_plant_remove.status_code == 422
+
+        assert "Animal &amp; plant directory" in client.get("/more").text
+        logout = client.post(
+            "/logout",
+            data={"csrf_token": csrf_from(client.get("/more").text)},
+            follow_redirects=False,
+        )
+        assert logout.status_code == 303
+        for path in (
+            f"{enclosure_url}/plants/new",
+            linked_url,
+            f"{linked_url}/edit",
+            f"{linked_url}/remove",
+        ):
+            response = client.get(path, follow_redirects=False)
+            assert response.status_code == 303
+            assert response.headers["location"] == "/login"

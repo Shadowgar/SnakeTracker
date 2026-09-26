@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Protocol
 from uuid import UUID, uuid4
 
@@ -16,6 +16,9 @@ from snaketracker.domains.enclosures.contracts import (
     ENCLOSURE_STATUSES,
     EnclosureCleaningRecordedV1,
     EnclosureMistingRecordedV1,
+    EnclosurePlantAddedV1,
+    EnclosurePlantProfileChangedV1,
+    EnclosurePlantRemovedV1,
     EnclosureProfileChangedV1,
     EnclosureRegisteredV1,
     EnclosureStatusChangedV1,
@@ -53,6 +56,18 @@ DELETABLE_ENCLOSURE_CARE_EVENT_TYPES = frozenset(
     }
 )
 
+ENCLOSURE_TYPE_OPTIONS = (
+    "Glass terrarium",
+    "Glass tank / aquarium-style enclosure",
+    "PVC enclosure",
+    "Acrylic enclosure",
+    "Screen / mesh enclosure",
+    "Plastic tub / bin",
+    "Rack tub",
+    "Custom / other",
+)
+CUSTOM_ENCLOSURE_TYPE = "Custom / other"
+
 
 class EnclosureValidationError(ValueError):
     """An enclosure command failed owned aggregate validation."""
@@ -75,6 +90,50 @@ class EnclosureOccupant:
     name: str
 
 
+@dataclass(frozen=True, slots=True)
+class EnclosurePlant:
+    enclosure_plant_id: UUID
+    household_id: UUID
+    enclosure_id: UUID
+    taxon_id: UUID | None
+    confirmed_scientific_name: str | None
+    confirmed_common_name: str | None
+    manual_species: str | None
+    label: str | None
+    quantity: int
+    date_added: date | None
+    notes: str | None
+    status: str
+    stream_version: int
+
+    @property
+    def species_display(self) -> str:
+        return (
+            self.confirmed_common_name
+            or self.confirmed_scientific_name
+            or self.manual_species
+            or "Plant"
+        )
+
+
+class PlantTaxon(Protocol):
+    @property
+    def taxon_id(self) -> UUID: ...
+
+    @property
+    def supported_group(self) -> str: ...
+
+    @property
+    def accepted_scientific_name(self) -> str: ...
+
+    @property
+    def preferred_common_name(self) -> str | None: ...
+
+
+class PlantTaxonLookup(Protocol):
+    def get(self, taxon_id: UUID) -> PlantTaxon | None: ...
+
+
 class EnclosureCurrentProjection(SynchronousProjection, Protocol):
     def profile_for(self, household_id: UUID, enclosure_id: UUID) -> EnclosureProfile | None: ...
 
@@ -89,6 +148,14 @@ class EnclosureCurrentProjection(SynchronousProjection, Protocol):
     ) -> str | None:
         """Return one current household occupant's profile, or None if absent/unassigned."""
         ...
+
+    def plant_for(
+        self, household_id: UUID, enclosure_id: UUID, enclosure_plant_id: UUID
+    ) -> EnclosurePlant | None: ...
+
+    def plants_for(
+        self, household_id: UUID, enclosure_id: UUID, *, include_removed: bool = False
+    ) -> tuple[EnclosurePlant, ...]: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -176,10 +243,59 @@ class EnclosureRegistrationResult:
     profile: EnclosureProfile
 
 
+@dataclass(frozen=True, slots=True)
+class AddEnclosurePlantCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    enclosure_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    taxon_id: UUID | None
+    manual_species: str | None
+    label: str | None
+    quantity: int
+    date_added: date | None
+    notes: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class UpdateEnclosurePlantCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    enclosure_id: UUID
+    enclosure_plant_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    taxon_id: UUID | None
+    manual_species: str | None
+    label: str | None
+    quantity: int
+    date_added: date | None
+    notes: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class RemoveEnclosurePlantCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    enclosure_id: UUID
+    enclosure_plant_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    reason: str | None
+
+
 class EnclosureService:
-    def __init__(self, event_store: EventStore, projection: EnclosureCurrentProjection) -> None:
+    def __init__(
+        self,
+        event_store: EventStore,
+        projection: EnclosureCurrentProjection,
+        *,
+        taxon_lookup: PlantTaxonLookup | None = None,
+    ) -> None:
         self._event_store = event_store
         self._projection = projection
+        self._taxon_lookup = taxon_lookup
 
     def register(self, command: RegisterEnclosureCommand) -> EnclosureRegistrationResult:
         name = _required_text(command.name, "name", maximum_length=200)
@@ -324,6 +440,191 @@ class EnclosureService:
 
     def list_profiles(self, household_id: UUID) -> tuple[EnclosureProfile, ...]:
         return self._projection.list_for(household_id)
+
+    def plants(
+        self, household_id: UUID, enclosure_id: UUID, *, include_removed: bool = False
+    ) -> tuple[EnclosurePlant, ...]:
+        return self._projection.plants_for(
+            household_id, enclosure_id, include_removed=include_removed
+        )
+
+    def plant_for(
+        self, household_id: UUID, enclosure_id: UUID, enclosure_plant_id: UUID
+    ) -> EnclosurePlant | None:
+        return self._projection.plant_for(household_id, enclosure_id, enclosure_plant_id)
+
+    def add_plant(self, command: AddEnclosurePlantCommand) -> EnclosurePlant:
+        plant_id = uuid4()
+        identity = self._plant_identity(command.taxon_id, command.manual_species)
+        payload = EnclosurePlantAddedV1(
+            enclosure_plant_id=plant_id,
+            taxon_id=command.taxon_id,
+            confirmed_scientific_name=identity[0],
+            confirmed_common_name=identity[1],
+            manual_species=identity[2],
+            label=_optional_text(command.label, "plant label"),
+            quantity=_plant_quantity(command.quantity),
+            date_added=command.date_added.isoformat() if command.date_added else None,
+            notes=_optional_text(command.notes, "plant notes"),
+        )
+        persisted_plant_id = self._append_plant_event(
+            household_id=command.household_id,
+            actor_user_id=command.actor_user_id,
+            enclosure_id=command.enclosure_id,
+            correlation_id=command.correlation_id,
+            idempotency_key=command.idempotency_key,
+            event_type="enclosure.plant_added",
+            title="Enclosure plant added",
+            payload=payload,
+            plant_id=plant_id,
+            scope="enclosures.plants.add",
+        )
+        plant = self.plant_for(command.household_id, command.enclosure_id, persisted_plant_id)
+        if plant is None:
+            raise RuntimeError("Enclosure plant did not project current state.")
+        return plant
+
+    def update_plant(self, command: UpdateEnclosurePlantCommand) -> EnclosurePlant:
+        current = self._active_plant(
+            command.household_id, command.enclosure_id, command.enclosure_plant_id
+        )
+        identity = self._plant_identity(command.taxon_id, command.manual_species)
+        payload = EnclosurePlantProfileChangedV1(
+            enclosure_plant_id=current.enclosure_plant_id,
+            taxon_id=command.taxon_id,
+            confirmed_scientific_name=identity[0],
+            confirmed_common_name=identity[1],
+            manual_species=identity[2],
+            label=_optional_text(command.label, "plant label"),
+            quantity=_plant_quantity(command.quantity),
+            date_added=command.date_added.isoformat() if command.date_added else None,
+            notes=_optional_text(command.notes, "plant notes"),
+        )
+        self._append_plant_event(
+            household_id=command.household_id,
+            actor_user_id=command.actor_user_id,
+            enclosure_id=command.enclosure_id,
+            correlation_id=command.correlation_id,
+            idempotency_key=command.idempotency_key,
+            event_type="enclosure.plant_profile_changed",
+            title="Enclosure plant profile corrected",
+            payload=payload,
+            plant_id=current.enclosure_plant_id,
+            scope="enclosures.plants.update",
+        )
+        updated = self.plant_for(
+            command.household_id, command.enclosure_id, command.enclosure_plant_id
+        )
+        if updated is None:
+            raise RuntimeError("Enclosure plant correction did not project current state.")
+        return updated
+
+    def remove_plant(self, command: RemoveEnclosurePlantCommand) -> EnclosurePlant:
+        current = self._active_plant(
+            command.household_id, command.enclosure_id, command.enclosure_plant_id
+        )
+        self._append_plant_event(
+            household_id=command.household_id,
+            actor_user_id=command.actor_user_id,
+            enclosure_id=command.enclosure_id,
+            correlation_id=command.correlation_id,
+            idempotency_key=command.idempotency_key,
+            event_type="enclosure.plant_removed",
+            title="Enclosure plant removed",
+            payload=EnclosurePlantRemovedV1(
+                current.enclosure_plant_id, _optional_text(command.reason, "plant removal reason")
+            ),
+            plant_id=current.enclosure_plant_id,
+            scope="enclosures.plants.remove",
+        )
+        removed = self.plant_for(
+            command.household_id, command.enclosure_id, command.enclosure_plant_id
+        )
+        if removed is None:
+            raise RuntimeError("Enclosure plant removal did not project current state.")
+        return removed
+
+    def _active_plant(
+        self, household_id: UUID, enclosure_id: UUID, enclosure_plant_id: UUID
+    ) -> EnclosurePlant:
+        plant = self.plant_for(household_id, enclosure_id, enclosure_plant_id)
+        if plant is None or plant.status != "active":
+            raise EnclosureValidationError("Active enclosure plant was not found.")
+        return plant
+
+    def _plant_identity(
+        self, taxon_id: UUID | None, manual_species: str | None
+    ) -> tuple[str | None, str | None, str | None]:
+        manual = _optional_text(manual_species, "plant species")
+        if taxon_id is None:
+            if manual is None:
+                raise EnclosureValidationError("Choose a plant or enter its species/name.")
+            return None, None, manual
+        if self._taxon_lookup is None:
+            raise EnclosureValidationError("Plant directory lookup is unavailable.")
+        taxon = self._taxon_lookup.get(taxon_id)
+        if taxon is None or taxon.supported_group != "plant":
+            raise EnclosureValidationError("Choose a valid plant from the directory.")
+        return taxon.accepted_scientific_name, taxon.preferred_common_name, None
+
+    def _append_plant_event(
+        self,
+        *,
+        household_id: UUID,
+        actor_user_id: UUID,
+        enclosure_id: UUID,
+        correlation_id: UUID,
+        idempotency_key: str,
+        event_type: str,
+        title: str,
+        payload: EventPayload,
+        plant_id: UUID,
+        scope: str,
+    ) -> UUID:
+        key = StreamKey(household_id, "enclosure", enclosure_id)
+        existing = self._event_store.load_stream(key)
+        if not existing:
+            raise EnclosureValidationError("Enclosure does not exist in this household.")
+        recorded_at = datetime.now(UTC)
+        event = _event(
+            key=key,
+            event_id=uuid4(),
+            stream_version=len(existing) + 1,
+            event_type=event_type,
+            occurred_at=recorded_at,
+            recorded_at=recorded_at,
+            actor_user_id=actor_user_id,
+            correlation_id=correlation_id,
+            causation_id=None,
+            idempotency_key=idempotency_key,
+            title=title,
+            payload=payload,
+            notes=getattr(payload, "notes", None),
+            related_subjects=(EventSubject("enclosure-plant", plant_id, "related", 1),),
+        )
+        append = self._event_store.append_many(
+            AtomicAppendRequest(
+                streams=(StreamAppend(key, len(existing), (event,)),),
+                idempotency=_idempotency(
+                    household_id=household_id,
+                    actor_user_id=actor_user_id,
+                    operation_scope=scope,
+                    idempotency_key=idempotency_key,
+                    correlation_id=correlation_id,
+                    stored_response={
+                        "event_id": str(event.event_id),
+                        "enclosure_plant_id": str(plant_id),
+                    },
+                    command=_plant_command_payload(event_type, payload, plant_id),
+                    recorded_at=recorded_at,
+                ),
+                synchronous_projections=(self._projection,),
+            )
+        )
+        stored_plant_id = append.stored_response.get("enclosure_plant_id")
+        if not isinstance(stored_plant_id, str):
+            raise RuntimeError("Enclosure plant command did not retain its stored response.")
+        return UUID(stored_plant_id)
 
     def effective_history(self, household_id: UUID, enclosure_id: UUID) -> tuple[DomainEvent, ...]:
         """Return the enclosure stream with void/correction controls applied."""
@@ -610,3 +911,33 @@ def _optional_text(value: str | None, label: str) -> str | None:
     if len(normalized) > 2_000:
         raise EnclosureValidationError(f"Enclosure {label} is too long.")
     return normalized
+
+
+def _plant_quantity(value: int) -> int:
+    if type(value) is not int or not 1 <= value <= 999:
+        raise EnclosureValidationError("Plant quantity must be between 1 and 999.")
+    return value
+
+
+def _plant_command_payload(
+    event_type: str, payload: EventPayload, plant_id: UUID
+) -> dict[str, object]:
+    command: dict[str, object] = {"event_type": event_type}
+    if event_type != "enclosure.plant_added":
+        command["enclosure_plant_id"] = str(plant_id)
+    if isinstance(payload, (EnclosurePlantAddedV1, EnclosurePlantProfileChangedV1)):
+        command.update(
+            {
+                "taxon_id": str(payload.taxon_id) if payload.taxon_id else None,
+                "confirmed_scientific_name": payload.confirmed_scientific_name,
+                "confirmed_common_name": payload.confirmed_common_name,
+                "manual_species": payload.manual_species,
+                "label": payload.label,
+                "quantity": payload.quantity,
+                "date_added": payload.date_added,
+                "notes": payload.notes,
+            }
+        )
+    elif isinstance(payload, EnclosurePlantRemovedV1):
+        command["reason"] = payload.reason
+    return command

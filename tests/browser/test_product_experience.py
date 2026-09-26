@@ -120,6 +120,28 @@ def test_today_reports_search_and_read_only_pwa_shell_are_browser_visible(tmp_pa
         assert "indexedDB" not in pwa.text
 
 
+def test_m66_static_assets_advance_and_retire_previous_shell_cache(tmp_path: Path) -> None:
+    with client_for(tmp_path) as client:
+        complete_setup(client)
+        page = client.get("/animals/new")
+        worker = client.get("/service-worker.js")
+        pwa = client.get("/static/pwa.js")
+
+        assert "/static/app.css?v=m66-a-visual-closure-c1" in page.text
+        assert "/static/pwa.js?v=m66-a-visual-closure-c1" in page.text
+        assert "/static/species-directory.js?v=m66-a-visual-closure-c1" in page.text
+        assert 'const ASSET_VERSION = "m66-a-visual-closure-c1"' in worker.text
+        assert "`/static/app.css?v=${ASSET_VERSION}`" in worker.text
+        assert "`/static/species-directory.js?v=${ASSET_VERSION}`" in worker.text
+        assert "name.startsWith(CACHE_PREFIX) && name !== CACHE" in worker.text
+        assert "caches.delete(name)" in worker.text
+        assert "self.skipWaiting()" in worker.text
+        assert "self.clients.claim()" in worker.text
+        assert "/service-worker.js?v=m66-a-visual-closure-c1" in pwa.text
+        assert "m65-c1" not in page.text
+        assert "m61-corrections" not in worker.text
+
+
 def test_analytics_explains_estimates_and_passed_windows_in_plain_language(tmp_path) -> None:
     with client_for(tmp_path) as client:
         complete_setup(client)
@@ -299,6 +321,60 @@ def test_selected_calendar_care_rows_are_large_navigable_household_scoped_links(
             follow_redirects=False,
         )
         assert schedule.status_code == 303
+
+        home = client.get("/home")
+        assert (
+            f'class="today-care-primary" href="{animal_url}/feedings/new?return_to=today"'
+            in home.text
+        )
+        assert 'class="overflow-trigger"' in home.text
+        assert 'popover="auto" aria-label="Secondary care actions"' in home.text
+        assert f'<a href="{animal_url}">View profile</a>' in home.text
+        assert 'class="today-insights" aria-label="Collection insights"' in home.text
+        assert "Total animals" in home.text
+        assert "Needs attention" in home.text
+        assert "Next scheduled care" in home.text
+
+        agenda = client.get("/calendar?view=agenda")
+        assert (
+            f'class="agenda-primary" href="{animal_url}/feedings/new?return_to=today"'
+            in agenda.text
+        )
+        assert 'class="agenda-care-row status-edge-overdue"' in agenda.text
+        assert 'class="agenda-row-copy"' in agenda.text
+        assert 'class="agenda-primary-due"' in agenda.text
+        assert 'popover="auto" aria-label="Secondary care actions"' in agenda.text
+
+        animals = client.get("/animals")
+        assert f'class="animal-card animal-collection-card" href="{animal_url}"' in animals.text
+        assert f'popovertarget="animal-menu-{animal_url.rsplit("/", 1)[-1]}"' in animals.text
+        assert "View →" not in animals.text
+
+        enclosure_form = client.get("/enclosures/new")
+        enclosure = client.post(
+            "/enclosures",
+            data={
+                "csrf_token": csrf_from(enclosure_form.text),
+                "idempotency_key": "interaction-primary-enclosure",
+                "name": "Atlas Habitat",
+                "enclosure_type_choice": "Glass terrarium",
+            },
+            follow_redirects=False,
+        )
+        assert enclosure.status_code == 303
+        enclosure_url = enclosure.headers["location"]
+        enclosures = client.get("/enclosures")
+        assert f'class="enclosure-card" href="{enclosure_url}"' in enclosures.text
+        assert f'href="{enclosure_url}/edit">Edit enclosure</a>' in enclosures.text
+        assert ">Open enclosure<" not in enclosures.text
+
+        quick_log = client.get("/quick-log")
+        assert 'data-quick-log-selector aria-label="Select animal for quick log"' in quick_log.text
+
+        menu_script = client.get("/static/overflow-menu.js").text
+        assert 'menu.matches(":popover-open")' in menu_script
+        assert "window.innerWidth - menuBox.width" in menu_script
+        assert 'event.key !== "Escape"' in menu_script
 
         month = client.get(f"/calendar?view=month&selected={selected_day}")
         assert month.status_code == 200

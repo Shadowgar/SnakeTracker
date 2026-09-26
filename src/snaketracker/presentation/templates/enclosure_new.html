@@ -7,14 +7,21 @@
     <h1 id="page-title">Add enclosure</h1>
     <p class="lede">Name the physical space before assigning an animal to it.</p>
   </div>
-  <form class="card form-stack" method="post" action="/enclosures" novalidate>
+  <form class="card form-stack" method="post" action="/enclosures" novalidate data-enclosure-type-form>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="idempotency_key" value="{{ command_id }}">
     {% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
     <label>Name<input name="name" value="{{ values.name|default('') }}" required></label>
-    <label>Type<input name="enclosure_type" value="{{ values.enclosure_type|default('') }}" required></label>
+    <label>Enclosure type
+      <select name="enclosure_type_choice" required data-enclosure-type-choice>
+        <option value="">Choose the physical enclosure style</option>
+        {% for option in enclosure_type_options %}<option value="{{ option }}" {% if values.enclosure_type_choice|default('') == option %}selected{% endif %}>{{ option }}</option>{% endfor %}
+      </select>
+    </label>
+    <label data-custom-enclosure-type {% if values.enclosure_type_choice|default('') != custom_enclosure_type %}hidden{% endif %}>Describe enclosure type<input name="custom_enclosure_type" value="{{ values.custom_enclosure_type|default('') }}" maxlength="100"></label>
     <label>Notes<textarea name="notes" rows="4">{{ values.notes|default('') }}</textarea></label>
     <div class="form-actions"><a href="/home">Cancel</a><button type="submit">Create enclosure</button></div>
   </form>
 </section>
 {% endblock %}
+{% block scripts %}<script src="/static/enclosure-type.js" defer></script>{% endblock %}

@@ -987,7 +987,7 @@ def test_animal_profile_manages_care_schedule_and_reminders_is_an_agenda(
             data={
                 "csrf_token": _csrf(enclosure_form.text),
                 "name": "Keeper enclosure",
-                "enclosure_type": "vivarium",
+                "enclosure_type_choice": "Glass terrarium",
                 "notes": "",
             },
             follow_redirects=False,

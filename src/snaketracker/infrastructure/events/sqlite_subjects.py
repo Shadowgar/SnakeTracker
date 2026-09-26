@@ -7,6 +7,7 @@ from typing import cast
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
+from snaketracker.domains.enclosures.contracts import EnclosurePlantAddedV1
 from snaketracker.domains.purchases.contracts import PurchaseRecordedV2
 from snaketracker.platform.events.envelope import DomainEvent
 from snaketracker.platform.events.validation import EventValidationError
@@ -85,6 +86,25 @@ class SQLAlchemySubjectReferenceValidator:
                         {
                             "subject_id": str(subject.subject_id),
                             "household_id": str(event.household_id),
+                        },
+                    ).scalar_one_or_none()
+            elif subject.subject_type == "enclosure-plant":
+                if (
+                    isinstance(event.payload, EnclosurePlantAddedV1)
+                    and event.payload.enclosure_plant_id == subject.subject_id
+                ):
+                    exists = 1
+                else:
+                    exists = connection.execute(
+                        text(
+                            "SELECT 1 FROM enclosure_plant_current "
+                            "WHERE household_id=:household_id AND enclosure_id=:enclosure_id "
+                            "AND enclosure_plant_id=:subject_id"
+                        ),
+                        {
+                            "subject_id": str(subject.subject_id),
+                            "household_id": str(event.household_id),
+                            "enclosure_id": str(event.stream_id),
                         },
                     ).scalar_one_or_none()
             elif subject.subject_type == "inventory_item":

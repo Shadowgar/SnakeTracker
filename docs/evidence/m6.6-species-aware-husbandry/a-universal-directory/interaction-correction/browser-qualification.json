@@ -1,0 +1,75 @@
+{
+  "origin": "https://tracker.theroccos.us",
+  "results": [
+    {
+      "viewport": "390x844",
+      "primaryTargets": {
+        "todayTarget": "/animals/a513a652-b7a9-44f0-b194-854770264a6c/baths/new?return_to=today",
+        "animalTarget": "/animals/9eda4959-018a-4e68-85b8-6391f972169e",
+        "enclosureTarget": "/enclosures/0b71b04f-ebfe-4c09-b3f0-fc387f72e0b0",
+        "calendarTarget": "/animals/a513a652-b7a9-44f0-b194-854770264a6c/baths/new?return_to=today"
+      },
+      "quickLogSelectedAnimalId": "1a04ad47-5bca-4d9e-80ed-3611e5d458a9",
+      "overflow": {
+        "firstGeometry": {
+          "top": 159,
+          "right": 190,
+          "bottom": 293,
+          "left": 30,
+          "position": "fixed",
+          "topLayerHit": true
+        },
+        "edgeGeometry": {
+          "top": 634,
+          "right": 190,
+          "bottom": 768,
+          "left": 30
+        }
+      },
+      "violations": {
+        "today": [],
+        "animals": [],
+        "enclosures": [],
+        "calendar": [],
+        "quickLog": []
+      }
+    },
+    {
+      "viewport": "1440x900",
+      "primaryTargets": {
+        "todayTarget": "/animals/a513a652-b7a9-44f0-b194-854770264a6c/baths/new?return_to=today",
+        "animalTarget": "/animals/9eda4959-018a-4e68-85b8-6391f972169e",
+        "enclosureTarget": "/enclosures/0b71b04f-ebfe-4c09-b3f0-fc387f72e0b0",
+        "calendarTarget": "/animals/a513a652-b7a9-44f0-b194-854770264a6c/baths/new?return_to=today"
+      },
+      "quickLogSelectedAnimalId": "1a04ad47-5bca-4d9e-80ed-3611e5d458a9",
+      "overflow": {
+        "firstGeometry": {
+          "top": 166,
+          "right": 526,
+          "bottom": 300,
+          "left": 366,
+          "position": "fixed",
+          "topLayerHit": true
+        },
+        "edgeGeometry": {
+          "top": 714,
+          "right": 1124,
+          "bottom": 848,
+          "left": 964
+        }
+      },
+      "violations": {
+        "today": [],
+        "animals": [],
+        "enclosures": [],
+        "calendar": [],
+        "quickLog": []
+      }
+    }
+  ],
+  "applicationDiagnostics": [],
+  "externalDiagnostics": [],
+  "pageErrors": [],
+  "requestFailures": []
+}

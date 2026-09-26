@@ -36,7 +36,7 @@ from snaketracker.infrastructure.inventory.projections import SQLAlchemyInventor
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 
 ROOT = Path(__file__).parents[2]
-REVISION = "0018_inventory_stock_roles"
+REVISION = "0022_reference_image_provenance"
 PHASE_FIVE_TABLES = {
     "aggregate_snapshots",
     "alembic_version",
@@ -79,6 +79,12 @@ PHASE_FIVE_TABLES = {
     "reminder_rule_current",
     "security_audit",
     "sessions",
+    "taxa",
+    "taxon_names",
+    "taxon_provider_mappings",
+    "taxon_images",
+    "animal_taxon_current",
+    "enclosure_plant_current",
     "users",
 }
 
@@ -321,7 +327,7 @@ def test_0018_downgrade_blocks_role_aware_inventory_history(tmp_path: Path) -> N
 
     with pytest.raises(RuntimeError, match="stock-role downgrade blocked"):
         command.downgrade(config, "0017_inventory_intelligence")
-    assert current_revision(database) == REVISION
+    assert current_revision(database) == "0018_inventory_stock_roles"
 
 
 def test_inventory_lifecycle_migration_blocks_lossy_downgrade(tmp_path: Path) -> None:

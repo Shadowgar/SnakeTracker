@@ -95,7 +95,7 @@ def test_owner_review_demo_is_isolated_populated_and_prediction_ready(tmp_path: 
             "SELECT count(*) FROM sessions WHERE revoked_at IS NULL"
         ).fetchone() == (0,)
         assert connection.execute("PRAGMA integrity_check").fetchone() == ("ok",)
-    photos = tuple((data_dir / "attachments" / "versions").glob("*.png"))
+    photos = tuple((data_dir / "attachments" / "versions").glob("*.webp"))
     assert len(photos) == 20
     assert len({hashlib.sha256(photo.read_bytes()).digest() for photo in photos}) == 20
     assert {image_size(photo) for photo in photos} == {(640, 480)}
@@ -132,7 +132,7 @@ def test_owner_review_demo_reset_replaces_only_the_reserved_household(tmp_path: 
     engine = migrated_engine(database)
     engine.dispose()
     first = seed_demo(data_dir, as_of=date(2026, 8, 15))
-    old_photos = tuple((data_dir / "attachments" / "versions").glob("*.png"))
+    old_photos = tuple((data_dir / "attachments" / "versions").glob("*.webp"))
     backup_request_id = str(uuid4())
     backup_run_id = str(uuid4())
     with sqlite3.connect(database) as connection:
@@ -172,7 +172,7 @@ def test_owner_review_demo_reset_replaces_only_the_reserved_household(tmp_path: 
 
     assert replacement.household_id == first.household_id
     assert replacement.animal_count == 20
-    assert len(tuple((data_dir / "attachments" / "versions").glob("*.png"))) == 20
+    assert len(tuple((data_dir / "attachments" / "versions").glob("*.webp"))) == 20
     assert not any(path.exists() for path in old_photos)
     with sqlite3.connect(database) as connection:
         assert connection.execute(

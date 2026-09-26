@@ -131,6 +131,19 @@ than a mutable completed-task flag.
 
 Dashboard, reports, search, timelines, statistics, reminder facts, and enclosure occupancy are projection/query modules. They have no write aggregates. Administration coordinates platform capabilities and audited operations without bypassing domain services.
 
+### M6.6 global taxon reference directory
+
+The universal directory is global normalized reference data, not an event-sourced household
+aggregate. Care Keeper owns an opaque taxon UUID and stores supported group, accepted scientific
+identity, optional common/alternative/synonym names, classification, provider mappings,
+provenance, refresh state, and only affirmatively licensed image metadata. Provider IDs never own
+identity. Taxonomy, morph/genetics, plant cultivars, trade names, and localities remain distinct.
+
+An Animal stream may append a keeper-confirmed `animal.taxon_linked` fact. Its current projection
+points from one same-household Animal to one global internal taxon and retains the link-event
+snapshot. Provider refreshes cannot rewrite the event or the Animal's free-text registration
+history. Reference records create no household events by themselves.
+
 ## Future bounded contexts
 
 Breeding and incubation should begin with `breeding-project:{uuid}` and related incubation streams after a dedicated ADR. Marketplace, organizations, cloud sync, telemetry, AI, cameras, QR/NFC, and home automation are deferred capabilities. High-frequency telemetry must not enter animal or enclosure streams; only meaningful threshold transitions may become domain events.

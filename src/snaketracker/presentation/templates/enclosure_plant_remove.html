@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Remove {{ plant.label or plant.species_display }} · Care Keeper{% endblock %}
+{% block content %}
+<section class="form-page" aria-labelledby="page-title">
+  <header><p class="page-kicker">{{ enclosure.name }} · Plant</p><h1 id="page-title">Remove {{ plant.label or plant.species_display }}?</h1><p class="lede">The plant leaves the active roster, while its history remains in Care Keeper.</p></header>
+  <form class="card form-stack" method="post" action="/enclosures/{{ enclosure.enclosure_id }}/plants/{{ plant.enclosure_plant_id }}/remove">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="idempotency_key" value="{{ command_id }}">
+    {% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
+    <label>Reason <span class="muted">(optional)</span><textarea name="reason" rows="3"></textarea></label>
+    <div class="form-actions"><a href="/enclosures/{{ enclosure.enclosure_id }}/plants/{{ plant.enclosure_plant_id }}">Cancel</a><button class="danger" type="submit">Remove plant</button></div>
+  </form>
+</section>
+{% endblock %}

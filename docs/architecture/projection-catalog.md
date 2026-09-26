@@ -5,12 +5,15 @@
 | Projection/group | Purpose | Consistency |
 |---|---|---|
 | `authorization_memberships` | Current membership, roles, account/household access | Synchronous |
-| `animal_current` | Profile, registered capability profile, lifecycle, enclosure, latest applicable measurements | Synchronous |
+| `animal_current` | Profile, registered capability profile, lifecycle, enclosure, reference-image preference, latest applicable measurements | Synchronous |
+| `animal_taxon_current` | Keeper-confirmed current link from a household Animal to a global Care Keeper taxon | Synchronous |
+| `taxa` / `taxon_names` / provider mappings / `taxon_images` | Optional normalized global species and licensed local-reference-image cache with provenance, integrity metadata, and freshness | Read-only reference data, updated by bounded adapters |
 | `animal_effective_timeline` | Effective history and correction chain | Synchronous initially |
 | `molt_history` | Effective Spider/Scorpion molt and premolt history across schema v1/v2 | Synchronous initially |
 | `health_current` | Active medication and material health state | Synchronous |
 | `enclosure_current` | Enclosure state and maintenance due facts | Synchronous |
 | `enclosure_occupancy` | Current projected occupancy from animal streams | Synchronous |
+| `enclosure_plant_current` | Household-owned active/removed plant roster projected from Enclosure streams | Synchronous |
 | `inventory_balance` | Available, reserved, consumed, expired quantities | Synchronous |
 | `reminder_rule_current` | Effective reminder-rule state | Synchronous |
 | `reminder_facts` | Explainable due/overdue facts from owner rules and effective care history | Synchronous where command correctness depends on them; otherwise asynchronous |

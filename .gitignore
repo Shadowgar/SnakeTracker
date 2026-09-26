@@ -31,6 +31,8 @@ playwright-report/
 blob-report/
 .playwright-cli/
 /output/
+.playwright-mcp/
+SnakeTracker.code-workspace
 
 # Editors and operating-system metadata
 .vscode/
