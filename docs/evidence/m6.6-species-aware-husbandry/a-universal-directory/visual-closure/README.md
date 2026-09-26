@@ -71,6 +71,13 @@ business counts, 40-file attachment tree, and four-file reference-image cache we
 before and after. SQLite integrity was `ok`, foreign-key violations were zero, and migration
 remained `0022_reference_image_provenance`. Details are in [live-data-integrity.json](live-data-integrity.json).
 
+A later read-only check observed positions 865–870: three `animal.feeding_recorded` events each
+paired with `inventory.stock_consumed`, recorded 05:53–05:54 UTC during a concurrent stock-feeding
+investigation. These occurred after the identical visual-qualification before/after snapshot, not
+from this pass's read-only browser journeys. The later database still passed SQLite integrity and
+foreign-key checks; the six subsequent events are preserved, not cleaned up or attributed to the
+visual qualification.
+
 Prequalification encrypted backup run `65a9d334-9c93-48fd-a489-e06353595860` completed and
 passed the built-in archive verifier. Its manifest SHA-256 was
 `7c77473657e80a5c8610157643b2dba043d0c7a9489c650bd5b1e51da7fdcd1e`; the encrypted
