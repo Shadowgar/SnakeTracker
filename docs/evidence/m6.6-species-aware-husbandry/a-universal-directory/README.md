@@ -24,6 +24,7 @@ Architecture: [ADR-0043](../../../adr/0043-universal-species-directory.md)
 - [Autocomplete performance](autocomplete-performance.json)
 - [Photo-rich surface performance](visual-performance.json)
 - [Phase 2 independent visual reconstruction](visual-rebuild/README.md)
+- [Final visual closure and blind re-audit](visual-closure/README.md)
 - [Owner-review screenshots](screenshots/)
 
 ## Architecture and behavior
