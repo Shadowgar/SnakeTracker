@@ -53,6 +53,10 @@ from snaketracker.platform.events.store import (
     StreamKey,
     canonical_command_hash,
 )
+from snaketracker.presentation.animal_care_views import (
+    present_care_events,
+    present_effective_care_events,
+)
 
 ROOT = Path(__file__).parents[2]
 SECRET = b"phase5-inventory-test-secret-32-bytes"
@@ -639,6 +643,18 @@ def test_stock_linked_feeding_void_and_reinstatement_compensate_atomically(tmp_p
         )
         balance = projection.balance_for(bootstrap.household_id, item.item_id)
         assert balance is not None and balance.on_hand_quantity == 3
+        effective_views = present_effective_care_events(
+            animals.effective_history(bootstrap.household_id, animal.animal_id)
+        )
+        assert [view.event.event_type for view in effective_views].count(
+            "animal.feeding_recorded"
+        ) == 1
+        assert not any(view.event.event_type.startswith("inventory.") for view in effective_views)
+        assert next(
+            view.event.occurred_at
+            for view in effective_views
+            if view.event.event_type == "animal.feeding_recorded"
+        ) == datetime(2026, 8, 10, 12, tzinfo=UTC)
 
         animals.void_event(
             VoidAnimalEventCommand(
@@ -653,6 +669,12 @@ def test_stock_linked_feeding_void_and_reinstatement_compensate_atomically(tmp_p
         )
         balance = projection.balance_for(bootstrap.household_id, item.item_id)
         assert balance is not None and balance.on_hand_quantity == 5
+        assert not any(
+            view.event.event_type == "animal.feeding_recorded"
+            for view in present_effective_care_events(
+                animals.effective_history(bootstrap.household_id, animal.animal_id)
+            )
+        )
 
         animals.reinstate_event(
             ReinstateAnimalEventCommand(
@@ -667,6 +689,19 @@ def test_stock_linked_feeding_void_and_reinstatement_compensate_atomically(tmp_p
         )
         balance = projection.balance_for(bootstrap.household_id, item.item_id)
         assert balance is not None and balance.on_hand_quantity == 3
+        assert [
+            view.event.event_type
+            for view in present_effective_care_events(
+                animals.effective_history(bootstrap.household_id, animal.animal_id)
+            )
+        ].count("animal.feeding_recorded") == 1
+        assert not any(
+            view.event.event_type.startswith("inventory.")
+            for view in present_care_events(
+                animals.audit_history(bootstrap.household_id, animal.animal_id),
+                include_controls=True,
+            )
+        )
         assert [
             event.event_type
             for event in store.load_stream(

@@ -11,11 +11,15 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy import text
 
+from snaketracker.application.animals import AnimalService, RegisterAnimalCommand
 from snaketracker.application.household_bootstrap import (
+    AccountRegistrationCommand,
+    AccountRegistrationService,
     BootstrapCommand,
     HouseholdBootstrapService,
 )
 from snaketracker.domains.households.contracts import HouseholdCreatedV1
+from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
 from snaketracker.infrastructure.database.engine import create_sqlite_engine
 from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
 from snaketracker.infrastructure.identity.bootstrap_repository import (
@@ -188,5 +192,70 @@ def test_subject_household_and_current_actor_permission_are_checked_in_append(
             store.append(key, expected_version=2, events=(unauthorized,))
 
         assert len(store.load_stream(key)) == 2
+    finally:
+        engine.dispose()
+
+
+def test_subject_lookup_is_household_scoped_with_identical_animal_ids(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store, engine, _key, first = migrated_store(tmp_path)
+    try:
+        second = AccountRegistrationService(
+            SQLAlchemyHouseholdBootstrapRepository(engine),
+            Argon2PasswordHasher.for_testing(),
+            command_hash_secret=SECRET,
+        ).register(
+            AccountRegistrationCommand(
+                collection_name="Second Home",
+                timezone="UTC",
+                email="second@example.com",
+                display_name="Second",
+                password="correct horse battery staple",
+                idempotency_key="second-home-bootstrap",
+                correlation_id=uuid4(),
+            )
+        )
+        shared_animal_id = uuid4()
+        generated_ids = iter(
+            (
+                shared_animal_id,
+                uuid4(),
+                uuid4(),
+                shared_animal_id,
+                uuid4(),
+                uuid4(),
+            )
+        )
+        monkeypatch.setattr("snaketracker.application.animals.uuid4", lambda: next(generated_ids))
+        animals = AnimalService(store, SQLAlchemyAnimalCurrentProjection(engine))
+        for owner, name in ((first, "First animal"), (second, "Second animal")):
+            registered = animals.register(
+                RegisterAnimalCommand(
+                    household_id=owner.household_id,
+                    actor_user_id=owner.user_id,
+                    correlation_id=uuid4(),
+                    idempotency_key=f"register-{name}",
+                    name=name,
+                    species="Python regius",
+                    morph=None,
+                    genetics=None,
+                    sex=None,
+                    birth_hatch_date=None,
+                    acquisition_date=None,
+                    breeder_source=None,
+                    notes=None,
+                )
+            )
+            assert registered.animal_id == shared_animal_id
+
+        first_events = store.load_subject_events(first.household_id, "animal", shared_animal_id)
+        second_events = store.load_subject_events(second.household_id, "animal", shared_animal_id)
+        assert len(first_events) == len(second_events) == 1
+        assert first_events[0].household_id == first.household_id
+        assert second_events[0].household_id == second.household_id
+        assert first_events[0].payload.name == "First animal"
+        assert second_events[0].payload.name == "Second animal"
+        assert store.load_subject_events(uuid4(), "animal", shared_animal_id) == ()
     finally:
         engine.dispose()

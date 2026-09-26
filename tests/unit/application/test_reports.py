@@ -94,16 +94,16 @@ def test_care_report_excludes_registration_and_preserves_effective_notes() -> No
                     notes="Keeper observed a strong response",
                 ),
                 SimpleNamespace(
-                    event_type="animal.cleaning_recorded",
+                    event_type="animal.weight_recorded",
                     occurred_at=now,
-                    title="Spot cleaned",
+                    title="Recorded weight",
                     notes=None,
                 ),
             )
 
     report = ReportService(CareAnimals(), Expenses()).care(uuid4(), generated_at=now)  # type: ignore[arg-type]
 
-    assert [row.values[2] for row in report.rows] == ["Accepted one mouse", "Spot cleaned"]
+    assert [row.values[2] for row in report.rows] == ["Accepted one mouse", "Recorded weight"]
     assert report.rows[0].values[3] == "Keeper observed a strong response"
     assert report.rows[1].values[3] == ""
 

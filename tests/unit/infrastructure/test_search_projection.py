@@ -70,7 +70,18 @@ def test_search_documents_are_classified_at_the_projection_boundary(
 
 @pytest.mark.parametrize(
     "event_type",
-    ["expense.voided", "animal.status_changed", "animal.enclosure_assigned", "unknown.fact"],
+    [
+        "expense.voided",
+        "animal.status_changed",
+        "animal.enclosure_assigned",
+        "animal.reference_image_preference_changed",
+        "animal.taxon_linked",
+        "inventory.stock_consumed",
+        "inventory.consumption_reversed",
+        "reminder.rule_created",
+        "enclosure.misting_recorded",
+        "unknown.fact",
+    ],
 )
 def test_non_searchable_operational_events_are_omitted(event_type: str) -> None:
     assert _document(event(event_type, {})) is None
