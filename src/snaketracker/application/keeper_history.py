@@ -27,6 +27,8 @@ KEEPER_HISTORY_EVENT_TYPES = frozenset(
         "animal.molt_corrected",
         "animal.premolt_observed",
         "enclosure.misting_recorded",
+        "enclosure.cleaning_recorded",
+        "enclosure.water_change_recorded",
     }
 )
 
