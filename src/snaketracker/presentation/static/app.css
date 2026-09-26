@@ -1573,7 +1573,7 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
   .today-insight small { overflow: hidden; color: var(--color-text-muted); font-size: .58rem; text-overflow: ellipsis; white-space: nowrap; }
   .animal-collection { grid-template-columns: minmax(0,1fr) auto; align-items: end; }
   .animal-collection > .collection-heading { grid-column: 1 / -1; grid-row: 1; }
-  .animal-collection > .filter-rail { grid-column: 2; grid-row: 1; align-self: center; margin-right: 3.25rem; }
+  .animal-collection > .filter-rail { grid-column: 2; grid-row: 1; align-self: center; margin-right: 4.5rem; }
   .animal-collection > .animal-list, .animal-collection > .empty-state { grid-column: 1 / -1; }
   .collection-add { display: inline-flex; width: auto; min-height: 2rem; gap: .3rem; padding: .3rem .6rem; border-radius: .45rem; background: var(--color-primary); font-size: .65rem; }
   .collection-add:hover { background: #b69dfa; transform: translateY(-1px); }
