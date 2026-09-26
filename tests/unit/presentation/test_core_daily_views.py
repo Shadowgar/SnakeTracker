@@ -174,6 +174,7 @@ def test_completed_calendar_rows_deduplicate_and_label_subject_streams() -> None
     other_event = event("animal.weight_recorded", "other", uuid4())
     ignored_animal_event = event("animal.registered", "animal", atlas.animal_id)
     enclosure_event = event("enclosure.cleaning_recorded", "enclosure", enclosure_id)
+    water_change_event = event("enclosure.water_change_recorded", "enclosure", enclosure_id)
     ignored_enclosure_event = event("enclosure.registered", "enclosure", enclosure_id)
     animal_service = SimpleNamespace(
         effective_history=lambda _household_id, _animal_id: (
@@ -185,6 +186,7 @@ def test_completed_calendar_rows_deduplicate_and_label_subject_streams() -> None
     enclosure_service = SimpleNamespace(
         effective_history=lambda _household_id, _enclosure_id: (
             enclosure_event,
+            water_change_event,
             ignored_enclosure_event,
         )
     )
@@ -199,5 +201,6 @@ def test_completed_calendar_rows_deduplicate_and_label_subject_streams() -> None
     )
 
     assert {row["subject_name"] for row in rows} == {"Atlas", "Habitat", "Care"}
+    assert sum(row["subject_name"] == "Habitat" for row in rows) == 2
     assert any(row["subject_url"] == "/home" for row in rows)
     assert any(row["calendar_url"] == f"/animals/{atlas.animal_id}/timeline" for row in rows)

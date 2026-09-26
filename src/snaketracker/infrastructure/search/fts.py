@@ -14,6 +14,7 @@ from sqlalchemy import bindparam, text
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import SQLAlchemyError
 
+from snaketracker.application.keeper_history import KEEPER_HISTORY_EVENT_TYPES
 from snaketracker.application.search import SearchResult, SearchUnavailableError
 from snaketracker.infrastructure.projections.sqlite_generations import (
     SQLiteProjectionGenerationManager,
@@ -239,10 +240,16 @@ class SQLAlchemyFTSSearchRepository:
         statement = text(
             f'SELECT c.kind,c.title,c.body,c.route,c.effective_at FROM "{fts}" f '
             f'JOIN "{content}" c ON c.rowid=f.rowid '
+            "LEFT JOIN domain_events e ON c.kind='care' "
+            "AND c.document_key='event:'||e.event_id AND e.household_id=c.household_id "
             f'WHERE "{fts}" MATCH :query AND c.household_id=:household '
             "AND (c.capability_required IS NULL OR c.capability_required IN :capabilities) "
+            "AND (c.kind<>'care' OR e.event_type IN :keeper_event_types) "
             f'ORDER BY bm25("{fts}"),c.title LIMIT :limit'
-        ).bindparams(bindparam("capabilities", expanding=True))
+        ).bindparams(
+            bindparam("capabilities", expanding=True),
+            bindparam("keeper_event_types", expanding=True),
+        )
         try:
             with self._engine.connect() as connection:
                 rows = connection.execute(
@@ -251,6 +258,7 @@ class SQLAlchemyFTSSearchRepository:
                         "query": " AND ".join(f'"{term}"*' for term in terms),
                         "household": str(household_id),
                         "capabilities": sorted(capabilities),
+                        "keeper_event_types": sorted(KEEPER_HISTORY_EVENT_TYPES),
                         "limit": limit,
                     },
                 ).mappings()
@@ -314,11 +322,16 @@ def _document(
             f"/expenses/{event.stream_id}",
             "expense.view",
         )
-    if event.event_type.startswith("animal.") and event.event_type not in {
-        "animal.status_changed",
-        "animal.enclosure_assigned",
-        "animal.photo_selected",
-    }:
+    if (
+        event.stream_type == "animal"
+        and event.event_type in KEEPER_HISTORY_EVENT_TYPES
+        and event.event_type
+        not in {
+            "animal.status_changed",
+            "animal.enclosure_assigned",
+            "animal.photo_selected",
+        }
+    ):
         return (
             f"event:{event.event_id}",
             "care",

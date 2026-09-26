@@ -138,6 +138,7 @@ from snaketracker.application.inventory_intelligence import (
     shows_consumption_forecast,
     stock_check_is_due,
 )
+from snaketracker.application.keeper_history import keeper_history_events
 from snaketracker.application.purchases import (
     AcquireNewInventoryCommand,
     AssignExistingStockCostCommand,
@@ -296,7 +297,11 @@ def _recent_care_views(
     events: tuple[DomainEvent, ...], *, enclosure_names: Mapping[UUID, str]
 ) -> tuple[CareEventView, ...]:
     return present_effective_care_events(
-        tuple(event for event in events if event.event_type in RECENT_CARE_EVENT_TYPES),
+        tuple(
+            event
+            for event in keeper_history_events(events)
+            if event.event_type in RECENT_CARE_EVENT_TYPES
+        ),
         enclosure_names=enclosure_names,
     )
 
@@ -766,6 +771,7 @@ def _care_return_location(animal_id: str, value: object) -> str:
 
 
 def _timeline_action_ids(events: tuple[DomainEvent, ...]) -> dict[str, frozenset[UUID]]:
+    events = keeper_history_events(events, include_controls=True)
     active_voids: set[UUID] = set()
     for event in events:
         if isinstance(event.payload, EventVoidedV1):
@@ -810,7 +816,9 @@ def _timeline_context(
             effective_events,
             enclosure_names=enclosure_names,
         ),
-        "audit_events": present_care_events(audit_events, enclosure_names=enclosure_names),
+        "audit_events": present_care_events(
+            audit_events, enclosure_names=enclosure_names, include_controls=True
+        ),
         "errors": {},
         "deletable_event_ids": frozenset(
             event.event_id
@@ -2397,8 +2405,10 @@ def create_web_router(
                         max(
                             0,
                             len(
-                                animal_service.effective_history(
-                                    principal.household_id, animal.animal_id
+                                keeper_history_events(
+                                    animal_service.effective_history(
+                                        principal.household_id, animal.animal_id
+                                    )
                                 )
                             )
                             - 1,

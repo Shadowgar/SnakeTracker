@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from uuid import UUID
 
+from snaketracker.application.keeper_history import keeper_history_events
 from snaketracker.application.weight_measurements import format_weight_payload
 from snaketracker.domains.animals.contracts import (
     AnimalBathRecordedV1,
@@ -244,7 +245,9 @@ def present_care_events(
     events: tuple[DomainEvent, ...],
     *,
     enclosure_names: Mapping[UUID, str] | None = None,
+    include_controls: bool = False,
 ) -> tuple[CareEventView, ...]:
+    events = keeper_history_events(events, include_controls=include_controls)
     previous_enclosures: dict[UUID, UUID | None] = {}
     previous_enclosure_id: UUID | None = None
     for event in sorted(events, key=lambda item: item.stream_version):

@@ -360,6 +360,22 @@ def test_feeding_form_requires_valid_food_inventory_and_rejects_invalid_links(
             == 303
         )
         assert "2 each" in client.get(inventory_url).text
+        for path in (
+            f"{animal_url}/timeline",
+            f"{animal_url}/timeline?event_type=inventory.stock_consumed",
+            f"{animal_url}/feedings?event_type=inventory.stock_consumed",
+            f"{animal_url}/measurements?event_type=inventory.stock_consumed",
+        ):
+            history = client.get(path)
+            assert history.status_code == 200
+            assert "Inventory stock consumed" not in history.text
+            assert "inventory.stock_consumed" not in history.text
+        assert client.get(f"{animal_url}/timeline").text.count("Feeding recorded") == 1
+        for path in (animal_url, "/home", "/calendar", "/reports/care"):
+            page = client.get(path)
+            assert page.status_code == 200
+            assert "Inventory stock consumed" not in page.text
+            assert "inventory.stock_consumed" not in page.text
 
         missing_quantity = submit_feeding(
             "linked-missing-quantity", inventory_item_id=f"{item_id}:3"

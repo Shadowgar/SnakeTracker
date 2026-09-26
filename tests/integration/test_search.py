@@ -108,6 +108,34 @@ def test_search_is_household_scoped_capability_filtered_and_unicode_safe(
                 ),
                 {"rowid": expense_rowid},
             )
+            hidden_event_id = connection.execute(
+                text(
+                    "SELECT event_id FROM domain_events WHERE household_id=:household "
+                    "AND event_type='household.created'"
+                ),
+                {"household": str(bootstrap.household_id)},
+            ).scalar_one()
+            connection.execute(
+                text(
+                    f'INSERT INTO "{content}" '
+                    "(document_key,household_id,kind,title,body,route,capability_required,"
+                    "effective_at,source_global_position) VALUES "
+                    "(:key,:household,'care','InternalSecret','Bookkeeping',"
+                    "'/animals/hidden/timeline',NULL,NULL,1001)"
+                ),
+                {
+                    "key": f"event:{hidden_event_id}",
+                    "household": str(bootstrap.household_id),
+                },
+            )
+            hidden_rowid = connection.execute(text("SELECT last_insert_rowid()")).scalar_one()
+            connection.execute(
+                text(
+                    f'INSERT INTO "{fts}" (rowid,title,body) '
+                    "VALUES (:rowid,'InternalSecret','Bookkeeping')"
+                ),
+                {"rowid": hidden_rowid},
+            )
 
         nyx = service.search(bootstrap.household_id, frozenset(), "Nyx")
         assert [item.title for item in nyx] == ["Nyx"]
@@ -117,6 +145,7 @@ def test_search_is_household_scoped_capability_filtered_and_unicode_safe(
             == "expense"
         )
         assert "<script>" in service.search(bootstrap.household_id, frozenset(), "Calm")[0].body
+        assert service.search(bootstrap.household_id, frozenset(), "InternalSecret") == ()
     finally:
         engine.dispose()
 

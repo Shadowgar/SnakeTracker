@@ -18,6 +18,7 @@ from snaketracker.application.inventory_intelligence import (
     InventoryIntelligenceProjection,
     stock_check_is_due,
 )
+from snaketracker.application.keeper_history import keeper_history_events
 from snaketracker.application.projected_events import ProjectedEventReader
 from snaketracker.application.purchases import (
     CurrencyValue,
@@ -229,7 +230,7 @@ class ReportService:
                 if projected_by_animal is not None
                 else self._animals.effective_history(household_id, animal.animal_id)
             )
-            for event in history:
+            for event in keeper_history_events(history):
                 if event.event_type == "animal.registered":
                     continue
                 rows.append(
