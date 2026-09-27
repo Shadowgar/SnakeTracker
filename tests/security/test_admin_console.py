@@ -79,6 +79,11 @@ def test_admin_routes_authorize_independently_and_audit(tmp_path: Path) -> None:
             assert "csrf_token_hash" not in response.text
             assert "token_hash" not in response.text
         assert "Care Keeper Operations" in client.get("/admin").text
+        account_page = client.get(f"/admin/accounts/{user_id}").text
+        assert "Active</span>" in account_page
+        assert "Browser / device" in account_page
+        assert f'data-copy-id="{user_id}"' in account_page
+        assert "Rocco" in client.get("/admin/audit").text
         assert "Rocco" in client.get("/admin/accounts?status=active").text
         today = datetime.now(UTC).date().isoformat()
         assert "Rocco" in client.get(f"/admin/accounts?registered_from={today}").text
@@ -216,15 +221,25 @@ def test_animal_feeding_inventory_provenance_and_warning(tmp_path: Path) -> None
         assert consumption_id in animal_page.text
         item_page = client.get(f"/admin/inventory/{item_id}")
         assert item_page.status_code == 200
+        assert "scaled units" not in item_page.text
+        assert "Raw scaled quantity" in item_page.text
         assert source_id in item_page.text and consumption_id in item_page.text
         assert f"/admin/animals/{animal_id}" in item_page.text
         source_page = client.get(f"/admin/events/{source_id}")
         assert "Currently effective" in source_page.text
+        assert source_page.text.index("event-hero") < source_page.text.index(
+            "Technical event metadata"
+        )
+        assert "Atlas" in source_page.text
         assert consumption_id in source_page.text
         consumed_page = client.get(f"/admin/events/{consumption_id}")
         assert "Internal side effect" in consumed_page.text
         assert source_id in consumed_page.text
         assert source_id in client.get(f"/admin/incidents?q={animal_id}").text
+        household_page = client.get(f"/admin/households/{household_id}").text
+        assert "Internal side effect" in household_page
+        assert "Related to" in household_page
+        assert "scaled units" not in household_page
         assert household_id in client.get(f"/admin?q={household_id}").text
         assert "Rack A-03" in client.get(f"/admin/enclosures/{enclosure_id}").text
         for identifier in (

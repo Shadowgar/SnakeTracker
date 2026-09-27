@@ -29,7 +29,7 @@ The console does not alter Sara's historical Feeding records or any other produc
 
 ## Recorded versus unavailable health
 
-The System page reads job status, completed/failed backup runs, migration revision, event high-water, finalized attachment metadata, local file presence, reference-image cache files, and projection registrations. A completed backup run is shown as such; independent restore verification is labelled **Not recorded** because the current store has no durable result for it. Git SHA and database integrity checks are also labelled **Not recorded** until an authoritative persisted source exists. An unlisted health signal is not assumed healthy.
+The System page reads job status, completed/failed backup runs, migration revision, event high-water, finalized attachment metadata, local file presence, reference-image cache files, and projection registrations. A completed backup run is shown as such; independent restore verification is labelled **Not recorded** because the current store has no durable result for it. The image build embeds its source Git SHA through `SNAKETRACKER_BUILD_GIT_SHA`; System Health reports that image value, not the working-tree HEAD. Database integrity checks remain **Not recorded** in the UI until an authoritative runtime result exists. An unlisted health signal is not assumed healthy.
 
 List and event searches paginate at 30 rows. Household and subject drill-down sections cap recent results at 100 and label them as bounded. This is an investigation view, not a bulk export.
 
@@ -39,4 +39,4 @@ Support notes require an append-only, separately audited platform store and rema
 
 ## Data safety
 
-OPS-A adds no database schema migration and needs no reseed or restore. Deploy only after the draft PR and owner review. Use isolated test data for qualification and screenshots. Never put production incident evidence into Git or a screenshot artifact.
+OPS-A adds no database schema migration and needs no reseed or restore. For production set `SNAKETRACKER_ENVIRONMENT=production` explicitly in Compose `.env`, use an HTTPS external origin and secure session cookies, configure valid runtime and backup secrets, and set password-reset delivery to `disabled` while no email adapter exists. Validate the production configuration on isolated storage before recreating services. Build the web and worker from one image with the exact commit SHA embedded, and verify both report production. Use isolated test data for qualification and keep production screenshots private. Never put production incident evidence into Git or a screenshot artifact.

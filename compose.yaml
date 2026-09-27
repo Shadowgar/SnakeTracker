@@ -6,8 +6,9 @@ x-app-common: &app-common
     context: .
     args:
       SNAKETRACKER_UID: ${SNAKETRACKER_UID:-1000}
+      SNAKETRACKER_BUILD_GIT_SHA: ${SNAKETRACKER_BUILD_GIT_SHA:-}
   environment: &app-environment
-    SNAKETRACKER_ENVIRONMENT: development
+    SNAKETRACKER_ENVIRONMENT: ${SNAKETRACKER_ENVIRONMENT:-development}
     SNAKETRACKER_DATABASE_PATH: /var/lib/snaketracker/snaketracker.sqlite3
     SNAKETRACKER_ATTACHMENT_STORAGE_PATH: /var/lib/snaketracker/attachments
     SNAKETRACKER_REFERENCE_IMAGE_STORAGE_PATH: /var/lib/snaketracker/reference-images

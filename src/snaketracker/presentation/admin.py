@@ -17,6 +17,13 @@ from snaketracker.application.enclosures import EnclosureService
 from snaketracker.application.identity import AuthenticationError, IdentityService, Principal
 from snaketracker.platform.events.corrections import evaluate_effective_events
 from snaketracker.platform.events.store import StreamKey
+from snaketracker.presentation.admin_display import (
+    admin_datetime,
+    admin_quantity,
+    admin_session_status,
+    admin_short_id,
+    admin_user_agent,
+)
 from snaketracker.presentation.animal_care_views import present_effective_care_events
 from snaketracker.presentation.web import SESSION_COOKIE, templates
 
@@ -35,6 +42,7 @@ def create_admin_router(
     event_store: AdminEventReadPort,
     environment: str,
     version: str,
+    build_git_sha: str | None,
     attachment_root: Path,
     reference_root: Path,
 ) -> APIRouter:
@@ -68,6 +76,13 @@ def create_admin_router(
                 "title": title,
                 "operator": principal,
                 "capabilities": PLATFORM_READ_CAPABILITIES,
+                "admin_datetime": admin_datetime,
+                "admin_quantity": admin_quantity,
+                "admin_session_status": admin_session_status,
+                "admin_short_id": admin_short_id,
+                "admin_user_agent": admin_user_agent,
+                "display_timezone": principal.household_timezone or "UTC",
+                "now": datetime.now(UTC),
                 **data,
             },
             headers={"Cache-Control": "private, no-store"},
@@ -92,6 +107,7 @@ def create_admin_router(
             search=repository.search(q),
             q=q[:120],
             version=version,
+            build_git_sha=build_git_sha,
         )
 
     @router.get("/accounts", response_class=HTMLResponse)
@@ -196,6 +212,7 @@ def create_admin_router(
             record=record,
             bundle=repository.household_bundle(str(household_id)),
             financial=repository.household_financial(str(household_id)),
+            display_timezone=record["timezone"],
         )
 
     @router.get("/animals/{animal_id}", response_class=HTMLResponse)
@@ -224,6 +241,9 @@ def create_admin_router(
             history=history[:100],
             events=events,
             truncated=len(history) > 100 or len(events) == 100,
+            display_timezone=(repository.household(record["household_id"]) or {}).get(
+                "timezone", "UTC"
+            ),
         )
 
     @router.get("/enclosures/{enclosure_id}", response_class=HTMLResponse)
@@ -254,6 +274,9 @@ def create_admin_router(
                 if item["current_enclosure_id"] == str(enclosure_id)
             ],
             plants=[item for item in bundle["plants"] if item["enclosure_id"] == str(enclosure_id)],
+            display_timezone=(repository.household(record["household_id"]) or {}).get(
+                "timezone", "UTC"
+            ),
         )
 
     @router.get("/inventory/{item_id}", response_class=HTMLResponse)
@@ -277,6 +300,9 @@ def create_admin_router(
                 record["household_id"], "inventory_item", str(item_id)
             ),
             links=repository.inventory_links(str(item_id)),
+            display_timezone=(repository.household(record["household_id"]) or {}).get(
+                "timezone", "UTC"
+            ),
         )
 
     @router.get("/events", response_class=HTMLResponse)
@@ -389,6 +415,7 @@ def create_admin_router(
             source=source,
             warnings=warnings,
             state=state,
+            display_timezone=record["household_timezone"] or "UTC",
         )
 
     @router.get("/incidents", response_class=HTMLResponse)
@@ -458,6 +485,7 @@ def create_admin_router(
             storage=repository.storage_health(attachment_root, reference_root),
             environment=environment,
             version=version,
+            build_git_sha=build_git_sha,
             checked_at=datetime.now(UTC).isoformat(),
         )
 

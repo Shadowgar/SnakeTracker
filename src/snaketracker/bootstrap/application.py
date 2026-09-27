@@ -357,6 +357,7 @@ def build_application(settings: Settings) -> FastAPI:
                 event_store=event_store,
                 environment=settings.environment.value,
                 version=app.version,
+                build_git_sha=settings.build_git_sha,
                 attachment_root=settings.attachment_storage_path
                 or settings.database_path.parent / "attachments",
                 reference_root=settings.reference_image_storage_path

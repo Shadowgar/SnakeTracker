@@ -280,11 +280,16 @@ class AdminReadRepository:
                 id=id,
             ),
             "inventory": self.rows(
-                "SELECT item_id,name,status,on_hand_quantity_scaled,reorder_threshold_scaled,unit_code FROM inventory_balance WHERE household_id=:id ORDER BY name LIMIT 100",
+                "SELECT item_id,name,status,on_hand_quantity_scaled,reorder_threshold_scaled,unit_code,unit FROM inventory_balance WHERE household_id=:id ORDER BY name LIMIT 100",
                 id=id,
             ),
             "events": self.rows(
-                "SELECT event_id,title,event_type,occurred_at FROM domain_events WHERE household_id=:id ORDER BY global_position DESC LIMIT 20",
+                "SELECT e.event_id,e.title,e.event_type,e.occurred_at,e.actor_user_id,u.display_name actor_name,"
+                "l.source_event_id,l.quantity_scaled,l.item_id,i.name item_name,i.unit_code,i.unit "
+                "FROM domain_events e LEFT JOIN users u ON u.user_id=e.actor_user_id "
+                "LEFT JOIN inventory_consumption_links_v2 l ON l.consumption_event_id=e.event_id "
+                "LEFT JOIN inventory_balance i ON i.item_id=l.item_id AND i.household_id=e.household_id "
+                "WHERE e.household_id=:id ORDER BY e.global_position DESC LIMIT 20",
                 id=id,
             ),
             "jobs": self.rows(
@@ -343,8 +348,15 @@ class AdminReadRepository:
         )
         type_clause = "AND s.subject_type=:subject_type " if join else ""
         return self.rows(
-            "SELECT e.event_id,e.title,e.event_type,e.occurred_at,e.actor_user_id,e.household_id,e.correlation_id "
-            f"FROM domain_events e {join}WHERE (:query='' OR {column}=:query "
+            "SELECT e.event_id,e.title,e.event_type,e.occurred_at,e.actor_user_id,e.household_id,e.correlation_id,"
+            "u.display_name actor_name,h.timezone household_timezone,"
+            "(SELECT coalesce(a.name,i.name) FROM event_subjects es "
+            "LEFT JOIN animal_current a ON a.animal_id=es.subject_id AND a.household_id=e.household_id "
+            "LEFT JOIN inventory_balance i ON i.item_id=es.subject_id AND i.household_id=e.household_id "
+            "WHERE es.event_id=e.event_id AND es.subject_type IN ('animal','inventory_item') "
+            "AND coalesce(a.name,i.name) IS NOT NULL ORDER BY CASE es.subject_type WHEN 'animal' THEN 0 ELSE 1 END LIMIT 1) related_label "
+            f"FROM domain_events e LEFT JOIN users u ON u.user_id=e.actor_user_id "
+            f"LEFT JOIN household_summaries h ON h.household_id=e.household_id {join}WHERE (:query='' OR {column}=:query "
             f"OR {column} LIKE :like) {type_clause}ORDER BY e.global_position DESC "
             "LIMIT :limit OFFSET :offset",
             query=query,
@@ -356,15 +368,25 @@ class AdminReadRepository:
 
     def event(self, event_id: str) -> dict[str, Any] | None:
         return self.one(
-            "SELECT event_id,global_position,household_id,stream_type,stream_id,stream_version,"
-            "event_type,schema_version,title,occurred_at,recorded_at,actor_user_id,correlation_id,"
-            "causation_id,payload_json FROM domain_events WHERE event_id=:id",
+            "SELECT e.event_id,e.global_position,e.household_id,e.stream_type,e.stream_id,e.stream_version,"
+            "e.event_type,e.schema_version,e.title,e.occurred_at,e.recorded_at,e.actor_user_id,e.correlation_id,"
+            "e.causation_id,e.payload_json,u.display_name actor_name,h.name household_name,h.timezone household_timezone "
+            "FROM domain_events e LEFT JOIN users u ON u.user_id=e.actor_user_id "
+            "LEFT JOIN household_summaries h ON h.household_id=e.household_id WHERE e.event_id=:id",
             id=event_id,
         )
 
     def event_subjects(self, event_id: str) -> list[dict[str, Any]]:
         return self.rows(
-            "SELECT subject_type,subject_id,relationship FROM event_subjects WHERE event_id=:id ORDER BY display_order LIMIT 30",
+            "SELECT s.subject_type,s.subject_id,s.relationship,"
+            "coalesce(a.name,i.name,h.name,u.display_name,c.name) display_label "
+            "FROM event_subjects s JOIN domain_events d ON d.event_id=s.event_id "
+            "LEFT JOIN animal_current a ON s.subject_type='animal' AND a.animal_id=s.subject_id AND a.household_id=d.household_id "
+            "LEFT JOIN inventory_balance i ON s.subject_type='inventory_item' AND i.item_id=s.subject_id AND i.household_id=d.household_id "
+            "LEFT JOIN household_summaries h ON s.subject_type='household' AND h.household_id=s.subject_id "
+            "LEFT JOIN users u ON s.subject_type='user' AND u.user_id=s.subject_id "
+            "LEFT JOIN enclosure_current c ON s.subject_type='enclosure' AND c.enclosure_id=s.subject_id AND c.household_id=d.household_id "
+            "WHERE s.event_id=:id ORDER BY s.display_order LIMIT 30",
             id=event_id,
         )
 
@@ -382,11 +404,12 @@ class AdminReadRepository:
     def inventory_links(self, item_id: str) -> list[dict[str, Any]]:
         return self.rows(
             "SELECT l.source_event_id,l.consumption_event_id,l.quantity_scaled,l.status,l.reversal_event_id,"
-            "e.event_type source_type,e.title source_title,e.actor_user_id,e.occurred_at,"
+            "e.event_type source_type,e.title source_title,e.actor_user_id,e.occurred_at,i.unit_code,i.unit,"
             "s.subject_id animal_id,a.name animal_name "
             "FROM inventory_consumption_links_v2 l LEFT JOIN domain_events e ON e.event_id=l.source_event_id "
             "LEFT JOIN event_subjects s ON s.event_id=e.event_id AND s.subject_type='animal' "
             "LEFT JOIN animal_current a ON a.animal_id=s.subject_id AND a.household_id=l.household_id "
+            "LEFT JOIN inventory_balance i ON i.item_id=l.item_id AND i.household_id=l.household_id "
             "WHERE l.item_id=:id ORDER BY e.recorded_at DESC LIMIT 100",
             id=item_id,
         )
@@ -394,7 +417,7 @@ class AdminReadRepository:
     def animal_inventory_links(self, animal_id: str) -> list[dict[str, Any]]:
         return self.rows(
             "SELECT l.source_event_id,l.consumption_event_id,l.item_id,l.quantity_scaled,"
-            "l.status,i.name item_name,e.occurred_at,e.actor_user_id "
+            "l.status,i.name item_name,i.unit_code,i.unit,e.occurred_at,e.actor_user_id "
             "FROM event_subjects s JOIN inventory_consumption_links_v2 l "
             "ON l.source_event_id=s.event_id "
             "LEFT JOIN inventory_balance i ON i.household_id=l.household_id AND i.item_id=l.item_id "
@@ -534,11 +557,20 @@ class AdminReadRepository:
         page: int,
     ) -> list[dict[str, Any]]:
         return self.rows(
-            "SELECT recorded_at,actor_user_id,action,target_type,target_id,outcome FROM security_audit "
-            "WHERE category='platform_admin' AND (:operator='' OR actor_user_id=:operator) "
-            "AND (:action='' OR action=:action) AND (:target_type='' OR target_type=:target_type) "
-            "AND (:target_id='' OR target_id=:target_id) AND (:since='' OR recorded_at>=:since) "
-            "AND (:until='' OR recorded_at<:until) ORDER BY recorded_at DESC LIMIT :limit OFFSET :offset",
+            "SELECT s.recorded_at,s.actor_user_id,s.action,s.target_type,s.target_id,s.outcome,"
+            "u.display_name actor_name,u.email_normalized actor_email,"
+            "coalesce(tu.display_name,h.name,a.name,e.name,i.name,d.title) target_label "
+            "FROM security_audit s LEFT JOIN users u ON u.user_id=s.actor_user_id "
+            "LEFT JOIN users tu ON s.target_type IN ('account','user') AND tu.user_id=s.target_id "
+            "LEFT JOIN household_summaries h ON s.target_type='household' AND h.household_id=s.target_id "
+            "LEFT JOIN animal_current a ON s.target_type='animal' AND a.animal_id=s.target_id "
+            "LEFT JOIN enclosure_current e ON s.target_type='enclosure' AND e.enclosure_id=s.target_id "
+            "LEFT JOIN inventory_balance i ON s.target_type IN ('inventory','inventory_item') AND i.item_id=s.target_id "
+            "LEFT JOIN domain_events d ON s.target_type='event' AND d.event_id=s.target_id "
+            "WHERE s.category='platform_admin' AND (:operator='' OR s.actor_user_id=:operator) "
+            "AND (:action='' OR s.action=:action) AND (:target_type='' OR s.target_type=:target_type) "
+            "AND (:target_id='' OR s.target_id=:target_id) AND (:since='' OR s.recorded_at>=:since) "
+            "AND (:until='' OR s.recorded_at<:until) ORDER BY s.recorded_at DESC LIMIT :limit OFFSET :offset",
             operator=operator,
             action=action,
             target_type=target_type,
