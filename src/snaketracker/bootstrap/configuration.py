@@ -8,6 +8,7 @@ from collections.abc import Mapping
 from enum import StrEnum
 from pathlib import Path
 from typing import Self
+from uuid import UUID
 
 from pydantic import HttpUrl, SecretStr, ValidationInfo, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -51,6 +52,20 @@ class Settings(BaseSettings):
     session_cookie_secure: bool = True
     password_reset_delivery: PasswordResetDeliveryMode = PasswordResetDeliveryMode.DISABLED
     password_reset_delivery_path: Path | None = None
+    platform_operator_user_ids: str = ""
+
+    @field_validator("platform_operator_user_ids")
+    @classmethod
+    def validate_platform_operators(cls, value: str) -> str:
+        ids = [item.strip() for item in value.split(",") if item.strip()]
+        if len(ids) > 10:
+            raise ValueError("at most ten platform operators may be configured")
+        for item in ids:
+            if str(UUID(item)) != item.lower():
+                raise ValueError("platform operator IDs must be canonical UUIDs")
+        if len(set(ids)) != len(ids):
+            raise ValueError("platform operator IDs must be unique")
+        return ",".join(ids)
 
     @field_validator("external_origin")
     @classmethod
@@ -158,6 +173,7 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         "SNAKETRACKER_SESSION_COOKIE_SECURE": "session_cookie_secure",
         "SNAKETRACKER_PASSWORD_RESET_DELIVERY": "password_reset_delivery",
         "SNAKETRACKER_PASSWORD_RESET_DELIVERY_PATH": "password_reset_delivery_path",
+        "SNAKETRACKER_PLATFORM_OPERATOR_USER_IDS": "platform_operator_user_ids",
     }
     for environment_key, field_name in keys.items():
         if environment_key in source:

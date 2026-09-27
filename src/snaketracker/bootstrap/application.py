@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from pathlib import Path
+from uuid import UUID
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import FileResponse
@@ -40,6 +41,7 @@ from snaketracker.bootstrap.configuration import (
     Settings,
     load_settings,
 )
+from snaketracker.infrastructure.admin.read_repository import AdminReadRepository
 from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
 from snaketracker.infrastructure.attachments.repository import SQLAlchemyAttachmentRepository
 from snaketracker.infrastructure.attachments.storage import LocalAttachmentStorage
@@ -97,6 +99,7 @@ from snaketracker.infrastructure.taxonomy.reference_providers import (
 )
 from snaketracker.infrastructure.taxonomy.repository import SQLAlchemyTaxonRepository
 from snaketracker.platform.notifications.service import NotificationIntentService
+from snaketracker.presentation.admin import create_admin_router
 from snaketracker.presentation.health import create_health_router
 from snaketracker.presentation.web import create_web_router
 from snaketracker.worker.projections import ProjectionWorker
@@ -280,6 +283,18 @@ def build_application(settings: Settings) -> FastAPI:
             and settings.password_reset_delivery_path is not None
             else None
         )
+        web_identity_service = IdentityService(
+            identity_repository,
+            password_hasher,
+            secret=secret,
+            idle_timeout=timedelta(minutes=30),
+            absolute_timeout=timedelta(hours=12),
+            rate_limit=5,
+            rate_window=timedelta(minutes=15),
+            block_duration=timedelta(minutes=15),
+            password_reset_delivery=password_reset_delivery,
+            external_origin=external_origin,
+        )
         app.include_router(
             create_web_router(
                 bootstrap_service=HouseholdBootstrapService(
@@ -292,18 +307,7 @@ def build_application(settings: Settings) -> FastAPI:
                     password_hasher,
                     command_hash_secret=secret,
                 ),
-                identity_service=IdentityService(
-                    identity_repository,
-                    password_hasher,
-                    secret=secret,
-                    idle_timeout=timedelta(minutes=30),
-                    absolute_timeout=timedelta(hours=12),
-                    rate_limit=5,
-                    rate_window=timedelta(minutes=15),
-                    block_duration=timedelta(minutes=15),
-                    password_reset_delivery=password_reset_delivery,
-                    external_origin=external_origin,
-                ),
+                identity_service=web_identity_service,
                 animal_service=animal_service,
                 attachment_service=attachment_service,
                 backup_service=BackupService(SQLAlchemyBackupRepository(engine)),
@@ -339,6 +343,24 @@ def build_application(settings: Settings) -> FastAPI:
                 secure_cookie=settings.session_cookie_secure,
                 expected_origin=external_origin,
                 directory_service=directory_service,
+            )
+        )
+        app.include_router(
+            create_admin_router(
+                repository=AdminReadRepository(engine),
+                identity=web_identity_service,
+                operator_ids=frozenset(
+                    UUID(item) for item in settings.platform_operator_user_ids.split(",") if item
+                ),
+                animals=animal_service,
+                enclosures=enclosure_service,
+                event_store=event_store,
+                environment=settings.environment.value,
+                version=app.version,
+                attachment_root=settings.attachment_storage_path
+                or settings.database_path.parent / "attachments",
+                reference_root=settings.reference_image_storage_path
+                or settings.database_path.parent / "reference-images",
             )
         )
     elif settings.runtime_secret is None:
