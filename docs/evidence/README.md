@@ -13,6 +13,7 @@ docs/evidence/
 ├── m5.5-multispecies-foundation/
 ├── m6-product-experience/
 ├── m6.5-inventory-intelligence/
+├── m6.6-species-aware-husbandry/
 ├── m7-recovery-compatibility/
 └── m8-production/
 ```

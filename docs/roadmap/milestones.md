@@ -337,7 +337,8 @@ derived only under the costing policy accepted during M6.5 design.
 
 ## Phase 6.6 / M6.6 — Species-aware husbandry and bioactive care
 
-Status: Owner-approved September 13, 2026; M6.6-A owner-review correction in progress
+Status: Owner-approved September 13, 2026; M6.6-OPS-A accepted September 27, 2026; remaining
+M6.6 tranches are not accepted as a whole
 
 M6.6 was approved after M6.5 acceptance and inserted before M7 without changing any prior
 acceptance record. External sources provide optional reference knowledge; Care Keeper remains the
@@ -374,6 +375,22 @@ decisions. M6.6 requires explicit owner acceptance after all five tranches.
   workflow stays discoverable and its personal image always wins. (`R-090`, `AT-SPDIR-05`)
 
 Owner review is required after M6.6-A. Do not begin M6.6-B until it is accepted.
+
+### M6.6-OPS-A — Platform administration and support
+
+Status: **M6.6-OPS-A accepted September 27, 2026**. Evidence:
+[owner acceptance and final qualification](../evidence/m6.6-species-aware-husbandry/ops-a-platform-admin/approvals/2026-09-27-owner-acceptance.md).
+
+- [x] A deployment-authorized platform operator has a read-only Admin Overview and Accounts,
+  Households, Animal/Enclosure/Inventory support, Event Inspector, Incident Explorer, System
+  Health, and Admin Audit.
+- [x] Production-mode configuration, readable support presentation, authoritative build SHA,
+  isolated qualification, encrypted-backup verification, and live business-data integrity passed
+  owner review.
+
+OPS-B remains deferred: Support Notes, session revocation, account disable/reactivation, Admin
+password-reset actions, job retry, projection rebuild, business-data correction tools, image
+refresh actions, and impersonation. No OPS-B mutation capability is accepted by this tranche.
 
 ### M6.6-B — Sourced care guides
 

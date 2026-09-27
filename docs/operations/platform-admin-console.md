@@ -1,5 +1,8 @@
 # Platform Administration and Support Console (OPS-A)
 
+Status: **Owner-accepted September 27, 2026**. See the
+[OPS-A acceptance and qualification record](../evidence/m6.6-species-aware-husbandry/ops-a-platform-admin/approvals/2026-09-27-owner-acceptance.md).
+
 ## Authority and grant
 
 A household `owner` manages one household. That role does not authorize `/admin`. A platform operator is an existing active Care Keeper account whose canonical user UUID is listed in the **web process** deployment setting `SNAKETRACKER_PLATFORM_OPERATOR_USER_IDS`. The setting grants `platform.admin.read`, `platform.support.read`, and `platform.system.read` together. The default empty setting denies everyone. Normal signup, household settings, and household role changes cannot alter this list.
