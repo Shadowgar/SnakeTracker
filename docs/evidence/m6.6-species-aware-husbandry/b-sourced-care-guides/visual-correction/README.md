@@ -16,4 +16,8 @@ The final isolated pass produced 21 full-page captures plus five mobile viewport
 
 Predeployment encrypted backup request `2b91aab3-fa24-4f8b-9ee0-4bffd7bf73a9` completed as run `529f749d-2f7f-4f6a-8679-817b2b6fb72c`, manifest checksum `f94b39a162e8575b15ee6a5a3d9693253343428cd88da223459ab701163da3ea`. Isolated restore under `/tmp/m66b-visual-restore.pgmRnO` returned `verified` with 33 referenced attachments.
 
-Pending exact-image build, production deployment, and before/after data comparison.
+## Production owner-review deployment
+
+Built image `snaketracker:m66b-visual-e9bad88` from commit `e9bad88d991a8fe0739b52a2e1062e18ae28e081` and verified its embedded revision label. The protected `.env` retained production mode and all operator settings; only the image tag changed. Its mode remains `600`. Recreated web and worker from the built image without running a migration or Care Guide import. Web, worker, and nginx are healthy; local nginx readiness returned HTTP 200. The deployed service worker advertises asset version `m66b-visual-correction-v1`.
+
+Schema remains `0023_sourced_care_guides`. The global guide tables still contain five versions, five current pointers, eight sources, and 30 claims. Exact pre/post hashes match across all 12 measured household/business tables, all 40 attachment files, nine schema/taxonomy/guide tables, and all four reference image files. The domain-event high-water mark remains 872. SQLite integrity is `ok` with zero foreign-key violations. The existing reminder rules, care history, users, Animals, Inventory, and guide source relationships were not changed by deployment.
