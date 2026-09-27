@@ -8,6 +8,9 @@ ENV PATH="/app/.venv/bin:$PATH" \
     UV_LINK_MODE=copy
 
 ARG SNAKETRACKER_UID=1000
+ARG SNAKETRACKER_BUILD_GIT_SHA=""
+ENV SNAKETRACKER_BUILD_GIT_SHA=${SNAKETRACKER_BUILD_GIT_SHA}
+LABEL org.opencontainers.image.revision=${SNAKETRACKER_BUILD_GIT_SHA}
 RUN apt-get update \
     && apt-get upgrade --yes \
     && rm -rf /var/lib/apt/lists/* \

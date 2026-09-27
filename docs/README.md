@@ -1,5 +1,7 @@
 # Care Keeper Architecture Package
 
+Operations guide: [Platform Administration and Support Console](operations/platform-admin-console.md).
+
 Status: Approved
 Acceptance date: 2026-08-04
 
