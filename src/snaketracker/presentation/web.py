@@ -70,7 +70,12 @@ from snaketracker.application.backups import (
     ConfigureBackupScheduleCommand,
     RequestBackupCommand,
 )
-from snaketracker.application.care_guides import CareGuideReader, format_claim_value, grouped_claims
+from snaketracker.application.care_guides import (
+    CareGuideReader,
+    format_claim_value,
+    glance_claims,
+    grouped_claims,
+)
 from snaketracker.application.dashboard import DashboardStatisticsService
 from snaketracker.application.enclosures import (
     CUSTOM_ENCLOSURE_TYPE,
@@ -2150,6 +2155,7 @@ def create_web_router(
                 "taxon": taxon,
                 "guide": guide,
                 "sections": grouped_claims(guide) if guide is not None else (),
+                "glance_facts": glance_claims(guide) if guide is not None else (),
                 "sources_by_id": {source.source_id: source for source in guide.sources}
                 if guide is not None
                 else {},

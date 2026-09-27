@@ -1,45 +1,45 @@
 {% extends "base.html" %}
 {% block title %}{{ taxon.display_name }} Care Guide · Care Keeper{% endblock %}
 {% block content %}
-<section class="directory-detail" aria-labelledby="page-title">
+<section class="care-guide-page" aria-labelledby="page-title">
   <a class="back-link" href="/directory/{{ taxon.taxon_id }}">← {{ taxon.display_name }} in Directory</a>
-  <header class="card">
+  <header class="card guide-header">
     <p class="page-kicker">Reference guidance · {{ taxon.supported_group|capitalize }}</p>
     <h1 id="page-title">{{ taxon.display_name }} Care Guide</h1>
-    <p><i>{{ taxon.accepted_scientific_name }}</i></p>
-    <p class="muted">This is reviewed species reference knowledge. It does not describe your individual Animal or plant and does not create or change care schedules, reminders, or records.</p>
-    {% if guide %}<p><strong>Version {{ guide.version }}</strong> · Reviewed <time datetime="{{ guide.reviewed_at.date().isoformat() }}">{{ guide.reviewed_at.strftime('%b %-d, %Y') }}</time></p>{% endif %}
+    <p class="guide-scientific"><i>{{ taxon.accepted_scientific_name }}</i></p>
+    {% if guide %}<p class="guide-review-line"><span class="guide-state guide-state-reviewed">Reviewed</span><strong>Version {{ guide.version }}</strong><span>Reviewed <time datetime="{{ guide.reviewed_at.date().isoformat() }}">{{ guide.reviewed_at.strftime('%b %-d, %Y') }}</time></span></p>{% endif %}
   </header>
+  <div class="guide-boundary" role="note" aria-label="Reference guidance boundary"><strong>Species reference knowledge</strong><p>This guide does not describe your individual Animal or plant. It does not create or change care schedules, reminders, or records.</p></div>
   {% if not guide %}
   <section class="card"><h2>No reviewed guidance available</h2><p>Care Keeper has no reviewed Care Guide for this taxon yet. No care values are inferred from the species name.</p></section>
   {% else %}
-  {% if taxon.supported_group == 'plant' %}<section class="card"><h2>Suitability scope</h2><p>Plant cultivation and cat/dog toxicity references do not establish reptile safety or suitability for an exotic bioactive enclosure. That suitability is not established by this guide.</p></section>{% endif %}
+  {% if taxon.supported_group == 'plant' %}<section class="guide-scope card" aria-labelledby="suitability-title"><h2 id="suitability-title">Suitability scope</h2><p>Plant cultivation and cat/dog toxicity references do not establish reptile, amphibian, or invertebrate safety. Exotic enclosure suitability is not established by these sources.</p></section>{% endif %}
+  {% if glance_facts %}<section class="guide-glance card" aria-labelledby="glance-title"><div class="guide-section-heading"><p class="page-kicker">Selected reviewed facts</p><h2 id="glance-title">At a glance</h2></div><div class="guide-glance-grid">{% for label, claims, state in glance_facts %}<a class="guide-glance-item" href="#fact-{{ claims[0].claim_id }}"><span>{{ label }}</span><strong>{% if state == 'Sources differ' %}Sources differ · see positions{% else %}{{ format_claim_value(claims[0]) }}{% endif %}</strong><small>View sourced fact ↓</small></a>{% endfor %}</div></section>{% endif %}
   {% for section_label, facts in sections %}
-  <section class="card" aria-labelledby="guide-section-{{ loop.index }}">
-    <h2 id="guide-section-{{ loop.index }}">{{ section_label }}</h2>
-    <dl class="fact-list">
+  <section class="guide-section card" aria-labelledby="guide-section-{{ loop.index }}">
+    <div class="guide-section-heading"><h2 id="guide-section-{{ loop.index }}">{{ section_label }}</h2></div>
+    <div class="guide-fact-grid">
       {% for label, claims, state in facts %}
-      <div>
-        <dt>{{ label }}{% if claims[0].life_stage %} · {{ claims[0].life_stage }}{% endif %}</dt>
-        <dd>
-          {% if state == 'Sources differ' %}
-            <strong>Sources differ</strong>
-            <ul>{% for claim in claims %}<li>{{ sources_by_id[claim.source_id].publisher }}: {{ format_claim_value(claim) }}{% if claim.qualifier %} · {{ claim.qualifier }}{% endif %}</li>{% endfor %}</ul>
-          {% else %}
-            <strong>{{ format_claim_value(claims[0]) }}</strong>{% if claims[0].qualifier %} · {{ claims[0].qualifier }}{% endif %}
-            <small class="muted">{{ state }}</small>
-          {% endif %}
-          {% if claims[0].context %}<p class="muted">Context: {{ claims[0].context }}</p>{% endif %}
-          {% if claims[0].scope %}<p class="muted">Scope: {{ claims[0].scope }}</p>{% endif %}
-          {% for claim in claims %}{% if claim.caution %}<p>{{ claim.caution }}</p>{% endif %}{% endfor %}
-          <details><summary>Sources and review dates</summary><ul>{% for claim in claims %}{% set source = sources_by_id[claim.source_id] %}<li><a href="{{ source.url }}" rel="noopener noreferrer" target="_blank">{{ source.publisher }} · {{ source.title }}</a> — retrieved <time datetime="{{ source.retrieved_at.date().isoformat() }}">{{ source.retrieved_at.date().isoformat() }}</time>; reviewed <time datetime="{{ source.reviewed_at.date().isoformat() }}">{{ source.reviewed_at.date().isoformat() }}</time>{% if state == 'Sources differ' %}; position: {{ format_claim_value(claim) }}{% endif %}</li>{% endfor %}</ul></details>
-        </dd>
-      </div>
+      <article class="guide-fact" id="fact-{{ claims[0].claim_id }}" aria-labelledby="fact-label-{{ claims[0].claim_id }}">
+        <h3 id="fact-label-{{ claims[0].claim_id }}">{{ label }}{% if claims[0].life_stage %} <span>· {{ claims[0].life_stage }}</span>{% endif %}</h3>
+        {% if state == 'Sources differ' %}
+          <span class="guide-state guide-state-differ">Sources differ</span>
+          <div class="guide-positions">{% for claim in claims %}<div class="guide-position"><span>{{ sources_by_id[claim.source_id].publisher }}</span><strong>{{ format_claim_value(claim) }}</strong>{% if claim.qualifier %}<p>{{ claim.qualifier }}</p>{% endif %}</div>{% endfor %}</div>
+        {% else %}
+          <p class="guide-value">{{ format_claim_value(claims[0]) }}</p>
+          <span class="guide-state {% if state == 'Corroborated' %}guide-state-corroborated{% else %}guide-state-single{% endif %}">{{ state }}</span>
+          {% if claims[0].qualifier %}<p class="guide-qualifier">{{ claims[0].qualifier }}</p>{% endif %}
+        {% endif %}
+        {% if claims[0].context %}<p class="guide-context"><strong>Context</strong> {{ claims[0].context }}</p>{% endif %}
+        {% if claims[0].scope %}<p class="guide-context"><strong>Scope</strong> {{ claims[0].scope }}</p>{% endif %}
+        {% for claim in claims %}{% if claim.caution %}<p class="guide-caution">{{ claim.caution }}</p>{% endif %}{% endfor %}
+        <details class="guide-disclosure"><summary>Sources and review dates</summary><ul>{% for claim in claims %}{% set source = sources_by_id[claim.source_id] %}<li><a href="{{ source.url }}" rel="noopener noreferrer" target="_blank">{{ source.publisher }} · {{ source.title }}</a><span>Retrieved <time datetime="{{ source.retrieved_at.date().isoformat() }}">{{ source.retrieved_at.date().isoformat() }}</time> · Reviewed <time datetime="{{ source.reviewed_at.date().isoformat() }}">{{ source.reviewed_at.date().isoformat() }}</time></span>{% if state == 'Sources differ' %}<span>Position: {{ format_claim_value(claim) }}</span>{% endif %}</li>{% endfor %}</ul></details>
+      </article>
       {% endfor %}
-    </dl>
+    </div>
   </section>
   {% endfor %}
-  <section class="card"><h2>Sources</h2><ol>{% for source in guide.sources %}<li><a href="{{ source.url }}" rel="noopener noreferrer" target="_blank">{{ source.publisher }} · {{ source.title }}</a> · Retrieved {{ source.retrieved_at.date().isoformat() }} · Reviewed {{ source.reviewed_at.date().isoformat() }}{% if source.published_at %} · Published/updated {{ source.published_at.date().isoformat() }}{% endif %}</li>{% endfor %}</ol><p class="muted">Corroborated means independent publishers make the same contextual claim. Single source means only one publisher supports that position in this reviewed guide. Sources differ preserves each source's separate position.</p></section>
+  <section class="guide-sources card" aria-labelledby="guide-sources-title"><h2 id="guide-sources-title">Sources</h2><div class="guide-source-grid">{% for source in guide.sources %}<article class="guide-source-card"><p>{{ source.publisher }}</p><h3><a href="{{ source.url }}" rel="noopener noreferrer" target="_blank">{{ source.title }}</a></h3><p>Reviewed <time datetime="{{ source.reviewed_at.date().isoformat() }}">{{ source.reviewed_at.date().isoformat() }}</time> · Retrieved <time datetime="{{ source.retrieved_at.date().isoformat() }}">{{ source.retrieved_at.date().isoformat() }}</time>{% if source.published_at %} · Published/updated <time datetime="{{ source.published_at.date().isoformat() }}">{{ source.published_at.date().isoformat() }}</time>{% endif %}</p></article>{% endfor %}</div><p class="guide-source-explanation"><strong>How support is shown:</strong> Corroborated means independent publishers make the same contextual claim. Single source means only one publisher supports that position in this reviewed guide. Sources differ preserves each publisher's separate position.</p></section>
   {% if versions|length > 1 %}<nav class="card" aria-label="Care Guide versions"><h2>Earlier reviewed versions</h2><ul>{% for number in versions %}{% if number != guide.version %}<li><a href="/directory/{{ taxon.taxon_id }}/care-guide?version={{ number }}">Version {{ number }}</a></li>{% endif %}{% endfor %}</ul></nav>{% endif %}
   {% endif %}
 </section>

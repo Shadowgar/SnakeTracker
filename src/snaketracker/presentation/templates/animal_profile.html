@@ -11,7 +11,7 @@
   </nav>
   <div class="animal-overview-layout">
     <section class="card overview-identity" aria-labelledby="profile-facts-title">
-      <div class="section-heading"><h2 id="profile-facts-title">About</h2></div>
+      <div class="section-heading"><div><p class="page-kicker">Your records</p><h2 id="profile-facts-title">About</h2></div></div>
       <dl class="fact-list">
         <div><dt>Species</dt><dd>{% if linked_taxon %}{{ linked_taxon.taxon.display_name }}<br><i>{{ linked_taxon.taxon.accepted_scientific_name }}</i>{% else %}{{ animal.species }}{% endif %}</dd></div>
         <div><dt>Sex</dt><dd>{{ animal.sex|capitalize if animal.sex else 'Not recorded' }}</dd></div>
@@ -21,7 +21,7 @@
         {% if premolt_status %}<div><dt>Premolt state</dt><dd>{{ premolt_status.label }}{% if premolt_status.observation %} · {{ premolt_status.observation }}{% endif %}</dd></div>{% endif %}
       </dl>
       {% if animal.notes %}<p class="keeper-note">{{ animal.notes }}</p>{% endif %}
-      {% if linked_taxon and care_guide_available %}<p><strong>Species reference</strong><br><a href="/directory/{{ linked_taxon.taxon.taxon_id }}/care-guide">Species care guide for {{ linked_taxon.taxon.display_name }}</a><br><small class="muted">Reference guidance only. Your records and schedules stay separate.</small></p>{% endif %}
+      {% if linked_taxon and care_guide_available %}<div class="profile-reference-entry"><p class="page-kicker">Species reference</p><a href="/directory/{{ linked_taxon.taxon.taxon_id }}/care-guide">Species Care Guide for {{ linked_taxon.taxon.display_name }} →</a><p>Reviewed reference guidance. Your records and schedules stay separate.</p></div>{% endif %}
     </section>
     <section class="card overview-recent" aria-labelledby="recent-care-title">
       <span class="visually-hidden">Recent care</span>

@@ -11,6 +11,7 @@ from snaketracker.application.care_guides import (
     GuideBundle,
     GuideClaim,
     format_claim_value,
+    glance_claims,
     grouped_claims,
 )
 
@@ -59,7 +60,7 @@ def test_range_units_scope_and_source_validation() -> None:
     with pytest.raises(ValidationError, match="scope"):
         GuideClaim.model_validate({**base, "fact_key": "toxicity_cats_dogs"})
     temperature = GuideClaim.model_validate({**base, "minimum": 30, "maximum": 32, "unit": "c"})
-    assert format_claim_value(temperature) == "30\u201332°C (86\u201389.6°F)"
+    assert format_claim_value(temperature) == "30\u201332°C · 86\u201390°F"
 
 
 def test_reviewed_bundle_rejects_malformed_source_url_and_unknown_source() -> None:
@@ -188,8 +189,46 @@ def test_reviewed_lizard_guide_displays_real_disagreement_and_corroboration() ->
     basking = next(fact for fact in facts if fact[0] == "Basking area")
     assert basking[2] == "Sources differ"
     assert [format_claim_value(claim) for claim in basking[1]] == [
-        "35\u201340°C (95\u2013104°F)",
-        "38\u201342°C (100.4\u2013107.6°F)",
+        "35\u201340°C · 95\u2013104°F",
+        "38\u201342°C · 100\u2013108°F",
     ]
     uvb = next(fact for fact in facts if fact[0] == "UVB")
     assert uvb[2] == "Corroborated"
+
+
+def test_glance_uses_only_existing_claim_groups_and_preserves_disagreement() -> None:
+    bundle = GuideBundle.model_validate_json(
+        (ROOT / "reference/care-guides/reviewed-v1.json").read_bytes()
+    )
+    for guide in bundle.guides:
+        facts = [fact for _, section in grouped_claims(guide) for fact in section]
+        glance = glance_claims(guide)
+        assert glance
+        assert all(fact in facts for fact in glance)
+        assert all(claim in guide.claims for _, claims, _ in glance for claim in claims)
+        assert all(
+            state == "Sources differ" or len(format_claim_value(claims[0])) <= 64
+            for _, claims, state in glance
+        )
+    lizard = next(guide for guide in bundle.guides if guide.biological_group == "lizard")
+    basking = next(
+        fact for fact in glance_claims(lizard) if fact[1][0].fact_key == "basking_temperature"
+    )
+    assert basking[2] == "Sources differ"
+    assert len(basking[1]) == 2
+
+
+def test_fahrenheit_display_rounds_half_up_without_changing_canonical_claim() -> None:
+    claim = GuideClaim(
+        claim_id="rounding-display",
+        source_id="test-source",
+        section="temperature_humidity",
+        fact_key="temperature",
+        label="Temperature",
+        minimum=25.0,
+        maximum=25.3,
+        unit="c",
+    )
+    original = claim.model_dump()
+    assert format_claim_value(claim) == "25\u201325.3°C · 77\u201378°F"
+    assert claim.model_dump() == original

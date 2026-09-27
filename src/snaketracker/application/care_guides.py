@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 from collections import defaultdict
 from datetime import UTC, datetime
+from decimal import ROUND_HALF_UP, Decimal
 from enum import StrEnum
 from typing import Protocol, Self
 from urllib.parse import urlsplit
@@ -33,13 +34,13 @@ class GuideSection(StrEnum):
 
 
 SECTION_LABELS = {
-    GuideSection.AT_A_GLANCE: "At a glance",
+    GuideSection.AT_A_GLANCE: "Natural history",
     GuideSection.TEMPERATURE_HUMIDITY: "Temperature & humidity",
     GuideSection.FEEDING: "Feeding",
     GuideSection.HABITAT_ENCLOSURE: "Habitat & enclosure",
     GuideSection.LIGHTING: "Lighting",
     GuideSection.WATER_SUBSTRATE: "Water & substrate",
-    GuideSection.LIFE_STAGE: "Life stage",
+    GuideSection.LIFE_STAGE: "Life history",
     GuideSection.CAUTIONS: "Cautions",
 }
 
@@ -238,9 +239,11 @@ def format_claim_value(claim: GuideClaim) -> str:
     rendered = "\u2013".join(numbers)
     if claim.unit == "c":
         fahrenheit = "\u2013".join(
-            _number(round(value * 9 / 5 + 32, 1)) for value in values if value is not None
+            str((Decimal(str(value)) * 9 / 5 + 32).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+            for value in values
+            if value is not None
         )
-        return f"{rendered}°C ({fahrenheit}°F)"
+        return f"{rendered}°C · {fahrenheit}°F"
     suffix = {"percent": "%", "cm": " cm", "days": " days", "years": " years", "hours": " hours"}
     return rendered + suffix[claim.unit or ""]
 
@@ -294,4 +297,42 @@ def grouped_claims(
         )
         for section in GuideSection
         if sections.get(section)
+    )
+
+
+def glance_claims(
+    guide: ReviewedGuide,
+) -> tuple[tuple[str, tuple[GuideClaim, ...], str], ...]:
+    """Select existing reviewed facts for linked guide summaries; never derive guidance."""
+    keys = {
+        GuideGroup.SNAKE: (
+            "basking_temperature",
+            "cool_side_temperature",
+            "ambient_humidity",
+            "food_types",
+            "uvb",
+        ),
+        GuideGroup.LIZARD: (
+            "basking_temperature",
+            "cool_side_temperature",
+            "ambient_humidity",
+            "food_types",
+            "uvb",
+        ),
+        GuideGroup.SPIDER: ("activity_pattern", "prey_types", "female_lifespan"),
+        GuideGroup.SCORPION: ("activity_pattern", "adult_length", "prey_types"),
+        GuideGroup.PLANT: (
+            "plant_light",
+            "plant_watering",
+            "plant_growth_habit",
+            "toxicity_cats_dogs",
+        ),
+    }[guide.biological_group]
+    facts = [fact for _, section in grouped_claims(guide) for fact in section]
+    return tuple(
+        fact
+        for key in keys
+        for fact in facts
+        if fact[1][0].fact_key == key
+        and (fact[2] == "Sources differ" or len(format_claim_value(fact[1][0])) <= 64)
     )

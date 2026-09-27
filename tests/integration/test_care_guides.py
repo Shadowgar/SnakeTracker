@@ -236,6 +236,12 @@ def test_authenticated_offline_guide_escapes_source_text_and_keeps_csp(tmp_path:
         assert 'rel="noopener noreferrer"' in response.text
         assert "script-src 'self'" in response.headers["content-security-policy"]
         assert "30\u201332°C" in response.text
+        assert 'class="care-guide-page"' in response.text
+        assert 'class="guide-glance-item"' in response.text
+        assert f'href="#fact-{claim.claim_id}"' in response.text
+        assert 'class="guide-state guide-state-single"' in response.text
+        assert "<summary>Sources and review dates</summary>" in response.text
+        assert 'class="guide-source-card"' in response.text
         assert (
             "No reviewed guidance available"
             in client.get(f"/directory/{ids['Monstera deliciosa']}/care-guide").text
