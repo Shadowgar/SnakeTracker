@@ -29,6 +29,20 @@ The browser qualification recorded navigation durations including Playwright's `
 
 `uv sync --frozen` and `./scripts/quality/check.sh` passed on the Pi: 709 tests passed, 94.51% line coverage, 85.24% branch coverage, no known dependency vulnerabilities, and successful architecture, documentation, type, Compose, and diff checks. The fixed thresholds were unchanged.
 
+## Production owner-review deployment
+
+- Committed source `6cbecf76f2f04be2a6e110acaef599a5a24bc597`; built image `snaketracker:m66b-owner-review-6cbecf7` with that exact embedded revision. The protected `.env` retained all settings, including production mode and platform operator configuration; only the image tag changed. Its mode remains `600`.
+- Before promotion, encrypted backup request `d4e3fe55-510b-4b5c-9641-9247ef322865` completed as run `073db6e1-26e9-4ae8-a0a1-05cf5a28ad6a`, manifest checksum `83467367d1d1babdf8ffaa0192a6fc283415a6e28594919811687dc67e17c693`. Isolated restore under `/tmp/m66b-predeploy-restore.0TK5EG` verified 33 referenced attachments, integrity `ok`, zero foreign-key violations, and exact hashes for all measured household tables compared with live production. The production Attachment tree contains 40 files and remained byte-identical across deployment.
+- The existing public taxonomy cache lacked *Pogona vitticeps* and *Pandinus imperator*. The M6.6-A provider/cache path resolved one exact public match for each and added only global taxonomy reference records before guide import. No household identifiers were sent to the provider. Business and Attachment hashes remained identical after this separate cache step.
+- Stopped web and worker for the forward `0022→0023` migration. The immediate post-migration household/Attachment snapshot matched the predeploy baseline exactly. Imported five reviewed guide versions, eight source records, and 30 claims using the new image. A second production import reported zero new and five identical versions.
+- Web and worker use the same new image in `production`; both and nginx are healthy. The local nginx readiness endpoint returned HTTP 200. Schema revision is `0023_sourced_care_guides`; current guide groups are snake, lizard, spider, scorpion, and plant.
+
+## Production data integrity
+
+Before/after hashes match for users, memberships, household summaries, Animals, Enclosures, Enclosure Plants, Inventory balances, Purchases, Expenses, immutable domain events, attachment metadata, and all 40 Attachment files. The event high-water mark remains 872. SQLite integrity remains `ok` with zero foreign-key violations. Full table comparison to the verified predeploy restore also found `reminder_rule_current` byte-identical. All 21 `reminder_facts` retain their identity, due time, status, and explanation; only the derived `calculated_at` timestamp changed when the worker recalculated them. The encrypted backup intentionally excludes ephemeral sessions and password-reset credentials, so those tables cannot be compared to its restored copy.
+
+No household fact was created from Care Guide data. No schedule or reminder rule was created or changed; no Animal care history, Inventory balance, or user account changed. The new guide importer modified only the four new global Care Guide tables. The separate public-taxonomy cache step changed only global taxonomy reference records.
+
 ## Boundaries
 
 The guide import writes only the new global Care Guide tables. Guide pages and links perform reads only. No household care records, reminders, schedules, Inventory balances, user accounts, or attachments are derived or changed by guide data.
