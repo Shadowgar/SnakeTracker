@@ -5,6 +5,7 @@ tranche-specific. M6.6 is not accepted until A–E qualify and the owner explici
 
 - [M6.6-A — Universal directory](a-universal-directory/README.md)
 - [M6.6-OPS-A — Read-only platform administration, accepted September 27, 2026](ops-a-platform-admin/README.md)
+- [M6.6-B — Sourced Care Guides, implementation in owner review](b-sourced-care-guides/README.md)
 
-OPS-A acceptance does not accept M6.6 as a whole. OPS-B and M6.6-B, C, D, E, and M7 have not
-begun.
+OPS-A acceptance does not accept M6.6 as a whole. M6.6-B is in progress and not accepted.
+OPS-B and M6.6-C, D, E, and M7 have not begun.

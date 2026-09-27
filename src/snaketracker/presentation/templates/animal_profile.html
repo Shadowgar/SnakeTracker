@@ -21,6 +21,7 @@
         {% if premolt_status %}<div><dt>Premolt state</dt><dd>{{ premolt_status.label }}{% if premolt_status.observation %} · {{ premolt_status.observation }}{% endif %}</dd></div>{% endif %}
       </dl>
       {% if animal.notes %}<p class="keeper-note">{{ animal.notes }}</p>{% endif %}
+      {% if linked_taxon and care_guide_available %}<p><strong>Species reference</strong><br><a href="/directory/{{ linked_taxon.taxon.taxon_id }}/care-guide">Species care guide for {{ linked_taxon.taxon.display_name }}</a><br><small class="muted">Reference guidance only. Your records and schedules stay separate.</small></p>{% endif %}
     </section>
     <section class="card overview-recent" aria-labelledby="recent-care-title">
       <span class="visually-hidden">Recent care</span>

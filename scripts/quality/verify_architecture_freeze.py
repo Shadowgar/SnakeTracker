@@ -18,8 +18,9 @@ ACCEPTANCE_DATES = {
     "0040": "2026-08-16",
     "0041": "2026-08-24",
     "0042": "2026-09-10",
+    "0043": "2026-09-26",
 }
-PROPOSED_ADRS: set[str] = {"0043"}
+PROPOSED_ADRS: set[str] = {"0044"}
 APPROVED_AMENDMENT_PATHS = {
     "docs/README.md",
     "docs/adr/README.md",
@@ -31,6 +32,7 @@ APPROVED_AMENDMENT_PATHS = {
     "docs/adr/0041-four-group-capability-expansion-and-neutral-molt-contracts.md",
     "docs/adr/0042-inventory-purchases-fifo-and-quantity-policy.md",
     "docs/adr/0043-universal-species-directory.md",
+    "docs/adr/0044-versioned-sourced-care-guides.md",
     "docs/architecture/domain-catalog.md",
     "docs/architecture/database-schema.md",
     "docs/architecture/event-catalog.md",

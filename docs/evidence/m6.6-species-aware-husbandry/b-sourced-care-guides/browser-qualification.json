@@ -1,0 +1,174 @@
+{
+  "fictionalDataOnly": true,
+  "captures": [
+    {
+      "viewport": "desktop-1440x900",
+      "name": "species-directory-guide",
+      "route": "/directory/a0246336-5165-4efc-bdf3-9155c470feed",
+      "durationMs": 628.8,
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      },
+      "axeViolations": 0,
+      "screenshot": "screenshots/desktop-1440x900-species-directory-guide.png"
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "animal-profile-entry",
+      "route": "/animals/3d4de07c-75d3-454c-b196-20cccc2ecf19",
+      "durationMs": 628.3,
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      },
+      "axeViolations": 0,
+      "screenshot": "screenshots/desktop-1440x900-animal-profile-entry.png"
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "animal-care-guide",
+      "route": "/directory/a0246336-5165-4efc-bdf3-9155c470feed/care-guide",
+      "durationMs": 665.4,
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      },
+      "axeViolations": 0,
+      "screenshot": "screenshots/desktop-1440x900-animal-care-guide.png"
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "lizard-source-disagreement",
+      "route": "/directory/a148bf1f-8c65-409d-b21c-a4933aa61045/care-guide",
+      "durationMs": 580.1,
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      },
+      "axeViolations": 0,
+      "screenshot": "screenshots/desktop-1440x900-lizard-source-disagreement.png"
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "plant-directory-guide",
+      "route": "/directory/d56ff4ed-4e3a-4c4f-aa17-2a8bb3aa4117",
+      "durationMs": 1642.9,
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      },
+      "axeViolations": 0,
+      "screenshot": "screenshots/desktop-1440x900-plant-directory-guide.png"
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "plant-care-guide",
+      "route": "/directory/d56ff4ed-4e3a-4c4f-aa17-2a8bb3aa4117/care-guide",
+      "durationMs": 599.4,
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      },
+      "axeViolations": 0,
+      "screenshot": "screenshots/desktop-1440x900-plant-care-guide.png"
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "enclosure-plant-guide",
+      "route": "/enclosures/b4373687-3481-43a0-921a-6c8e1fcb75b2/plants/4ad7ac34-1f98-44a9-b64d-696e97a9e5f0",
+      "durationMs": 581.2,
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      },
+      "axeViolations": 0,
+      "screenshot": "screenshots/desktop-1440x900-enclosure-plant-guide.png"
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "species-directory-guide",
+      "route": "/directory/a0246336-5165-4efc-bdf3-9155c470feed",
+      "durationMs": 654.8,
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      },
+      "axeViolations": 0,
+      "screenshot": "screenshots/mobile-390x844-species-directory-guide.png"
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "animal-profile-entry",
+      "route": "/animals/3d4de07c-75d3-454c-b196-20cccc2ecf19",
+      "durationMs": 602.6,
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      },
+      "axeViolations": 0,
+      "screenshot": "screenshots/mobile-390x844-animal-profile-entry.png"
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "animal-care-guide",
+      "route": "/directory/a0246336-5165-4efc-bdf3-9155c470feed/care-guide",
+      "durationMs": 564.7,
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      },
+      "axeViolations": 0,
+      "screenshot": "screenshots/mobile-390x844-animal-care-guide.png"
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "lizard-source-disagreement",
+      "route": "/directory/a148bf1f-8c65-409d-b21c-a4933aa61045/care-guide",
+      "durationMs": 571.8,
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      },
+      "axeViolations": 0,
+      "screenshot": "screenshots/mobile-390x844-lizard-source-disagreement.png"
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "plant-directory-guide",
+      "route": "/directory/d56ff4ed-4e3a-4c4f-aa17-2a8bb3aa4117",
+      "durationMs": 590.2,
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      },
+      "axeViolations": 0,
+      "screenshot": "screenshots/mobile-390x844-plant-directory-guide.png"
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "plant-care-guide",
+      "route": "/directory/d56ff4ed-4e3a-4c4f-aa17-2a8bb3aa4117/care-guide",
+      "durationMs": 566.8,
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      },
+      "axeViolations": 0,
+      "screenshot": "screenshots/mobile-390x844-plant-care-guide.png"
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "enclosure-plant-guide",
+      "route": "/enclosures/b4373687-3481-43a0-921a-6c8e1fcb75b2/plants/4ad7ac34-1f98-44a9-b64d-696e97a9e5f0",
+      "durationMs": 566.4,
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      },
+      "axeViolations": 0,
+      "screenshot": "screenshots/mobile-390x844-enclosure-plant-guide.png"
+    }
+  ],
+  "diagnostics": []
+}

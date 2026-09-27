@@ -374,7 +374,8 @@ decisions. M6.6 requires explicit owner acceptance after all five tranches.
   from a bounded, checksum-verified local cache under `img-src 'self'`; the existing household photo
   workflow stays discoverable and its personal image always wins. (`R-090`, `AT-SPDIR-05`)
 
-Owner review is required after M6.6-A. Do not begin M6.6-B until it is accepted.
+M6.6-A was integrated in PR #14 and is accepted as the prerequisite for M6.6-B. ADR-0043's
+status is reconciled to Accepted; the historical M6.6-A qualification record remains unchanged.
 
 ### M6.6-OPS-A — Platform administration and support
 
@@ -393,6 +394,8 @@ password-reset actions, job retry, projection rebuild, business-data correction 
 refresh actions, and impersonation. No OPS-B mutation capability is accepted by this tranche.
 
 ### M6.6-B — Sourced care guides
+
+Status: Implementation in progress for owner review; not accepted. ADR-0044 remains Proposed.
 
 - [ ] RB Versioned Animal and plant guide facts retain values/ranges/units, source references,
   provider/source IDs, retrieved/reviewed dates, and support/confidence or disagreement state.

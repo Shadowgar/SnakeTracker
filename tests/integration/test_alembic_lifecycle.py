@@ -36,7 +36,7 @@ from snaketracker.infrastructure.inventory.projections import SQLAlchemyInventor
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 
 ROOT = Path(__file__).parents[2]
-REVISION = "0022_reference_image_provenance"
+REVISION = "0023_sourced_care_guides"
 PHASE_FIVE_TABLES = {
     "aggregate_snapshots",
     "alembic_version",
@@ -84,6 +84,10 @@ PHASE_FIVE_TABLES = {
     "taxon_provider_mappings",
     "taxon_images",
     "animal_taxon_current",
+    "care_guide_versions",
+    "care_guide_current",
+    "care_guide_sources",
+    "care_guide_claims",
     "enclosure_plant_current",
     "users",
 }

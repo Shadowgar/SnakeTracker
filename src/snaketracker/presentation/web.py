@@ -70,6 +70,7 @@ from snaketracker.application.backups import (
     ConfigureBackupScheduleCommand,
     RequestBackupCommand,
 )
+from snaketracker.application.care_guides import CareGuideReader, format_claim_value, grouped_claims
 from snaketracker.application.dashboard import DashboardStatisticsService
 from snaketracker.application.enclosures import (
     CUSTOM_ENCLOSURE_TYPE,
@@ -240,6 +241,7 @@ templates = Jinja2Templates(directory=PACKAGE_DIR / "templates")
 templates.env.globals["current_year"] = datetime.now(UTC).year
 templates.env.globals["format_quantity"] = format_quantity_scaled
 templates.env.globals["format_weight"] = format_weight_payload
+templates.env.globals["format_claim_value"] = format_claim_value
 
 CARE_FORM_DETAILS: dict[str, tuple[str, str, str]] = {
     "feeding": ("Record feeding", "Choose food from Inventory and record the outcome.", "feedings"),
@@ -1132,6 +1134,7 @@ def create_web_router(
     secure_cookie: bool,
     expected_origin: str | None = None,
     directory_service: SpeciesDirectoryService | None = None,
+    care_guide_repository: CareGuideReader | None = None,
 ) -> APIRouter:
     router = APIRouter(include_in_schema=False)
     animal_visual_resolver = AnimalVisualResolver(directory_service)
@@ -1387,6 +1390,11 @@ def create_web_router(
         return {
             "animal": animal,
             "linked_taxon": linked_taxon,
+            "care_guide_available": bool(
+                linked_taxon is not None
+                and care_guide_repository is not None
+                and care_guide_repository.available(linked_taxon.taxon.taxon_id)
+            ),
             "reference_taxon": reference_taxon_available,
             "reference_taxon_available": reference_taxon_available,
             "animal_visual": animal_visual,
@@ -2099,7 +2107,54 @@ def create_web_router(
             request,
             "directory_detail.html",
             principal,
-            context={"taxon": taxon, "reference_taxon": reference_taxon},
+            context={
+                "taxon": taxon,
+                "reference_taxon": reference_taxon,
+                "care_guide_available": bool(
+                    care_guide_repository is not None
+                    and care_guide_repository.available(taxon.taxon_id)
+                ),
+            },
+        )
+
+    @router.get("/directory/{taxon_id}/care-guide", response_class=HTMLResponse)
+    async def care_guide_detail(
+        request: Request, taxon_id: str, version: int | None = None
+    ) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            taxon_uuid = UUID(taxon_id)
+        except ValueError:
+            return _not_found(request, "Directory entry not found")
+        taxon = directory_service.get(taxon_uuid) if directory_service is not None else None
+        if taxon is None:
+            return _not_found(request, "Directory entry not found")
+        guide = None
+        versions: tuple[int, ...] = ()
+        if care_guide_repository is not None:
+            versions = care_guide_repository.versions(taxon_uuid)
+            guide = (
+                care_guide_repository.current(taxon_uuid)
+                if version is None
+                else care_guide_repository.version(taxon_uuid, version)
+            )
+        if version is not None and guide is None:
+            return _not_found(request, "Care Guide version not found")
+        return protected_page(
+            request,
+            "care_guide.html",
+            principal,
+            context={
+                "taxon": taxon,
+                "guide": guide,
+                "sections": grouped_claims(guide) if guide is not None else (),
+                "sources_by_id": {source.source_id: source for source in guide.sources}
+                if guide is not None
+                else {},
+                "versions": versions,
+            },
         )
 
     @router.get("/api/directory/search", response_class=JSONResponse)
@@ -4981,6 +5036,11 @@ def create_web_router(
                 "enclosure": enclosure,
                 "plant": plant,
                 "reference_taxon": reference_taxon,
+                "care_guide_available": bool(
+                    plant.taxon_id is not None
+                    and care_guide_repository is not None
+                    and care_guide_repository.available(plant.taxon_id)
+                ),
             },
         )
 
