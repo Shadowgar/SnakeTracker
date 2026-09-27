@@ -75,6 +75,7 @@ from snaketracker.application.care_guides import (
     format_claim_value,
     glance_claims,
     grouped_claims,
+    profile_reference_claims,
 )
 from snaketracker.application.dashboard import DashboardStatisticsService
 from snaketracker.application.enclosures import (
@@ -1387,6 +1388,11 @@ def create_web_router(
             if directory_service is not None
             else None
         )
+        profile_reference_guide = (
+            care_guide_repository.current(linked_taxon.taxon.taxon_id)
+            if linked_taxon is not None and care_guide_repository is not None
+            else None
+        )
         reference_taxon_available = (
             linked_taxon.taxon
             if linked_taxon is not None and animal_visual.is_species_reference
@@ -1395,10 +1401,12 @@ def create_web_router(
         return {
             "animal": animal,
             "linked_taxon": linked_taxon,
-            "care_guide_available": bool(
-                linked_taxon is not None
-                and care_guide_repository is not None
-                and care_guide_repository.available(linked_taxon.taxon.taxon_id)
+            "care_guide_available": profile_reference_guide is not None,
+            "profile_reference_guide": profile_reference_guide,
+            "profile_reference_facts": (
+                profile_reference_claims(profile_reference_guide)
+                if profile_reference_guide is not None
+                else ()
             ),
             "reference_taxon": reference_taxon_available,
             "reference_taxon_available": reference_taxon_available,

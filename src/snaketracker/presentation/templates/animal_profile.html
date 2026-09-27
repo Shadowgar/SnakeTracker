@@ -10,6 +10,7 @@
     {% if not animal.photo_attachment_version_id %}<a href="/animals/{{ animal.animal_id }}/photo">Add my animal's photo</a><span>Add photo</span>{% endif %}
   </nav>
   <div class="animal-overview-layout">
+    <div class="overview-personal-column">
     <section class="card overview-identity" aria-labelledby="profile-facts-title">
       <div class="section-heading"><div><p class="page-kicker">Your records</p><h2 id="profile-facts-title">About</h2></div></div>
       <dl class="fact-list">
@@ -21,12 +22,6 @@
         {% if premolt_status %}<div><dt>Premolt state</dt><dd>{{ premolt_status.label }}{% if premolt_status.observation %} · {{ premolt_status.observation }}{% endif %}</dd></div>{% endif %}
       </dl>
       {% if animal.notes %}<p class="keeper-note">{{ animal.notes }}</p>{% endif %}
-      {% if linked_taxon and care_guide_available %}<div class="profile-reference-entry"><p class="page-kicker">Species reference</p><a href="/directory/{{ linked_taxon.taxon.taxon_id }}/care-guide">Species Care Guide for {{ linked_taxon.taxon.display_name }} →</a><p>Reviewed reference guidance. Your records and schedules stay separate.</p></div>{% endif %}
-    </section>
-    <section class="card overview-recent" aria-labelledby="recent-care-title">
-      <span class="visually-hidden">Recent care</span>
-      <div class="section-heading"><h2 id="recent-care-title">Recent history</h2><a href="/animals/{{ animal.animal_id }}/timeline">View all</a></div>
-      {% if recent_events %}<ol class="recent-care-list">{% for item in recent_events %}<li><div><strong>{{ item.keeper_title }}</strong><p>{{ item.description }}</p></div><time datetime="{{ item.event.occurred_at.isoformat() }}">{{ item.event.occurred_at.astimezone(household_zone).strftime('%b %-d') }}</time></li>{% endfor %}</ol>{% else %}<p class="muted">No care history yet.</p>{% endif %}
     </section>
     <section class="card overview-care" aria-labelledby="current-care-title">
       <div class="section-heading"><h2 id="current-care-title">Care snapshot</h2><a href="/animals/{{ animal.animal_id }}/analytics">Trends</a></div>
@@ -34,6 +29,30 @@
         {% for fact in overview_care_facts %}<div><dt>{{ fact.label }}</dt>{% if fact.event %}<dd><strong>{{ fact.event.description }}</strong><span>{{ fact.event.event.occurred_at.astimezone(household_zone).strftime('%b %-d, %Y') }}</span></dd>{% else %}<dd><span>Not recorded yet</span></dd>{% endif %}</div>{% endfor %}
       </dl>
     </section>
+    </div>
+    <div class="overview-reference-column">
+    <section class="card overview-recent" aria-labelledby="recent-care-title">
+      <span class="visually-hidden">Recent care</span>
+      <div class="section-heading"><h2 id="recent-care-title">Recent history</h2><a href="/animals/{{ animal.animal_id }}/timeline">View all</a></div>
+      {% if recent_events %}<ol class="recent-care-list">{% for item in recent_events %}<li><div><strong>{{ item.keeper_title }}</strong><p>{{ item.description }}</p></div><time datetime="{{ item.event.occurred_at.isoformat() }}">{{ item.event.occurred_at.astimezone(household_zone).strftime('%b %-d') }}</time></li>{% endfor %}</ol>{% else %}<p class="muted">No care history yet.</p>{% endif %}
+    </section>
+    <section class="card overview-reference" aria-labelledby="profile-reference-title">
+      <div class="section-heading"><div><p class="page-kicker">Species reference</p><h2 id="profile-reference-title">About this species</h2></div></div>
+      {% if linked_taxon and profile_reference_guide %}
+        <p class="profile-reference-intro">Reviewed reference guidance for <i>{{ linked_taxon.taxon.accepted_scientific_name }}</i> · Version {{ profile_reference_guide.version }}</p>
+        <p class="profile-reference-boundary">Species reference — not your Animal's individual records or care settings.</p>
+        {% if profile_reference_facts %}<dl class="profile-reference-grid">{% for label, claims, state in profile_reference_facts %}<div class="profile-reference-fact"><dt>{{ label }}{% if claims[0].life_stage %} · {{ claims[0].life_stage }}{% endif %}</dt><dd><strong>{% if state == 'Sources differ' %}Sources differ{% else %}{{ format_claim_value(claims[0]) }}{% endif %}</strong><span class="guide-state {% if state == 'Sources differ' %}guide-state-differ{% elif state == 'Corroborated' %}guide-state-corroborated{% else %}guide-state-single{% endif %}">{{ state }}</span></dd></div>{% endfor %}</dl>{% endif %}
+        <a class="profile-reference-action" href="/directory/{{ linked_taxon.taxon.taxon_id }}/care-guide">View full Care Guide →</a>
+      {% elif linked_taxon %}
+        <p class="profile-reference-boundary">Species reference — not your Animal's individual records or care settings.</p>
+        <p class="profile-reference-empty">No reviewed species guidance available yet.</p>
+        <a class="profile-reference-action" href="/directory/{{ linked_taxon.taxon.taxon_id }}">View species in Directory →</a>
+      {% else %}
+        <p class="profile-reference-empty">Link a species to see reviewed guidance.</p>
+        <a class="profile-reference-action" href="/animals/{{ animal.animal_id }}/species">Find species reference →</a>
+      {% endif %}
+    </section>
+    </div>
     <section class="card overview-manage" aria-labelledby="manage-profile-title">
       <h2 id="manage-profile-title">Manage profile</h2>
       <div class="manage-links">

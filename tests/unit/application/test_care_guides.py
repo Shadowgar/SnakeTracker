@@ -13,6 +13,7 @@ from snaketracker.application.care_guides import (
     format_claim_value,
     glance_claims,
     grouped_claims,
+    profile_reference_claims,
 )
 
 ROOT = Path(__file__).parents[3]
@@ -232,3 +233,29 @@ def test_fahrenheit_display_rounds_half_up_without_changing_canonical_claim() ->
     original = claim.model_dump()
     assert format_claim_value(claim) == "25\u201325.3°C · 77\u201378°F"
     assert claim.model_dump() == original
+
+
+def test_profile_reference_uses_existing_claims_and_keeps_disagreement() -> None:
+    bundle = GuideBundle.model_validate_json(
+        (ROOT / "reference/care-guides/reviewed-v1.json").read_bytes()
+    )
+    for guide in bundle.guides:
+        selected = profile_reference_claims(guide)
+        assert all(claim in guide.claims for _, claims, _ in selected for claim in claims)
+        assert all(
+            fact in [item for _, section in grouped_claims(guide) for item in section]
+            for fact in selected
+        )
+    lizard = next(guide for guide in bundle.guides if guide.biological_group == "lizard")
+    basking = next(
+        fact
+        for fact in profile_reference_claims(lizard)
+        if fact[1][0].fact_key == "basking_temperature"
+    )
+    assert basking[2] == "Sources differ"
+    assert len(basking[1]) == 2
+    assert {
+        fact[1][0].life_stage
+        for fact in profile_reference_claims(lizard)
+        if fact[1][0].fact_key == "food_types"
+    } == {"Adult", "Juvenile"}

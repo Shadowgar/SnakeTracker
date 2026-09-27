@@ -75,6 +75,22 @@ def main() -> None:
             observed_at=datetime.now(UTC),
         )
         taxon_ids[guide.scientific_name] = str(taxon.taxon_id)
+    no_guide = repository.upsert(
+        ProviderTaxon(
+            provider="fixture",
+            provider_id="unreviewed-boa",
+            source_url="https://example.test/taxa/unreviewed-boa",
+            supported_group="snake",
+            accepted_scientific_name="Boa constrictor",
+            preferred_common_name="Boa constrictor",
+            rank="species",
+            kingdom="Animalia",
+            genus="Boa",
+            species="Boa constrictor",
+        ),
+        observed_at=datetime.now(UTC),
+    )
+    taxon_ids["Boa constrictor"] = str(no_guide.taxon_id)
     SQLAlchemyCareGuideRepository(engine).import_bundle(bundle)
     engine.dispose()
     app = build_application(
@@ -123,6 +139,47 @@ def main() -> None:
             follow_redirects=False,
         )
         assert animal.status_code == 303, animal.text[:200]
+        animal_urls = {"with_guide": animal.headers["location"]}
+        for key, group, name, species, taxon_id in (
+            (
+                "disagreement",
+                "lizard",
+                "Fictional Draco",
+                "Pogona vitticeps",
+                taxon_ids["Pogona vitticeps"],
+            ),
+            (
+                "linked_without_guide",
+                "snake",
+                "Fictional Boa",
+                "Boa constrictor",
+                taxon_ids["Boa constrictor"],
+            ),
+            ("unlinked", "snake", "Fictional Unlinked", "Python regius", ""),
+        ):
+            form = client.get("/animals/new")
+            response = client.post(
+                "/animals",
+                data={
+                    "csrf_token": csrf(form.text),
+                    "idempotency_key": f"m66b-fictional-{key}",
+                    "animal_type": group,
+                    "name": name,
+                    "species": species,
+                    "taxon_id": taxon_id,
+                    "photo_preference": "none",
+                    "sex": "",
+                    "morph": "",
+                    "genetics": "",
+                    "birth_hatch_date": "",
+                    "acquisition_date": "",
+                    "breeder_source": "",
+                    "notes": "",
+                },
+                follow_redirects=False,
+            )
+            assert response.status_code == 303, response.text[:200]
+            animal_urls[key] = response.headers["location"]
         enclosure_form = client.get("/enclosures/new")
         enclosure = client.post(
             "/enclosures",
@@ -157,6 +214,7 @@ def main() -> None:
     manifest = {
         "taxon_ids": taxon_ids,
         "animal_url": animal.headers["location"],
+        "animal_urls": animal_urls,
         "plant_url": plant.headers["location"],
         "database": str(database),
     }

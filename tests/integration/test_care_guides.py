@@ -250,3 +250,145 @@ def test_authenticated_offline_guide_escapes_source_text_and_keeps_csp(tmp_path:
     with create_sqlite_engine(path, require_local_storage=False).connect() as connection:
         event_rows = connection.execute(text("SELECT count(*) FROM domain_events"))
         assert event_rows.scalar_one() == event_count
+
+
+def test_animal_overview_reads_only_its_explicitly_linked_current_guide(tmp_path: Path) -> None:
+    path, ids = _database(tmp_path)
+    engine = create_sqlite_engine(path, require_local_storage=False)
+    SQLAlchemyCareGuideRepository(engine).import_bundle(_bundle())
+    no_guide_id = uuid4()
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO taxa (taxon_id,supported_group,accepted_scientific_name,"
+                "taxonomic_status,created_at,refreshed_at) "
+                "VALUES (:id,'snake','Boa constrictor','accepted',:at,:at)"
+            ),
+            {"id": str(no_guide_id), "at": datetime.now(UTC).isoformat()},
+        )
+        connection.execute(
+            text(
+                "INSERT INTO taxon_provider_mappings "
+                "(taxon_id,provider,provider_id,source_url,retrieved_at,refreshed_at) "
+                "VALUES (:id,'fixture','boa-no-guide','https://example.test/boa',:at,:at)"
+            ),
+            {"id": str(no_guide_id), "at": datetime.now(UTC).isoformat()},
+        )
+    engine.dispose()
+
+    app = build_application(
+        Settings(
+            environment=Environment.TEST,
+            database_path=path,
+            runtime_secret=SecretStr("profile-reference-runtime-secret-32-bytes"),
+            session_cookie_secure=False,
+        )
+    )
+    with TestClient(app) as client:
+        setup = client.get("/setup")
+        token = re.search(r'name="csrf_token" value="([^"]+)"', setup.text)
+        assert token is not None
+        created = client.post(
+            "/setup",
+            data={
+                "csrf_token": token.group(1),
+                "household_name": "Reference Test",
+                "timezone": "UTC",
+                "display_name": "Keeper",
+                "email": "profile-guide@example.test",
+                "password": "correct horse battery staple",
+                "password_confirmation": "correct horse battery staple",
+            },
+            follow_redirects=False,
+        )
+        assert created.status_code == 303
+
+        def register(name: str, group: str, species: str, taxon_id: UUID | None) -> str:
+            form = client.get("/animals/new")
+            token = re.search(r'name="csrf_token" value="([^"]+)"', form.text)
+            assert token is not None
+            response = client.post(
+                "/animals",
+                data={
+                    "csrf_token": token.group(1),
+                    "idempotency_key": f"profile-reference-{name}",
+                    "animal_type": group,
+                    "name": name,
+                    "species": species,
+                    "taxon_id": str(taxon_id) if taxon_id is not None else "",
+                    "photo_preference": "none",
+                    "sex": "",
+                    "morph": "",
+                    "genetics": "",
+                    "birth_hatch_date": "",
+                    "acquisition_date": "",
+                    "breeder_source": "",
+                    "notes": "",
+                },
+                follow_redirects=False,
+            )
+            assert response.status_code == 303, response.text[:200]
+            return response.headers["location"]
+
+        snake_url = register("Linked snake", "snake", "Python regius", ids["Python regius"])
+        lizard_url = register(
+            "Linked lizard", "lizard", "Pogona vitticeps", ids["Pogona vitticeps"]
+        )
+        no_guide_url = register("Linked boa", "snake", "Boa constrictor", no_guide_id)
+        unlinked_url = register("Unlinked snake", "snake", "Python regius", None)
+
+        def snapshot() -> dict[str, tuple[tuple[object, ...], ...]]:
+            with create_sqlite_engine(path, require_local_storage=False).connect() as connection:
+                return {
+                    table: tuple(
+                        tuple(row)
+                        for row in connection.execute(text(f"SELECT * FROM {table} ORDER BY rowid"))
+                    )
+                    for table in (
+                        "animal_current",
+                        "domain_events",
+                        "reminder_rule_current",
+                        "reminder_facts",
+                        "care_guide_versions",
+                        "care_guide_current",
+                        "care_guide_sources",
+                        "care_guide_claims",
+                    )
+                }
+
+        before = snapshot()
+
+        def reference_html(url: str) -> str:
+            response = client.get(url)
+            assert response.status_code == 200
+            assert 'class="card overview-reference"' in response.text
+            return response.text.split('class="card overview-reference"', 1)[1].split(
+                'class="card overview-manage"', 1
+            )[0]
+
+        snake = reference_html(snake_url)
+        assert "Reviewed reference guidance for" in snake
+        assert "30\u201332°C · 86\u201390°F" in snake
+        assert "Single source" in snake
+        assert f"/directory/{ids['Python regius']}/care-guide" in snake
+        assert "individual records or care settings." in snake
+
+        lizard = reference_html(lizard_url)
+        assert "Sources differ" in lizard
+        assert "35\u201340°C" not in lizard
+        assert "38\u201342°C" not in lizard
+        assert f"/directory/{ids['Pogona vitticeps']}/care-guide" in lizard
+        assert "Corroborated" in lizard
+
+        no_guide = reference_html(no_guide_url)
+        assert "No reviewed species guidance available yet." in no_guide
+        assert f"/directory/{no_guide_id}" in no_guide
+        assert "profile-reference-grid" not in no_guide
+
+        unlinked = reference_html(unlinked_url)
+        assert "Link a species to see reviewed guidance." in unlinked
+        assert f"{unlinked_url}/species" in unlinked
+        assert "30\u201332°C" not in unlinked
+        assert "profile-reference-grid" not in unlinked
+        assert client.get("/directory").status_code == 200
+        assert snapshot() == before

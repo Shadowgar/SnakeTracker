@@ -336,3 +336,43 @@ def glance_claims(
         if fact[1][0].fact_key == key
         and (fact[2] == "Sources differ" or len(format_claim_value(fact[1][0])) <= 64)
     )
+
+
+def profile_reference_claims(
+    guide: ReviewedGuide,
+) -> tuple[tuple[str, tuple[GuideClaim, ...], str], ...]:
+    """Select existing high-level claims for an Animal profile without inventing values."""
+    keys = {
+        GuideGroup.SNAKE: (
+            "basking_temperature",
+            "cool_side_temperature",
+            "ambient_humidity",
+            "food_types",
+            "uvb",
+            "hides",
+        ),
+        GuideGroup.LIZARD: (
+            "basking_temperature",
+            "cool_side_temperature",
+            "ambient_humidity",
+            "food_types",
+            "uvb",
+            "heat_burns",
+        ),
+        GuideGroup.SPIDER: (
+            "activity_pattern",
+            "prey_types",
+            "habitat_structure",
+            "female_lifespan",
+        ),
+        GuideGroup.SCORPION: (
+            "activity_pattern",
+            "prey_types",
+            "natural_habitat",
+            "adult_length",
+            "sting_caution",
+        ),
+        GuideGroup.PLANT: (),
+    }[guide.biological_group]
+    facts = [fact for _, section in grouped_claims(guide) for fact in section]
+    return tuple(fact for key in keys for fact in facts if fact[1][0].fact_key == key)

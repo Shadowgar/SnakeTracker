@@ -1683,10 +1683,6 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
 .guide-source-card p:last-child { margin: .7rem 0 0; color: var(--color-text-secondary); font-size: .84rem; }
 .guide-source-explanation { max-width: 85ch; margin: 1.2rem 0 0; border-top: 1px solid var(--color-border); padding-top: 1rem; color: var(--color-text-secondary); font-size: .9rem; }
 .guide-source-explanation strong { color: var(--color-text); }
-.profile-reference-entry { margin-top: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: .9rem; background: var(--color-primary-soft); }
-.profile-reference-entry .page-kicker { margin: 0 0 .2rem; }
-.profile-reference-entry a { display: inline-block; min-height: 2.75rem; align-content: center; color: var(--color-primary); font-weight: 750; }
-.profile-reference-entry p:last-child { margin: .1rem 0 0; color: var(--color-text-secondary); font-size: .85rem; }
 @media (max-width: 46rem) {
   .directory-hero { grid-template-columns: 1fr; }
   .directory-hero-media > img { height: auto; min-height: 0; max-height: 23rem; aspect-ratio: 4 / 3; }
@@ -1701,4 +1697,33 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
   .guide-glance-item strong { font-size: 1rem; }
   .guide-fact { padding: 1rem; }
   .directory-hero-media .reference-attribution { font-size: .75rem; }
+}
+
+/* M6.6-B Animal Overview species reference. */
+.animal-overview-layout { grid-template-columns: minmax(0, 1fr); grid-template-areas: none; align-items: start; }
+.overview-personal-column, .overview-reference-column { display: grid; min-width: 0; align-content: start; gap: .65rem; }
+.overview-identity, .overview-care, .overview-recent, .overview-reference, .overview-manage { grid-area: auto; min-width: 0; }
+.overview-reference { display: grid; gap: .7rem; }
+.overview-reference .section-heading { margin: 0; }
+.overview-reference .page-kicker { margin: 0 0 .2rem; }
+.overview-reference h2 { margin: 0; font-size: 1.25rem; }
+.profile-reference-intro { margin: 0; color: var(--color-text-secondary); font-size: .9rem; }
+.profile-reference-boundary { margin: 0; border-left: 3px solid var(--color-primary); padding: .5rem .75rem; color: var(--color-text-secondary); background: var(--color-primary-soft); font-size: .85rem; line-height: 1.4; }
+.profile-reference-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; margin: .2rem 0 0; }
+.profile-reference-fact { display: grid; min-width: 0; align-content: start; gap: .3rem; border: 1px solid var(--color-border-subtle); border-radius: .55rem; padding: .7rem; background: var(--color-surface-raised); }
+.profile-reference-fact dt { color: var(--color-text-secondary); font-size: .8rem; font-weight: 700; }
+.profile-reference-fact dd { display: grid; justify-items: start; gap: .45rem; min-width: 0; margin: 0; }
+.profile-reference-fact dd strong { font-size: 1rem; line-height: 1.35; overflow-wrap: anywhere; }
+.profile-reference-fact .guide-state { min-height: 1.65rem; font-size: .72rem; }
+.profile-reference-empty { margin: .15rem 0; color: var(--color-text-secondary); font-size: .92rem; }
+.profile-reference-action { display: inline-flex; min-height: 2.75rem; width: max-content; max-width: 100%; align-items: center; color: var(--color-primary); font-size: .9rem; font-weight: 750; text-decoration: none; }
+.profile-reference-action:hover { text-decoration: underline; }
+.profile-reference-action:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+@media (min-width: 64rem) {
+  .animal-overview-layout { grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); }
+  .overview-manage { grid-column: 1 / -1; }
+}
+@media (max-width: 34.99rem) {
+  .profile-reference-grid { grid-template-columns: 1fr; }
+  .profile-reference-fact { padding: .65rem .75rem; }
 }
