@@ -28,6 +28,7 @@
         <ul id="species-results" class="taxon-results" role="listbox" hidden data-taxon-results></ul>
       </div>
       <input type="hidden" name="taxon_id" value="{{ values.taxon_id|default('') }}" data-taxon-id>
+      <button type="button" class="secondary-button" data-manual-species>Use manual species entry</button>
       <p id="species-help" class="field-help">Type at least 2 letters to search by common or scientific name. Can't find it? Keep your species text and create the Animal manually.</p>
       <p id="species-status" class="field-help" role="status" aria-live="polite" data-taxon-status>{% if not directory_available %}Directory search is unavailable; manual species entry still works.{% endif %}</p>
     </div>
@@ -40,7 +41,7 @@
         <h2 id="reference-photo-title">Profile picture</h2>
         <p data-reference-photo-copy class="field-help">Reference images are available when a supported Directory species is linked. You can add a photo of your animal after creation.</p>
         <p class="field-help">Care Keeper uses your animal's own photo first, then a licensed species reference, then an honest group illustration.</p>
-        <input type="hidden" name="photo_preference" value="species_reference">
+        <input type="hidden" name="photo_preference" value="none">
       </div>
     </section>
     <label>Sex
@@ -72,4 +73,4 @@
   </form>
 </section>
 {% endblock %}
-{% block scripts %}<script src="/static/species-directory.js?v=m66b-profile-reference-v2" defer></script>{% endblock %}
+{% block scripts %}<script src="/static/species-directory.js?v=m66b-correction-v3" defer></script>{% endblock %}

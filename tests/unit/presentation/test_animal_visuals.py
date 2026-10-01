@@ -71,7 +71,7 @@ def test_visual_resolver_uses_reference_photo_metadata() -> None:
     )
     directory = SimpleNamespace(
         linked_for=lambda *_args: SimpleNamespace(taxon=taxon),
-        reference_image=lambda *_args: reference,
+        cached_reference_image=lambda *_args: reference,
     )
 
     visual = animal_visuals.AnimalVisualResolver(directory).resolve(uuid4(), _animal())
@@ -99,7 +99,7 @@ def test_visual_resolver_preserves_cached_reference_illustration_kind() -> None:
     )
     directory = SimpleNamespace(
         linked_for=lambda *_args: SimpleNamespace(taxon=taxon),
-        reference_image=lambda *_args: reference,
+        cached_reference_image=lambda *_args: reference,
     )
 
     visual = animal_visuals.AnimalVisualResolver(directory).resolve(uuid4(), _animal())
@@ -119,7 +119,7 @@ def test_visual_resolver_uses_species_illustration_then_safe_group_fallback(
     )
     directory = SimpleNamespace(
         linked_for=lambda *_args: SimpleNamespace(taxon=taxon),
-        reference_image=lambda *_args: None,
+        cached_reference_image=lambda *_args: None,
     )
     monkeypatch.setattr(
         animal_visuals, "_load_species_illustrations", lambda: {"boa constrictor": "boa.webp"}

@@ -9,6 +9,7 @@ from pathlib import Path
 from time import perf_counter
 from typing import cast
 
+import pytest
 from alembic import command
 from alembic.config import Config
 from fastapi import FastAPI
@@ -189,7 +190,7 @@ def test_directory_animal_selection_manual_fallback_and_legacy_link(
             "Reference images are available when a supported Directory species is linked"
             in form.text
         )
-        assert "/static/species-directory.js?v=m66b-profile-reference-v2" in form.text
+        assert "/static/species-directory.js?v=m66b-correction-v3" in form.text
         suggestions = client.get("/api/directory/search?group=snake&q=ball+p")
         assert suggestions.status_code == 200
         assert suggestions.json()["records"][0]["scientific_name"] == "Python regius"
@@ -389,8 +390,9 @@ def test_directory_animal_selection_manual_fallback_and_legacy_link(
                 "notes": "",
             },
         )
-        assert unavailable.status_code == 422
-        assert "licensed species reference image is not available" in unavailable.text
+        assert unavailable.status_code == 200
+        assert "Burmese Python" in unavailable.text
+        assert "group illustration" in unavailable.text
         legacy_link = client.get(f"{manual.headers['location']}/species")
         assert "Nothing is linked until" in legacy_link.text
         linked = client.post(
@@ -484,3 +486,189 @@ def test_directory_animal_selection_manual_fallback_and_legacy_link(
         assert "Pothos by the hide" in roster.text
         assert "Qty 2" in roster.text
         assert "Unidentified fern" in roster.text
+
+
+def _register_correction_animal(
+    client: TestClient, group: str, taxon_id: str = "", *, key: str = "correction"
+):
+    form = client.get("/animals/new")
+    return client.post(
+        "/animals",
+        data={
+            "csrf_token": _csrf(form.text),
+            "idempotency_key": key,
+            "animal_type": group,
+            "name": "Manual keeper animal",
+            "species": "Trade name only",
+            "taxon_id": taxon_id,
+            "photo_preference": "species_reference",
+        },
+        follow_redirects=False,
+    )
+
+
+@pytest.mark.parametrize("group", ["snake", "spider", "lizard", "scorpion"])
+def test_manual_creation_and_selected_taxon_do_not_require_reference_photo(tmp_path, group):
+    with _client(tmp_path) as client:
+        _setup(client)
+        manual = _register_correction_animal(client, group, key="manual")
+        assert manual.status_code == 303
+        assert "Trade name only" in client.get(manual.headers["location"]).text
+        taxon = _cache(client, "no-photo", group, "Example species", "Known directory name")
+        selected = _register_correction_animal(client, group, str(taxon.taxon_id), key="selected")
+        assert selected.status_code == 303, selected.text
+        application = cast(FastAPI, client.app)
+        with application.state.database_engine.connect() as connection:
+            links = connection.execute(
+                text("SELECT animal_id,taxon_id FROM animal_taxon_current")
+            ).all()
+        assert len(links) == 1
+        assert str(links[0].taxon_id) == str(taxon.taxon_id)
+        assert str(links[0].animal_id) in selected.headers["location"]
+
+
+def test_edit_retains_explicit_selected_taxon_in_same_save(tmp_path):
+    with _client(tmp_path) as client:
+        _setup(client)
+        created = _register_correction_animal(client, "spider")
+        assert created.status_code == 303
+        url = created.headers["location"]
+        taxon = _cache(
+            client, "edit-photo-optional", "spider", "Avicularia avicularia", "Pink-toed tarantula"
+        )
+        form = client.get(url + "/edit")
+        edited = client.post(
+            url + "/edit",
+            data={
+                "csrf_token": _csrf(form.text),
+                "idempotency_key": "select-in-edit",
+                "name": "Manual keeper animal",
+                "species": "Pink-toed tarantula",
+                "taxon_id": str(taxon.taxon_id),
+            },
+            follow_redirects=False,
+        )
+        assert edited.status_code == 303
+        application = cast(FastAPI, client.app)
+        with application.state.database_engine.connect() as connection:
+            link = connection.execute(text("SELECT taxon_id FROM animal_taxon_current")).scalar()
+        assert link == str(taxon.taxon_id)
+        assert "Avicularia avicularia" in client.get(url).text
+
+
+@pytest.mark.parametrize(
+    "state", ["keeper_photo", "cached_image", "missing_image", "unlinked", "missing_optional"]
+)
+def test_profile_and_local_image_reads_make_zero_outbound_calls(tmp_path, monkeypatch, state):
+    from snaketracker.infrastructure.taxonomy import inaturalist, reference_providers
+    from snaketracker.infrastructure.taxonomy.reference_images import LocalReferenceImageCache
+
+    with _client(tmp_path) as client:
+        _setup(client)
+        taxon = _cache(
+            client,
+            "local-only",
+            "spider",
+            "Avicularia avicularia",
+            "Pink-toed tarantula",
+            image_license="cc-by",
+        )
+        created = _register_correction_animal(
+            client, "spider", "" if state == "unlinked" else str(taxon.taxon_id)
+        )
+        assert created.status_code == 303
+        url = created.headers["location"]
+        if state == "cached_image":
+            content = _install_reference_image(client, tmp_path, taxon, color="gray")
+        if state == "keeper_photo":
+            form = client.get(url + "/photo")
+            photo = client.post(
+                url + "/photo",
+                data={"csrf_token": _csrf(form.text), "idempotency_key": "personal-photo"},
+                files={"photo": ("keeper.png", ONE_PIXEL_PNG, "image/png")},
+                follow_redirects=False,
+            )
+            assert photo.status_code == 303
+        if state == "missing_optional":
+            application = cast(FastAPI, client.app)
+            with application.state.database_engine.begin() as connection:
+                connection.execute(
+                    text("UPDATE taxa SET family=NULL,genus=NULL,species=NULL WHERE taxon_id=:id"),
+                    {"id": str(taxon.taxon_id)},
+                )
+        calls = []
+
+        def forbidden(*args, **kwargs):
+            calls.append("outbound")
+            raise AssertionError("Ordinary profile rendering attempted outbound provider work")
+
+        monkeypatch.setattr(inaturalist, "urlopen", forbidden)
+        monkeypatch.setattr(reference_providers, "urlopen", forbidden)
+        monkeypatch.setattr(LocalReferenceImageCache, "_fetch_remote", forbidden)
+        # Existing cache instances retain their fetch callable; patch the transport too.
+        monkeypatch.setattr("urllib.request.OpenerDirector.open", forbidden)
+        profile = client.get(url)
+        assert profile.status_code == 200
+        assert "Your records" in profile.text
+        image = client.get(f"/directory/reference-images/{taxon.taxon_id}")
+        if state == "cached_image":
+            assert image.status_code == 200
+            assert image.content == content
+        else:
+            assert image.status_code == 404
+        assert calls == []
+
+
+@pytest.mark.parametrize("group", ["snake", "spider", "lizard", "scorpion"])
+@pytest.mark.parametrize(
+    "failure", ["empty", "offline", "timeout", "throttled", "malformed", "oversized"]
+)
+def test_manual_creation_survives_bounded_provider_failures(tmp_path, monkeypatch, group, failure):
+    from email.message import Message
+    from urllib.error import HTTPError, URLError
+
+    from snaketracker.infrastructure.taxonomy import inaturalist
+
+    class ProviderResponse:
+        headers = Message()
+        headers["Content-Type"] = "application/json"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self, limit):
+            if failure == "malformed":
+                return b"not valid JSON"
+            if failure == "oversized":
+                return b" " * limit
+            return b'{"results":[]}'
+
+    def fetch(request, **kwargs):
+        if failure == "offline":
+            raise URLError("isolated offline provider")
+        if failure == "timeout":
+            raise TimeoutError("isolated provider timeout")
+        if failure == "throttled":
+            raise HTTPError(request.full_url, 429, "Rate limited", None, None)
+        return ProviderResponse()
+
+    monkeypatch.setattr(inaturalist, "urlopen", fetch)
+    with _client(tmp_path) as client:
+        _setup(client)
+        search = client.get(f"/api/directory/search?group={group}&q=unknown+trade+name")
+        assert search.status_code == 200
+        assert search.json()["records"] == []
+        assert search.json()["state"] == ("empty" if failure == "empty" else "unavailable")
+        created = _register_correction_animal(client, group)
+        assert created.status_code == 303
+        profile = client.get(created.headers["location"])
+        assert profile.status_code == 200
+        assert "Trade name only" in profile.text
+        application = cast(FastAPI, client.app)
+        with application.state.database_engine.connect() as connection:
+            assert (
+                connection.execute(text("SELECT count(*) FROM animal_taxon_current")).scalar() == 0
+            )

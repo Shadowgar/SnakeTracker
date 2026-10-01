@@ -40,7 +40,9 @@
     {% elif care_kind == 'weight' %}
     <label>Weight (g)<input name="weight_grams" type="number" inputmode="decimal" min="0.001" step="0.001" value="{{ values.get('weight_grams', '') }}" required></label>
     {% elif care_kind == 'length' %}
-    <label>Length (mm)<input name="length_mm" type="number" min="1" value="{{ values.get('length_mm', '') }}" required></label>
+    <label>Length<input name="length_value" data-length-value type="number" inputmode="decimal" min="0.01" step="any" value="{{ values.get('length_value', values.get('length_mm', '')) }}" aria-describedby="length-precision" required></label>
+    <label>Length unit<select name="length_unit" data-length-unit required>{% for unit in ('mm', 'cm', 'in') %}<option value="{{ unit }}"{% if values.get('length_unit', 'mm') == unit %} selected{% endif %}>{{ {'mm':'Millimetres (mm)', 'cm':'Centimetres (cm)', 'in':'Inches (in)'}[unit] }}</option>{% endfor %}</select></label>
+    <small id="length-precision">Use up to 1 decimal place in mm or 2 in cm/in. Length must be between 0.1 and 10000 mm.</small>
     {% elif care_kind == 'shed' %}
     {% set blue_state = values.get('blue_state', 'false') %}
     {% set completed = values.get('completed', 'true') %}
@@ -69,4 +71,4 @@
   </form>
 </section>
 {% endblock %}
-{% block scripts %}{% if care_kind == 'feeding' %}<script defer src="/static/feeding-form.js?v=m65-a1"></script>{% endif %}{% endblock %}
+{% block scripts %}{% if care_kind == 'feeding' %}<script defer src="/static/feeding-form.js?v=m65-a1"></script>{% endif %}{% if care_kind == 'length' %}<script defer src="/static/length-form.js"></script>{% endif %}{% endblock %}

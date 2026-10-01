@@ -35,6 +35,41 @@ distinct bearded-dragon basking ranges; the UI preserves both. RVC and RSPCA sep
 daily UVB lighting. The source facts, publication context, and URLs were checked September 27,
 2026. No private production data is in the bundle.
 
+The separate [Boa constrictor version 1 bundle](../../reference/care-guides/reviewed-boa-constrictor-v1.json)
+adds one taxon, seven source pages from two publishers, and 34 sourced claims. The existing
+`reviewed-v1.json` bytes are preserved so its reviewed versions remain idempotent. Source text was
+retrieved and reviewed on October 1, 2026; ADR-0044 remains Proposed and M6.6-B awaits owner review.
+
+Royal Veterinary College's *Boa Constrictor Care* explicitly identifies `Boa constrictor
+constrictor`. Its captive care positions cover temperature, qualitative humidity, enclosure/hides,
+UVB, rodents, water, substrate safety, lifespan, and hygiene. The official PDF currently returns
+HTTP 403 to direct retrieval in this environment; its publisher-hosted indexed text was retrieved
+and checked for every included position. No unverified PDF publication date is inferred from the
+filename. ReptiFiles' specialist genus guide explicitly distinguishes `Boa constrictor` from
+`Boa imperator` and covers the target species as well as related boas. Its six separate pages
+provide species/locality context, temperature, humidity, feeding, lighting, and enclosure positions.
+Claims retain that broader source context and do not identify an Animal's locality or subspecies.
+
+Cool-end temperature, ambient humidity, overnight guidance, and UVB positions retain **Sources
+differ**. RVC's basking spot and ReptiFiles' basking air values keep distinct measurement contexts.
+Whole-rodent feeding and daily fresh water are **Corroborated** by the two publishers; other
+contextual positions remain **Single source**. The feeding intervals are reference outlines with
+life stage and body-condition qualifications. No percentage of support, average range, household
+schedule, or Animal-specific recommendation is generated.
+
+Validate the Boa bundle without a database write:
+
+```sh
+uv run python -m snaketracker.operations.import_care_guides \
+  reference/care-guides/reviewed-boa-constrictor-v1.json
+```
+
+For an explicitly authorized import into a verified isolated migrated database, use that bundle
+with the same `--database /absolute/path/to/isolated.sqlite3 --apply` arguments documented below.
+The cache must contain exactly one existing `snake` taxon named `Boa constrictor`; a cache entry
+for `Boa imperator` does not satisfy this requirement. The import changes only the four global
+Care Guide reference tables and preserves all household records and events.
+
 Validate without writing:
 
 ```sh

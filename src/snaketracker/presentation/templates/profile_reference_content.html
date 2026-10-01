@@ -1,0 +1,38 @@
+{% if profile_reference_glance %}
+<section class="profile-reference-section" aria-labelledby="profile-glance-title">
+  <h3 id="profile-glance-title">At a glance</h3>
+  <dl class="profile-reference-grid">
+    {% for label, claims, state in profile_reference_glance %}
+    <div class="profile-reference-fact"><dt>{{ label }}</dt><dd><strong>{% if state == 'Sources differ' %}Sources differ · see positions below{% else %}{{ format_claim_value(claims[0]) }}{% endif %}</strong><a href="#profile-fact-{{ claims[0].claim_id }}">Source positions ↓</a></dd></div>
+    {% endfor %}
+  </dl>
+</section>
+{% endif %}
+{% for section_label, facts in profile_reference_sections %}
+<section class="profile-reference-section" aria-labelledby="profile-section-{{ loop.index }}">
+  <h3 id="profile-section-{{ loop.index }}">{{ section_label }}</h3>
+  <div class="guide-fact-grid">
+    {% for label, claims, state in facts %}
+    <article class="guide-fact" id="profile-fact-{{ claims[0].claim_id }}" aria-labelledby="profile-label-{{ claims[0].claim_id }}">
+      <h4 id="profile-label-{{ claims[0].claim_id }}">{{ label }}{% if claims[0].life_stage %} · {{ claims[0].life_stage }}{% endif %}</h4>
+      <span class="guide-state {% if state == 'Sources differ' %}guide-state-differ{% elif state == 'Corroborated' %}guide-state-corroborated{% else %}guide-state-single{% endif %}">{{ state }}</span>
+      {% if state == 'Sources differ' %}
+      <div class="guide-positions">{% for claim in claims %}<div class="guide-position"><span>{{ profile_reference_sources[claim.source_id].publisher }}</span><strong>{{ format_claim_value(claim) }}</strong>{% if claim.qualifier %}<p>{{ claim.qualifier }}</p>{% endif %}</div>{% endfor %}</div>
+      {% else %}
+      <p class="guide-value">{{ format_claim_value(claims[0]) }}</p>
+      {% if claims[0].qualifier %}<p class="guide-qualifier">{{ claims[0].qualifier }}</p>{% endif %}
+      {% endif %}
+      {% if claims[0].context %}<p class="guide-context"><strong>Context</strong> {{ claims[0].context }}</p>{% endif %}
+      {% if claims[0].scope %}<p class="guide-context"><strong>Scope</strong> {{ claims[0].scope }}</p>{% endif %}
+      {% for claim in claims %}{% if claim.caution %}<p class="guide-caution">{{ claim.caution }}</p>{% endif %}{% endfor %}
+      <details class="guide-disclosure"><summary>Sources and review dates</summary><ul>{% for claim in claims %}{% set source = profile_reference_sources[claim.source_id] %}<li><a href="{{ source.url }}" rel="noopener noreferrer" target="_blank">{{ source.publisher }} · {{ source.title }}</a><span>Retrieved <time datetime="{{ source.retrieved_at.date().isoformat() }}">{{ source.retrieved_at.date().isoformat() }}</time> · Reviewed <time datetime="{{ source.reviewed_at.date().isoformat() }}">{{ source.reviewed_at.date().isoformat() }}</time></span></li>{% endfor %}</ul></details>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+<section class="profile-reference-section" aria-labelledby="profile-sources-title">
+  <h3 id="profile-sources-title">Sources</h3>
+  <details class="guide-disclosure"><summary>Bibliography and provenance</summary><ul>{% for source in profile_reference_guide.sources %}<li><a href="{{ source.url }}" rel="noopener noreferrer" target="_blank">{{ source.publisher }} · {{ source.title }}</a><span>Retrieved {{ source.retrieved_at.date().isoformat() }} · Reviewed {{ source.reviewed_at.date().isoformat() }}{% if source.published_at %} · Published/updated {{ source.published_at.date().isoformat() }}{% endif %}</span></li>{% endfor %}</ul></details>
+  <p class="field-help">Corroborated means independent publishers support the same contextual position. Single source means one publisher. Sources differ preserves separate positions without averaging.</p>
+</section>

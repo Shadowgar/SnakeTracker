@@ -7,14 +7,24 @@
     <h1 id="page-title">Edit profile</h1>
     <p class="lede">Update current profile details while retaining the original registration history.</p>
   </div>
-  <form class="card form-stack" method="post" action="/animals/{{ animal.animal_id }}/edit" novalidate>
+  <form class="card form-stack" method="post" action="/animals/{{ animal.animal_id }}/edit" novalidate data-taxon-form>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="idempotency_key" value="{{ command_id }}">
     <input type="hidden" name="return_to" value="animal">
     {% if errors.form %}<div class="alert" role="alert">{{ errors.form }}</div>{% endif %}
     <label>Name<input name="name" value="{{ animal.name }}" required></label>
-    <label>Species<input name="species" value="{{ animal.species }}" required></label>
-    <p class="field-help">Free text remains the historical profile value. <a href="/animals/{{ animal.animal_id }}/species">Link or change the verified directory species</a>.</p>
+    <input type="hidden" name="animal_type" value="{{ animal.animal_type }}">
+    <div class="taxon-combobox" data-taxon-combobox data-group-field="animal_type">
+      <label for="edit-species">Species</label>
+      <div class="taxon-input-results">
+        <input id="edit-species" name="species" value="{{ animal.species }}" required autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="edit-species-results" aria-describedby="edit-species-help edit-species-status">
+        <ul id="edit-species-results" class="taxon-results" role="listbox" hidden data-taxon-results></ul>
+      </div>
+      <input type="hidden" name="taxon_id" value="" data-taxon-id>
+      <button type="button" class="secondary-button" data-manual-species>Use manual species entry</button>
+      <p id="edit-species-help" class="field-help">Select a Directory result to save its verified link with this edit. Manual text remains valid; an existing confirmed link is retained unless you select its replacement.</p>
+      <p id="edit-species-status" class="field-help" role="status" aria-live="polite" data-taxon-status></p>
+    </div>
     <label>Sex
       <select name="sex">
         <option value="">Not recorded</option>
@@ -39,3 +49,5 @@
   </form>
 </section>
 {% endblock %}
+
+{% block scripts %}<script src="/static/species-directory.js?v=m66b-correction-v3" defer></script>{% endblock %}

@@ -24,7 +24,9 @@ from snaketracker.domains.animals.contracts import (
     AnimalFeedingRecordedV1,
     AnimalFeedingRecordedV2,
     AnimalLengthCorrectedV1,
+    AnimalLengthCorrectedV2,
     AnimalLengthRecordedV1,
+    AnimalLengthRecordedV2,
     AnimalMoltCorrectedV2,
     AnimalMoltRecordedV2,
     AnimalPhotoSelectedV1,
@@ -39,6 +41,7 @@ from snaketracker.domains.animals.contracts import (
     AnimalWeightCorrectedV2,
     AnimalWeightRecordedV2,
 )
+from snaketracker.domains.animals.measurements import validate_length_tuple
 from snaketracker.domains.inventory.catalog import UNIT_BY_CODE
 from snaketracker.domains.inventory.contracts import (
     InventoryConsumptionReversedV1,
@@ -290,6 +293,21 @@ class RecordLengthCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class RecordLengthV2Command:
+    household_id: UUID
+    actor_user_id: UUID
+    animal_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    occurred_at: datetime
+    length_um: int
+    entered_value_scaled: int
+    entered_scale: int
+    entered_unit: str
+    notes: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class RecordShedCommand:
     household_id: UUID
     actor_user_id: UUID
@@ -395,6 +413,22 @@ class CorrectLengthCommand:
     idempotency_key: str
     occurred_at: datetime
     length_mm: int
+    notes: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class CorrectLengthV2Command:
+    household_id: UUID
+    actor_user_id: UUID
+    actor_role: str
+    animal_id: UUID
+    target_event_id: UUID
+    idempotency_key: str
+    occurred_at: datetime
+    length_um: int
+    entered_value_scaled: int
+    entered_scale: int
+    entered_unit: str
     notes: str | None
 
 
@@ -742,9 +776,40 @@ class AnimalService:
             )
         )
 
-    def record_length(self, command: RecordLengthCommand) -> AnimalEventResult:
-        if command.length_mm < 1 or command.length_mm > 10_000:
-            raise AnimalValidationError("Length must be between 1 and 10000 millimetres.")
+    def record_length(
+        self, command: RecordLengthCommand | RecordLengthV2Command
+    ) -> AnimalEventResult:
+        payload: AnimalLengthRecordedV1 | AnimalLengthRecordedV2
+        length_fields: dict[str, object]
+        if isinstance(command, RecordLengthV2Command):
+            try:
+                validate_length_tuple(
+                    command.length_um,
+                    command.entered_value_scaled,
+                    command.entered_scale,
+                    command.entered_unit,
+                )
+            except ValueError as error:
+                raise AnimalValidationError(str(error)) from error
+            payload = AnimalLengthRecordedV2(
+                command.length_um,
+                command.entered_value_scaled,
+                command.entered_scale,
+                command.entered_unit,
+            )
+            length_fields = {
+                "length_um": command.length_um,
+                "entered_value_scaled": command.entered_value_scaled,
+                "entered_scale": command.entered_scale,
+                "entered_unit": command.entered_unit,
+            }
+            schema_version = 2
+        else:
+            if type(command.length_mm) is not int or not 1 <= command.length_mm <= 10000:
+                raise AnimalValidationError("Length must be between 1 and 10000 millimetres.")
+            payload = AnimalLengthRecordedV1(command.length_mm)
+            length_fields = {"length_mm": command.length_mm}
+            schema_version = 1
         return AnimalEventResult(
             self._append_animal_event(
                 household_id=command.household_id,
@@ -756,11 +821,12 @@ class AnimalService:
                 occurred_at=command.occurred_at,
                 event_type="animal.length_recorded",
                 title="Length recorded",
-                payload=AnimalLengthRecordedV1(command.length_mm),
+                payload=payload,
+                schema_version=schema_version,
                 notes=_optional_text(command.notes, "measurement notes"),
                 command_hash_fields={
                     "occurred_at": command.occurred_at.isoformat(),
-                    "length_mm": command.length_mm,
+                    **length_fields,
                     "notes": _optional_text(command.notes, "measurement notes"),
                 },
             )
@@ -1016,9 +1082,41 @@ class AnimalService:
             )
         )
 
-    def correct_length(self, command: CorrectLengthCommand) -> AnimalEventResult:
-        if command.length_mm < 1 or command.length_mm > 10_000:
-            raise AnimalValidationError("Length must be between 1 and 10000 millimetres.")
+    def correct_length(
+        self, command: CorrectLengthCommand | CorrectLengthV2Command
+    ) -> AnimalEventResult:
+        payload: AnimalLengthCorrectedV1 | AnimalLengthCorrectedV2
+        length_fields: dict[str, object]
+        if isinstance(command, CorrectLengthV2Command):
+            try:
+                validate_length_tuple(
+                    command.length_um,
+                    command.entered_value_scaled,
+                    command.entered_scale,
+                    command.entered_unit,
+                )
+            except ValueError as error:
+                raise AnimalValidationError(str(error)) from error
+            payload = AnimalLengthCorrectedV2(
+                command.target_event_id,
+                command.length_um,
+                command.entered_value_scaled,
+                command.entered_scale,
+                command.entered_unit,
+            )
+            length_fields = {
+                "length_um": command.length_um,
+                "entered_value_scaled": command.entered_value_scaled,
+                "entered_scale": command.entered_scale,
+                "entered_unit": command.entered_unit,
+            }
+            schema_version = 2
+        else:
+            if type(command.length_mm) is not int or not 1 <= command.length_mm <= 10000:
+                raise AnimalValidationError("Length must be between 1 and 10000 millimetres.")
+            payload = AnimalLengthCorrectedV1(command.target_event_id, command.length_mm)
+            length_fields = {"length_mm": command.length_mm}
+            schema_version = 1
         return AnimalEventResult(
             self._correct_animal_event(
                 household_id=command.household_id,
@@ -1030,12 +1128,13 @@ class AnimalService:
                 occurred_at=command.occurred_at,
                 event_type="animal.length_corrected",
                 title="Length corrected",
-                payload=AnimalLengthCorrectedV1(command.target_event_id, command.length_mm),
+                payload=payload,
+                schema_version=schema_version,
                 notes=_optional_text(command.notes, "measurement notes"),
                 command_hash_fields={
                     "target_event_id": str(command.target_event_id),
                     "occurred_at": command.occurred_at.isoformat(),
-                    "length_mm": command.length_mm,
+                    **length_fields,
                     "notes": _optional_text(command.notes, "measurement notes"),
                 },
             )

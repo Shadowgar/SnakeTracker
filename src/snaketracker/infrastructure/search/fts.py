@@ -15,10 +15,15 @@ from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import SQLAlchemyError
 
 from snaketracker.application.keeper_history import KEEPER_HISTORY_EVENT_TYPES
+from snaketracker.application.length_measurements import format_length_payload, length_entered_unit
 from snaketracker.application.search import SearchResult, SearchUnavailableError
+from snaketracker.domains.animals.contracts import AnimalLengthRecordedV2
+from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
 from snaketracker.infrastructure.projections.sqlite_generations import (
     SQLiteProjectionGenerationManager,
 )
+from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
+from snaketracker.platform.events.corrections import effective_event_root, evaluate_effective_events
 from snaketracker.platform.projections.definitions import GenerationLayout, ProjectionEvent
 
 PROJECTION_NAME: Final = "global_search_fts"
@@ -55,6 +60,15 @@ class FTSSearchProjectionStrategy:
 
     def apply(self, transaction: object, layout: GenerationLayout, event: ProjectionEvent) -> None:
         connection = _connection(transaction)
+        if event.stream_type == "animal" and (
+            event.event_type in {"animal.length_recorded", "animal.length_corrected"}
+            or (
+                event.event_type in {"event.voided", "event.reinstated"}
+                and self._is_length_control(connection, event)
+            )
+        ):
+            self._refresh_lengths(connection, layout, event)
+            return
         if event.event_type == "event.voided":
             target = event.payload.get("target_event_id")
             if target is not None:
@@ -114,6 +128,91 @@ class FTSSearchProjectionStrategy:
             effective_at=event.occurred_at.isoformat(timespec="microseconds"),
             source_position=event.global_position,
         )
+
+    @staticmethod
+    def _is_length_control(connection: Connection, event: ProjectionEvent) -> bool:
+        target = _stored_event(
+            connection, event.household_id, str(event.payload.get("target_event_id", ""))
+        )
+        return target is not None and target.event_type in {
+            "animal.length_recorded",
+            "animal.length_corrected",
+        }
+
+    def _refresh_lengths(
+        self, connection: Connection, layout: GenerationLayout, event: ProjectionEvent
+    ) -> None:
+        # Read only history at this projection checkpoint, including during a rebuild.
+        # The event-store decoder verifies contract, subject and checksum invariants.
+        rows = (
+            connection.execute(
+                text(
+                    "SELECT * FROM domain_events WHERE household_id=:household "
+                    "AND stream_type='animal' AND stream_id=:animal "
+                    "AND event_type IN ('animal.length_recorded','animal.length_corrected',"
+                    "'event.voided','event.reinstated') "
+                    "AND global_position<=:cutoff ORDER BY stream_version"
+                ),
+                {
+                    "household": str(event.household_id),
+                    "animal": str(event.stream_id),
+                    "cutoff": event.global_position,
+                },
+            )
+            .mappings()
+            .all()
+        )
+        decoder = SQLAlchemyEventStore(connection.engine)
+        history = tuple(decoder._deserialize_row(connection, row) for row in rows)
+        positions = {UUID(str(row["event_id"])): int(row["global_position"]) for row in rows}
+        by_id = {item.event_id: item for item in history}
+        control_positions: dict[UUID, int] = {}
+        for item in history:
+            if not isinstance(item.payload, EventVoidedV1 | EventReinstatedV1):
+                continue
+            target = by_id.get(item.payload.target_event_id)
+            if target is None or target.event_type not in {
+                "animal.length_recorded",
+                "animal.length_corrected",
+            }:
+                continue
+            while (parent_id := getattr(target.payload, "target_event_id", None)) in by_id:
+                target = by_id[parent_id]
+            control_positions[target.event_id] = positions[item.event_id]
+
+        length_history = tuple(
+            item
+            for item in history
+            if item.event_type in {"animal.length_recorded", "animal.length_corrected"}
+        )
+        for item in length_history:
+            self._delete(connection, layout, f"event:{item.event_id}")
+        for current in evaluate_effective_events(history):
+            if current.event_type not in {"animal.length_recorded", "animal.length_corrected"}:
+                continue
+            root = effective_event_root(history, current.event_id)
+            stored = _stored_event(connection, event.household_id, str(current.event_id))
+            if root is None or stored is None:
+                continue
+            document = _document(stored)
+            if document is None:
+                continue
+            _key, kind, title, body, route, capability = document
+            self._upsert(
+                connection,
+                layout,
+                key=f"event:{root.event_id}",
+                household_id=str(event.household_id),
+                kind=kind,
+                title=title,
+                body=body,
+                route=route,
+                capability=capability,
+                effective_at=current.occurred_at.isoformat(timespec="microseconds"),
+                source_position=max(
+                    positions[current.event_id], control_positions.get(root.event_id, 0)
+                ),
+            )
 
     def validate(self, transaction: object, layout: GenerationLayout) -> Mapping[str, object]:
         connection = _connection(transaction)
@@ -344,6 +443,23 @@ def _document(
 
 
 def _body(payload: Mapping[str, object], notes: str | None) -> str:
+    if all(
+        key in payload
+        for key in ("length_um", "entered_value_scaled", "entered_scale", "entered_unit")
+    ):
+        length = AnimalLengthRecordedV2(
+            int(str(payload["length_um"])),
+            int(str(payload["entered_value_scaled"])),
+            int(str(payload["entered_scale"])),
+            str(payload["entered_unit"]),
+        )
+        values = [
+            f"{format_length_payload(length)} {length_entered_unit(length)}",
+            f"{length.length_um} um",
+        ]
+        if notes:
+            values.append(notes)
+        return " · ".join(values)
     values = [
         str(value)
         for key, value in payload.items()

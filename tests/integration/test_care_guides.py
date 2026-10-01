@@ -375,8 +375,8 @@ def test_animal_overview_reads_only_its_explicitly_linked_current_guide(tmp_path
 
         lizard = reference_html(lizard_url)
         assert "Sources differ" in lizard
-        assert "35\u201340°C" not in lizard
-        assert "38\u201342°C" not in lizard
+        assert "35\u201340°C" in lizard
+        assert "38\u201342°C" in lizard
         assert f"/directory/{ids['Pogona vitticeps']}/care-guide" in lizard
         assert "Corroborated" in lizard
 

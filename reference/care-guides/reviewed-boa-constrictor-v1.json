@@ -1,0 +1,463 @@
+{
+  "format_version": 1,
+  "guides": [
+    {
+      "biological_group": "snake",
+      "scientific_name": "Boa constrictor",
+      "version": 1,
+      "created_at": "2026-10-01T07:15:14Z",
+      "reviewed_at": "2026-10-01T07:15:14Z",
+      "sources": [
+        {
+          "source_id": "rvc-boa",
+          "publisher": "Royal Veterinary College",
+          "title": "Boa Constrictor Care",
+          "url": "https://www.rvc.ac.uk/Media/Default/small-animal/documents/Boa-constrictor-snake-care%202016-1.pdf",
+          "source_type": "veterinary",
+          "retrieved_at": "2026-10-01T07:15:14Z",
+          "reviewed_at": "2026-10-01T07:15:14Z"
+        },
+        {
+          "source_id": "rf-boa-species",
+          "publisher": "ReptiFiles",
+          "title": "Boa Species & Subspecies",
+          "url": "https://reptifiles.com/boa-constrictor-care/boa-species-subspecies/",
+          "source_type": "specialist",
+          "retrieved_at": "2026-10-01T07:15:14Z",
+          "reviewed_at": "2026-10-01T07:15:14Z"
+        },
+        {
+          "source_id": "rf-boa-temperature",
+          "publisher": "ReptiFiles",
+          "title": "Boa Constrictor Temperatures & Heating Requirements",
+          "url": "https://reptifiles.com/boa-constrictor-care/boa-constrictor-temperatures/",
+          "source_type": "specialist",
+          "retrieved_at": "2026-10-01T07:15:14Z",
+          "reviewed_at": "2026-10-01T07:15:14Z"
+        },
+        {
+          "source_id": "rf-boa-humidity",
+          "publisher": "ReptiFiles",
+          "title": "Boa Constrictor Humidity Requirements",
+          "url": "https://reptifiles.com/boa-constrictor-care/boa-constrictor-humidity/",
+          "source_type": "specialist",
+          "retrieved_at": "2026-10-01T07:15:14Z",
+          "reviewed_at": "2026-10-01T07:15:14Z"
+        },
+        {
+          "source_id": "rf-boa-lighting",
+          "publisher": "ReptiFiles",
+          "title": "Boa Constrictor UVB & Other Lighting Requirements",
+          "url": "https://reptifiles.com/boa-constrictor-care/boa-constrictor-uvb-lighting/",
+          "source_type": "specialist",
+          "retrieved_at": "2026-10-01T07:15:14Z",
+          "reviewed_at": "2026-10-01T07:15:14Z"
+        },
+        {
+          "source_id": "rf-boa-feeding",
+          "publisher": "ReptiFiles",
+          "title": "What Do Boa Constrictors Eat?",
+          "url": "https://reptifiles.com/boa-constrictor-care/what-do-boa-constrictors-eat/",
+          "source_type": "specialist",
+          "retrieved_at": "2026-10-01T07:15:14Z",
+          "reviewed_at": "2026-10-01T07:15:14Z"
+        },
+        {
+          "source_id": "rf-boa-enclosure",
+          "publisher": "ReptiFiles",
+          "title": "Boa Constrictor Enclosure Size Requirements",
+          "url": "https://reptifiles.com/boa-constrictor-care/boa-constrictor-enclosure-size/",
+          "source_type": "specialist",
+          "retrieved_at": "2026-10-01T07:15:14Z",
+          "reviewed_at": "2026-10-01T07:15:14Z"
+        }
+      ],
+      "claims": [
+        {
+          "claim_id": "boa-rvc-natural",
+          "source_id": "rvc-boa",
+          "section": "at_a_glance",
+          "fact_key": "natural_habitat",
+          "label": "Natural habitat",
+          "context": "wild; Boa constrictor constrictor",
+          "scope": "Boa constrictor",
+          "value_text": "South American rainforest; ground, trees and water."
+        },
+        {
+          "claim_id": "boa-rf-identity",
+          "source_id": "rf-boa-species",
+          "section": "cautions",
+          "fact_key": "species_identity",
+          "label": "Species and locality context",
+          "context": "taxonomic identity",
+          "scope": "Boa constrictor",
+          "value_text": "Boa constrictor and Boa imperator are distinct species; common pet-trade names can obscure identity.",
+          "caution": "This guide attaches only to an explicitly linked Boa constrictor taxon; it does not identify an Animal or locality."
+        },
+        {
+          "claim_id": "boa-rf-scope",
+          "source_id": "rf-boa-species",
+          "section": "cautions",
+          "fact_key": "reference_scope",
+          "label": "Source scope",
+          "context": "genus-wide captive guidance",
+          "scope": "Boa constrictor",
+          "value_text": "ReptiFiles covers Boa constrictor and other Boa species; individual localities can have different needs.",
+          "caution": "General captive positions below do not establish a subspecies, locality or individual care plan."
+        },
+        {
+          "claim_id": "boa-rvc-life",
+          "source_id": "rvc-boa",
+          "section": "life_stage",
+          "fact_key": "lifespan",
+          "label": "Captive lifespan",
+          "context": "captive; Boa constrictor constrictor",
+          "scope": "Boa constrictor",
+          "minimum": 20,
+          "maximum": 30,
+          "unit": "years"
+        },
+        {
+          "claim_id": "boa-rf-size",
+          "source_id": "rf-boa-species",
+          "section": "life_stage",
+          "fact_key": "adult_length",
+          "label": "Typical true red-tail length",
+          "context": "Boa constrictor constrictor",
+          "scope": "Boa constrictor",
+          "minimum": 210,
+          "maximum": 300,
+          "unit": "cm",
+          "life_stage": "adult",
+          "qualifier": "Typical range, not a maximum; locality and growth vary."
+        },
+        {
+          "claim_id": "boa-rvc-bask",
+          "source_id": "rvc-boa",
+          "section": "temperature_humidity",
+          "fact_key": "basking_temperature",
+          "label": "Basking spot",
+          "context": "daytime basking spot",
+          "scope": "Boa constrictor",
+          "value_number": 35,
+          "unit": "c",
+          "qualifier": "Spot-bulb basking target; the source does not specify an air measurement."
+        },
+        {
+          "claim_id": "boa-rf-bask",
+          "source_id": "rf-boa-temperature",
+          "section": "temperature_humidity",
+          "fact_key": "basking_temperature",
+          "label": "Basking air",
+          "context": "daytime basking air",
+          "scope": "Boa constrictor",
+          "minimum": 30,
+          "maximum": 32,
+          "unit": "c",
+          "qualifier": "Air temperature; maintain a thermal gradient."
+        },
+        {
+          "claim_id": "boa-rvc-cool",
+          "source_id": "rvc-boa",
+          "section": "temperature_humidity",
+          "fact_key": "cool_side_temperature",
+          "label": "Cool end",
+          "context": "captive cool end",
+          "scope": "Boa constrictor",
+          "value_number": 25,
+          "unit": "c"
+        },
+        {
+          "claim_id": "boa-rf-cool",
+          "source_id": "rf-boa-temperature",
+          "section": "temperature_humidity",
+          "fact_key": "cool_side_temperature",
+          "label": "Cool end",
+          "context": "captive cool end",
+          "scope": "Boa constrictor",
+          "minimum": 24,
+          "maximum": 26,
+          "unit": "c"
+        },
+        {
+          "claim_id": "boa-rvc-night",
+          "source_id": "rvc-boa",
+          "section": "temperature_humidity",
+          "fact_key": "night_temperature",
+          "label": "Night temperature",
+          "context": "captive overnight",
+          "scope": "Boa constrictor",
+          "value_number": 25,
+          "unit": "c",
+          "qualifier": "Minimum; use thermostat-controlled background heat."
+        },
+        {
+          "claim_id": "boa-rf-night",
+          "source_id": "rf-boa-temperature",
+          "section": "temperature_humidity",
+          "fact_key": "night_temperature",
+          "label": "Night temperature",
+          "context": "captive overnight",
+          "scope": "Boa constrictor",
+          "value_number": 20,
+          "unit": "c",
+          "qualifier": "Lower threshold for supplemental lightless heat; the source recommends a night drop.",
+          "caution": "A lower threshold is not a whole-enclosure daytime or overnight target."
+        },
+        {
+          "claim_id": "boa-rvc-humidity",
+          "source_id": "rvc-boa",
+          "section": "temperature_humidity",
+          "fact_key": "ambient_humidity",
+          "label": "Humidity",
+          "context": "captive ambient",
+          "scope": "Boa constrictor",
+          "value_text": "Moderately high; monitor with a hygrometer.",
+          "qualifier": "The source gives no numeric range."
+        },
+        {
+          "claim_id": "boa-rf-humidity",
+          "source_id": "rf-boa-humidity",
+          "section": "temperature_humidity",
+          "fact_key": "ambient_humidity",
+          "label": "Humidity",
+          "context": "captive ambient",
+          "scope": "Boa constrictor",
+          "minimum": 55,
+          "maximum": 75,
+          "unit": "percent",
+          "qualifier": "Allow controlled fluctuations and drying; avoid persistently wet conditions."
+        },
+        {
+          "claim_id": "boa-rf-shed-humidity",
+          "source_id": "rf-boa-humidity",
+          "section": "temperature_humidity",
+          "fact_key": "shed_humidity",
+          "label": "Humidity during shedding",
+          "context": "pre-shed",
+          "scope": "Boa constrictor",
+          "minimum": 75,
+          "maximum": 85,
+          "unit": "percent",
+          "qualifier": "Temporary shedding context; not the usual ambient range."
+        },
+        {
+          "claim_id": "boa-rvc-diet",
+          "source_id": "rvc-boa",
+          "section": "feeding",
+          "fact_key": "food_types",
+          "label": "Food",
+          "context": "captive diet",
+          "scope": "Boa constrictor",
+          "value_text": "Whole rodents sized to the snake."
+        },
+        {
+          "claim_id": "boa-rf-diet",
+          "source_id": "rf-boa-feeding",
+          "section": "feeding",
+          "fact_key": "food_types",
+          "label": "Food",
+          "context": "captive diet",
+          "scope": "Boa constrictor",
+          "value_text": "Whole rodents sized to the snake."
+        },
+        {
+          "claim_id": "boa-rf-prey",
+          "source_id": "rf-boa-feeding",
+          "section": "feeding",
+          "fact_key": "prey_size",
+          "label": "Prey size",
+          "context": "captive feeding",
+          "scope": "Boa constrictor",
+          "value_text": "Prey should not be wider than the snake at its widest point.",
+          "caution": "Adjust meal size and frequency to body condition; species grow at different rates."
+        },
+        {
+          "claim_id": "boa-rf-young-feed",
+          "source_id": "rf-boa-feeding",
+          "section": "feeding",
+          "fact_key": "feeding_interval",
+          "label": "Young feeding interval",
+          "context": "captive feeding",
+          "scope": "Boa constrictor",
+          "minimum": 10,
+          "maximum": 12,
+          "unit": "days",
+          "life_stage": "newborn to 12 months",
+          "qualifier": "General source outline; adjust to body condition and prey size."
+        },
+        {
+          "claim_id": "boa-rf-adult-feed",
+          "source_id": "rf-boa-feeding",
+          "section": "feeding",
+          "fact_key": "feeding_interval",
+          "label": "Mature feeding interval",
+          "context": "captive feeding",
+          "scope": "Boa constrictor",
+          "minimum": 28,
+          "maximum": 56,
+          "unit": "days",
+          "life_stage": "4 years and older",
+          "qualifier": "Source gives 4-8 weeks; adjust to body condition and prey size."
+        },
+        {
+          "claim_id": "boa-rf-live-prey",
+          "source_id": "rf-boa-feeding",
+          "section": "cautions",
+          "fact_key": "live_prey",
+          "label": "Live prey risk",
+          "context": "captive feeding",
+          "scope": "Boa constrictor",
+          "value_text": "Frozen-thawed prey is suitable; live rodents can injure the snake."
+        },
+        {
+          "claim_id": "boa-rf-postmeal",
+          "source_id": "rf-boa-feeding",
+          "section": "cautions",
+          "fact_key": "postmeal_handling",
+          "label": "Handling after meals",
+          "context": "after feeding",
+          "scope": "Boa constrictor",
+          "value_number": 2,
+          "unit": "days",
+          "qualifier": "Avoid handling during this period to reduce regurgitation risk."
+        },
+        {
+          "claim_id": "boa-rvc-housing",
+          "source_id": "rvc-boa",
+          "section": "habitat_enclosure",
+          "fact_key": "ventilation",
+          "label": "Ventilation and space",
+          "context": "captive enclosure",
+          "scope": "Boa constrictor",
+          "value_text": "Provide ample exercise space, ventilation and a temperature gradient."
+        },
+        {
+          "claim_id": "boa-rf-housing",
+          "source_id": "rf-boa-enclosure",
+          "section": "habitat_enclosure",
+          "fact_key": "enclosure_dimensions",
+          "label": "Enclosure proportions",
+          "context": "captive enclosure",
+          "scope": "Boa constrictor",
+          "value_text": "General rule: length equals snake length; width and height each equal half its length.",
+          "qualifier": "Larger and taller housing is encouraged; size for exercise and a thermal gradient."
+        },
+        {
+          "claim_id": "boa-rvc-hides",
+          "source_id": "rvc-boa",
+          "section": "habitat_enclosure",
+          "fact_key": "hides",
+          "label": "Hides",
+          "context": "captive enclosure",
+          "scope": "Boa constrictor",
+          "value_text": "Place secure hides at both the warm and cool ends."
+        },
+        {
+          "claim_id": "boa-rf-solitary",
+          "source_id": "rf-boa-enclosure",
+          "section": "habitat_enclosure",
+          "fact_key": "solitary_housing",
+          "label": "Housing companions",
+          "context": "captive enclosure",
+          "scope": "Boa constrictor",
+          "value_text": "House boas individually."
+        },
+        {
+          "claim_id": "boa-rvc-uvb",
+          "source_id": "rvc-boa",
+          "section": "lighting",
+          "fact_key": "uvb",
+          "label": "UVB",
+          "context": "captive lighting",
+          "scope": "Boa constrictor",
+          "value_text": "Low-level UVB is recommended.",
+          "qualifier": "Follow manufacturer guidance for distance, output checks and replacement."
+        },
+        {
+          "claim_id": "boa-rf-uvb",
+          "source_id": "rf-boa-lighting",
+          "section": "lighting",
+          "fact_key": "uvb",
+          "label": "UVB",
+          "context": "captive lighting",
+          "scope": "Boa constrictor",
+          "value_text": "Provide access to suitable UVB.",
+          "qualifier": "Specialist recommendation; measure exposure and account for lamp distance and mesh."
+        },
+        {
+          "claim_id": "boa-rvc-daylight",
+          "source_id": "rvc-boa",
+          "section": "lighting",
+          "fact_key": "daylight_hours",
+          "label": "Daytime lighting",
+          "context": "captive day",
+          "scope": "Boa constrictor",
+          "value_number": 12,
+          "unit": "hours",
+          "qualifier": "Daily duration for the low-level UVB lamp."
+        },
+        {
+          "claim_id": "boa-rf-dark",
+          "source_id": "rf-boa-lighting",
+          "section": "lighting",
+          "fact_key": "night_lighting",
+          "label": "Night lighting",
+          "context": "captive night",
+          "scope": "Boa constrictor",
+          "value_text": "Keep the enclosure dark at night."
+        },
+        {
+          "claim_id": "boa-rvc-water",
+          "source_id": "rvc-boa",
+          "section": "water_substrate",
+          "fact_key": "fresh_water",
+          "label": "Water",
+          "context": "captive hydration",
+          "scope": "Boa constrictor",
+          "value_text": "Provide a soaking-sized water bowl and change the water daily."
+        },
+        {
+          "claim_id": "boa-rf-water",
+          "source_id": "rf-boa-feeding",
+          "section": "water_substrate",
+          "fact_key": "fresh_water",
+          "label": "Water",
+          "context": "captive hydration",
+          "scope": "Boa constrictor",
+          "value_text": "Provide a soaking-sized water bowl and change the water daily."
+        },
+        {
+          "claim_id": "boa-rvc-substrate",
+          "source_id": "rvc-boa",
+          "section": "water_substrate",
+          "fact_key": "substrate_safety",
+          "label": "Substrate safety",
+          "context": "captive enclosure",
+          "scope": "Boa constrictor",
+          "value_text": "Choose a lining or substrate that avoids ingestion and intestinal blockage risks."
+        },
+        {
+          "claim_id": "boa-rvc-burns",
+          "source_id": "rvc-boa",
+          "section": "cautions",
+          "fact_key": "heat_burns",
+          "label": "Heat source safety",
+          "context": "captive heating",
+          "scope": "Boa constrictor",
+          "value_text": "Guard heat sources to prevent burns and measure enclosure temperatures."
+        },
+        {
+          "claim_id": "boa-rvc-hygiene",
+          "source_id": "rvc-boa",
+          "section": "cautions",
+          "fact_key": "salmonella_hygiene",
+          "label": "Handling hygiene",
+          "context": "keeper handling",
+          "scope": "Boa constrictor",
+          "value_text": "Wash hands after handling; reptiles can carry Salmonella."
+        }
+      ]
+    }
+  ]
+}

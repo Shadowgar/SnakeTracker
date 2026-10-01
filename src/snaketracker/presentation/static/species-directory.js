@@ -13,6 +13,7 @@
     let timer = null;
     let controller = null;
     let activeIndex = -1;
+    let generation = 0;
 
     const referenceRoot = form.querySelector("[data-reference-photo]");
     const referenceImage = referenceRoot?.querySelector("[data-reference-photo-image]");
@@ -70,6 +71,7 @@
         });
         if (!response.ok) return;
         const payload = await response.json();
+        if (taxonId.value !== selectedTaxonId) return;
         const morphs = Array.isArray(payload.morphs) ? payload.morphs : [];
         const genetics = Array.isArray(payload.genetics) ? payload.genetics : [];
         setIdentityOptions(morphSuggestions, morphs);
@@ -100,6 +102,8 @@
       updateReferencePlaceholder();
       if (referenceOptions) referenceOptions.hidden = true;
       if (referenceCopy) referenceCopy.textContent = copy;
+      const preference = form.querySelector('input[type="hidden"][name="photo_preference"]');
+      if (preference) preference.value = "none";
       const noPhoto = form.querySelector('input[name="photo_preference"][value="none"]');
       if (noPhoto) noPhoto.checked = true;
     };
@@ -116,12 +120,15 @@
         referenceImage.alt = `Species reference image for ${row.dataset.commonName || row.dataset.scientificName}`;
         referenceImage.hidden = false;
       }
+      const preference = form.querySelector('input[type="hidden"][name="photo_preference"]');
+      if (preference) preference.value = "species_reference";
       if (referencePlaceholder) referencePlaceholder.hidden = true;
       if (referenceOptions) referenceOptions.hidden = false;
       if (referenceCopy) referenceCopy.textContent = `Species reference image available · ${(row.dataset.imageLicenseCode || "").replaceAll("-", " ").toUpperCase()} · ${row.dataset.imageCreator || "attribution available"}. This is a general photo of the species, not your individual animal.`;
     };
     const loadReferencePhoto = async (row) => {
       if (!referenceRoot) return;
+      const selectedId = row.dataset.taxonId;
       if (referenceCopy) referenceCopy.textContent = "Finding a licensed species image…";
       try {
         const response = await fetch(`/api/directory/${encodeURIComponent(row.dataset.taxonId || "")}/reference-image`, {
@@ -129,6 +136,7 @@
           headers: { Accept: "application/json" },
         });
         const payload = await response.json();
+        if (taxonId.value !== selectedId) return;
         if (!response.ok || payload.available !== true) {
           showUnavailableReferencePhoto();
           return;
@@ -139,7 +147,7 @@
         row.dataset.imageLicenseCode = payload.license_code || "";
         showReferencePhoto(row);
       } catch (_error) {
-        showUnavailableReferencePhoto();
+        if (taxonId.value === selectedId) showUnavailableReferencePhoto();
       }
     };
     referenceImage?.addEventListener("error", showUnavailableReferencePhoto);
@@ -174,6 +182,10 @@
       active.scrollIntoView({ block: "nearest" });
     };
     const select = (row) => {
+      if (!row || row.dataset.group !== groupInput?.value) return;
+      controller?.abort();
+      generation += 1;
+      window.clearTimeout(timer);
       taxonId.value = row.dataset.taxonId || "";
       input.value = row.dataset.commonName || row.dataset.scientificName || "";
       status.textContent = `Selected ${input.value}, ${row.dataset.scientificName}.`;
@@ -183,7 +195,12 @@
     };
     const render = (payload) => {
       list.replaceChildren();
-      const records = Array.isArray(payload.records) ? payload.records : [];
+      const records = Array.isArray(payload?.records) ? payload.records.filter(record =>
+        record && record.group === groupInput?.value &&
+        typeof record.taxon_id === "string" && /^[0-9a-f-]{36}$/i.test(record.taxon_id) &&
+        typeof record.scientific_name === "string" && record.scientific_name.length <= 300 &&
+        (record.common_name == null || typeof record.common_name === "string")
+      ).slice(0, 20) : [];
       records.forEach((record, index) => {
         const row = document.createElement("li");
         row.id = `${input.id}-option-${index}`;
@@ -191,6 +208,7 @@
         row.setAttribute("aria-selected", "false");
         row.tabIndex = -1;
         row.dataset.taxonId = record.taxon_id;
+        row.dataset.group = record.group;
         row.dataset.commonName = record.common_name || "";
         row.dataset.scientificName = record.scientific_name;
         row.dataset.referenceImageAvailable = String(record.reference_image_available === true);
@@ -222,6 +240,7 @@
       }
     };
     const search = async () => {
+      const requestGeneration = generation;
       const query = input.value.trim();
       const group = groupInput ? groupInput.value : "";
       if (query.length < 2) {
@@ -239,16 +258,20 @@
           signal: controller.signal,
         });
         const payload = await response.json();
-        if (!response.ok && !payload.records) throw new Error("search unavailable");
+        if (requestGeneration !== generation) return;
+        if (!response.ok && !payload?.records) throw new Error("search unavailable");
         render(payload);
       } catch (error) {
-        if (error.name === "AbortError") return;
+        if (error.name === "AbortError" || requestGeneration !== generation) return;
         close();
         status.textContent = "Species search is temporarily unavailable. You can enter the species manually.";
       }
     };
 
     input.addEventListener("input", () => {
+      controller?.abort();
+      generation += 1;
+      close();
       taxonId.value = "";
       resetReferencePhoto();
       loadIdentitySuggestions("");
@@ -271,6 +294,9 @@
     });
     input.addEventListener("blur", () => window.setTimeout(close, 120));
     groupInput?.addEventListener("change", () => {
+      controller?.abort();
+      generation += 1;
+      window.clearTimeout(timer);
       taxonId.value = "";
       resetReferencePhoto();
       updateMorphExample();
@@ -280,6 +306,17 @@
     if (nameInput instanceof HTMLInputElement) {
       nameInput.addEventListener("input", updateReferencePlaceholder);
     }
+    root.querySelector("[data-manual-species]")?.addEventListener("click", () => {
+      controller?.abort();
+      generation += 1;
+      window.clearTimeout(timer);
+      taxonId.value = "";
+      close();
+      resetReferencePhoto();
+      loadIdentitySuggestions("");
+      status.textContent = "Manual species entry selected. You can save with the text you entered; no Directory selection or reference photo is required.";
+      input.focus();
+    });
     updateReferencePlaceholder();
     updateMorphExample();
   });

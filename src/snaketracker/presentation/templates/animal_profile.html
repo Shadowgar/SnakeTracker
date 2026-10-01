@@ -41,15 +41,30 @@
       {% if linked_taxon and profile_reference_guide %}
         <p class="profile-reference-intro">Reviewed reference guidance for <i>{{ linked_taxon.taxon.accepted_scientific_name }}</i> · Version {{ profile_reference_guide.version }}</p>
         <p class="profile-reference-boundary">Species reference — not your Animal's individual records or care settings.</p>
-        {% if profile_reference_facts %}<dl class="profile-reference-grid">{% for label, claims, state in profile_reference_facts %}<div class="profile-reference-fact"><dt>{{ label }}{% if claims[0].life_stage %} · {{ claims[0].life_stage }}{% endif %}</dt><dd><strong>{% if state == 'Sources differ' %}Sources differ{% else %}{{ format_claim_value(claims[0]) }}{% endif %}</strong><span class="guide-state {% if state == 'Sources differ' %}guide-state-differ{% elif state == 'Corroborated' %}guide-state-corroborated{% else %}guide-state-single{% endif %}">{{ state }}</span></dd></div>{% endfor %}</dl>{% endif %}
-        <a class="profile-reference-action" href="/directory/{{ linked_taxon.taxon.taxon_id }}/care-guide">View full Care Guide →</a>
+        {% include "profile_reference_content.html" %}
+        <a class="profile-reference-action" href="/directory/{{ linked_taxon.taxon.taxon_id }}/care-guide">Browse standalone Care Guide →</a>
       {% elif linked_taxon %}
         <p class="profile-reference-boundary">Species reference — not your Animal's individual records or care settings.</p>
         <p class="profile-reference-empty">No reviewed species guidance available yet.</p>
         <a class="profile-reference-action" href="/directory/{{ linked_taxon.taxon.taxon_id }}">View species in Directory →</a>
       {% else %}
         <p class="profile-reference-empty">Link a species to see reviewed guidance.</p>
-        <a class="profile-reference-action" href="/animals/{{ animal.animal_id }}/species">Find species reference →</a>
+        <form class="form-stack" method="post" action="/animals/{{ animal.animal_id }}/species" data-taxon-form>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="idempotency_key" value="{{ command_id }}">
+          <input type="hidden" name="animal_type" value="{{ animal.animal_type }}">
+          <div class="taxon-combobox" data-taxon-combobox data-group-field="animal_type">
+            <label for="profile-species-search">Find species reference</label>
+            <div class="taxon-input-results">
+              <input id="profile-species-search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="profile-species-results" aria-describedby="profile-species-help profile-species-status">
+              <ul id="profile-species-results" class="taxon-results" role="listbox" hidden data-taxon-results></ul>
+            </div>
+            <input type="hidden" name="taxon_id" data-taxon-id required>
+            <p id="profile-species-help" class="field-help">Your manual species record is valid. Choose an exact Directory result and confirm here to link reference information.</p>
+            <p id="profile-species-status" class="field-help" role="status" aria-live="polite" data-taxon-status></p>
+          </div>
+          <button type="submit">Confirm species link</button>
+        </form>
       {% endif %}
     </section>
     </div>
@@ -68,3 +83,5 @@
   </div>
 </section>
 {% endblock %}
+
+{% block scripts %}<script src="/static/species-directory.js?v=m66b-correction-v3" defer></script>{% endblock %}

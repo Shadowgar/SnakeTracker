@@ -22,7 +22,9 @@ from snaketracker.domains.animals.contracts import (
     AnimalFeedingRecordedV1,
     AnimalFeedingRecordedV2,
     AnimalLengthCorrectedV1,
+    AnimalLengthCorrectedV2,
     AnimalLengthRecordedV1,
+    AnimalLengthRecordedV2,
     AnimalMoltCorrectedV1,
     AnimalMoltCorrectedV2,
     AnimalMoltRecordedV1,
@@ -791,7 +793,15 @@ def _qualifies(reminder_type: str, event: DomainEvent) -> bool:
         )
         or (
             reminder_type == "length"
-            and isinstance(payload, (AnimalLengthRecordedV1, AnimalLengthCorrectedV1))
+            and isinstance(
+                payload,
+                (
+                    AnimalLengthRecordedV1,
+                    AnimalLengthCorrectedV1,
+                    AnimalLengthRecordedV2,
+                    AnimalLengthCorrectedV2,
+                ),
+            )
         )
         or (reminder_type == "bath" and isinstance(payload, AnimalBathRecordedV1))
         or (

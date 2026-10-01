@@ -1,0 +1,30 @@
+{
+  "architecture_freeze": "43 accepted, 5 proposed, 0 superseded ADRs unchanged",
+  "artifacts_sha256": {
+    "coverage.json": "cc6ca3b3415fd9fba2f01abf6138eb41e8a68e2d2f3c652b847f840d0cef9637",
+    "coverage.xml": "e9e418280c1bb6c7de1ca4e39d1b28bc933b392b80aaf4f39418960746ff2b5e",
+    "junit.xml": "a680eaa15af7df07965bde297af4ac1a635d350d96ad71fed4b9f8c519ab5455"
+  },
+  "branch_percent": 85.27,
+  "command": "TMPDIR=/dev/shm/extensible-baseline-jpq9nv3z ./scripts/quality/check.sh",
+  "coverage_thresholds_unchanged": true,
+  "dependency_audit": "no known vulnerabilities",
+  "exit_code": 0,
+  "failures": 0,
+  "formatted_files": 533,
+  "frozen_sync_packages": 75,
+  "full_gate_log_sha256": "d296ac1688e090b8d6b2918a67363e3cc632a85b7c038eaee1cc5f09a382f074",
+  "line_percent": 94.46,
+  "mypy_source_files": 154,
+  "prior_gate": {
+    "failed": 1,
+    "failure": "Boa import test broad owner-review fixture exceeded unchanged30s timeout; coverage isolation reproduced; replaced with bounded populated real command paths; all non-guide-table hashes retained.",
+    "passed": 857,
+    "seconds": 711.94
+  },
+  "pytest_seconds": 554.64,
+  "release_status": "blocked by incomplete encrypted historical attachment backup; no Pi deployment",
+  "test_timeout_seconds_unchanged": 30,
+  "tests": 868,
+  "warnings": 172
+}

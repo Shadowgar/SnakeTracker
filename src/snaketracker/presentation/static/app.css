@@ -1727,3 +1727,11 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
   .profile-reference-grid { grid-template-columns: 1fr; }
   .profile-reference-fact { padding: .65rem .75rem; }
 }
+
+/* Reviewed species guidance stays on the Animal Overview at every viewport. */
+.profile-reference-section { min-width: 0; display: grid; gap: .65rem; }
+.profile-reference-section h3, .profile-reference-section h4 { margin: .35rem 0; }
+.overview-reference .guide-fact-grid { grid-template-columns: minmax(0, 1fr); }
+.overview-reference .guide-fact { min-width: 0; }
+.overview-reference .guide-disclosure a { overflow-wrap: anywhere; }
+.taxon-combobox [data-manual-species] { margin-top: .5rem; width: 100%; }

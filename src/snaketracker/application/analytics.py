@@ -9,6 +9,11 @@ from itertools import pairwise
 from uuid import UUID
 
 from snaketracker.application.animals import AnimalProfile, AnimalService
+from snaketracker.application.length_measurements import (
+    format_length_payload,
+    length_entered_unit,
+    length_mm_decimal,
+)
 from snaketracker.application.projected_events import ProjectedEventReader
 from snaketracker.application.suggestion_policy import (
     CareWindowEstimate,
@@ -25,7 +30,9 @@ from snaketracker.domains.animals.contracts import (
     AnimalFeedingRecordedV1,
     AnimalFeedingRecordedV2,
     AnimalLengthCorrectedV1,
+    AnimalLengthCorrectedV2,
     AnimalLengthRecordedV1,
+    AnimalLengthRecordedV2,
     AnimalMoltCorrectedV1,
     AnimalMoltCorrectedV2,
     AnimalMoltRecordedV1,
@@ -51,6 +58,7 @@ class MeasurementPoint:
     value: Decimal | int
     unit: str
     display_value: str
+    display_unit: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,11 +146,24 @@ class AnimalAnalyticsService:
                     "animal.length_corrected",
                 }
                 and ("length" in capability.analytics_kinds)
-                and isinstance(payload, (AnimalLengthRecordedV1, AnimalLengthCorrectedV1))
+                and isinstance(
+                    payload,
+                    (
+                        AnimalLengthRecordedV1,
+                        AnimalLengthCorrectedV1,
+                        AnimalLengthRecordedV2,
+                        AnimalLengthCorrectedV2,
+                    ),
+                )
             ):
                 measurements.append(
                     MeasurementPoint(
-                        "length", event.occurred_at, payload.length_mm, "mm", str(payload.length_mm)
+                        "length",
+                        event.occurred_at,
+                        length_mm_decimal(payload),
+                        "mm",
+                        format_length_payload(payload),
+                        length_entered_unit(payload),
                     )
                 )
             elif (

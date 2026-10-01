@@ -21,7 +21,9 @@ from snaketracker.domains.animals.contracts import (
     AnimalFeedingRecordedV1,
     AnimalFeedingRecordedV2,
     AnimalLengthCorrectedV1,
+    AnimalLengthCorrectedV2,
     AnimalLengthRecordedV1,
+    AnimalLengthRecordedV2,
     AnimalMoltCorrectedV1,
     AnimalMoltCorrectedV2,
     AnimalMoltRecordedV1,
@@ -42,6 +44,7 @@ from snaketracker.domains.animals.contracts import (
     AnimalWeightRecordedV1,
     AnimalWeightRecordedV2,
 )
+from snaketracker.domains.animals.measurements import validate_length_tuple
 from snaketracker.domains.enclosures.contracts import (
     ENCLOSURE_STATUSES,
     EnclosureCleaningRecordedV1,
@@ -704,6 +707,29 @@ def _deserialize_animal_length_corrected(data: Mapping[str, object]) -> EventPay
     )
 
 
+def _length_v2_fields(data: Mapping[str, object]) -> tuple[int, int, int, str]:
+    values = (
+        data["length_um"],
+        data["entered_value_scaled"],
+        data["entered_scale"],
+        data["entered_unit"],
+    )
+    validate_length_tuple(*values)
+    return cast(tuple[int, int, int, str], values)
+
+
+def _deserialize_animal_length_recorded_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalLengthRecordedV2, data)
+    return AnimalLengthRecordedV2(*_length_v2_fields(data))
+
+
+def _deserialize_animal_length_corrected_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalLengthCorrectedV2, data)
+    return AnimalLengthCorrectedV2(
+        _uuid_field(data, "target_event_id", "length correction"), *_length_v2_fields(data)
+    )
+
+
 def _length_mm(data: Mapping[str, object]) -> int:
     length_mm = data["length_mm"]
     if type(length_mm) is not int:
@@ -955,7 +981,43 @@ ANIMAL_HUSBANDRY_CONTRACTS = (
         payload_type=AnimalLengthCorrectedV1,
         deserialize_payload=_deserialize_animal_length_corrected,
         subject_requirements=(SubjectRequirement("animal", "primary"),),
-        correction=CorrectionCapabilities(voidable=True, reinstatable=True, required_role="owner"),
+        correction=CorrectionCapabilities(
+            correctable=True,
+            voidable=True,
+            reinstatable=True,
+            required_role="owner",
+            correction_event_types=("animal.length_corrected",),
+        ),
+    ),
+    EventContractRegistration(
+        event_type="animal.length_recorded",
+        schema_version=2,
+        owner="animals.husbandry",
+        payload_type=AnimalLengthRecordedV2,
+        deserialize_payload=_deserialize_animal_length_recorded_v2,
+        subject_requirements=(SubjectRequirement("animal", "primary"),),
+        correction=CorrectionCapabilities(
+            correctable=True,
+            voidable=True,
+            reinstatable=True,
+            required_role="owner",
+            correction_event_types=("animal.length_corrected",),
+        ),
+    ),
+    EventContractRegistration(
+        event_type="animal.length_corrected",
+        schema_version=2,
+        owner="animals.husbandry",
+        payload_type=AnimalLengthCorrectedV2,
+        deserialize_payload=_deserialize_animal_length_corrected_v2,
+        subject_requirements=(SubjectRequirement("animal", "primary"),),
+        correction=CorrectionCapabilities(
+            correctable=True,
+            voidable=True,
+            reinstatable=True,
+            required_role="owner",
+            correction_event_types=("animal.length_corrected",),
+        ),
     ),
     EventContractRegistration(
         event_type="animal.shed_recorded",
