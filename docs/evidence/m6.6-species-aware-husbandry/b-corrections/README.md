@@ -3,6 +3,8 @@
 Status: five objectives implemented; final full quality gate passed. Production release is
 blocked by incomplete encrypted attachment history. PR #17 remains draft; owner acceptance pending.
 Authority: owner's October 1 production-correctness request. ADR-0044 and ADR-0048 remain Proposed.
+Verified implementation source: `859ca2964953b26657cf4699bc128ac646c347e4`. A following evidence-only commit records this identity;
+production source/tests/reference/scripts are identical to the fully qualified implementation.
 
 ## Bounded implementation and qualification sequence
 
@@ -173,7 +175,7 @@ freeze, documentation, typing, Compose configuration and diff checks passed.
 **1027**, UTC clock **2026-10-01T07:20:17+00:00**, schema **0023_sourced_care_guides**.
 Old reads/rebuild ran in the actual deployed image `snaketracker:m66b-profile-c4740b3`, revision
 `c4740b32c1b80f054725c0a037d47689bc283474`, with network disabled. Candidate used the reviewed
-working tree. Both refreshed manifests have 1,373 successful application read dimensions; comparison
+working tree, then was recaptured at committed source `859ca2964953b26657cf4699bc128ac646c347e4` with a second passing comparison. Both refreshed manifests have 1,373 successful application read dimensions; comparison
 covers 64 table/view content dimensions and 114 normalized schema objects, with no unexpected
 differences. Expected changes are only Boa rows in four reference tables and validated release
 registry/handler/source evolution. A first comparison detected 21 length documents whose source

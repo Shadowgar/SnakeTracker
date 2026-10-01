@@ -1,7 +1,8 @@
 {
   "backup_gate": "blocked: encrypted archive restores 40 current versions; 46 immutable versions exist; six isolated diagnostic supplemental files are outside encrypted backup",
-  "candidate_release": "candidate-worktree-3432cb5",
+  "candidate_release": "859ca2964953b26657cf4699bc128ac646c347e4",
   "clock": "2026-10-01T07:20:17.000000+00:00",
+  "committed_candidate_comparison": "passed; zero unexpected differences",
   "consumer_qualification": {
     "changed_command_conflicts": 61,
     "http": {
@@ -60,8 +61,10 @@
   },
   "old_release": "c4740b32c1b80f054725c0a037d47689bc283474",
   "private_artifact_sha256": {
+    "candidate-manifest-859ca29.json": "52f714e07a36f21b19a05b9d878a4a7faffb246cc6033480eee7be6c10843f45",
     "candidate-manifest-final.json": "caa4c68701e4fad29c8811c8e45bc739a6b3e004bd5907dcad5cc302bd7c5912",
     "candidate-rebuild-final.json": "f432bc6099c36ad2a2470fea68d3476ceda0ae43e4ddf6e0690599408c94a37d",
+    "comparison-859ca29.json": "84bfb653c87dfd8a27926fb3f427be7a39f3a04b1a1094d6f631485e04a6e88c",
     "comparison-final.json": "84bfb653c87dfd8a27926fb3f427be7a39f3a04b1a1094d6f631485e04a6e88c",
     "consumer-qualification.json": "12b26905799aaf92bb18f56c17b7df54f260ea066ab3da411debb3f7cd243818",
     "old-binary-rejection.json": "27a02305bd3ba910c58fa9e058285e1c39affa3697a0d5f7e6b985b43916e559",

@@ -16,6 +16,7 @@
   "full_gate_log_sha256": "d296ac1688e090b8d6b2918a67363e3cc632a85b7c038eaee1cc5f09a382f074",
   "line_percent": 94.46,
   "mypy_source_files": 154,
+  "post_gate_changes": "Only evidence documentation changed after the full gate; product, tests, guide and qualification scripts match this source commit.",
   "prior_gate": {
     "failed": 1,
     "failure": "Boa import test broad owner-review fixture exceeded unchanged30s timeout; coverage isolation reproduced; replaced with bounded populated real command paths; all non-guide-table hashes retained.",
@@ -26,5 +27,12 @@
   "release_status": "blocked by incomplete encrypted historical attachment backup; no Pi deployment",
   "test_timeout_seconds_unchanged": 30,
   "tests": 868,
+  "verified_source_commit": "859ca2964953b26657cf4699bc128ac646c347e4",
+  "verified_source_tree_ids": {
+    "reference/care-guides": "6a9562ff60ab742c0cb01c544d435f04217d0efd",
+    "scripts/qualification": "d7078a30cc2692f50676fa2755c6b1040c6e52fe",
+    "src": "3e403d018ec97f979584127fb190d3c312052227",
+    "tests": "c1bfd046cf4088b374f4729e3c45612cf2dfbec2"
+  },
   "warnings": 172
 }
