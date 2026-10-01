@@ -1,0 +1,505 @@
+{
+  "attachments": {
+    "all_media_bytes_preserved": true,
+    "all_media_files_after": 77,
+    "all_media_files_before": 77,
+    "every_file_hash_and_size_valid": true,
+    "finalized_versions_after": 46,
+    "finalized_versions_before": 46,
+    "metadata_compared": [
+      "version_id",
+      "storage_key",
+      "media_type",
+      "sha256",
+      "size_bytes"
+    ],
+    "metadata_equal": true,
+    "mismatches": 0,
+    "version_metadata_digest": "9f06a3a20b0daf5acd4846ea9846f2e312b8cebab13e03684168fbd08b84f615"
+  },
+  "authority": "Owner October 1 M6.6-B live owner-review deployment request",
+  "backup": {
+    "archive_unchanged": true,
+    "attachments": 46,
+    "event_cutoff": 1027,
+    "manifest_checksum": "11878c2e09ed66b833a64543a2d2cc7b7fae44f7b9ea8cecf0a6498994aebd76",
+    "postdeployment_reverified": true,
+    "run_id": "8777f5b4-545e-4384-81e6-e50c99553bb8",
+    "schema": "0023_sourced_care_guides",
+    "status": "verified"
+  },
+  "boa": {
+    "bundle_sha256": "4c70f16e78be29257d63b1ecb6b619fa93a0db0386ed8c52a3f2135fc02ca5a7",
+    "contextual_facts": 28,
+    "execution": "Exact candidate CLI in network-none/read-only-root container; reviewed JSON read-only; explicit absolute existing production DB; only runtime DB directory writable",
+    "guides": 1,
+    "imported_versions": 1,
+    "rerun_identical_versions": 1,
+    "rerun_imported_versions": 0,
+    "rerun_sql_writes": 0,
+    "source_records": 7,
+    "sourced_positions": 34,
+    "species": "Boa constrictor",
+    "sql_write_target_guard": true,
+    "support_states": {
+      "Corroborated": 2,
+      "Single source": 22,
+      "Sources differ": 4
+    },
+    "version": 1
+  },
+  "boundaries": {
+    "adr0044": "Proposed",
+    "adr0048": "Proposed",
+    "amphibians_added": false,
+    "bulk_taxonomy_started": false,
+    "m66b_accepted": false,
+    "m66c_started": false,
+    "pr17": "open/draft/unmerged",
+    "x1_started": false
+  },
+  "candidate": {
+    "all_installed_versions_in_frozen_lock": true,
+    "boa_bundle_packaged": false,
+    "build_sha": "f1d4d33c27bdb79be31b7c9fbf33b5291c036377",
+    "command": [
+      "uvicorn",
+      "snaketracker.bootstrap.application:application_factory",
+      "--factory",
+      "--host",
+      "0.0.0.0",
+      "--port",
+      "8000",
+      "--workers",
+      "1"
+    ],
+    "gid": 1001,
+    "image_id": "sha256:233530ff12ca8173872f4211e224d554c6c7b3988d1b6f519588f1a113a5c8df",
+    "image_tag": "snaketracker:m66b-owner-review-f1d4d33",
+    "image_user": "snaketracker",
+    "installed_distributions": 35,
+    "lock_sha256": "5b046571bf29654e77386dbfdc29890e57c5ebb7196dc71321979b977e25502d",
+    "migration_heads": [
+      "0023_sourced_care_guides"
+    ],
+    "oci_revision": "f1d4d33c27bdb79be31b7c9fbf33b5291c036377",
+    "pyproject_sha256": "a2286fb6433b27d1e525e499d5d20a5541d2851afd4b7ac4812fa62eb25ebfc5",
+    "uid": 1001
+  },
+  "captured_at": "2026-10-01T10:11:42.290752+00:00",
+  "deployment": {
+    "dotenv_changed": false,
+    "maintenance_end": "2026-10-01T09:57:13Z",
+    "maintenance_seconds": 15,
+    "maintenance_start": "2026-10-01T09:56:58Z",
+    "migrate_invoked": false,
+    "old_containers": {
+      "snaketracker-nginx-1": {
+        "container_id": "6c6ced7e7aa63ccb376dc43a8af45301d5aaef417b7a0bfcf0f6263f273792e2",
+        "health": "healthy",
+        "image_id": "sha256:faf280afcb57d1269dee9097230e104260d67de6be94156082e10504f954dc2e",
+        "image_tag": "nginx@sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e",
+        "revision": null,
+        "started_at": "2026-09-27T18:03:12.304321318Z",
+        "state": "running"
+      },
+      "snaketracker-web-1": {
+        "container_id": "a57a9ce7807090c060f6ce9eb634d3431caf9c730f5546003281b068aa5ce315",
+        "health": "healthy",
+        "image_id": "sha256:5fe071ea797a7d723f5b40df5454aa7405cfbaf91037adf18bb13e80f0362771",
+        "image_tag": "snaketracker:m66b-profile-c4740b3",
+        "revision": "c4740b32c1b80f054725c0a037d47689bc283474",
+        "started_at": "2026-09-27T18:03:12.911535114Z",
+        "state": "running"
+      },
+      "snaketracker-worker-1": {
+        "container_id": "498dc5afc79bfbee03198a8891482d94e77906d8ce0ffd9b588d17b4a26b3901",
+        "health": "healthy",
+        "image_id": "sha256:5fe071ea797a7d723f5b40df5454aa7405cfbaf91037adf18bb13e80f0362771",
+        "image_tag": "snaketracker:m66b-profile-c4740b3",
+        "revision": "c4740b32c1b80f054725c0a037d47689bc283474",
+        "started_at": "2026-10-01T09:05:49.478622272Z",
+        "state": "running"
+      }
+    },
+    "recreate_command": "SNAKETRACKER_IMAGE_TAG=m66b-owner-review-f1d4d33 docker compose up -d --no-deps --no-build --pull never --force-recreate --wait --wait-timeout 120 web worker",
+    "runtime_settings_and_mounts_preserved": true,
+    "services": {
+      "/health/live": {
+        "body": "{\"status\":\"alive\"}",
+        "status": 200
+      },
+      "/health/ready": {
+        "body": "{\"status\":\"ready\"}",
+        "status": 200
+      },
+      "candidate_sha": "f1d4d33c27bdb79be31b7c9fbf33b5291c036377",
+      "dotenv_unchanged": true,
+      "migrate_untouched": true,
+      "mounts_and_settings_unchanged": true,
+      "snaketracker-nginx-1": {
+        "container_id": "6c6ced7e7aa63ccb376dc43a8af45301d5aaef417b7a0bfcf0f6263f273792e2",
+        "health": "healthy",
+        "image_id": "sha256:faf280afcb57d1269dee9097230e104260d67de6be94156082e10504f954dc2e",
+        "image_tag": "nginx@sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e",
+        "revision": null,
+        "started_at": "2026-09-27T18:03:12.304321318Z",
+        "state": "running"
+      },
+      "snaketracker-web-1": {
+        "container_id": "f6dbd7fed55f10c1fb240232599f57f423500e86250a66a3e4aaf22f462a63b4",
+        "health": "healthy",
+        "image_id": "sha256:233530ff12ca8173872f4211e224d554c6c7b3988d1b6f519588f1a113a5c8df",
+        "image_tag": "snaketracker:m66b-owner-review-f1d4d33",
+        "revision": "f1d4d33c27bdb79be31b7c9fbf33b5291c036377",
+        "started_at": "2026-10-01T09:57:03.06567484Z",
+        "state": "running"
+      },
+      "snaketracker-worker-1": {
+        "container_id": "27248445f64362771a482e9ecae53b96d3bcefaa9fdd126ecd207c9f44777297",
+        "health": "healthy",
+        "image_id": "sha256:233530ff12ca8173872f4211e224d554c6c7b3988d1b6f519588f1a113a5c8df",
+        "image_tag": "snaketracker:m66b-owner-review-f1d4d33",
+        "revision": "f1d4d33c27bdb79be31b7c9fbf33b5291c036377",
+        "started_at": "2026-10-01T09:57:02.756614662Z",
+        "state": "running"
+      },
+      "tunnel_unchanged": true
+    },
+    "stop_order": [
+      "worker",
+      "web"
+    ],
+    "storage": "Existing local ext4 runtime path retained on host SD storage; no SSD qualification or storage relocation claimed"
+  },
+  "external_health": {
+    "automated_python_user_agent": {
+      "body_excerpt": "error code: 1010\n",
+      "headers": {
+        "content-type": "text/plain; charset=UTF-8",
+        "server": "cloudflare"
+      },
+      "status": 403
+    },
+    "browser_user_agent": {
+      "body_excerpt": "{\"status\":\"ready\"}",
+      "method": "GET health/ready with browser user-agent; no authentication or policy changes",
+      "status": 200
+    },
+    "cloudflare_configuration_unchanged": true
+  },
+  "github_qualified_source": {
+    "headRefOid": "f1d4d33c27bdb79be31b7c9fbf33b5291c036377",
+    "isDraft": true,
+    "mergeable": "MERGEABLE",
+    "mergedAt": null,
+    "number": 17,
+    "state": "OPEN",
+    "statusCheckRollup": [
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T09:14:53Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/Shadowgar/SnakeTracker/actions/runs/36841244452/job/110300609931",
+        "name": "container",
+        "startedAt": "2026-10-01T09:12:52Z",
+        "status": "COMPLETED",
+        "workflowName": "Container"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T09:19:11Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/Shadowgar/SnakeTracker/actions/runs/36841244448/job/110300610408",
+        "name": "quality",
+        "startedAt": "2026-10-01T09:12:53Z",
+        "status": "COMPLETED",
+        "workflowName": "Quality"
+      },
+      {
+        "__typename": "StatusContext",
+        "context": "CodeRabbit",
+        "startedAt": "2026-10-01T09:12:54Z",
+        "state": "SUCCESS",
+        "targetUrl": ""
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T09:12:49Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://dashboard.gitguardian.com",
+        "name": "GitGuardian Security Checks",
+        "startedAt": "2026-10-01T09:12:48Z",
+        "status": "COMPLETED",
+        "workflowName": ""
+      }
+    ],
+    "url": "https://github.com/Shadowgar/SnakeTracker/pull/17"
+  },
+  "integrity": {
+    "all_nonboa_guide_rows_preserved": true,
+    "event_cutoff_after": 1027,
+    "event_cutoff_before": 1027,
+    "expected_logical_changes": [
+      "care_guide_claims",
+      "care_guide_current",
+      "care_guide_sources",
+      "care_guide_versions",
+      "projection:global_search_fts:content",
+      "projection:global_search_fts:fts"
+    ],
+    "import_normalized_changes": [
+      "backup_leases",
+      "care_guide_claims",
+      "care_guide_current",
+      "care_guide_sources",
+      "care_guide_versions"
+    ],
+    "import_operational_lease_note": "Normal worker polling transiently changes backup_leases; no request or backup initiated by deployment",
+    "raw_changed_existing_tables": [
+      "care_guide_claims",
+      "care_guide_current",
+      "care_guide_sources",
+      "care_guide_versions",
+      "projection_checkpoints",
+      "projection_definitions",
+      "projection_generations",
+      "reminder_facts"
+    ],
+    "reminder_facts": {
+      "expected_raw_change": "calculated_at only",
+      "normalized_equal": true,
+      "rows": 22
+    },
+    "unchanged_logical_dimensions": 55,
+    "unexpected_logical_changes": [],
+    "users_memberships_animals_links_enclosures_plants_inventory_care_purchases_expenses_rules_schedules_events_attachments_unchanged": true
+  },
+  "mobile": {
+    "checks": [
+      {
+        "name": "animal-profile-inline-reference",
+        "overflow": false,
+        "scroll": 390,
+        "smallControls": 0,
+        "viewport": 390
+      },
+      {
+        "name": "reference-sources-expanded",
+        "overflow": false,
+        "scroll": 390,
+        "smallControls": 0,
+        "viewport": 390
+      },
+      {
+        "name": "length-entry-48-5-in",
+        "overflow": false,
+        "scroll": 390,
+        "smallControls": 0,
+        "viewport": 390
+      },
+      {
+        "name": "manual-spider-unsaved",
+        "overflow": false,
+        "scroll": 390,
+        "smallControls": 0,
+        "viewport": 390
+      }
+    ],
+    "external_requests": 0,
+    "method": "Real read-only production GET-handler HTML and exact candidate static assets replayed locally; no production login or writes; empty search response stub and visual placeholder for layout only",
+    "post_requests": 0,
+    "viewport": {
+      "height": 844,
+      "width": 390
+    }
+  },
+  "owner_review": {
+    "flows": [
+      "Unknown Spider/manual entry",
+      "Explicit same-save taxon selection",
+      "Bitey inline Boa reference and sources",
+      "Real fractional length 48.5 in = 1231900 um = 1231.9 mm; history, correction, reminders, export",
+      "390x844 profile/reference/length/manual species"
+    ],
+    "origin": "https://tracker.theroccos.us",
+    "owner_browser_acceptance_pending": true,
+    "production_fake_animals_or_care_events_created": false,
+    "routes": [
+      "/animals/new",
+      "/animals",
+      "/animals/{Bitey ID}",
+      "/animals/{Bitey ID}/lengths/new"
+    ]
+  },
+  "rollback": {
+    "normal_readiness": false,
+    "note": "Old image refuses stored handler 5; a plain container-only downgrade is unsafe. No compatibility bypass, catalog downgrade, guide deletion or database restore was performed.",
+    "performed": false,
+    "reason": "projection_definition_newer"
+  },
+  "schema": {
+    "after": "0023_sourced_care_guides",
+    "all_original_raw_objects_preserved": true,
+    "before": "0023_sourced_care_guides",
+    "expected_change": "Worker rotated derived global_search_fts generation for handler 4 to 5; retained old generation; no Alembic migration",
+    "new_objects": [
+      {
+        "name": "global_search_fts_content_g_75775a0dbfc7",
+        "type": "table"
+      },
+      {
+        "name": "global_search_fts_content_g_75775a0dbfc7_household_kind",
+        "type": "index"
+      },
+      {
+        "name": "global_search_fts_fts_g_75775a0dbfc7",
+        "type": "table"
+      },
+      {
+        "name": "global_search_fts_fts_g_75775a0dbfc7_config",
+        "type": "table"
+      },
+      {
+        "name": "global_search_fts_fts_g_75775a0dbfc7_content",
+        "type": "table"
+      },
+      {
+        "name": "global_search_fts_fts_g_75775a0dbfc7_data",
+        "type": "table"
+      },
+      {
+        "name": "global_search_fts_fts_g_75775a0dbfc7_docsize",
+        "type": "table"
+      },
+      {
+        "name": "global_search_fts_fts_g_75775a0dbfc7_idx",
+        "type": "table"
+      }
+    ],
+    "normalized_definitions_equal": true,
+    "normalized_objects": 114,
+    "raw_objects_after": 148,
+    "raw_objects_before": 140
+  },
+  "worker": {
+    "active_checkpoints": [
+      {
+        "handler": 2,
+        "name": "dashboard_statistics",
+        "position": 1027
+      },
+      {
+        "handler": 2,
+        "name": "feeding_analytics",
+        "position": 1027
+      },
+      {
+        "handler": 2,
+        "name": "husbandry_recommendations",
+        "position": 1027
+      },
+      {
+        "handler": 2,
+        "name": "measurement_analytics",
+        "position": 1027
+      },
+      {
+        "handler": 2,
+        "name": "report_facts",
+        "position": 1027
+      },
+      {
+        "handler": 5,
+        "name": "global_search_fts",
+        "position": 1027
+      },
+      {
+        "handler": 1,
+        "name": "cash_spend_facts",
+        "position": 1027
+      },
+      {
+        "handler": 2,
+        "name": "inventory_costing",
+        "position": 1027
+      },
+      {
+        "handler": 1,
+        "name": "inventory_intelligence",
+        "position": 1027
+      }
+    ],
+    "backup_worker_available": true,
+    "lifetime_log_bytes": 0,
+    "projection_registry_validated_against_exact_release": true,
+    "remaining_569_documents_unchanged_except_physical_rowid": true,
+    "removed_generic_search_documents": [
+      {
+        "event_type": "animal.taxon_linked",
+        "qualified_history_exclusion": true,
+        "schema_version": 1
+      },
+      {
+        "event_type": "animal.taxon_linked",
+        "qualified_history_exclusion": true,
+        "schema_version": 1
+      },
+      {
+        "event_type": "animal.taxon_linked",
+        "qualified_history_exclusion": true,
+        "schema_version": 1
+      },
+      {
+        "event_type": "animal.reference_image_preference_changed",
+        "qualified_history_exclusion": true,
+        "schema_version": 1
+      }
+    ],
+    "restarts": 0,
+    "search_rows_after": 569,
+    "search_rows_before": 573
+  },
+  "zero_network_profile_reads": {
+    "boa": {
+      "all_sources_same_page": true,
+      "contextual_facts": 28,
+      "exact_bundle_equal": true,
+      "html_inline_facts": 28,
+      "sections": [
+        "Natural history",
+        "Temperature & humidity",
+        "Feeding",
+        "Habitat & enclosure",
+        "Lighting",
+        "Water & substrate",
+        "Life history",
+        "Cautions"
+      ],
+      "sourced_positions": 34,
+      "sources": 7,
+      "support_states": {
+        "Corroborated": 2,
+        "Single source": 22,
+        "Sources differ": 4
+      },
+      "version": 1
+    },
+    "candidate_sha": "f1d4d33c27bdb79be31b7c9fbf33b5291c036377",
+    "cases": {
+      "keeper_photo": 20,
+      "linked_cached_image_available": 36,
+      "linked_cached_image_selected": 21,
+      "linked_missing_optional_enrichment": 3
+    },
+    "households": 4,
+    "local_reference_asset_statuses": {
+      "200": 36,
+      "404": 3
+    },
+    "method": "Actual GET route endpoints and production composition in isolated exact-image process; real production data/media read-only; existing owner principal injected locally; no sessions issued; full HTTP authentication/middleware excluded",
+    "outbound_attempts": 0,
+    "profiles_rendered": 61,
+    "sql_write_attempts": 0
+  }
+}

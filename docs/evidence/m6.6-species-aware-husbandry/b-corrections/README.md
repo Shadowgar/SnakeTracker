@@ -257,3 +257,25 @@ no migration; original worker resumed directly. Normal reminder calculation time
 The old 40-photo archive remains historically incomplete. The backup/recovery blocker is resolved;
 full M6.6-B deployment and Boa production import remain deferred. No ADR/milestone acceptance,
 PR merge, X1 or M6.6-C work occurred.
+
+## Subsequent live owner-review deployment — October 1
+
+Under the owner's subsequent exact-head deployment request, source
+`f1d4d33c27bdb79be31b7c9fbf33b5291c036377` is now live in paired web/worker image
+`snaketracker:m66b-owner-review-f1d4d33`. A 15-second worker-first/web-second controlled replacement
+used `--no-deps --no-build`; migration, nginx, tunnel, `.env`, settings and mounts were preserved.
+Schema remains 0023. The qualified complete recovery point remains valid and unchanged.
+The bounded reference-only Boa import added one version, seven sources and 34 positions/28 facts;
+rerun imported zero and wrote nothing. Cutoff 1027, all 55 unchanged logical dimensions, 46 immutable
+attachment versions and 77 media files match. Expected search handler 4→5 generation rotation adds
+only derived objects and excludes four identity-settings care-search entries; authoritative events
+are unchanged. Normal reminder calculation timestamps refreshed.
+
+[Live deployment evidence](owner-review-deployment/README.md) and its
+[sanitized receipt](owner-review-deployment/qualification-20261001.json) distinguish actual service
+health, 61 real read-only profile renders with zero outbound calls, bounded 390×844 local layout replay,
+and pending authenticated owner review. External browser User-Agent readiness returns 200; Python
+User-Agent was blocked by unchanged Cloudflare 1010. The actual previous image now refuses the newer
+projection catalog, so a plain container-only rollback is unsafe. No rollback bypass was attempted.
+PR #17 remains open/draft/unmerged; M6.6-B and ADR-0044/0048 remain unaccepted. No X1, bulk taxonomy,
+Amphibians or M6.6-C was started. Work stops for the five owner review flows.
