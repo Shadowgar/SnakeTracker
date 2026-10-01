@@ -236,3 +236,24 @@ mobile 390×844. They are **not yet available as this candidate in live producti
 backup qualification and full gate, an exact committed image must be built/deployed through the
 established safe process, with a separate before/after integrity receipt. PR #17 must remain open,
 draft and unmerged. ADR-0044, ADR-0048 and M6.6-B acceptance remain owner decisions.
+
+## Subsequent immutable-backup blocker resolution — October 1
+
+The preceding incomplete-backup and pending-authorization statements record the earlier qualification.
+Under the owner's subsequent narrow backup request, correction
+`606e8a2024674a9c9c1f3d9903b6f41d61c31199` and packaging follow-up
+`65a0b3d3d582a0ee15ce3beb6027eaee45bfe1ff` passed the full gate: **892 tests**,
+**94.53% line / 85.35% branch** coverage. The
+[bounded recovery qualification](backup-completeness/README.md) and
+[sanitized receipt](backup-completeness/qualification-20261001.json) retain source/image proof,
+the execution incident, restored hashes/counts and final production integrity.
+
+A temporary worker based on deployed source plus only the backup patch created encrypted run
+`8777f5b4-545e-4384-81e6-e50c99553bb8`, cutoff 1027, schema 0023:
+**46 finalized DB versions = 46 manifest attachments = 46 restored files**, zero metadata/hash
+mismatches, including all six previously omitted versions. Original images/containers, `.env`,
+business state and all media remain preserved. A failed Compose cleanup dependency attempt applied
+no migration; original worker resumed directly. Normal reminder calculation timestamps refreshed.
+The old 40-photo archive remains historically incomplete. The backup/recovery blocker is resolved;
+full M6.6-B deployment and Boa production import remain deferred. No ADR/milestone acceptance,
+PR merge, X1 or M6.6-C work occurred.
