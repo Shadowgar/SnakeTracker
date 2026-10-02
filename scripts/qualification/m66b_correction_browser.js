@@ -315,7 +315,7 @@ async function main() {
       for (const [name, route, requiredText] of profiles) await runCase(state, label, name, async () => {
         assert(route, `${name}: manifest URL is required`);
         await open(page, route);
-        const reference = await page.locator(".overview-reference").innerText();
+        const reference = await page.locator(".overview-reference").textContent();
         const provenance = await page.locator(".overview-reference").textContent();
         for (const text of requiredText) {
           const visibleText = ["Royal Veterinary College", "RSPCA", "ReptiFiles"].includes(text) ? provenance : reference;
@@ -327,9 +327,14 @@ async function main() {
           const facts = page.locator(".overview-reference article.guide-fact");
           const expectedFacts = { "linked-python-direct-guide": 6, "linked-lizard-separate-disagreements": 7, "linked-boa-direct-guide": 28 }[name];
           assert.equal(await facts.count(), expectedFacts, "Every sourced contextual fact must appear directly");
+          const sections = page.locator(".overview-reference details.profile-reference-disclosure");
+          assert(await sections.count(), "Detailed reference must be expandable on the same page");
+          assert.equal(await facts.locator(":visible").count(), 0, "Guide defaults must stay compact");
+          for (const section of await sections.all()) await section.locator(":scope > summary").click();
           for (const fact of await facts.all()) {
-            assert(await fact.locator(".guide-value, .guide-position strong").first().isVisible(), "Guide claim requires expansion");
+            assert(await fact.locator(".guide-value, .guide-position strong").first().isVisible(), "Guide claim missing after same-page expansion");
           }
+          for (const section of await sections.all()) await section.locator(":scope > summary").click();
         }
         if (name === "linked-no-reviewed-guide") assert.equal(await page.locator(".profile-reference-fact").count(), 0);
         await capture(page, label, name);

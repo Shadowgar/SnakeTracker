@@ -1,7 +1,7 @@
 "use strict";
 
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("/service-worker.js?v=m66b-correction-v3", {scope: "/"}));
+  window.addEventListener("load", () => navigator.serviceWorker.register("/service-worker.js?v=m66b-compact-reference-v1", {scope: "/"}));
 }
 
 document.addEventListener("DOMContentLoaded", () => {

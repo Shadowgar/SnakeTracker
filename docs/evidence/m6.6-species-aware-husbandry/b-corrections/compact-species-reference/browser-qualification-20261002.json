@@ -1,0 +1,169 @@
+{
+  "baseline_source": "e02bfabcbcc7028fe4b8694bf3832447f3ec4fb4",
+  "cache_version_tests": {
+    "failed": 0,
+    "passed": 2
+  },
+  "date": "2026-10-02",
+  "fictional_http_browser": {
+    "all_facts_same_page": [
+      28,
+      7,
+      6
+    ],
+    "axe_violations": 0,
+    "captures": 26,
+    "cases": [
+      {
+        "defaultHeight": 1021.15625,
+        "taxon": "boa",
+        "viewport": "desktop"
+      },
+      {
+        "defaultHeight": 649.296875,
+        "taxon": "dragon",
+        "viewport": "desktop"
+      },
+      {
+        "defaultHeight": 649.296875,
+        "taxon": "python",
+        "viewport": "desktop"
+      },
+      {
+        "defaultHeight": 1796.59375,
+        "taxon": "boa",
+        "viewport": "mobile"
+      },
+      {
+        "defaultHeight": 1090.140625,
+        "taxon": "dragon",
+        "viewport": "mobile"
+      },
+      {
+        "defaultHeight": 1082.953125,
+        "taxon": "python",
+        "viewport": "mobile"
+      }
+    ],
+    "directory_and_standalone_dragon_and_plant": true,
+    "external_requests": 0,
+    "guide_version_provenance": true,
+    "keyboard_enter_space": true,
+    "major_sections_initially_closed": true,
+    "meaningful_source_names_and_https_links": true,
+    "overflow_captures": 0,
+    "remote_publisher_uptime": "not probed; source names/URLs/provenance and visibility checked without external requests",
+    "strict_CSP_unchanged": true,
+    "unexpected_console_errors": 0,
+    "viewports": [
+      "1440x900",
+      "390x844"
+    ],
+    "visible_focus_outline_px_minimum": 2
+  },
+  "focused_care_guide_tests": {
+    "failed": 0,
+    "passed": 18
+  },
+  "height_comparison": [
+    {
+      "after_px": 1021.15625,
+      "before_px": 10929.8125,
+      "reduction_percent": 90.7,
+      "taxon": "boa",
+      "viewport": "desktop"
+    },
+    {
+      "after_px": 649.296875,
+      "before_px": 2811.8125,
+      "reduction_percent": 76.9,
+      "taxon": "dragon",
+      "viewport": "desktop"
+    },
+    {
+      "after_px": 649.296875,
+      "before_px": 2497.03125,
+      "reduction_percent": 74.0,
+      "taxon": "python",
+      "viewport": "desktop"
+    },
+    {
+      "after_px": 1796.59375,
+      "before_px": 11575,
+      "reduction_percent": 84.5,
+      "taxon": "boa",
+      "viewport": "mobile"
+    },
+    {
+      "after_px": 1090.140625,
+      "before_px": 3094.296875,
+      "reduction_percent": 64.8,
+      "taxon": "dragon",
+      "viewport": "mobile"
+    },
+    {
+      "after_px": 1082.953125,
+      "before_px": 2765.28125,
+      "reduction_percent": 60.8,
+      "taxon": "python",
+      "viewport": "mobile"
+    }
+  ],
+  "independent_review": "No remaining material findings; missing Version1 provenance fixed and browser assertion added",
+  "manual_species_and_exact_lengths_regression": {
+    "axeViolations": 0,
+    "cases": 84,
+    "consoleErrors": 26,
+    "expectedInjectedErrors": 26,
+    "externalRequestsBlocked": 0,
+    "failed": 0,
+    "overflowCaptures": 0,
+    "passed": 84,
+    "screenshots": 32,
+    "unexpectedErrors": 0
+  },
+  "prior_quality_attempt": "Interrupted after stale asset version assertions failed; all cache tokens and assertions updated, no thresholds/timeouts suppressed. Final full gate is recorded separately. Second disk-backed rerun was explicitly interrupted after >22 minutes at31%, with no new failures, to move disposable test fixtures to a fresh RAM TMPDIR used by prior qualification. No test/runtime/timeout/threshold changed; final full gate remains mandatory.",
+  "private_capture_paths": [
+    "/tmp/m66b-browser.kjRrjMCO/compact-review",
+    "/tmp/m66b-browser.kjRrjMCO/regression-review"
+  ],
+  "qualified_product_file_sha256": {
+    "scripts/qualification/m66b_compact_reference_browser.js": "c1a2630fbf4461db20660c4bcd415b20b2de853be5cd11f9373f3e46f863adaf",
+    "scripts/qualification/m66b_correction_browser.js": "ef7cbbdc762b5c566cf85600867312a1b7f5c851c6dae4350363286bfd7d0c95",
+    "src/snaketracker/presentation/static/app.css": "db00c46e636af703b2885ceda634a4767005081bf4fe0a8d6d46e0c5074aa9e5",
+    "src/snaketracker/presentation/static/pwa.js": "413759858e33653b8a7d26fc88df00883451e5e52bc68b52c6e0155cd3926523",
+    "src/snaketracker/presentation/static/service-worker.js": "c6eb1671667f3e21bb8df053a86b2c3fddf6ae594f7adf5ab4990602e2bfc85e",
+    "src/snaketracker/presentation/templates/animal_edit.html": "f8bfda3d726ec6ac9221d37fa9f6c51e1f819d65c636d5c0a4fde2c40a701fb7",
+    "src/snaketracker/presentation/templates/animal_new.html": "87c3d1e45fce39fd3abe09e118e9ba900ccb40c471d6ddc075106b23fcadd8a9",
+    "src/snaketracker/presentation/templates/animal_profile.html": "f1cd8e394496c4ff53721641a72b5e70b1620d1248488b36de991dfbb9e3a854",
+    "src/snaketracker/presentation/templates/animal_species_link.html": "1b68a57336c002df85ad7707ce4b124fe033091dcac0ddd14743eedafbdba55f",
+    "src/snaketracker/presentation/templates/base.html": "a93da18ac3c04abae1340f180674c0809965fa54d4f69b9727fa875ecd26696a",
+    "src/snaketracker/presentation/templates/enclosure_plant_form.html": "3d7bf202530ee583f5dbe0c04da8ada82d658288f158ef30d405d47aad02402e",
+    "src/snaketracker/presentation/templates/profile_reference_content.html": "adc9ef0d3520bf39ead5a6e2b69703df88eaae8e35705171e8661da08358f97b",
+    "src/snaketracker/presentation/templates/quick_log.html": "f560a9e6f9714e23d09e38614b92dd1dc612d6d8b34096b97a91ea773f83f831",
+    "tests/browser/test_product_experience.py": "561b5e6daa60d53213342d7869d5f43b5b3540f524e704697241e80a1cface01",
+    "tests/browser/test_purchase_workflow.py": "ba2c4e282873940b75c30d2e335decbdf8779bcd799b7bcca5164d9980eefb03",
+    "tests/browser/test_species_directory_workflow.py": "6776f2f7791c9776c20ab19c039f79987f4c42dd4de4f8225d2932c74e772bf2",
+    "tests/integration/test_care_guides.py": "c7ef94013786e133a3735267d767106c4427c73b78678179eb5dec54f2eafc4f"
+  },
+  "recovery": {
+    "compatibility_mode": "normal",
+    "compatibility_reason": "compatible",
+    "database_count": 46,
+    "event_cutoff": 1031,
+    "foreign_key_errors": 0,
+    "hash_mismatches": 0,
+    "integrity_check": "ok",
+    "manifest_checksum": "f35b577dce2a5408913e8ef8c4069a02293a0b272bd6acc25eff0de238cf63e9",
+    "manifest_count": 46,
+    "metadata_mismatches": 0,
+    "reset_credentials": 0,
+    "restored_count": 46,
+    "run_id": "12fa3806-128d-4fde-83b1-b72d728919a9",
+    "schema": "0023_sourced_care_guides",
+    "sessions": 0,
+    "source_sha": "f1d4d33c27bdb79be31b7c9fbf33b5291c036377",
+    "status": "verified"
+  },
+  "scope": "Presentation-only owner correction; acceptance pending"
+}

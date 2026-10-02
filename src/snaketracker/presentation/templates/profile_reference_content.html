@@ -3,15 +3,21 @@
   <h3 id="profile-glance-title">At a glance</h3>
   <dl class="profile-reference-grid">
     {% for label, claims, state in profile_reference_glance %}
-    <div class="profile-reference-fact"><dt>{{ label }}</dt><dd><strong>{% if state == 'Sources differ' %}Sources differ · see positions below{% else %}{{ format_claim_value(claims[0]) }}{% endif %}</strong><a href="#profile-fact-{{ claims[0].claim_id }}">Source positions ↓</a></dd></div>
+    <div class="profile-reference-fact"><dt>{{ label }}</dt><dd><strong>{% if state == 'Sources differ' %}See separate positions{% else %}{{ format_claim_value(claims[0]) }}{% endif %}</strong><span class="guide-state {% if state == 'Sources differ' %}guide-state-differ{% elif state == 'Corroborated' %}guide-state-corroborated{% else %}guide-state-single{% endif %}">{{ state }}</span></dd></div>
     {% endfor %}
   </dl>
 </section>
 {% endif %}
+<div class="profile-reference-sections">
 {% for section_label, facts in profile_reference_sections %}
-<section class="profile-reference-section" aria-labelledby="profile-section-{{ loop.index }}">
-  <h3 id="profile-section-{{ loop.index }}">{{ section_label }}</h3>
-  <div class="guide-fact-grid">
+<details class="profile-reference-disclosure" aria-labelledby="profile-section-{{ loop.index }}">
+  <summary>
+    <h3 id="profile-section-{{ loop.index }}">{{ section_label }}</h3>
+    <span class="profile-reference-summary-values">{% if section_label == 'Cautions' %}{{ facts|length }} reviewed caution fact{% if facts|length != 1 %}s{% endif %}{% else %}{% for label, claims, state in facts[:2] %}{% if not loop.first %} · {% endif %}{{ label }}{% if claims[0].life_stage %} ({{ claims[0].life_stage }}){% endif %}: {% if state == 'Sources differ' %}Sources differ{% else %}{{ format_claim_value(claims[0])|truncate(80, false, '…') }}{% endif %}{% endfor %}{% endif %}</span>
+    {% set disagreements = facts|selectattr('2', 'equalto', 'Sources differ')|list %}
+    {% if disagreements %}<span class="profile-reference-summary-disagreement"><span class="guide-state guide-state-differ">Sources differ</span> {% for label, claims, state in disagreements %}{{ label }}{% if not loop.last %} · {% endif %}{% endfor %}</span>{% endif %}
+  </summary>
+  <div class="guide-fact-grid profile-reference-detail">
     {% for label, claims, state in facts %}
     <article class="guide-fact" id="profile-fact-{{ claims[0].claim_id }}" aria-labelledby="profile-label-{{ claims[0].claim_id }}">
       <h4 id="profile-label-{{ claims[0].claim_id }}">{{ label }}{% if claims[0].life_stage %} · {{ claims[0].life_stage }}{% endif %}</h4>
@@ -29,10 +35,11 @@
     </article>
     {% endfor %}
   </div>
-</section>
+</details>
 {% endfor %}
-<section class="profile-reference-section" aria-labelledby="profile-sources-title">
-  <h3 id="profile-sources-title">Sources</h3>
-  <details class="guide-disclosure"><summary>Bibliography and provenance</summary><ul>{% for source in profile_reference_guide.sources %}<li><a href="{{ source.url }}" rel="noopener noreferrer" target="_blank">{{ source.publisher }} · {{ source.title }}</a><span>Retrieved {{ source.retrieved_at.date().isoformat() }} · Reviewed {{ source.reviewed_at.date().isoformat() }}{% if source.published_at %} · Published/updated {{ source.published_at.date().isoformat() }}{% endif %}</span></li>{% endfor %}</ul></details>
-  <p class="field-help">Corroborated means independent publishers support the same contextual position. Single source means one publisher. Sources differ preserves separate positions without averaging.</p>
-</section>
+</div>
+<details class="profile-reference-disclosure profile-reference-sources" aria-labelledby="profile-sources-title">
+  <summary><h3 id="profile-sources-title">Sources</h3><span class="profile-reference-summary-values">{{ profile_reference_guide.sources|length }} reviewed · bibliography and provenance</span></summary>
+  <div class="profile-reference-detail"><p class="field-help">Reviewed guide · Version {{ profile_reference_guide.version }}</p><ul class="profile-reference-bibliography">{% for source in profile_reference_guide.sources %}<li><a href="{{ source.url }}" rel="noopener noreferrer" target="_blank">{{ source.publisher }} · {{ source.title }}</a><span>Retrieved {{ source.retrieved_at.date().isoformat() }} · Reviewed {{ source.reviewed_at.date().isoformat() }}{% if source.published_at %} · Published/updated {{ source.published_at.date().isoformat() }}{% endif %}</span></li>{% endfor %}</ul>
+  <p class="field-help">Corroborated means independent publishers support the same contextual position. Single source means one publisher. Sources differ preserves separate positions without averaging.</p></div>
+</details>
