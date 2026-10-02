@@ -276,6 +276,30 @@ def test_animal_reference_reads_only_its_explicitly_linked_current_guide(
             ),
             {"id": str(no_guide_id), "at": datetime.now(UTC).isoformat()},
         )
+        connection.execute(
+            text(
+                "UPDATE taxa SET rank='species',kingdom='Animalia',phylum_division='Chordata',"
+                "class_name='Reptilia',order_name='Squamata',family='Pythonidae',genus='Python' "
+                "WHERE taxon_id=:id"
+            ),
+            {"id": str(ids["Python regius"])},
+        )
+        for name, kind in (
+            ("Royal Python", "alternative_common"),
+            ("A legitimate long historical synonym & author citation", "synonym"),
+        ):
+            connection.execute(
+                text(
+                    "INSERT INTO taxon_names (taxon_id,name,normalized_name,name_kind) "
+                    "VALUES (:id,:name,:normalized,:kind)"
+                ),
+                {
+                    "id": str(ids["Python regius"]),
+                    "name": name,
+                    "normalized": name.lower(),
+                    "kind": kind,
+                },
+            )
     engine.dispose()
 
     app = build_application(
@@ -347,6 +371,9 @@ def test_animal_reference_reads_only_its_explicitly_linked_current_guide(
                         for row in connection.execute(text(f"SELECT * FROM {table} ORDER BY rowid"))
                     )
                     for table in (
+                        "taxa",
+                        "taxon_names",
+                        "taxon_provider_mappings",
                         "animal_current",
                         "domain_events",
                         "reminder_rule_current",
@@ -391,6 +418,29 @@ def test_animal_reference_reads_only_its_explicitly_linked_current_guide(
             assert f'href="{url}" aria-current="page"' in overview.text
 
         snake = reference_html(snake_url)
+        taxonomy = re.search(
+            r'<details class="profile-taxonomy-disclosure"[^>]*>(.*?)</details>', snake, re.S
+        )
+        assert taxonomy is not None
+        assert " open" not in taxonomy.group(0).split(">", 1)[0]
+        assert "<summary>Taxonomy details</summary>" in taxonomy.group(1)
+        assert "Reptilia · Squamata · Pythonidae · Python" in snake
+        for value in (
+            "Animalia",
+            "Chordata",
+            "Reptilia",
+            "Squamata",
+            "Pythonidae",
+            "Python",
+            "Royal Python",
+            "A legitimate long historical synonym &amp; author citation",
+        ):
+            assert value in taxonomy.group(1)
+        feeding_summary = re.search(
+            r"<summary>\s*<h3[^>]*>Feeding</h3>(.*?)</summary>", snake, re.S
+        )
+        assert feeding_summary is not None
+        assert "Food (Hatchling and older):" in feeding_summary.group(1)
         assert "Reviewed reference guidance for" in snake
         assert "30\u201332°C · 86\u201390°F" in snake
         assert "Single source" in snake
@@ -407,6 +457,7 @@ def test_animal_reference_reads_only_its_explicitly_linked_current_guide(
         assert 'class="profile-reference-disclosure profile-reference-sources"' in lizard
         assert "Version 1" in lizard
 
+        assert 'class="profile-taxonomy-line"' not in lizard
         no_guide = reference_html(no_guide_url)
         assert "No reviewed captive-care guide is available yet." in no_guide
         assert "Boa constrictor" in no_guide

@@ -1774,3 +1774,44 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
 @media (min-width: 64rem) {
   .overview-reference .profile-reference-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+
+/* The Animal reference sheet sizes static content independently of touch controls. */
+.animal-reference-content { gap: .6rem; }
+.animal-reference-content > section { min-width: 0; display: grid; gap: .35rem; padding: .65rem 0 0; border-top: 1px solid var(--color-border); }
+.animal-reference-content > .profile-species-overview { gap: .2rem; padding-top: .45rem; }
+.animal-reference-content h2 { font-size: 1.1rem; line-height: 1.3; }
+.animal-reference-content .profile-reference-identity { line-height: 1.35; }
+.animal-reference-content .profile-taxonomy-line, .animal-reference-content .profile-taxonomy-other { margin: 0; color: var(--color-text-secondary); font-size: .875rem; line-height: 1.35; overflow-wrap: anywhere; }
+.animal-reference-content .profile-reference-boundary, .animal-reference-content .profile-reference-intro, .animal-reference-content .profile-reference-empty, .animal-reference-content .profile-source-overview > .field-help { margin: 0; }
+.animal-reference-content .profile-taxonomy-disclosure { min-width: 0; }
+.animal-reference-content .profile-taxonomy-disclosure > summary { display: list-item; width: fit-content; max-width: 100%; min-height: 2.75rem; padding: .6rem .25rem; cursor: pointer; font-size: .875rem; line-height: 1.35; }
+.animal-reference-content .profile-taxonomy-disclosure > summary:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: .25rem; }
+.animal-reference-content .profile-taxonomy-disclosure .fact-list { margin: .25rem 0; gap: .25rem; }
+.animal-reference-content .profile-taxonomy-disclosure .fact-list > div { grid-template-columns: minmax(7rem, 25%) minmax(0, 1fr); padding-bottom: .25rem; font-size: .875rem; }
+.animal-reference-content .profile-taxonomy-disclosure .fact-list dd { overflow-wrap: anywhere; }
+.animal-reference-content .profile-reference-section { gap: .25rem; }
+.animal-reference-content .profile-reference-section h3 { margin: .15rem 0; font-size: 1rem; }
+.animal-reference-content .profile-reference-grid { gap: .4rem; align-items: start; }
+.animal-reference-content .profile-reference-fact { gap: .2rem; padding: .4rem .55rem; align-self: start; }
+.animal-reference-content .profile-reference-fact dt { font-size: .8rem; line-height: 1.3; }
+.animal-reference-content .profile-reference-fact dd { gap: .2rem; }
+.animal-reference-content .profile-reference-fact dd strong { font-size: 1rem; line-height: 1.3; }
+.animal-reference-content .profile-reference-fact .guide-state { min-height: 0; padding: .1rem .35rem; font-size: .75rem; line-height: 1.3; }
+.animal-reference-content .profile-reference-sections { gap: .4rem; align-items: start; }
+.animal-reference-content .profile-reference-disclosure { border-radius: .4rem; }
+.animal-reference-content .profile-reference-disclosure > summary { gap: .15rem; padding: .4rem 2.25rem .4rem .6rem; }
+.animal-reference-content .profile-reference-disclosure > summary::after { top: .4rem; right: .65rem; }
+.animal-reference-content .profile-reference-sources > summary { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: .6rem; }
+.animal-reference-content .profile-reference-action { min-height: 2.75rem; width: fit-content; max-width: 100%; padding: .55rem .25rem; }
+@media (max-width: 40rem) {
+  .animal-reference-content .profile-taxonomy-disclosure .fact-list > div { grid-template-columns: 7rem minmax(0, 1fr); }
+}
+.animal-reference-content .profile-reference-bibliography li a,
+.animal-reference-content .guide-disclosure li a { display: flex; align-items: center; min-height: 2.75rem; }
+.animal-reference-content > .section-heading > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .6rem; }
+.animal-reference-content > .section-heading .page-kicker { margin: 0; }
+.animal-reference-content .profile-reference-boundary { padding: .2rem .55rem; }
+.animal-reference-content { gap: .4rem; }
+.animal-reference-content > section { gap: .25rem; }
+.animal-reference-content .profile-source-overview > .field-help a { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 .25rem; vertical-align: middle; }

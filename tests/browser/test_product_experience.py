@@ -127,10 +127,10 @@ def test_m66_static_assets_advance_and_retire_previous_shell_cache(tmp_path: Pat
         worker = client.get("/service-worker.js")
         pwa = client.get("/static/pwa.js")
 
-        assert "/static/app.css?v=m66b-animal-reference-v1" in page.text
-        assert "/static/pwa.js?v=m66b-animal-reference-v1" in page.text
-        assert "/static/species-directory.js?v=m66b-animal-reference-v1" in page.text
-        assert 'const ASSET_VERSION = "m66b-animal-reference-v1"' in worker.text
+        assert "/static/app.css?v=m66b-reference-density-v1" in page.text
+        assert "/static/pwa.js?v=m66b-reference-density-v1" in page.text
+        assert "/static/species-directory.js?v=m66b-reference-density-v1" in page.text
+        assert 'const ASSET_VERSION = "m66b-reference-density-v1"' in worker.text
         assert "`/static/app.css?v=${ASSET_VERSION}`" in worker.text
         assert "`/static/species-directory.js?v=${ASSET_VERSION}`" in worker.text
         assert "`/static/animal-sections.js?v=${ASSET_VERSION}`" in worker.text
@@ -138,7 +138,7 @@ def test_m66_static_assets_advance_and_retire_previous_shell_cache(tmp_path: Pat
         assert "caches.delete(name)" in worker.text
         assert "self.skipWaiting()" in worker.text
         assert "self.clients.claim()" in worker.text
-        assert "/service-worker.js?v=m66b-animal-reference-v1" in pwa.text
+        assert "/service-worker.js?v=m66b-reference-density-v1" in pwa.text
         assert "m65-c1" not in page.text
         assert "m61-corrections" not in worker.text
 
