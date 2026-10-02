@@ -1,0 +1,334 @@
+{
+  "candidate": {
+    "build_sha": "dd1785fe5508127f8c292b28cc8363b3e70e735d",
+    "frozen_distributions": 35,
+    "frozen_versions_match": true,
+    "gid": 1001,
+    "image_id": "sha256:7a3fb836a12783e1bb8be2dc1c9d0f0e914ad8ab11367dc1ab78969f656fc4ef",
+    "image_tag": "snaketracker:m66b-reference-navigation-dd1785f",
+    "oci_revision": "dd1785fe5508127f8c292b28cc8363b3e70e735d",
+    "production_mounts_used": false,
+    "schema_head": "0023_sourced_care_guides",
+    "source_tree_ids": {
+      "reference/care-guides": "6a9562ff60ab742c0cb01c544d435f04217d0efd",
+      "scripts/qualification": "ac2e5852a0c57b462f3353cce6e59ae8d89d6aab",
+      "src": "caf480e50cd7efa0356fcb69b2921df6ca583280",
+      "tests": "76890b633a87981af0bdedf213f22bc59e219019"
+    },
+    "uid": 1001
+  },
+  "candidate_ci": {
+    "checks": [
+      {
+        "name": "container",
+        "result": "SUCCESS"
+      },
+      {
+        "name": "quality",
+        "result": "SUCCESS"
+      },
+      {
+        "name": "CodeRabbit",
+        "result": "SUCCESS"
+      },
+      {
+        "name": "GitGuardian Security Checks",
+        "result": "SUCCESS"
+      }
+    ],
+    "draft": true,
+    "head": "dd1785fe5508127f8c292b28cc8363b3e70e735d",
+    "merged_at": null,
+    "state": "OPEN"
+  },
+  "deployment": {
+    "compose_flags": [
+      "--no-deps",
+      "--no-build",
+      "--pull never",
+      "--force-recreate"
+    ],
+    "guide_reimported": false,
+    "healthy_services": [
+      "web",
+      "worker",
+      "nginx"
+    ],
+    "local_live": 200,
+    "local_ready": 200,
+    "maintenance_seconds": 15.287791,
+    "migration_ran": false,
+    "nginx_tunnel_migrate_unchanged": true,
+    "public_ready": 200,
+    "recreated_services": [
+      "web",
+      "worker"
+    ],
+    "runtime_logs": {
+      "snaketracker-web-1": {
+        "errors": 0,
+        "restart_count": 0
+      },
+      "snaketracker-worker-1": {
+        "errors": 0,
+        "restart_count": 0
+      }
+    },
+    "same_exact_image_pair": true,
+    "settings_mounts_security_dotenv_operator_allowlist_unchanged": true,
+    "stop_order": [
+      "worker",
+      "web"
+    ]
+  },
+  "historical_recovery_point": {
+    "archive_unchanged": true,
+    "attachments": 46,
+    "event_cutoff": 1027,
+    "manifest_checksum": "11878c2e09ed66b833a64543a2d2cc7b7fae44f7b9ea8cecf0a6498994aebd76",
+    "run_id": "8777f5b4-545e-4384-81e6-e50c99553bb8",
+    "schema": "0023_sourced_care_guides",
+    "status": "verified"
+  },
+  "integrity": {
+    "attachment_metadata_and_hashes_unchanged": true,
+    "attachment_versions": 46,
+    "event_after": 1035,
+    "event_before": 1035,
+    "guide_tables_unchanged": true,
+    "hash_mismatches": 0,
+    "inventory_unchanged": true,
+    "logical_dimensions_unchanged": 61,
+    "media_files": 77,
+    "normalized_dimensions_unchanged": 90,
+    "normalized_schema_objects": 114,
+    "operational_table_changes": [],
+    "projection_catalog_and_generations_unchanged": true,
+    "raw_schema_objects": 148,
+    "reminder_rules_unchanged": true,
+    "schema_revision": "0023_sourced_care_guides",
+    "schema_unchanged": true,
+    "unexpected_business_table_changes": []
+  },
+  "private_captures": {
+    "axe_violations": 0,
+    "captured_states": [
+      {
+        "full_page": false,
+        "label": "bitey-overview-top",
+        "viewport": "desktop"
+      },
+      {
+        "full_page": false,
+        "label": "bitey-overview-compact",
+        "viewport": "desktop"
+      },
+      {
+        "full_page": false,
+        "label": "animal-tabs",
+        "viewport": "desktop"
+      },
+      {
+        "full_page": false,
+        "label": "bitey-reference-top",
+        "viewport": "desktop"
+      },
+      {
+        "full_page": true,
+        "label": "bitey-reference-full-collapsed",
+        "viewport": "desktop"
+      },
+      {
+        "full_page": false,
+        "label": "bitey-temperature-disagreement",
+        "viewport": "desktop"
+      },
+      {
+        "full_page": false,
+        "label": "bitey-sources-expanded",
+        "viewport": "desktop"
+      },
+      {
+        "full_page": true,
+        "label": "bitey-reference-all-facts",
+        "viewport": "desktop"
+      },
+      {
+        "full_page": false,
+        "label": "boa-imperator-reference-top",
+        "viewport": "desktop"
+      },
+      {
+        "full_page": false,
+        "label": "boa-imperator-reference-identity",
+        "viewport": "desktop"
+      },
+      {
+        "full_page": false,
+        "label": "record-length-actions",
+        "viewport": "desktop"
+      },
+      {
+        "full_page": false,
+        "label": "bitey-overview-top",
+        "viewport": "mobile"
+      },
+      {
+        "full_page": false,
+        "label": "bitey-overview-compact",
+        "viewport": "mobile"
+      },
+      {
+        "full_page": false,
+        "label": "animal-tabs",
+        "viewport": "mobile"
+      },
+      {
+        "full_page": false,
+        "label": "bitey-reference-top",
+        "viewport": "mobile"
+      },
+      {
+        "full_page": true,
+        "label": "bitey-reference-full-collapsed",
+        "viewport": "mobile"
+      },
+      {
+        "full_page": false,
+        "label": "bitey-temperature-disagreement",
+        "viewport": "mobile"
+      },
+      {
+        "full_page": false,
+        "label": "bitey-sources-expanded",
+        "viewport": "mobile"
+      },
+      {
+        "full_page": true,
+        "label": "bitey-reference-all-facts",
+        "viewport": "mobile"
+      },
+      {
+        "full_page": false,
+        "label": "boa-imperator-reference-top",
+        "viewport": "mobile"
+      },
+      {
+        "full_page": false,
+        "label": "boa-imperator-reference-identity",
+        "viewport": "mobile"
+      },
+      {
+        "full_page": false,
+        "label": "record-length-actions",
+        "viewport": "mobile"
+      }
+    ],
+    "captures": 22,
+    "method": "Actual read-only production GET-handler HTML, real returned media, exact candidate static assets replayed locally under unchanged CSP. Existing diagnostic principal injected locally. Full production HTTP authentication and middleware excluded.",
+    "non_get": 0,
+    "outbound": 0,
+    "page_overflow": 0,
+    "timing": "Predeployment exact candidate with read-only production handlers/data/media; immediate postdeployment reads and integrity repeated with unchanged data/assets",
+    "unexpected_errors": 0,
+    "viewports": [
+      {
+        "height": 900,
+        "width": 1440
+      },
+      {
+        "height": 844,
+        "width": 390
+      }
+    ]
+  },
+  "qualification_limit": "Actual production handler diagnostic supplies an existing principal locally and creates no sessions; genuine production owner login and full HTTP middleware remain owner review. Existing16MiB routine backup verification temporary-space limit unchanged.",
+  "read_only_production": {
+    "boa": {
+      "all_sources_same_page": true,
+      "contextual_facts": 28,
+      "exact_bundle_equal": true,
+      "overview_full_facts": 0,
+      "reference_full_facts": 28,
+      "sections": [
+        "Natural history",
+        "Temperature & humidity",
+        "Feeding",
+        "Habitat & enclosure",
+        "Lighting",
+        "Water & substrate",
+        "Life history",
+        "Cautions"
+      ],
+      "sourced_positions": 34,
+      "sources": 7,
+      "support_states": {
+        "Corroborated": 2,
+        "Single source": 22,
+        "Sources differ": 4
+      },
+      "version": 1
+    },
+    "boa_imperator": {
+      "common_name": "Central American Boa",
+      "guide_available": false,
+      "provider": "inaturalist",
+      "provider_id": "539399",
+      "scientific_name": "Boa imperator"
+    },
+    "candidate_sha": "dd1785fe5508127f8c292b28cc8363b3e70e735d",
+    "cases": {
+      "keeper_photo": 20,
+      "linked_cached_image_available": 39,
+      "linked_cached_image_selected": 24,
+      "linked_missing_enrichment_fallback_selected": 1,
+      "linked_missing_optional_enrichment": 4
+    },
+    "households": 4,
+    "local_reference_asset_statuses": {
+      "200": 39,
+      "404": 4
+    },
+    "method": "Actual GET route endpoints and production composition in isolated exact-image process; real production data/media read-only; existing owner principal injected locally; no sessions issued; full HTTP authentication/middleware excluded",
+    "outbound_attempts": 0,
+    "profiles_rendered": 61,
+    "references_rendered": 61,
+    "sql_write_attempts": 0
+  },
+  "recovery_point": {
+    "compatibility_mode": "normal",
+    "compatibility_reason": "compatible",
+    "database_count": 46,
+    "event_cutoff": 1031,
+    "foreign_key_errors": 0,
+    "hash_mismatches": 0,
+    "integrity_check": "ok",
+    "manifest_checksum": "f35b577dce2a5408913e8ef8c4069a02293a0b272bd6acc25eff0de238cf63e9",
+    "manifest_count": 46,
+    "metadata_mismatches": 0,
+    "reset_credentials": 0,
+    "restored_count": 46,
+    "run_id": "12fa3806-128d-4fde-83b1-b72d728919a9",
+    "schema": "0023_sourced_care_guides",
+    "sessions": 0,
+    "source_sha": "f1d4d33c27bdb79be31b7c9fbf33b5291c036377",
+    "status": "verified"
+  },
+  "rollback_probe": {
+    "image": "snaketracker:m66b-compact-reference-21a0fca",
+    "normal_readiness": true,
+    "performed": false,
+    "reason": "compatible"
+  },
+  "scope": "Owner review only; PR17 remains open/draft/unmerged; B/ADR0044/0048 unaccepted; noX1/X2/X3 implementation/Amphibians/C",
+  "worker": {
+    "active_projection_checkpoints": 9,
+    "all_checkpoints_at_high_water": true,
+    "backup_worker_available": true,
+    "compatibility_mode": "normal",
+    "compatibility_reason": "compatible",
+    "event_cutoff": 1035,
+    "pending_backup_requests": 0,
+    "source_sha": "dd1785fe5508127f8c292b28cc8363b3e70e735d"
+  }
+}
