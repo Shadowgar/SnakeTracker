@@ -6,13 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Care Keeper{% endblock %}</title>
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/static/app.css?v=m66b-compact-reference-v1">
+    <link rel="stylesheet" href="/static/app.css?v=m66b-animal-reference-v1">
     <link rel="manifest" href="/static/manifest.webmanifest">
     <meta name="theme-color" content="#100d18">
     <script defer src="/static/vendor/chart.js/chart.umd.min.js"></script>
     <script defer src="/static/charts.js"></script>
-    <script defer src="/static/overflow-menu.js?v=m66b-compact-reference-v1"></script>
-    <script defer src="/static/pwa.js?v=m66b-compact-reference-v1"></script>
+    <script defer src="/static/overflow-menu.js?v=m66b-animal-reference-v1"></script>
+    {% if active_section is defined %}<script defer src="/static/animal-sections.js?v=m66b-animal-reference-v1"></script>{% endif %}
+    <script defer src="/static/pwa.js?v=m66b-animal-reference-v1"></script>
   </head>
   <body class="{% if principal is defined %}app-body{% else %}auth-body{% endif %}">
     <a class="skip-link" href="#main-content">Skip to main content</a>

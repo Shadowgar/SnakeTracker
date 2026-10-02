@@ -1729,12 +1729,12 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
   .profile-reference-fact { padding: .65rem .75rem; }
 }
 
-/* Reviewed species guidance stays on the Animal Overview at every viewport. */
+/* Full reviewed guidance belongs to the Animal reference page. */
 .profile-reference-section { min-width: 0; display: grid; gap: .5rem; }
 .profile-reference-section h3, .profile-reference-section h4 { margin: .35rem 0; }
-.overview-reference .guide-fact-grid { grid-template-columns: minmax(0, 1fr); }
-.overview-reference .guide-fact { min-width: 0; }
-.overview-reference .guide-disclosure a { overflow-wrap: anywhere; }
+.animal-reference-content .guide-fact-grid { grid-template-columns: minmax(0, 1fr); }
+.animal-reference-content .guide-fact { min-width: 0; }
+.animal-reference-content .guide-disclosure a { overflow-wrap: anywhere; }
 .taxon-combobox [data-manual-species] { margin-top: .5rem; width: 100%; }
 
 /* Compact same-page reference disclosures; native controls require no script. */
@@ -1750,15 +1750,27 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
 .profile-reference-disclosure > summary h3 { margin: 0; font-size: 1rem; line-height: 1.35; }
 .profile-reference-summary-values { color: var(--color-text-secondary); font-size: .88rem; line-height: 1.4; }
 .profile-reference-summary-disagreement { color: var(--color-today); font-size: .8rem; line-height: 1.5; }
-.overview-reference .guide-state { min-height: 1.45rem; padding: .18rem .45rem; font-size: .75rem; }
+.animal-reference-content .guide-state { min-height: 1.45rem; padding: .18rem .45rem; font-size: .75rem; }
 .profile-reference-detail { margin: 0 .75rem .75rem; padding-top: .65rem; border-top: 1px solid var(--color-border); }
-.overview-reference .guide-fact { padding: .8rem; border-radius: .55rem; }
-.overview-reference .guide-value, .overview-reference .guide-position strong { margin: .55rem 0; font-size: 1.08rem; line-height: 1.4; }
-.overview-reference .guide-qualifier, .overview-reference .guide-context, .overview-reference .guide-caution { margin-top: .55rem; }
+.animal-reference-content .guide-fact { padding: .8rem; border-radius: .55rem; }
+.animal-reference-content .guide-value, .animal-reference-content .guide-position strong { margin: .55rem 0; font-size: 1.08rem; line-height: 1.4; }
+.animal-reference-content .guide-qualifier, .animal-reference-content .guide-context, .animal-reference-content .guide-caution { margin-top: .55rem; }
 .profile-reference-bibliography { display: grid; gap: .8rem; margin: 0; padding: .2rem 0; list-style: none; }
 .profile-reference-bibliography li { display: grid; gap: .3rem; padding-left: .65rem; border-left: 2px solid var(--color-border); font-size: .9rem; overflow-wrap: anywhere; }
 .profile-reference-bibliography li a { font-weight: 700; }
 .profile-reference-bibliography li span { color: var(--color-text-secondary); font-size: .85rem; }
 @media (min-width: 64rem) {
   .profile-reference-sections { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Five Animal sections retain readable labels inside their own scroll strip. */
+.animal-section-nav { min-width: 0; max-width: 100%; overflow-x: auto; }
+.animal-section-nav a { flex: 0 0 auto; min-width: 4.5rem; padding: .7rem .85rem; font-size: .875rem; white-space: nowrap; }
+.animal-section-nav a:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -3px; }
+.animal-reference-content { display: grid; min-width: 0; gap: .8rem; }
+.animal-reference-content > .card { display: grid; min-width: 0; gap: .7rem; }
+.animal-reference-content h2 { margin: 0; font-size: 1.25rem; }
+.profile-reference-identity { margin: 0; line-height: 1.6; }
+@media (min-width: 64rem) {
+  .overview-reference .profile-reference-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }

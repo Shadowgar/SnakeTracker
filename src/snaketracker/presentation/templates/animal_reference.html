@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ animal.name }} · Guides & Species Reference · Care Keeper{% endblock %}
+{% block content %}
+<section class="animal-experience" aria-labelledby="page-title">
+  {% include "animal_profile_header.html" %}
+  <div class="animal-reference-content">
+    <div class="section-heading"><div><p class="page-kicker">Species reference</p><h2>Guides &amp; Species Reference</h2></div></div>
+    <p class="profile-reference-boundary">Reference information for the linked species — separate from {{ animal.name }}'s individual records or care settings.</p>
+    <section class="card" aria-labelledby="species-overview-title">
+      <h2 id="species-overview-title">Species Overview / Natural History</h2>
+      {% if linked_taxon %}
+      {% set taxon = linked_taxon.taxon %}
+      <p class="profile-reference-identity"><strong>{{ taxon.display_name }}</strong><br><i>{{ taxon.accepted_scientific_name }}</i></p>
+      <dl class="fact-list">
+        {% if taxon.rank %}<div><dt>Rank</dt><dd>{{ taxon.rank|capitalize }}</dd></div>{% endif %}
+        {% for label, value in [('Kingdom', taxon.kingdom), ('Phylum / division', taxon.phylum_division), ('Class', taxon.class_name), ('Order', taxon.order_name), ('Family', taxon.family), ('Genus', taxon.genus)] %}
+        {% if value %}<div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>{% endif %}
+        {% endfor %}
+        {% if taxon.alternative_common_names %}<div><dt>Other common names</dt><dd>{{ taxon.alternative_common_names|join(', ') }}</dd></div>{% endif %}
+        {% if taxon.synonyms %}<div><dt>Synonyms</dt><dd>{{ taxon.synonyms|join(', ') }}</dd></div>{% endif %}
+      </dl>
+      <p class="field-help">Saved species identity and classification. Additional Natural History information is not available on this page yet.</p>
+      {% else %}
+      <p>Link a species to see its reference information. Your manual species record remains valid.</p>
+      <a class="button-link secondary-link" href="/animals/{{ animal.animal_id }}/species">Link species</a>
+      {% endif %}
+    </section>
+    <section class="card" aria-labelledby="reviewed-care-title">
+      <h2 id="reviewed-care-title">Reviewed Captive Care</h2>
+      {% if linked_taxon and profile_reference_guide %}
+      <p class="profile-reference-intro">Reviewed reference guidance for {{ linked_taxon.taxon.accepted_scientific_name }}. This guide retains its sourced care and life-history facts.</p>
+      {% include "profile_reference_content.html" %}
+      {% elif linked_taxon %}
+      <p class="profile-reference-empty">No reviewed captive-care guide is available yet.</p>
+      {% else %}
+      <p class="profile-reference-empty">Choose a linked species to check for a reviewed captive-care guide.</p>
+      {% endif %}
+    </section>
+    <section class="card" aria-labelledby="reference-provenance-title">
+      <h2 id="reference-provenance-title">Sources / Provenance</h2>
+      {% if linked_taxon %}
+      <p class="field-help">Species identity: <a href="{{ linked_taxon.taxon.source_url }}" target="_blank" rel="noopener noreferrer">{{ linked_taxon.taxon.provider|replace('_', ' ')|title }}</a> · Retrieved {{ linked_taxon.taxon.retrieved_at.date().isoformat() }} · Saved {{ linked_taxon.taxon.refreshed_at.date().isoformat() }}</p>
+      {% if profile_reference_guide %}{% include "profile_reference_sources.html" %}{% endif %}
+      <a class="profile-reference-action" href="/directory/{{ linked_taxon.taxon.taxon_id }}">Browse species in Directory →</a>
+      {% else %}
+      <p class="field-help">Sources will appear here for the species you link.</p>
+      <a class="profile-reference-action" href="/directory">Browse Species Directory →</a>
+      {% endif %}
+    </section>
+  </div>
+</section>
+{% endblock %}

@@ -204,6 +204,26 @@ as competing authorities. `AT-NATHIST-01` covers available/missing/conflicting N
 legacy biological claims, captive-context claims, source/licence attribution and no household writes.
 Captive guidance follows the [reviewed guide policy](../operations/care-guide-sources.md).
 
+### Required X3 qualification: Central American Boa
+
+`AT-NATHIST-01` must include an Animal explicitly linked to **Central American Boa / Boa imperator**,
+with iNaturalist taxon mapping **`539399`**, and **no reviewed captive-care guide**. X3 must prove
+that its Guides & Species Reference page displays locally stored/cached Species Overview / Natural
+History independently of guide availability: taxonomy/classification, preferred/common names,
+a short sourced species description, a Wikipedia-backed summary with actual Wikipedia attribution
+and applicable licence, conservation information, natural range/distribution, and other properly
+licensed Natural History facts where supported by approved sources. Unavailable facts remain
+unknown; the missing-guide message specifically states “No reviewed captive-care guide is available
+yet.” Biological reference is not classified as captive husbandry or duplicated as a competing
+authority over legacy guide claims; ADR-0047's presentation precedence applies.
+
+X2 supplies the ADR-0046 local taxonomy/reference baseline from the iNaturalist Taxonomy DarwinCore
+Archive, Care Keeper-owned taxon UUIDs and namespaced provider mappings; X3 adds approved reference
+detail through the bounded iNaturalist API overlay. Qualification must show zero outbound calls
+during ordinary Overview and Guides & Species Reference reads, including with providers unavailable;
+enrichment runs outside rendering and sends no household/private data externally. This is a required
+future X3 acceptance case, not X2/X3 implementation within the M6.6-B presentation correction.
+
 ### Ordinary Animal profile reads: zero outbound calls
 
 Current `AnimalVisualResolver.resolve` calls `SpeciesDirectoryService.reference_image`, which can

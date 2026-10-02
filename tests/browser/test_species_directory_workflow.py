@@ -190,7 +190,7 @@ def test_directory_animal_selection_manual_fallback_and_legacy_link(
             "Reference images are available when a supported Directory species is linked"
             in form.text
         )
-        assert "/static/species-directory.js?v=m66b-compact-reference-v1" in form.text
+        assert "/static/species-directory.js?v=m66b-animal-reference-v1" in form.text
         suggestions = client.get("/api/directory/search?group=snake&q=ball+p")
         assert suggestions.status_code == 200
         assert suggestions.json()["records"][0]["scientific_name"] == "Python regius"
@@ -559,7 +559,10 @@ def test_edit_retains_explicit_selected_taxon_in_same_save(tmp_path):
 @pytest.mark.parametrize(
     "state", ["keeper_photo", "cached_image", "missing_image", "unlinked", "missing_optional"]
 )
-def test_profile_and_local_image_reads_make_zero_outbound_calls(tmp_path, monkeypatch, state):
+@pytest.mark.parametrize("section", ["", "/reference"])
+def test_profile_and_local_image_reads_make_zero_outbound_calls(
+    tmp_path, monkeypatch, state, section
+):
     from snaketracker.infrastructure.taxonomy import inaturalist, reference_providers
     from snaketracker.infrastructure.taxonomy.reference_images import LocalReferenceImageCache
 
@@ -607,9 +610,9 @@ def test_profile_and_local_image_reads_make_zero_outbound_calls(tmp_path, monkey
         monkeypatch.setattr(LocalReferenceImageCache, "_fetch_remote", forbidden)
         # Existing cache instances retain their fetch callable; patch the transport too.
         monkeypatch.setattr("urllib.request.OpenerDirector.open", forbidden)
-        profile = client.get(url)
+        profile = client.get(url + section)
         assert profile.status_code == 200
-        assert "Your records" in profile.text
+        assert ("Guides &amp; Species Reference" if section else "Your records") in profile.text
         image = client.get(f"/directory/reference-images/{taxon.taxon_id}")
         if state == "cached_image":
             assert image.status_code == 200

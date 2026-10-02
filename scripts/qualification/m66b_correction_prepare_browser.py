@@ -9,11 +9,12 @@ import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
-from snaketracker.application.species_directory import ProviderTaxon
+from snaketracker.application.species_directory import ProviderTaxon, SpeciesDirectoryService
 from snaketracker.bootstrap.application import build_application
 from snaketracker.bootstrap.configuration import Environment, Settings
 from snaketracker.infrastructure.database.engine import create_sqlite_engine
@@ -79,6 +80,21 @@ def main() -> None:
             ),
             observed_at=datetime.now(UTC),
         )
+        imperator = SQLAlchemyTaxonRepository(engine).upsert(
+            ProviderTaxon(
+                provider="inaturalist",
+                provider_id="539399",
+                source_url="https://www.inaturalist.org/taxa/539399-Boa-imperator",
+                supported_group="snake",
+                accepted_scientific_name="Boa imperator",
+                preferred_common_name="Central American Boa",
+                rank="species",
+                kingdom="Animalia",
+                genus="Boa",
+                species="Boa imperator",
+            ),
+            observed_at=datetime.now(UTC),
+        )
     finally:
         engine.dispose()
     app = build_application(
@@ -91,7 +107,17 @@ def main() -> None:
             session_cookie_secure=False,
         )
     )
-    with TestClient(app) as client:
+    # Explicit species linking ordinarily refreshes a provider detail. Qualification
+    # links the locally seeded record without making a live provider request.
+    with (
+        patch.object(
+            SpeciesDirectoryService,
+            "refresh_detail",
+            autospec=True,
+            side_effect=lambda service, taxon_id: service.get(taxon_id),
+        ),
+        TestClient(app) as client,
+    ):
         login = client.get("/login")
         authenticated = client.post(
             "/login",
@@ -119,14 +145,54 @@ def main() -> None:
         )
         assert response.status_code == 303, response.text[:200]
         boa_route = manifest["animal_urls"]["linked_without_guide"]
-        assert "Reviewed reference guidance" in client.get(boa_route).text
+        assert "Reviewed captive-care guide available." in client.get(boa_route).text
+        assert "Boa constrictor" in client.get(f"{boa_route}/reference").text
         assert (
-            "No reviewed species guidance available yet."
+            "No reviewed captive-care guide is available yet."
             in client.get(response.headers["location"]).text
         )
+        form = client.get("/animals/new")
+        imperator_response = client.post(
+            "/animals",
+            data={
+                "csrf_token": csrf(form.text),
+                "idempotency_key": "boa-imperator-natural-history-browser",
+                "animal_type": "snake",
+                "name": "Fictional Central American Boa",
+                "species": "Central American Boa",
+                "taxon_id": str(imperator.taxon_id),
+                "photo_preference": "none",
+            },
+            follow_redirects=False,
+        )
+        assert imperator_response.status_code == 303, imperator_response.text[:200]
+        imperator_reference = client.get(f"{imperator_response.headers['location']}/reference")
+        assert imperator_reference.status_code == 200
+        assert "Boa imperator" in imperator_reference.text
+        assert "No reviewed captive-care guide is available yet." in imperator_reference.text
+        form = client.get("/animals/new")
+        spider_response = client.post(
+            "/animals",
+            data={
+                "csrf_token": csrf(form.text),
+                "idempotency_key": "navigation-form-spider-browser",
+                "animal_type": "spider",
+                "name": "Fictional Form Spider",
+                "species": "Fictional manual spider",
+                "photo_preference": "none",
+            },
+            follow_redirects=False,
+        )
+        assert spider_response.status_code == 303, spider_response.text[:200]
     manifest["animal_urls"]["boa_guide"] = boa_route
     manifest["animal_urls"]["linked_without_guide"] = response.headers["location"]
     manifest["taxon_ids"]["Morelia spilota"] = str(taxon.taxon_id)
+    manifest["taxon_ids"]["Boa imperator"] = str(imperator.taxon_id)
+    manifest["animal_urls"]["boa_imperator"] = imperator_response.headers["location"]
+    manifest["animal_urls"]["form_spider"] = spider_response.headers["location"]
+    manifest["provider_mappings"] = {
+        "Boa imperator": {"provider": "inaturalist", "provider_id": "539399"}
+    }
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"Correction fixture prepared: {manifest_path}")
 

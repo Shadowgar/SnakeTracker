@@ -41,14 +41,16 @@
       <div class="section-heading"><div><p class="page-kicker">Species reference</p><h2 id="profile-reference-title">{% if linked_taxon %}{{ linked_taxon.taxon.accepted_scientific_name }}{% else %}About this species{% endif %}</h2></div></div>
       {% if linked_taxon and profile_reference_guide %}
         <p class="profile-reference-boundary">Reviewed reference guidance for this species — separate from {{ animal.name }}'s individual records or care settings.</p>
-        {% include "profile_reference_content.html" %}
-        <a class="profile-reference-action" href="/directory/{{ linked_taxon.taxon.taxon_id }}">Open directory entry →</a>
+        <p class="profile-reference-intro">{{ linked_taxon.taxon.display_name }} · Reviewed captive-care guide available.</p>
+        {% with reference_glance = profile_reference_glance[:3] %}{% include "profile_reference_glance.html" %}{% endwith %}
+        <a class="profile-reference-action" href="/animals/{{ animal.animal_id }}/reference">Guides &amp; Species Reference →</a>
       {% elif linked_taxon %}
         <p class="profile-reference-boundary">Species reference — not your Animal's individual records or care settings.</p>
-        <p class="profile-reference-empty">No reviewed species guidance available yet.</p>
-        <a class="profile-reference-action" href="/directory/{{ linked_taxon.taxon.taxon_id }}">View species in Directory →</a>
+        <p class="profile-reference-empty">No reviewed captive-care guide is available yet.</p>
+        <a class="profile-reference-action" href="/animals/{{ animal.animal_id }}/reference">Guides &amp; Species Reference →</a>
       {% else %}
-        <p class="profile-reference-empty">Link a species to see reviewed guidance.</p>
+        <p class="profile-reference-empty">Link a species to see its reference information.</p>
+        <a class="profile-reference-action" href="/animals/{{ animal.animal_id }}/reference">Guides &amp; Species Reference →</a>
         <form class="form-stack" method="post" action="/animals/{{ animal.animal_id }}/species" data-taxon-form>
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <input type="hidden" name="idempotency_key" value="{{ command_id }}">
@@ -83,4 +85,4 @@
 </section>
 {% endblock %}
 
-{% block scripts %}<script src="/static/species-directory.js?v=m66b-compact-reference-v1" defer></script>{% endblock %}
+{% block scripts %}<script src="/static/species-directory.js?v=m66b-animal-reference-v1" defer></script>{% endblock %}

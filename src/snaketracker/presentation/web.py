@@ -5574,6 +5574,27 @@ def create_web_router(
             },
         )
 
+    @router.get("/animals/{animal_id}/reference", response_class=HTMLResponse)
+    async def animal_reference(request: Request, animal_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            profile = animal_service.profile_for(principal.household_id, UUID(animal_id))
+        except ValueError:
+            profile = None
+        if profile is None:
+            return _not_found(request, "Animal not found")
+        return protected_page(
+            request,
+            "animal_reference.html",
+            principal,
+            context={
+                **animal_experience_context(principal, profile),
+                "active_section": "reference",
+            },
+        )
+
     @router.get(
         "/animals/{animal_id}/care-schedule/{reminder_type}/edit",
         response_class=HTMLResponse,

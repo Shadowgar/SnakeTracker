@@ -252,7 +252,9 @@ def test_authenticated_offline_guide_escapes_source_text_and_keeps_csp(tmp_path:
         assert event_rows.scalar_one() == event_count
 
 
-def test_animal_overview_reads_only_its_explicitly_linked_current_guide(tmp_path: Path) -> None:
+def test_animal_reference_reads_only_its_explicitly_linked_current_guide(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     path, ids = _database(tmp_path)
     engine = create_sqlite_engine(path, require_local_storage=False)
     SQLAlchemyCareGuideRepository(engine).import_bundle(_bundle())
@@ -358,13 +360,35 @@ def test_animal_overview_reads_only_its_explicitly_linked_current_guide(tmp_path
 
         before = snapshot()
 
+        from snaketracker.infrastructure.taxonomy.inaturalist import INaturalistTaxonomyProvider
+
+        def forbidden_provider(*args: object, **kwargs: object) -> None:
+            pytest.fail("Animal pages must read local reference data only")
+
+        monkeypatch.setattr(INaturalistTaxonomyProvider, "search", forbidden_provider)
+        monkeypatch.setattr(INaturalistTaxonomyProvider, "detail", forbidden_provider)
+
         def reference_html(url: str) -> str:
-            response = client.get(url)
+            response = client.get(f"{url}/reference")
             assert response.status_code == 200
-            assert 'class="card overview-reference"' in response.text
-            return response.text.split('class="card overview-reference"', 1)[1].split(
-                'class="card overview-manage"', 1
-            )[0]
+            assert 'class="animal-reference-content"' in response.text
+            nav = response.text.split('class="animal-section-nav"', 1)[1].split("</nav>", 1)[0]
+            assert nav.count("<a ") == 5
+            assert nav.index(">Care</a>") < nav.index(">Guides &amp; Species Reference</a>")
+            assert f'href="{url}/reference" aria-current="page"' in nav
+            assert "Species Overview / Natural History" in response.text
+            assert "Reviewed Captive Care" in response.text
+            assert "Sources / Provenance" in response.text
+            return response.text
+
+        for url in (snake_url, lizard_url, no_guide_url, unlinked_url):
+            overview = client.get(url)
+            assert overview.status_code == 200
+            assert f'href="{url}/reference"' in overview.text
+            assert 'article class="guide-fact"' not in overview.text
+            assert 'class="profile-reference-disclosure' not in overview.text
+            assert overview.text.count('class="profile-reference-fact"') <= 3
+            assert f'href="{url}" aria-current="page"' in overview.text
 
         snake = reference_html(snake_url)
         assert "Reviewed reference guidance for" in snake
@@ -372,6 +396,7 @@ def test_animal_overview_reads_only_its_explicitly_linked_current_guide(tmp_path
         assert "Single source" in snake
         assert f'href="/directory/{ids["Python regius"]}"' in snake
         assert "individual records or care settings." in snake
+        assert snake.count('article class="guide-fact"') == 6
 
         lizard = reference_html(lizard_url)
         assert "Sources differ" in lizard
@@ -379,16 +404,40 @@ def test_animal_overview_reads_only_its_explicitly_linked_current_guide(tmp_path
         assert "38\u201342°C" in lizard
         assert f'href="/directory/{ids["Pogona vitticeps"]}"' in lizard
         assert "Corroborated" in lizard
+        assert 'class="profile-reference-disclosure profile-reference-sources"' in lizard
+        assert "Version 1" in lizard
 
         no_guide = reference_html(no_guide_url)
-        assert "No reviewed species guidance available yet." in no_guide
+        assert "No reviewed captive-care guide is available yet." in no_guide
+        assert "Boa constrictor" in no_guide
         assert f"/directory/{no_guide_id}" in no_guide
         assert "profile-reference-grid" not in no_guide
+        assert "No reviewed species guidance" not in no_guide
 
         unlinked = reference_html(unlinked_url)
-        assert "Link a species to see reviewed guidance." in unlinked
+        assert "Link a species" in unlinked
         assert f"{unlinked_url}/species" in unlinked
         assert "30\u201332°C" not in unlinked
         assert "profile-reference-grid" not in unlinked
         assert client.get("/directory").status_code == 200
+        assert client.get("/animals/not-a-uuid/reference").status_code == 404
+        assert client.get(f"/animals/{uuid4()}/reference").status_code == 404
         assert snapshot() == before
+        from dataclasses import replace
+
+        from snaketracker.application.identity import IdentityService
+
+        authenticate = IdentityService.authenticate
+
+        def foreign_household(self: IdentityService, token: str, **kwargs: object):
+            return replace(authenticate(self, token), household_id=uuid4())
+
+        with monkeypatch.context() as foreign:
+            foreign.setattr(IdentityService, "authenticate", foreign_household)
+            response = client.get(f"{snake_url}/reference")
+            assert response.status_code == 404
+            assert "Linked snake" not in response.text
+        client.cookies.clear()
+        denied = client.get(f"{snake_url}/reference", follow_redirects=False)
+        assert denied.status_code == 303
+        assert denied.headers["location"] == "/login"

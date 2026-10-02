@@ -1,0 +1,364 @@
+{
+  "navigation": {
+    "captured_states": [
+      {
+        "actual_viewport": true,
+        "name": "boa-overview-top",
+        "viewport": "desktop-1440x900"
+      },
+      {
+        "actual_viewport": true,
+        "name": "boa-overview-compact-reference",
+        "viewport": "desktop-1440x900"
+      },
+      {
+        "actual_viewport": true,
+        "name": "boa-reference-top",
+        "viewport": "desktop-1440x900"
+      },
+      {
+        "actual_viewport": true,
+        "name": "keyboard-tabstrip-reference-focused",
+        "viewport": "desktop-1440x900"
+      },
+      {
+        "actual_viewport": true,
+        "name": "boa-reference-collapsed-sections",
+        "viewport": "desktop-1440x900"
+      },
+      {
+        "actual_viewport": true,
+        "name": "boa-reference-expanded-top",
+        "viewport": "desktop-1440x900"
+      },
+      {
+        "actual_viewport": false,
+        "name": "boa-reference-all-expanded-full-page",
+        "viewport": "desktop-1440x900"
+      },
+      {
+        "actual_viewport": true,
+        "name": "boa-temperature-sources-differ",
+        "viewport": "desktop-1440x900"
+      },
+      {
+        "actual_viewport": true,
+        "name": "boa-sources-expanded",
+        "viewport": "desktop-1440x900"
+      },
+      {
+        "actual_viewport": true,
+        "name": "boa-fact-provenance-expanded",
+        "viewport": "desktop-1440x900"
+      },
+      {
+        "actual_viewport": true,
+        "name": "boa_imperator-reference-top",
+        "viewport": "desktop-1440x900"
+      },
+      {
+        "actual_viewport": true,
+        "name": "boa_imperator-reference-guide-absence",
+        "viewport": "desktop-1440x900"
+      },
+      {
+        "actual_viewport": true,
+        "name": "linked_without_guide-reference-top",
+        "viewport": "desktop-1440x900"
+      },
+      {
+        "actual_viewport": true,
+        "name": "linked_without_guide-reference-guide-absence",
+        "viewport": "desktop-1440x900"
+      },
+      {
+        "actual_viewport": true,
+        "name": "unlinked-reference",
+        "viewport": "desktop-1440x900"
+      },
+      {
+        "actual_viewport": true,
+        "name": "feeding-empty-inventory-actions",
+        "viewport": "desktop-1440x900"
+      },
+      {
+        "actual_viewport": true,
+        "name": "record-weight-submit-cancel",
+        "viewport": "desktop-1440x900"
+      },
+      {
+        "actual_viewport": true,
+        "name": "record-length-submit-cancel",
+        "viewport": "desktop-1440x900"
+      },
+      {
+        "actual_viewport": true,
+        "name": "boa-overview-top",
+        "viewport": "mobile-390x844"
+      },
+      {
+        "actual_viewport": true,
+        "name": "boa-overview-compact-reference",
+        "viewport": "mobile-390x844"
+      },
+      {
+        "actual_viewport": true,
+        "name": "boa-reference-top",
+        "viewport": "mobile-390x844"
+      },
+      {
+        "actual_viewport": true,
+        "name": "keyboard-tabstrip-reference-focused",
+        "viewport": "mobile-390x844"
+      },
+      {
+        "actual_viewport": true,
+        "name": "boa-reference-collapsed-sections",
+        "viewport": "mobile-390x844"
+      },
+      {
+        "actual_viewport": true,
+        "name": "boa-reference-expanded-top",
+        "viewport": "mobile-390x844"
+      },
+      {
+        "actual_viewport": false,
+        "name": "boa-reference-all-expanded-full-page",
+        "viewport": "mobile-390x844"
+      },
+      {
+        "actual_viewport": true,
+        "name": "boa-temperature-sources-differ",
+        "viewport": "mobile-390x844"
+      },
+      {
+        "actual_viewport": true,
+        "name": "boa-sources-expanded",
+        "viewport": "mobile-390x844"
+      },
+      {
+        "actual_viewport": true,
+        "name": "boa-fact-provenance-expanded",
+        "viewport": "mobile-390x844"
+      },
+      {
+        "actual_viewport": true,
+        "name": "boa_imperator-reference-top",
+        "viewport": "mobile-390x844"
+      },
+      {
+        "actual_viewport": true,
+        "name": "boa_imperator-reference-guide-absence",
+        "viewport": "mobile-390x844"
+      },
+      {
+        "actual_viewport": true,
+        "name": "linked_without_guide-reference-top",
+        "viewport": "mobile-390x844"
+      },
+      {
+        "actual_viewport": true,
+        "name": "linked_without_guide-reference-guide-absence",
+        "viewport": "mobile-390x844"
+      },
+      {
+        "actual_viewport": true,
+        "name": "unlinked-reference",
+        "viewport": "mobile-390x844"
+      },
+      {
+        "actual_viewport": true,
+        "name": "feeding-empty-inventory-actions",
+        "viewport": "mobile-390x844"
+      },
+      {
+        "actual_viewport": true,
+        "name": "record-weight-submit-cancel",
+        "viewport": "mobile-390x844"
+      },
+      {
+        "actual_viewport": true,
+        "name": "record-length-submit-cancel",
+        "viewport": "mobile-390x844"
+      }
+    ],
+    "case_names": [
+      "compact-overview-summary",
+      "five-tabs-active-and-navigation",
+      "keyboard-tabstrip-reaches-reference",
+      "full-reviewed-guide-collapsed-and-expanded",
+      "sources-differ-native-disclosure",
+      "source-provenance-and-per-fact-disclosures",
+      "boa_imperator-linked-without-care-guide",
+      "linked_without_guide-linked-without-care-guide",
+      "unlinked-reference-link-species-native-anchor",
+      "empty-feeding-peer-actions-style-and-semantics",
+      "record-weight-submit-cancel-controls",
+      "record-length-submit-cancel-controls",
+      "record-shed-submit-cancel-controls",
+      "record-bath-submit-cancel-controls",
+      "record-molt-submit-cancel-controls",
+      "record-premolt-submit-cancel-controls",
+      "record-misting-submit-cancel-controls",
+      "compact-overview-summary",
+      "five-tabs-active-and-navigation",
+      "keyboard-tabstrip-reaches-reference",
+      "full-reviewed-guide-collapsed-and-expanded",
+      "sources-differ-native-disclosure",
+      "source-provenance-and-per-fact-disclosures",
+      "boa_imperator-linked-without-care-guide",
+      "linked_without_guide-linked-without-care-guide",
+      "unlinked-reference-link-species-native-anchor",
+      "empty-feeding-peer-actions-style-and-semantics",
+      "record-weight-submit-cancel-controls",
+      "record-length-submit-cancel-controls",
+      "record-shed-submit-cancel-controls",
+      "record-bath-submit-cancel-controls",
+      "record-molt-submit-cancel-controls",
+      "record-premolt-submit-cancel-controls",
+      "record-misting-submit-cancel-controls"
+    ],
+    "mobile_keyboard_geometry": {
+      "anchorLeft": 141.28125,
+      "anchorRight": 389.953125,
+      "clientWidth": 390,
+      "focusOutline": "2px",
+      "scrollLeft": 196,
+      "scrollWidth": 586,
+      "stripLeft": 0,
+      "stripRight": 390
+    },
+    "totals": {
+      "axeViolations": 0,
+      "captures": 36,
+      "cases": 34,
+      "directoryRequestsOnReads": 0,
+      "externalRequests": 0,
+      "failed": 0,
+      "pageOverflow": 0,
+      "passed": 34,
+      "unexpectedConsoleOrPageErrors": 0
+    }
+  },
+  "private_capture_policy": "Screenshots and actual production HTML/media remain local outside the repository",
+  "qualification_before_commit": true,
+  "qualified_files": {
+    "scripts/qualification/m66b_correction_browser.js": "7d7f8718ef0f372c28b8bbbe4713f88e1085bd44f8f1724df7cc4808f32b8943",
+    "scripts/qualification/m66b_correction_prepare_browser.py": "7412d5815e6ce78ae013623ab04645044287ca2bc339657de334cae343eceb30",
+    "scripts/qualification/m66b_reference_navigation_browser.js": "c944f50d3f72d871fe8e6bec0529cc9bfc5b0faeea07c908af363289f96170ab",
+    "src/snaketracker/presentation/static/animal-sections.js": "f4186c04af5e16e500c2ec53c6acfb25875071bdb25d33e9fbe4274f50e0e9c3"
+  },
+  "regressions": {
+    "case_names": [
+      "manual-snake-none",
+      "manual-snake-outage",
+      "manual-snake-timeout",
+      "manual-snake-throttle",
+      "manual-snake-malformed",
+      "manual-snake-oversized",
+      "selected-snake-without-image",
+      "manual-lizard-none",
+      "manual-lizard-outage",
+      "manual-lizard-timeout",
+      "manual-lizard-throttle",
+      "manual-lizard-malformed",
+      "manual-lizard-oversized",
+      "selected-lizard-without-image",
+      "manual-spider-none",
+      "manual-spider-outage",
+      "manual-spider-timeout",
+      "manual-spider-throttle",
+      "manual-spider-malformed",
+      "manual-spider-oversized",
+      "selected-spider-without-image",
+      "manual-scorpion-none",
+      "manual-scorpion-outage",
+      "manual-scorpion-timeout",
+      "manual-scorpion-throttle",
+      "manual-scorpion-malformed",
+      "manual-scorpion-oversized",
+      "selected-scorpion-without-image",
+      "selection-cleared-by-species-text-edit",
+      "selection-cleared-by-animal-type-change",
+      "stale-search-response-discarded",
+      "stale-reference-image-response-discarded",
+      "edit-retains-explicit-selected-link",
+      "legacy-unlinked-inline-confirmation",
+      "linked-python-direct-guide",
+      "linked-lizard-separate-disagreements",
+      "linked-boa-direct-guide",
+      "linked-no-reviewed-guide",
+      "unlinked-honest-reference",
+      "directory-remains-usable",
+      "precise-length-record-correct-export",
+      "length-excess-precision-accessible-alert",
+      "manual-snake-none",
+      "manual-snake-outage",
+      "manual-snake-timeout",
+      "manual-snake-throttle",
+      "manual-snake-malformed",
+      "manual-snake-oversized",
+      "selected-snake-without-image",
+      "manual-lizard-none",
+      "manual-lizard-outage",
+      "manual-lizard-timeout",
+      "manual-lizard-throttle",
+      "manual-lizard-malformed",
+      "manual-lizard-oversized",
+      "selected-lizard-without-image",
+      "manual-spider-none",
+      "manual-spider-outage",
+      "manual-spider-timeout",
+      "manual-spider-throttle",
+      "manual-spider-malformed",
+      "manual-spider-oversized",
+      "selected-spider-without-image",
+      "manual-scorpion-none",
+      "manual-scorpion-outage",
+      "manual-scorpion-timeout",
+      "manual-scorpion-throttle",
+      "manual-scorpion-malformed",
+      "manual-scorpion-oversized",
+      "selected-scorpion-without-image",
+      "selection-cleared-by-species-text-edit",
+      "selection-cleared-by-animal-type-change",
+      "stale-search-response-discarded",
+      "stale-reference-image-response-discarded",
+      "edit-retains-explicit-selected-link",
+      "legacy-unlinked-inline-confirmation",
+      "linked-python-direct-guide",
+      "linked-lizard-separate-disagreements",
+      "linked-boa-direct-guide",
+      "linked-no-reviewed-guide",
+      "unlinked-honest-reference",
+      "directory-remains-usable",
+      "precise-length-record-correct-export",
+      "length-excess-precision-accessible-alert"
+    ],
+    "manual_species_same_save_linking_and_exact_fractional_lengths_retained": true,
+    "normal_csp": true,
+    "totals": {
+      "axeViolations": 0,
+      "cases": 84,
+      "consoleErrors": 26,
+      "expectedInjectedErrors": 26,
+      "externalRequestsBlocked": 0,
+      "failed": 0,
+      "overflowCaptures": 0,
+      "passed": 84,
+      "screenshots": 32,
+      "unexpectedErrors": 0
+    }
+  },
+  "scope": "Owner October2 Animal Reference Navigation amendment; isolated fictional HTTP fixture under normal CSP",
+  "viewports": [
+    {
+      "height": 900,
+      "width": 1440
+    },
+    {
+      "height": 844,
+      "width": 390
+    }
+  ]
+}

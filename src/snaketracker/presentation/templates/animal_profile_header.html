@@ -47,5 +47,6 @@
   <a href="/animals/{{ animal.animal_id }}/timeline"{% if active_section == 'history' %} aria-current="page"{% endif %}>History</a>
   <a href="/animals/{{ animal.animal_id }}/analytics"{% if active_section == 'trends' %} aria-current="page"{% endif %}>Trends</a>
   <a href="/animals/{{ animal.animal_id }}/care"{% if active_section == 'care' %} aria-current="page"{% endif %}>Care</a>
+  <a href="/animals/{{ animal.animal_id }}/reference"{% if active_section == 'reference' %} aria-current="page"{% endif %}>Guides &amp; Species Reference</a>
 </nav>
 <form hidden aria-hidden="true"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"></form>

@@ -9,7 +9,7 @@ const { chromium } = require(process.env.M66B_PLAYWRIGHT_MODULE || "playwright")
 
 const root = path.resolve(__dirname, "../..");
 const manifestPath = process.env.M66B_MANIFEST || path.join(
-  fs.readFileSync("/tmp/m66b-correction-browser-path", "utf8").trim(), "browser-manifest.json"
+  fs.readFileSync("/tmp/m66b-navigation-browser-path", "utf8").trim(), "browser-manifest.json"
 );
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 const origin = process.env.M66B_ORIGIN || "http://127.0.0.1:8098";
@@ -62,10 +62,13 @@ function writeResult() {
 }
 
 async function capture(page, viewport, name) {
-  await page.addScriptTag({ path: axePath });
+  const focused = await page.evaluateHandle(() => document.activeElement);
+  await page.addScriptTag({ url: `${origin}/static/qualification-axe.js` });
   const axeViolations = await page.evaluate(async () => (await window.axe.run(document)).violations.map(item => ({
     id: item.id, impact: item.impact, nodes: item.nodes.map(node => node.target),
   })));
+  await focused.evaluate(element => { if (element && element.isConnected && element.focus) element.focus({ preventScroll: true }); });
+  await focused.dispose();
   const overflow = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, viewportWidth: innerWidth }));
   const filename = `${runId}-${viewport}-${name}.png`;
   await page.screenshot({ path: path.join(evidence, "screenshots", filename), fullPage: true });
@@ -89,7 +92,7 @@ async function runCase(state, viewport, name, action, expectedErrors = false) {
 }
 
 async function open(page, route) {
-  const response = await page.goto(`${origin}${route}`, { waitUntil: "networkidle" });
+  const response = await page.goto(`${origin}${route}`, { waitUntil: "domcontentloaded" });
   assert.equal(response.status(), 200, `${route}: HTTP ${response.status()}`);
 }
 
@@ -113,7 +116,7 @@ async function createAnimal(page, linked) {
   const submit = page.getByRole("button", { name: "Create animal", exact: true });
   await Promise.all([page.waitForURL(url => /^\/animals\/[0-9a-f-]+$/.test(url.pathname)), submit.click()]);
   const text = await page.locator(".overview-reference").innerText();
-  assert(text.includes(linked ? "Reviewed reference guidance" : "Link a species to see reviewed guidance."));
+  assert(text.includes(linked ? "Reviewed reference guidance" : "Link a species to see its reference information."));
   return new URL(page.url()).pathname;
 }
 
@@ -136,7 +139,7 @@ async function main() {
   try {
     for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
       const label = viewport.width === 1440 ? "desktop-1440x900" : "mobile-390x844";
-      const context = await browser.newContext({ viewport, bypassCSP: true, serviceWorkers: "block" });
+      const context = await browser.newContext({ viewport, serviceWorkers: "block" });
       const state = { mode: "known", caseName: "login", expectedErrors: false, searchStarted: 0, imageDelay: false };
       await context.route("**/*", async route => {
         const url = new URL(route.request().url());
@@ -145,6 +148,7 @@ async function main() {
           await route.abort("blockedbyclient");
           return;
         }
+        if (url.pathname === "/static/qualification-axe.js") return route.fulfill({ contentType: "application/javascript", body: fs.readFileSync(axePath) });
         if (url.pathname === "/api/directory/search") {
           state.searchStarted += 1;
           const mode = state.mode;
@@ -309,36 +313,36 @@ async function main() {
         ["linked-python-direct-guide", manifest.animal_urls.with_guide, ["30–32°C", "Royal Veterinary College", "Feeding"]],
         ["linked-lizard-separate-disagreements", manifest.animal_urls.disagreement, ["Sources differ", "35–40°C", "38–42°C", "Royal Veterinary College", "RSPCA"]],
         ["linked-boa-direct-guide", manifest.animal_urls.boa_guide, ["Boa constrictor", "Royal Veterinary College", "ReptiFiles", "55–75%", "Sources differ"]],
-        ["linked-no-reviewed-guide", manifest.animal_urls.linked_without_guide, ["No reviewed species guidance available yet."]],
-        ["unlinked-honest-reference", manifest.animal_urls.unlinked, ["Link a species to see reviewed guidance.", "Confirm species link"]],
+        ["linked-no-reviewed-guide", manifest.animal_urls.linked_without_guide, ["No reviewed captive-care guide is available yet."]],
+        ["unlinked-honest-reference", manifest.animal_urls.unlinked, ["Link a species to see its reference information.", "Link species"]],
       ];
       for (const [name, route, requiredText] of profiles) await runCase(state, label, name, async () => {
         assert(route, `${name}: manifest URL is required`);
         await open(page, route);
-        const reference = await page.locator(".overview-reference").textContent();
-        const provenance = await page.locator(".overview-reference").textContent();
-        for (const text of requiredText) {
-          const visibleText = ["Royal Veterinary College", "RSPCA", "ReptiFiles"].includes(text) ? provenance : reference;
-          assert(visibleText.includes(text), `${name}: missing ${text}`);
-        }
+        const overview = page.locator(".overview-reference");
+        assert.equal(await overview.locator("article.guide-fact").count(), 0, "Overview must stay compact");
         assert(await page.locator(".overview-identity").isVisible());
         assert(await page.locator(".overview-care").isVisible());
+        await open(page, `${route}/reference`);
+        const content = page.locator(".animal-reference-content");
+        const reference = await content.textContent();
+        for (const text of requiredText) assert(reference.includes(text), `${name}: missing ${text}`);
         if (name.includes("direct-guide") || name.includes("disagreements")) {
-          const facts = page.locator(".overview-reference article.guide-fact");
+          const facts = content.locator("article.guide-fact");
           const expectedFacts = { "linked-python-direct-guide": 6, "linked-lizard-separate-disagreements": 7, "linked-boa-direct-guide": 28 }[name];
-          assert.equal(await facts.count(), expectedFacts, "Every sourced contextual fact must appear directly");
-          const sections = page.locator(".overview-reference details.profile-reference-disclosure");
-          assert(await sections.count(), "Detailed reference must be expandable on the same page");
+          assert.equal(await facts.count(), expectedFacts, "Every sourced contextual fact must appear on the Animal reference page");
+          const sections = content.locator("details.profile-reference-disclosure");
+          assert(await sections.count(), "Detailed reference must be expandable on the reference page");
           assert.equal(await facts.locator(":visible").count(), 0, "Guide defaults must stay compact");
           for (const section of await sections.all()) await section.locator(":scope > summary").click();
           for (const fact of await facts.all()) {
-            assert(await fact.locator(".guide-value, .guide-position strong").first().isVisible(), "Guide claim missing after same-page expansion");
+            assert(await fact.locator(".guide-value, .guide-position strong").first().isVisible(), "Guide claim missing after reference-page expansion");
           }
           for (const section of await sections.all()) await section.locator(":scope > summary").click();
         }
-        if (name === "linked-no-reviewed-guide") assert.equal(await page.locator(".profile-reference-fact").count(), 0);
+        if (name === "linked-no-reviewed-guide") assert.equal(await content.locator(".profile-reference-fact").count(), 0);
         await capture(page, label, name);
-        return { guidanceVisibleOnProfile: name.includes("direct-guide"), expectedTextVerified: requiredText };
+        return { guideOnAnimalReferencePage: name.includes("direct-guide"), compactOverview: true, expectedTextVerified: requiredText };
       });
       await runCase(state, label, "directory-remains-usable", async () => {
         state.mode = "known";

@@ -41,7 +41,7 @@
     <label>Result<select name="result">{% for option in ("complete", "partial", "failed") %}<option value="{{ option }}" {% if target.payload.result == option %}selected{% endif %}>{{ option|capitalize }}</option>{% endfor %}</select></label>
     {% endif %}
     <label>Notes<textarea name="notes" rows="3">{{ target.notes or '' }}</textarea></label>
-    <div class="form-actions"><a href="/animals/{{ animal.animal_id }}/timeline">Cancel</a><button type="submit">Save correction</button></div>
+    <div class="form-actions"><a class="button-link secondary-link" href="/animals/{{ animal.animal_id }}/timeline">Cancel</a><button type="submit">Save correction</button></div>
   </form>
 </section>
 {% endblock %}
