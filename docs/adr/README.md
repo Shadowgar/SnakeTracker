@@ -11,9 +11,20 @@ decisions.
 M6.5-A1 implements its structured Inventory and Inventory-authoritative Feeding foundation;
 Purchase, FIFO, costing, counting, and intelligence remain later M6.5 tranches.
 
-[ADR-0043](0043-universal-species-directory.md) is **Proposed for M6.6-A owner review**. It records
-Care Keeper-owned taxon identity, provider/cache boundaries, licensing, privacy, and offline
-behavior before the M6.6-A production-provider implementation.
+[ADR-0043](0043-universal-species-directory.md) records **Accepted** status dated 2026-09-26. A was integrated in
+PR #14; standalone milestone owner acceptance remains unverified in repository evidence (see the
+[roadmap](../roadmap/milestones.md)). It records Care Keeper-owned taxon identity, provider/cache
+boundaries, licensing, privacy, and
+offline behavior. [ADR-0044](0044-versioned-sourced-care-guides.md) is **Proposed for M6.6-B
+owner review** and records the immutable guide/source/claim boundary.
+
+[ADR-0045](0045-extensible-animal-capability-evolution.md),
+[ADR-0046](0046-local-taxonomy-snapshot-and-provider-overlay.md),
+[ADR-0047](0047-natural-history-reference-boundary.md), and
+[ADR-0048](0048-precise-animal-length-measurements.md) are **Proposed** for the pre-M6.6-C
+extension. They add profile lifecycle/startup compatibility, permanent identity with replaceable
+reference generations, Natural History/legacy-guide coexistence, and exact length contracts
+without altering accepted historical meanings.
 
 | ADR | Decision |
 |---|---|
@@ -60,3 +71,8 @@ behavior before the M6.6-A production-provider implementation.
 | [0041](0041-four-group-capability-expansion-and-neutral-molt-contracts.md) | Four-group capability expansion and neutral molt contracts |
 | [0042](0042-inventory-purchases-fifo-and-quantity-policy.md) | Structured Inventory, Inventory-authoritative Feeding, multi-line Purchases, FIFO valuation, canonical quantities, and physical counts |
 | [0043](0043-universal-species-directory.md) | Care Keeper-owned taxon identity, normalized provider mappings/cache, licensing, privacy, and offline species discovery |
+| [0044](0044-versioned-sourced-care-guides.md) | Versioned sourced Care Guides as global reference data, with atomic reviewed import and explicit disagreement |
+| [0045](0045-extensible-animal-capability-evolution.md) | Profile read/registration lifecycle, supported identities, startup checks and downgrade barrier |
+| [0046](0046-local-taxonomy-snapshot-and-provider-overlay.md) | Permanent taxon catalog, replaceable generations and reconciled live overlay/promotion |
+| [0047](0047-natural-history-reference-boundary.md) | Natural History authority, immutable guide coexistence and presentation precedence |
+| [0048](0048-precise-animal-length-measurements.md) | Exact length v2 scale/units/consistency and complete mixed-history consumer semantics |

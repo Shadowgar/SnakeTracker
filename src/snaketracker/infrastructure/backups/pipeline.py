@@ -119,16 +119,7 @@ class LocalBackupPipeline:
             )
             copied_database.unlink()
             for attachment in attachments:
-                content = self._attachment_storage.read_finalized(
-                    attachment.storage_key, attachment.media_type
-                )
-                if (
-                    len(content) != attachment.size_bytes
-                    or _sha256(content) != attachment.content_sha256
-                ):
-                    raise BackupVerificationError(
-                        "Immutable attachment failed checksum verification."
-                    )
+                content = _verified_attachment_content(self._attachment_storage, attachment)
                 extension = _extension_for(attachment.media_type)
                 artifact = self._encrypt_artifact(
                     content,
@@ -193,6 +184,8 @@ class LocalBackupPipeline:
             if database_path is None:
                 raise BackupVerificationError("Backup manifest has no database artifact.")
             self._verify_restored_database(database_path)
+            for attachment in self._selected_attachments(database_path):
+                _verified_attachment_content(attachment_storage, attachment)
             return RestoreRehearsal(
                 database_path=database_path,
                 attachment_storage=attachment_storage,
@@ -221,7 +214,7 @@ class LocalBackupPipeline:
 
     @staticmethod
     def _capture_database(copied_database: Path) -> _DatabaseCapture:
-        with closing(sqlite3.connect(copied_database)) as copied:
+        with closing(_readonly_database(copied_database)) as copied:
             revision_row = copied.execute("SELECT version_num FROM alembic_version").fetchone()
             position_row = copied.execute(
                 "SELECT COALESCE(MAX(global_position), 0) FROM domain_events"
@@ -240,16 +233,11 @@ class LocalBackupPipeline:
 
     @staticmethod
     def _selected_attachments(copied_database: Path) -> tuple[_AttachmentReference, ...]:
-        with closing(sqlite3.connect(copied_database)) as copied:
+        """All finalized immutable versions in this completed copy, including history."""
+        with closing(_readonly_database(copied_database)) as copied:
             rows = copied.execute(
-                "SELECT DISTINCT version.attachment_version_id,version.storage_key,"
-                "version.media_type,"
-                "version.content_sha256,version.size_bytes "
-                "FROM attachment_versions AS version "
-                "JOIN animal_current AS animal "
-                "ON animal.household_id=version.household_id "
-                "AND animal.photo_attachment_version_id=version.attachment_version_id "
-                "ORDER BY version.attachment_version_id"
+                "SELECT attachment_version_id,storage_key,media_type,content_sha256,size_bytes "
+                "FROM attachment_versions ORDER BY attachment_version_id"
             ).fetchall()
         return tuple(
             _AttachmentReference(
@@ -353,9 +341,14 @@ class LocalBackupPipeline:
         artifacts = _manifest_artifacts(manifest)
         capture = _manifest_capture(manifest, self._encryption_key_id)
         attachment_count = 0
+        attachment_artifacts: list[dict[str, object]] = []
         database_content: bytes | None = None
+        seen_paths: set[str] = set()
         for artifact in artifacts:
             relative_path = _artifact_relative_path(artifact)
+            if relative_path in seen_paths:
+                raise BackupVerificationError("Backup manifest contains a duplicate artifact.")
+            seen_paths.add(relative_path)
             encrypted = (archive / relative_path).read_bytes()
             if _sha256(encrypted) != _artifact_string(artifact, "ciphertext_sha256"):
                 raise BackupVerificationError("Encrypted backup artifact checksum does not match.")
@@ -363,10 +356,13 @@ class LocalBackupPipeline:
             _verify_plaintext_artifact(artifact, content)
             kind = _artifact_string(artifact, "kind")
             if kind == "database":
+                if database_content is not None:
+                    raise BackupVerificationError(
+                        "Backup manifest has multiple database artifacts."
+                    )
                 database_content = content
             elif kind == "attachment":
-                _artifact_uuid(artifact, "storage_key")
-                _artifact_media_type(artifact)
+                attachment_artifacts.append(artifact)
                 attachment_count += 1
             else:
                 raise BackupVerificationError("Backup manifest contains an unsupported artifact.")
@@ -378,6 +374,13 @@ class LocalBackupPipeline:
             database_path = Path(temporary_directory) / "database.sqlite3"
             _write_private_file(database_path, database_content)
             self._verify_restored_database(database_path)
+            if self._capture_database(database_path) != capture:
+                raise BackupVerificationError(
+                    "Backup database compatibility metadata does not match."
+                )
+            _verify_attachment_manifest(
+                self._selected_attachments(database_path), attachment_artifacts
+            )
         return BackupVerification(
             attachment_count=attachment_count,
             database_schema_revision=capture.schema_revision,
@@ -407,14 +410,66 @@ class LocalBackupPipeline:
 
     @staticmethod
     def _verify_restored_database(database_path: Path) -> None:
-        with closing(sqlite3.connect(database_path)) as restored:
+        with closing(_readonly_database(database_path)) as restored:
             integrity = restored.execute("PRAGMA integrity_check").fetchone()
+            foreign_key_errors = restored.execute("PRAGMA foreign_key_check").fetchall()
             session_count = restored.execute("SELECT count(*) FROM sessions").fetchone()
             reset_count = restored.execute(
                 "SELECT count(*) FROM password_reset_credentials"
             ).fetchone()
-        if integrity != ("ok",) or session_count != (0,) or reset_count != (0,):
+        if (
+            integrity != ("ok",)
+            or foreign_key_errors
+            or session_count != (0,)
+            or reset_count != (0,)
+        ):
             raise BackupVerificationError("Restored database did not pass local verification.")
+
+
+def _readonly_database(database_path: Path) -> sqlite3.Connection:
+    connection = sqlite3.connect(database_path.resolve().as_uri() + "?mode=ro", uri=True)
+    connection.execute("PRAGMA query_only=ON")
+    return connection
+
+
+def _verified_attachment_content(
+    storage: LocalAttachmentStorage, attachment: _AttachmentReference
+) -> bytes:
+    _extension_for(attachment.media_type)
+    try:
+        content = storage.read_finalized(attachment.storage_key, attachment.media_type)
+    except OSError as error:
+        raise BackupVerificationError("Immutable attachment content is unavailable.") from error
+    if len(content) != attachment.size_bytes or _sha256(content) != attachment.content_sha256:
+        raise BackupVerificationError("Immutable attachment failed checksum verification.")
+    return content
+
+
+def _verify_attachment_manifest(
+    expected: tuple[_AttachmentReference, ...], artifacts: list[dict[str, object]]
+) -> None:
+    actual: dict[UUID, _AttachmentReference] = {}
+    for artifact in artifacts:
+        version_id = _artifact_uuid(artifact, "attachment_version_id")
+        storage_key = _artifact_uuid(artifact, "storage_key")
+        media_type = _artifact_media_type(artifact)
+        size = artifact.get("plaintext_size")
+        if type(size) is not int or version_id in actual:
+            raise BackupVerificationError("Backup attachment manifest is inconsistent.")
+        expected_path = f"attachments/{storage_key.hex}{_extension_for(media_type)}.enc"
+        if _artifact_relative_path(artifact) != expected_path:
+            raise BackupVerificationError("Backup attachment path does not match its metadata.")
+        actual[version_id] = _AttachmentReference(
+            attachment_version_id=version_id,
+            storage_key=storage_key,
+            media_type=media_type,
+            content_sha256=_artifact_string(artifact, "plaintext_sha256"),
+            size_bytes=size,
+        )
+    if actual != {attachment.attachment_version_id: attachment for attachment in expected}:
+        raise BackupVerificationError(
+            "Backup attachment manifest does not match finalized database versions."
+        )
 
 
 def _manifest_artifacts(manifest: dict[str, object]) -> tuple[dict[str, object], ...]:

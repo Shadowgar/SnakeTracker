@@ -1,0 +1,1525 @@
+{
+  "runId": "20261001073705669",
+  "sourceCommit": "3432cb5405e8e44b6905c0d116a904121da4b44f",
+  "dirtySource": true,
+  "origin": "http://127.0.0.1:8098",
+  "fictionalDataOnly": true,
+  "fixtureGuard": "loopback:8098; real database and manifest in /tmp/m66b-browser.*",
+  "providerResponses": "intercepted locally; no live provider search or image fetch",
+  "phase": "full",
+  "cases": [
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-snake-none",
+      "status": "passed",
+      "durationMs": 1810,
+      "facts": {
+        "animalType": "snake",
+        "simulatedProviderResponse": "none",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-snake-outage",
+      "status": "passed",
+      "durationMs": 1560,
+      "facts": {
+        "animalType": "snake",
+        "simulatedProviderResponse": "outage",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-snake-timeout",
+      "status": "passed",
+      "durationMs": 1580,
+      "facts": {
+        "animalType": "snake",
+        "simulatedProviderResponse": "timeout",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-snake-throttle",
+      "status": "passed",
+      "durationMs": 1813,
+      "facts": {
+        "animalType": "snake",
+        "simulatedProviderResponse": "throttle",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-snake-malformed",
+      "status": "passed",
+      "durationMs": 1638,
+      "facts": {
+        "animalType": "snake",
+        "simulatedProviderResponse": "malformed",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-snake-oversized",
+      "status": "passed",
+      "durationMs": 2911,
+      "facts": {
+        "animalType": "snake",
+        "simulatedProviderResponse": "oversized",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "selected-snake-without-image",
+      "status": "passed",
+      "durationMs": 2656,
+      "facts": {
+        "savedAlreadyLinked": true,
+        "referenceImageRequired": false,
+        "species": "Python regius"
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-lizard-none",
+      "status": "passed",
+      "durationMs": 2257,
+      "facts": {
+        "animalType": "lizard",
+        "simulatedProviderResponse": "none",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-lizard-outage",
+      "status": "passed",
+      "durationMs": 2380,
+      "facts": {
+        "animalType": "lizard",
+        "simulatedProviderResponse": "outage",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-lizard-timeout",
+      "status": "passed",
+      "durationMs": 1551,
+      "facts": {
+        "animalType": "lizard",
+        "simulatedProviderResponse": "timeout",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-lizard-throttle",
+      "status": "passed",
+      "durationMs": 1888,
+      "facts": {
+        "animalType": "lizard",
+        "simulatedProviderResponse": "throttle",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-lizard-malformed",
+      "status": "passed",
+      "durationMs": 1592,
+      "facts": {
+        "animalType": "lizard",
+        "simulatedProviderResponse": "malformed",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-lizard-oversized",
+      "status": "passed",
+      "durationMs": 1581,
+      "facts": {
+        "animalType": "lizard",
+        "simulatedProviderResponse": "oversized",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "selected-lizard-without-image",
+      "status": "passed",
+      "durationMs": 2551,
+      "facts": {
+        "savedAlreadyLinked": true,
+        "referenceImageRequired": false,
+        "species": "Pogona vitticeps"
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-spider-none",
+      "status": "passed",
+      "durationMs": 3348,
+      "facts": {
+        "animalType": "spider",
+        "simulatedProviderResponse": "none",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-spider-outage",
+      "status": "passed",
+      "durationMs": 1958,
+      "facts": {
+        "animalType": "spider",
+        "simulatedProviderResponse": "outage",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-spider-timeout",
+      "status": "passed",
+      "durationMs": 4550,
+      "facts": {
+        "animalType": "spider",
+        "simulatedProviderResponse": "timeout",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-spider-throttle",
+      "status": "passed",
+      "durationMs": 2114,
+      "facts": {
+        "animalType": "spider",
+        "simulatedProviderResponse": "throttle",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-spider-malformed",
+      "status": "passed",
+      "durationMs": 3806,
+      "facts": {
+        "animalType": "spider",
+        "simulatedProviderResponse": "malformed",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-spider-oversized",
+      "status": "passed",
+      "durationMs": 1872,
+      "facts": {
+        "animalType": "spider",
+        "simulatedProviderResponse": "oversized",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "selected-spider-without-image",
+      "status": "passed",
+      "durationMs": 3414,
+      "facts": {
+        "savedAlreadyLinked": true,
+        "referenceImageRequired": false,
+        "species": "Avicularia avicularia"
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-scorpion-none",
+      "status": "passed",
+      "durationMs": 1661,
+      "facts": {
+        "animalType": "scorpion",
+        "simulatedProviderResponse": "none",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-scorpion-outage",
+      "status": "passed",
+      "durationMs": 1834,
+      "facts": {
+        "animalType": "scorpion",
+        "simulatedProviderResponse": "outage",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-scorpion-timeout",
+      "status": "passed",
+      "durationMs": 1606,
+      "facts": {
+        "animalType": "scorpion",
+        "simulatedProviderResponse": "timeout",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-scorpion-throttle",
+      "status": "passed",
+      "durationMs": 2015,
+      "facts": {
+        "animalType": "scorpion",
+        "simulatedProviderResponse": "throttle",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-scorpion-malformed",
+      "status": "passed",
+      "durationMs": 1581,
+      "facts": {
+        "animalType": "scorpion",
+        "simulatedProviderResponse": "malformed",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-scorpion-oversized",
+      "status": "passed",
+      "durationMs": 2124,
+      "facts": {
+        "animalType": "scorpion",
+        "simulatedProviderResponse": "oversized",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "selected-scorpion-without-image",
+      "status": "passed",
+      "durationMs": 2257,
+      "facts": {
+        "savedAlreadyLinked": true,
+        "referenceImageRequired": false,
+        "species": "Pandinus imperator"
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "selection-cleared-by-species-text-edit",
+      "status": "passed",
+      "durationMs": 2454,
+      "facts": {
+        "staleTaxonCleared": true,
+        "savedUnlinked": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "selection-cleared-by-animal-type-change",
+      "status": "passed",
+      "durationMs": 2337,
+      "facts": {
+        "staleTaxonCleared": true,
+        "savedUnlinked": true,
+        "selectedType": "spider"
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "stale-search-response-discarded",
+      "status": "passed",
+      "durationMs": 3435,
+      "facts": {
+        "oldestResponseDiscarded": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "stale-reference-image-response-discarded",
+      "status": "passed",
+      "durationMs": 4853,
+      "facts": {
+        "staleImageDiscarded": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "edit-retains-explicit-selected-link",
+      "status": "passed",
+      "durationMs": 4883,
+      "facts": {
+        "selectionSavedOnEdit": true,
+        "laterIdentityEditRetainedLink": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "legacy-unlinked-inline-confirmation",
+      "status": "passed",
+      "durationMs": 3478,
+      "facts": {
+        "manualFreeTextDidNotAutoLink": true,
+        "confirmedInsideProfile": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "linked-python-direct-guide",
+      "status": "passed",
+      "durationMs": 3061,
+      "facts": {
+        "guidanceVisibleOnProfile": true,
+        "expectedTextVerified": [
+          "30–32°C",
+          "Royal Veterinary College",
+          "Feeding"
+        ]
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "linked-lizard-separate-disagreements",
+      "status": "passed",
+      "durationMs": 4247,
+      "facts": {
+        "guidanceVisibleOnProfile": false,
+        "expectedTextVerified": [
+          "Sources differ",
+          "35–40°C",
+          "38–42°C",
+          "Royal Veterinary College",
+          "RSPCA"
+        ]
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "linked-boa-direct-guide",
+      "status": "passed",
+      "durationMs": 4406,
+      "facts": {
+        "guidanceVisibleOnProfile": true,
+        "expectedTextVerified": [
+          "Boa constrictor",
+          "Royal Veterinary College",
+          "ReptiFiles",
+          "55–75%",
+          "Sources differ"
+        ]
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "linked-no-reviewed-guide",
+      "status": "passed",
+      "durationMs": 6170,
+      "facts": {
+        "guidanceVisibleOnProfile": false,
+        "expectedTextVerified": [
+          "No reviewed species guidance available yet."
+        ]
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "unlinked-honest-reference",
+      "status": "passed",
+      "durationMs": 2088,
+      "facts": {
+        "guidanceVisibleOnProfile": false,
+        "expectedTextVerified": [
+          "Link a species to see reviewed guidance.",
+          "Confirm species link"
+        ]
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "directory-remains-usable",
+      "status": "passed",
+      "durationMs": 2400,
+      "facts": {
+        "directoryAndTaxonDetailAccessible": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "precise-length-record-correct-export",
+      "status": "passed",
+      "durationMs": 18068,
+      "facts": {
+        "entered": "48.5 in",
+        "canonicalChartMillimetres": 1231.9,
+        "canonicalExportMicrometres": 1231900,
+        "corrected": "48.5 cm",
+        "correctedExportMicrometres": 485000,
+        "rootIdentityPreserved": true,
+        "unitOnlyCorrectionPreservesEnteredNumber": true
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "length-excess-precision-accessible-alert",
+      "status": "passed",
+      "durationMs": 1750,
+      "facts": {
+        "status": 422,
+        "errorRole": "alert",
+        "submittedValuePreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-snake-none",
+      "status": "passed",
+      "durationMs": 1857,
+      "facts": {
+        "animalType": "snake",
+        "simulatedProviderResponse": "none",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-snake-outage",
+      "status": "passed",
+      "durationMs": 1515,
+      "facts": {
+        "animalType": "snake",
+        "simulatedProviderResponse": "outage",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-snake-timeout",
+      "status": "passed",
+      "durationMs": 1619,
+      "facts": {
+        "animalType": "snake",
+        "simulatedProviderResponse": "timeout",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-snake-throttle",
+      "status": "passed",
+      "durationMs": 1601,
+      "facts": {
+        "animalType": "snake",
+        "simulatedProviderResponse": "throttle",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-snake-malformed",
+      "status": "passed",
+      "durationMs": 1572,
+      "facts": {
+        "animalType": "snake",
+        "simulatedProviderResponse": "malformed",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-snake-oversized",
+      "status": "passed",
+      "durationMs": 3454,
+      "facts": {
+        "animalType": "snake",
+        "simulatedProviderResponse": "oversized",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "selected-snake-without-image",
+      "status": "passed",
+      "durationMs": 2160,
+      "facts": {
+        "savedAlreadyLinked": true,
+        "referenceImageRequired": false,
+        "species": "Python regius"
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-lizard-none",
+      "status": "passed",
+      "durationMs": 1607,
+      "facts": {
+        "animalType": "lizard",
+        "simulatedProviderResponse": "none",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-lizard-outage",
+      "status": "passed",
+      "durationMs": 1487,
+      "facts": {
+        "animalType": "lizard",
+        "simulatedProviderResponse": "outage",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-lizard-timeout",
+      "status": "passed",
+      "durationMs": 1833,
+      "facts": {
+        "animalType": "lizard",
+        "simulatedProviderResponse": "timeout",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-lizard-throttle",
+      "status": "passed",
+      "durationMs": 1530,
+      "facts": {
+        "animalType": "lizard",
+        "simulatedProviderResponse": "throttle",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-lizard-malformed",
+      "status": "passed",
+      "durationMs": 1624,
+      "facts": {
+        "animalType": "lizard",
+        "simulatedProviderResponse": "malformed",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-lizard-oversized",
+      "status": "passed",
+      "durationMs": 1770,
+      "facts": {
+        "animalType": "lizard",
+        "simulatedProviderResponse": "oversized",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "selected-lizard-without-image",
+      "status": "passed",
+      "durationMs": 2203,
+      "facts": {
+        "savedAlreadyLinked": true,
+        "referenceImageRequired": false,
+        "species": "Pogona vitticeps"
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-spider-none",
+      "status": "passed",
+      "durationMs": 2884,
+      "facts": {
+        "animalType": "spider",
+        "simulatedProviderResponse": "none",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-spider-outage",
+      "status": "passed",
+      "durationMs": 1519,
+      "facts": {
+        "animalType": "spider",
+        "simulatedProviderResponse": "outage",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-spider-timeout",
+      "status": "passed",
+      "durationMs": 1590,
+      "facts": {
+        "animalType": "spider",
+        "simulatedProviderResponse": "timeout",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-spider-throttle",
+      "status": "passed",
+      "durationMs": 2113,
+      "facts": {
+        "animalType": "spider",
+        "simulatedProviderResponse": "throttle",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-spider-malformed",
+      "status": "passed",
+      "durationMs": 5483,
+      "facts": {
+        "animalType": "spider",
+        "simulatedProviderResponse": "malformed",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-spider-oversized",
+      "status": "passed",
+      "durationMs": 1623,
+      "facts": {
+        "animalType": "spider",
+        "simulatedProviderResponse": "oversized",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "selected-spider-without-image",
+      "status": "passed",
+      "durationMs": 3249,
+      "facts": {
+        "savedAlreadyLinked": true,
+        "referenceImageRequired": false,
+        "species": "Avicularia avicularia"
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-scorpion-none",
+      "status": "passed",
+      "durationMs": 1691,
+      "facts": {
+        "animalType": "scorpion",
+        "simulatedProviderResponse": "none",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-scorpion-outage",
+      "status": "passed",
+      "durationMs": 1504,
+      "facts": {
+        "animalType": "scorpion",
+        "simulatedProviderResponse": "outage",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-scorpion-timeout",
+      "status": "passed",
+      "durationMs": 1794,
+      "facts": {
+        "animalType": "scorpion",
+        "simulatedProviderResponse": "timeout",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-scorpion-throttle",
+      "status": "passed",
+      "durationMs": 2278,
+      "facts": {
+        "animalType": "scorpion",
+        "simulatedProviderResponse": "throttle",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-scorpion-malformed",
+      "status": "passed",
+      "durationMs": 1692,
+      "facts": {
+        "animalType": "scorpion",
+        "simulatedProviderResponse": "malformed",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-scorpion-oversized",
+      "status": "passed",
+      "durationMs": 1907,
+      "facts": {
+        "animalType": "scorpion",
+        "simulatedProviderResponse": "oversized",
+        "savedUnlinked": true,
+        "manualSpeciesPreserved": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "selected-scorpion-without-image",
+      "status": "passed",
+      "durationMs": 2116,
+      "facts": {
+        "savedAlreadyLinked": true,
+        "referenceImageRequired": false,
+        "species": "Pandinus imperator"
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "selection-cleared-by-species-text-edit",
+      "status": "passed",
+      "durationMs": 2252,
+      "facts": {
+        "staleTaxonCleared": true,
+        "savedUnlinked": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "selection-cleared-by-animal-type-change",
+      "status": "passed",
+      "durationMs": 2428,
+      "facts": {
+        "staleTaxonCleared": true,
+        "savedUnlinked": true,
+        "selectedType": "spider"
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "stale-search-response-discarded",
+      "status": "passed",
+      "durationMs": 2672,
+      "facts": {
+        "oldestResponseDiscarded": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "stale-reference-image-response-discarded",
+      "status": "passed",
+      "durationMs": 2769,
+      "facts": {
+        "staleImageDiscarded": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "edit-retains-explicit-selected-link",
+      "status": "passed",
+      "durationMs": 5965,
+      "facts": {
+        "selectionSavedOnEdit": true,
+        "laterIdentityEditRetainedLink": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "legacy-unlinked-inline-confirmation",
+      "status": "passed",
+      "durationMs": 2335,
+      "facts": {
+        "manualFreeTextDidNotAutoLink": true,
+        "confirmedInsideProfile": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "linked-python-direct-guide",
+      "status": "passed",
+      "durationMs": 2160,
+      "facts": {
+        "guidanceVisibleOnProfile": true,
+        "expectedTextVerified": [
+          "30–32°C",
+          "Royal Veterinary College",
+          "Feeding"
+        ]
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "linked-lizard-separate-disagreements",
+      "status": "passed",
+      "durationMs": 2154,
+      "facts": {
+        "guidanceVisibleOnProfile": false,
+        "expectedTextVerified": [
+          "Sources differ",
+          "35–40°C",
+          "38–42°C",
+          "Royal Veterinary College",
+          "RSPCA"
+        ]
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "linked-boa-direct-guide",
+      "status": "passed",
+      "durationMs": 4380,
+      "facts": {
+        "guidanceVisibleOnProfile": true,
+        "expectedTextVerified": [
+          "Boa constrictor",
+          "Royal Veterinary College",
+          "ReptiFiles",
+          "55–75%",
+          "Sources differ"
+        ]
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "linked-no-reviewed-guide",
+      "status": "passed",
+      "durationMs": 1684,
+      "facts": {
+        "guidanceVisibleOnProfile": false,
+        "expectedTextVerified": [
+          "No reviewed species guidance available yet."
+        ]
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "unlinked-honest-reference",
+      "status": "passed",
+      "durationMs": 1611,
+      "facts": {
+        "guidanceVisibleOnProfile": false,
+        "expectedTextVerified": [
+          "Link a species to see reviewed guidance.",
+          "Confirm species link"
+        ]
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "directory-remains-usable",
+      "status": "passed",
+      "durationMs": 2796,
+      "facts": {
+        "directoryAndTaxonDetailAccessible": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "precise-length-record-correct-export",
+      "status": "passed",
+      "durationMs": 11675,
+      "facts": {
+        "entered": "48.5 in",
+        "canonicalChartMillimetres": 1231.9,
+        "canonicalExportMicrometres": 1231900,
+        "corrected": "48.5 cm",
+        "correctedExportMicrometres": 485000,
+        "rootIdentityPreserved": true,
+        "unitOnlyCorrectionPreservesEnteredNumber": true
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "length-excess-precision-accessible-alert",
+      "status": "passed",
+      "durationMs": 1522,
+      "facts": {
+        "status": 422,
+        "errorRole": "alert",
+        "submittedValuePreserved": true
+      }
+    }
+  ],
+  "captures": [
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-spider-form",
+      "screenshot": "screenshots/20261001073705669-desktop-1440x900-manual-spider-form.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "manual-spider-profile",
+      "screenshot": "screenshots/20261001073705669-desktop-1440x900-manual-spider-profile.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "selected-spider-linked-profile",
+      "screenshot": "screenshots/20261001073705669-desktop-1440x900-selected-spider-linked-profile.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "linked-python-direct-guide",
+      "screenshot": "screenshots/20261001073705669-desktop-1440x900-linked-python-direct-guide.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "linked-lizard-separate-disagreements",
+      "screenshot": "screenshots/20261001073705669-desktop-1440x900-linked-lizard-separate-disagreements.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "linked-boa-direct-guide",
+      "screenshot": "screenshots/20261001073705669-desktop-1440x900-linked-boa-direct-guide.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "linked-no-reviewed-guide",
+      "screenshot": "screenshots/20261001073705669-desktop-1440x900-linked-no-reviewed-guide.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "unlinked-honest-reference",
+      "screenshot": "screenshots/20261001073705669-desktop-1440x900-unlinked-honest-reference.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "directory-species",
+      "screenshot": "screenshots/20261001073705669-desktop-1440x900-directory-species.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "length-48-5-in-form",
+      "screenshot": "screenshots/20261001073705669-desktop-1440x900-length-48-5-in-form.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "length-48-5-in-profile",
+      "screenshot": "screenshots/20261001073705669-desktop-1440x900-length-48-5-in-profile.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "length-48-5-in-history",
+      "screenshot": "screenshots/20261001073705669-desktop-1440x900-length-48-5-in-history.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "length-48-5-in-trends",
+      "screenshot": "screenshots/20261001073705669-desktop-1440x900-length-48-5-in-trends.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "length-correction-48-5-cm",
+      "screenshot": "screenshots/20261001073705669-desktop-1440x900-length-correction-48-5-cm.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "length-corrected-profile",
+      "screenshot": "screenshots/20261001073705669-desktop-1440x900-length-corrected-profile.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      }
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "name": "length-excess-precision-alert",
+      "screenshot": "screenshots/20261001073705669-desktop-1440x900-length-excess-precision-alert.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "viewportWidth": 1440
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-spider-form",
+      "screenshot": "screenshots/20261001073705669-mobile-390x844-manual-spider-form.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "manual-spider-profile",
+      "screenshot": "screenshots/20261001073705669-mobile-390x844-manual-spider-profile.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "selected-spider-linked-profile",
+      "screenshot": "screenshots/20261001073705669-mobile-390x844-selected-spider-linked-profile.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "linked-python-direct-guide",
+      "screenshot": "screenshots/20261001073705669-mobile-390x844-linked-python-direct-guide.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "linked-lizard-separate-disagreements",
+      "screenshot": "screenshots/20261001073705669-mobile-390x844-linked-lizard-separate-disagreements.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "linked-boa-direct-guide",
+      "screenshot": "screenshots/20261001073705669-mobile-390x844-linked-boa-direct-guide.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "linked-no-reviewed-guide",
+      "screenshot": "screenshots/20261001073705669-mobile-390x844-linked-no-reviewed-guide.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "unlinked-honest-reference",
+      "screenshot": "screenshots/20261001073705669-mobile-390x844-unlinked-honest-reference.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "directory-species",
+      "screenshot": "screenshots/20261001073705669-mobile-390x844-directory-species.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "length-48-5-in-form",
+      "screenshot": "screenshots/20261001073705669-mobile-390x844-length-48-5-in-form.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "length-48-5-in-profile",
+      "screenshot": "screenshots/20261001073705669-mobile-390x844-length-48-5-in-profile.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "length-48-5-in-history",
+      "screenshot": "screenshots/20261001073705669-mobile-390x844-length-48-5-in-history.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "length-48-5-in-trends",
+      "screenshot": "screenshots/20261001073705669-mobile-390x844-length-48-5-in-trends.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "length-correction-48-5-cm",
+      "screenshot": "screenshots/20261001073705669-mobile-390x844-length-correction-48-5-cm.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "length-corrected-profile",
+      "screenshot": "screenshots/20261001073705669-mobile-390x844-length-corrected-profile.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      }
+    },
+    {
+      "viewport": "mobile-390x844",
+      "name": "length-excess-precision-alert",
+      "screenshot": "screenshots/20261001073705669-mobile-390x844-length-excess-precision-alert.png",
+      "axeViolations": [],
+      "overflow": {
+        "scrollWidth": 390,
+        "viewportWidth": 390
+      }
+    }
+  ],
+  "diagnostics": [
+    {
+      "viewport": "desktop-1440x900",
+      "case": "manual-snake-outage",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "case": "manual-snake-timeout",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: net::ERR_TIMED_OUT"
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "case": "manual-snake-throttle",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "case": "manual-lizard-outage",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "case": "manual-lizard-timeout",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: net::ERR_TIMED_OUT"
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "case": "manual-lizard-throttle",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "case": "manual-spider-outage",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "case": "manual-spider-timeout",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: net::ERR_TIMED_OUT"
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "case": "manual-spider-throttle",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "case": "manual-scorpion-outage",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "case": "manual-scorpion-timeout",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: net::ERR_TIMED_OUT"
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "case": "manual-scorpion-throttle",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "viewport": "desktop-1440x900",
+      "case": "length-excess-precision-accessible-alert",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Content)"
+    },
+    {
+      "viewport": "mobile-390x844",
+      "case": "manual-snake-outage",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "viewport": "mobile-390x844",
+      "case": "manual-snake-timeout",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: net::ERR_TIMED_OUT"
+    },
+    {
+      "viewport": "mobile-390x844",
+      "case": "manual-snake-throttle",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "viewport": "mobile-390x844",
+      "case": "manual-lizard-outage",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "viewport": "mobile-390x844",
+      "case": "manual-lizard-timeout",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: net::ERR_TIMED_OUT"
+    },
+    {
+      "viewport": "mobile-390x844",
+      "case": "manual-lizard-throttle",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "viewport": "mobile-390x844",
+      "case": "manual-spider-outage",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "viewport": "mobile-390x844",
+      "case": "manual-spider-timeout",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: net::ERR_TIMED_OUT"
+    },
+    {
+      "viewport": "mobile-390x844",
+      "case": "manual-spider-throttle",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "viewport": "mobile-390x844",
+      "case": "manual-scorpion-outage",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "viewport": "mobile-390x844",
+      "case": "manual-scorpion-timeout",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: net::ERR_TIMED_OUT"
+    },
+    {
+      "viewport": "mobile-390x844",
+      "case": "manual-scorpion-throttle",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+    },
+    {
+      "viewport": "mobile-390x844",
+      "case": "length-excess-precision-accessible-alert",
+      "type": "console",
+      "expected": true,
+      "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Content)"
+    }
+  ],
+  "blockedExternalRequests": [],
+  "totals": {
+    "cases": 84,
+    "passed": 84,
+    "failed": 0,
+    "screenshots": 32,
+    "axeViolations": 0,
+    "overflowCaptures": 0,
+    "consoleErrors": 26,
+    "expectedInjectedErrors": 26,
+    "unexpectedErrors": 0,
+    "externalRequestsBlocked": 0
+  }
+}

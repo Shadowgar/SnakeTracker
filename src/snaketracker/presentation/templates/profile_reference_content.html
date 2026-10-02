@@ -1,0 +1,31 @@
+{% with reference_glance = profile_reference_glance %}{% include "profile_reference_glance.html" %}{% endwith %}
+<div class="profile-reference-sections">
+{% for section_label, facts in profile_reference_sections %}
+<details class="profile-reference-disclosure" aria-labelledby="profile-section-{{ loop.index }}">
+  <summary>
+    <h3 id="profile-section-{{ loop.index }}">{{ section_label }}</h3>
+    <span class="profile-reference-summary-values">{% if section_label == 'Cautions' %}{{ facts|length }} reviewed caution fact{% if facts|length != 1 %}s{% endif %}{% else %}{% for label, claims, state in facts[:2] %}{% if not loop.first %} · {% endif %}{% if section_label != 'Temperature & humidity' %}{{ label }}{% if claims[0].life_stage %} ({{ claims[0].life_stage }}){% endif %}: {% endif %}{% if state == 'Sources differ' %}Sources differ{% else %}{{ format_claim_value(claims[0])|truncate(80, false, '…') }}{% endif %}{% endfor %}{% endif %}</span>
+    {% set disagreements = facts|selectattr('2', 'equalto', 'Sources differ')|list %}
+    {% if disagreements %}<span class="profile-reference-summary-disagreement"><span class="guide-state guide-state-differ">Sources differ</span> {% for label, claims, state in disagreements %}{{ label }}{% if not loop.last %} · {% endif %}{% endfor %}</span>{% endif %}
+  </summary>
+  <div class="guide-fact-grid profile-reference-detail">
+    {% for label, claims, state in facts %}
+    <article class="guide-fact" id="profile-fact-{{ claims[0].claim_id }}" aria-labelledby="profile-label-{{ claims[0].claim_id }}">
+      <h4 id="profile-label-{{ claims[0].claim_id }}">{{ label }}{% if claims[0].life_stage %} · {{ claims[0].life_stage }}{% endif %}</h4>
+      <span class="guide-state {% if state == 'Sources differ' %}guide-state-differ{% elif state == 'Corroborated' %}guide-state-corroborated{% else %}guide-state-single{% endif %}">{{ state }}</span>
+      {% if state == 'Sources differ' %}
+      <div class="guide-positions">{% for claim in claims %}<div class="guide-position"><span>{{ profile_reference_sources[claim.source_id].publisher }}</span><strong>{{ format_claim_value(claim) }}</strong>{% if claim.qualifier %}<p>{{ claim.qualifier }}</p>{% endif %}</div>{% endfor %}</div>
+      {% else %}
+      <p class="guide-value">{{ format_claim_value(claims[0]) }}</p>
+      {% if claims[0].qualifier %}<p class="guide-qualifier">{{ claims[0].qualifier }}</p>{% endif %}
+      {% endif %}
+      {% if claims[0].context %}<p class="guide-context"><strong>Context</strong> {{ claims[0].context }}</p>{% endif %}
+      {% if claims[0].scope %}<p class="guide-context"><strong>Scope</strong> {{ claims[0].scope }}</p>{% endif %}
+      {% for claim in claims %}{% if claim.caution %}<p class="guide-caution">{{ claim.caution }}</p>{% endif %}{% endfor %}
+      <details class="guide-disclosure"><summary>Sources and review dates</summary><ul>{% for claim in claims %}{% set source = profile_reference_sources[claim.source_id] %}<li><a href="{{ source.url }}" rel="noopener noreferrer" target="_blank">{{ source.publisher }} · {{ source.title }}</a><span>Retrieved <time datetime="{{ source.retrieved_at.date().isoformat() }}">{{ source.retrieved_at.date().isoformat() }}</time> · Reviewed <time datetime="{{ source.reviewed_at.date().isoformat() }}">{{ source.reviewed_at.date().isoformat() }}</time></span></li>{% endfor %}</ul></details>
+    </article>
+    {% endfor %}
+  </div>
+</details>
+{% endfor %}
+</div>

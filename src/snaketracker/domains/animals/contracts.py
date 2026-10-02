@@ -182,6 +182,27 @@ class AnimalLengthCorrectedV1:
 
 
 @dataclass(frozen=True, slots=True)
+class AnimalLengthRecordedV2:
+    """Exact micrometres with the original entered number, precision and unit."""
+
+    length_um: int
+    entered_value_scaled: int
+    entered_scale: int
+    entered_unit: str
+
+
+@dataclass(frozen=True, slots=True)
+class AnimalLengthCorrectedV2:
+    """Complete replacement length tuple retaining correction lineage."""
+
+    target_event_id: UUID
+    length_um: int
+    entered_value_scaled: int
+    entered_scale: int
+    entered_unit: str
+
+
+@dataclass(frozen=True, slots=True)
 class AnimalShedRecordedV1:
     """Observed in-shed state or completed shed result."""
 

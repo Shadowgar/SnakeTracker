@@ -10,8 +10,9 @@
     {% if not animal.photo_attachment_version_id %}<a href="/animals/{{ animal.animal_id }}/photo">Add my animal's photo</a><span>Add photo</span>{% endif %}
   </nav>
   <div class="animal-overview-layout">
+    <div class="overview-personal-column">
     <section class="card overview-identity" aria-labelledby="profile-facts-title">
-      <div class="section-heading"><h2 id="profile-facts-title">About</h2></div>
+      <div class="section-heading"><div><p class="page-kicker">Your records</p><h2 id="profile-facts-title">About</h2></div></div>
       <dl class="fact-list">
         <div><dt>Species</dt><dd>{% if linked_taxon %}{{ linked_taxon.taxon.display_name }}<br><i>{{ linked_taxon.taxon.accepted_scientific_name }}</i>{% else %}{{ animal.species }}{% endif %}</dd></div>
         <div><dt>Sex</dt><dd>{{ animal.sex|capitalize if animal.sex else 'Not recorded' }}</dd></div>
@@ -22,16 +23,51 @@
       </dl>
       {% if animal.notes %}<p class="keeper-note">{{ animal.notes }}</p>{% endif %}
     </section>
-    <section class="card overview-recent" aria-labelledby="recent-care-title">
-      <span class="visually-hidden">Recent care</span>
-      <div class="section-heading"><h2 id="recent-care-title">Recent history</h2><a href="/animals/{{ animal.animal_id }}/timeline">View all</a></div>
-      {% if recent_events %}<ol class="recent-care-list">{% for item in recent_events %}<li><div><strong>{{ item.keeper_title }}</strong><p>{{ item.description }}</p></div><time datetime="{{ item.event.occurred_at.isoformat() }}">{{ item.event.occurred_at.astimezone(household_zone).strftime('%b %-d') }}</time></li>{% endfor %}</ol>{% else %}<p class="muted">No care history yet.</p>{% endif %}
-    </section>
     <section class="card overview-care" aria-labelledby="current-care-title">
       <div class="section-heading"><h2 id="current-care-title">Care snapshot</h2><a href="/animals/{{ animal.animal_id }}/analytics">Trends</a></div>
       <dl class="care-fact-grid">
         {% for fact in overview_care_facts %}<div><dt>{{ fact.label }}</dt>{% if fact.event %}<dd><strong>{{ fact.event.description }}</strong><span>{{ fact.event.event.occurred_at.astimezone(household_zone).strftime('%b %-d, %Y') }}</span></dd>{% else %}<dd><span>Not recorded yet</span></dd>{% endif %}</div>{% endfor %}
       </dl>
+    </section>
+    </div>
+    <div class="overview-reference-column">
+    <section class="card overview-recent" aria-labelledby="recent-care-title">
+      <span class="visually-hidden">Recent care</span>
+      <div class="section-heading"><h2 id="recent-care-title">Recent history</h2><a href="/animals/{{ animal.animal_id }}/timeline">View all</a></div>
+      {% if recent_events %}<ol class="recent-care-list">{% for item in recent_events %}<li><div><strong>{{ item.keeper_title }}</strong><p>{{ item.description }}</p></div><time datetime="{{ item.event.occurred_at.isoformat() }}">{{ item.event.occurred_at.astimezone(household_zone).strftime('%b %-d') }}</time></li>{% endfor %}</ol>{% else %}<p class="muted">No care history yet.</p>{% endif %}
+    </section>
+    </div>
+    <section class="card overview-reference" aria-labelledby="profile-reference-title">
+      <div class="section-heading"><div><p class="page-kicker">Species reference</p><h2 id="profile-reference-title">{% if linked_taxon %}{{ linked_taxon.taxon.accepted_scientific_name }}{% else %}About this species{% endif %}</h2></div></div>
+      {% if linked_taxon and profile_reference_guide %}
+        <p class="profile-reference-boundary">Reviewed reference guidance for this species — separate from {{ animal.name }}'s individual records or care settings.</p>
+        <p class="profile-reference-intro">{{ linked_taxon.taxon.display_name }} · Reviewed captive-care guide available.</p>
+        {% with reference_glance = profile_reference_glance[:3] %}{% include "profile_reference_glance.html" %}{% endwith %}
+        <a class="profile-reference-action" href="/animals/{{ animal.animal_id }}/reference">Guides &amp; Species Reference →</a>
+      {% elif linked_taxon %}
+        <p class="profile-reference-boundary">Species reference — not your Animal's individual records or care settings.</p>
+        <p class="profile-reference-empty">No reviewed captive-care guide is available yet.</p>
+        <a class="profile-reference-action" href="/animals/{{ animal.animal_id }}/reference">Guides &amp; Species Reference →</a>
+      {% else %}
+        <p class="profile-reference-empty">Link a species to see its reference information.</p>
+        <a class="profile-reference-action" href="/animals/{{ animal.animal_id }}/reference">Guides &amp; Species Reference →</a>
+        <form class="form-stack" method="post" action="/animals/{{ animal.animal_id }}/species" data-taxon-form>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="idempotency_key" value="{{ command_id }}">
+          <input type="hidden" name="animal_type" value="{{ animal.animal_type }}">
+          <div class="taxon-combobox" data-taxon-combobox data-group-field="animal_type">
+            <label for="profile-species-search">Find species reference</label>
+            <div class="taxon-input-results">
+              <input id="profile-species-search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="profile-species-results" aria-describedby="profile-species-help profile-species-status">
+              <ul id="profile-species-results" class="taxon-results" role="listbox" hidden data-taxon-results></ul>
+            </div>
+            <input type="hidden" name="taxon_id" data-taxon-id required>
+            <p id="profile-species-help" class="field-help">Your manual species record is valid. Choose an exact Directory result and confirm here to link reference information.</p>
+            <p id="profile-species-status" class="field-help" role="status" aria-live="polite" data-taxon-status></p>
+          </div>
+          <button type="submit">Confirm species link</button>
+        </form>
+      {% endif %}
     </section>
     <section class="card overview-manage" aria-labelledby="manage-profile-title">
       <h2 id="manage-profile-title">Manage profile</h2>
@@ -48,3 +84,5 @@
   </div>
 </section>
 {% endblock %}
+
+{% block scripts %}<script src="/static/species-directory.js?v=m66b-reference-density-v1" defer></script>{% endblock %}

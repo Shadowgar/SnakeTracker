@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ page_title|default('Care timeline') }} · {{ animal.name }} · Care Keeper{% endblock %}
 {% block content %}
+{% if page_title|default('') == 'Measurement history' %}<nav aria-label="Measurement exports"><a href="/animals/{{ animal.animal_id }}/measurements/report">Measurement report</a> · <a href="/animals/{{ animal.animal_id }}/measurements.csv">Download precise CSV</a></nav>{% endif %}
 <section class="animal-experience timeline-page" aria-labelledby="page-title">
   {% set active_section = 'history' %}{% include "animal_profile_header.html" %}
   <header class="animal-section-heading">

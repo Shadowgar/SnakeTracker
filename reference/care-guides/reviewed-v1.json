@@ -1,0 +1,98 @@
+{
+  "format_version": 1,
+  "guides": [
+    {
+      "biological_group": "snake",
+      "scientific_name": "Python regius",
+      "version": 1,
+      "created_at": "2026-09-27T07:00:00Z",
+      "reviewed_at": "2026-09-27T07:00:00Z",
+      "sources": [
+        {"source_id":"rspca-royal-python","publisher":"RSPCA","title":"How to care for a royal python","url":"https://www.rspca.org.uk/adviceandwelfare/pets/other/royalpython","source_type":"animal_welfare","retrieved_at":"2026-09-27T07:00:00Z","reviewed_at":"2026-09-27T07:00:00Z"},
+        {"source_id":"rvc-royal-python","publisher":"Royal Veterinary College","title":"Royal python care","url":"https://www.rvc.ac.uk/Media/Default/Beaumont%20Sainsbury%20Animal%20Hospital/documents/caring-for-your-royal-python.pdf","source_type":"veterinary","retrieved_at":"2026-09-27T07:00:00Z","reviewed_at":"2026-09-27T07:00:00Z"}
+      ],
+      "claims": [
+        {"claim_id":"snake-basking","source_id":"rspca-royal-python","section":"temperature_humidity","fact_key":"basking_temperature","label":"Basking zone","minimum":30,"maximum":32,"unit":"c","context":"Daytime basking zone"},
+        {"claim_id":"snake-cool","source_id":"rspca-royal-python","section":"temperature_humidity","fact_key":"cool_side_temperature","label":"Cool end","minimum":24,"maximum":26,"unit":"c","context":"Measured at snake level"},
+        {"claim_id":"snake-humidity","source_id":"rspca-royal-python","section":"temperature_humidity","fact_key":"ambient_humidity","label":"Cool-end humidity","minimum":50,"maximum":60,"unit":"percent","context":"Normal level; source describes temporary misting increases"},
+        {"claim_id":"snake-hides","source_id":"rspca-royal-python","section":"habitat_enclosure","fact_key":"hides","label":"Hides","value_text":"Provide secure hides at both warm and cool ends."},
+        {"claim_id":"snake-uvb","source_id":"rvc-royal-python","section":"lighting","fact_key":"uvb","label":"UVB","value_text":"Low-percentage UVB is recommended; follow lamp distance and replacement guidance.","qualifier":"RVC describes apparent benefit."},
+        {"claim_id":"snake-feeding","source_id":"rvc-royal-python","section":"feeding","fact_key":"food_types","label":"Food","value_text":"Carnivorous; rodent prey size varies with life stage.","life_stage":"Hatchling and older","caution":"This reference does not set an individual feeding schedule."}
+      ]
+    },
+    {
+      "biological_group": "lizard",
+      "scientific_name": "Pogona vitticeps",
+      "version": 1,
+      "created_at": "2026-09-27T07:00:00Z",
+      "reviewed_at": "2026-09-27T07:00:00Z",
+      "sources": [
+        {"source_id":"rvc-bearded-2024","publisher":"Royal Veterinary College","title":"Bearded dragon care (reviewed December 2024)","url":"https://www.rvc.ac.uk/Media/Default/Beaumont%20Sainsbury%20Animal%20Hospital/EXOTICS/Animal%20Care%20Factsheets/Bearded%20dragon%20care%202024%20jh.pdf","source_type":"veterinary","retrieved_at":"2026-09-27T07:00:00Z","reviewed_at":"2026-09-27T07:00:00Z","published_at":"2024-12-01T00:00:00Z"},
+        {"source_id":"rspca-bearded","publisher":"RSPCA","title":"Bearded dragon care sheet","url":"https://www.rspca.org.uk/documents/1494939/7712578/Bearded%2BDragon%2BCare%2BSheet.pdf/d5d29b69-782e-fd32-c39f-e7da9cde33b4?download=true&t=1553169359967&version=1.0","source_type":"animal_welfare","retrieved_at":"2026-09-27T07:00:00Z","reviewed_at":"2026-09-27T07:00:00Z"}
+      ],
+      "claims": [
+        {"claim_id":"lizard-basking","source_id":"rvc-bearded-2024","section":"temperature_humidity","fact_key":"basking_temperature","label":"Basking area","minimum":35,"maximum":40,"unit":"c","context":"Daytime basking zone"},
+        {"claim_id":"lizard-basking-rspca","source_id":"rspca-bearded","section":"temperature_humidity","fact_key":"basking_temperature","label":"Basking area","minimum":38,"maximum":42,"unit":"c","context":"Daytime basking zone"},
+        {"claim_id":"lizard-cool","source_id":"rvc-bearded-2024","section":"temperature_humidity","fact_key":"cool_side_temperature","label":"Cool end","value_number":25,"unit":"c","qualifier":"Approximately"},
+        {"claim_id":"lizard-humidity","source_id":"rvc-bearded-2024","section":"temperature_humidity","fact_key":"ambient_humidity","label":"Humidity","minimum":30,"maximum":40,"unit":"percent","context":"Mid-vivarium hygrometer"},
+        {"claim_id":"lizard-uvb","source_id":"rvc-bearded-2024","section":"lighting","fact_key":"uvb","label":"UVB","value_text":"Daily UVB lighting is required."},
+        {"claim_id":"lizard-uvb-rspca","source_id":"rspca-bearded","section":"lighting","fact_key":"uvb","label":"UVB","value_text":"Daily UVB lighting is required."},
+        {"claim_id":"lizard-food-adult","source_id":"rvc-bearded-2024","section":"feeding","fact_key":"food_types","label":"Food","value_text":"Omnivorous; dark leafy greens and weeds are principal vegetable matter, with less live food as animals age.","life_stage":"Adult"},
+        {"claim_id":"lizard-food-young","source_id":"rvc-bearded-2024","section":"feeding","fact_key":"food_types","label":"Food","value_text":"Juveniles take a higher proportion of suitable live food than adults.","life_stage":"Juvenile"},
+        {"claim_id":"lizard-burn","source_id":"rvc-bearded-2024","section":"cautions","fact_key":"heat_burns","label":"Heat-source caution","value_text":"Guard heat sources and measure temperatures to prevent burns and overheating."}
+      ]
+    },
+    {
+      "biological_group": "spider",
+      "scientific_name": "Avicularia avicularia",
+      "version": 1,
+      "created_at": "2026-09-27T07:00:00Z",
+      "reviewed_at": "2026-09-27T07:00:00Z",
+      "sources": [
+        {"source_id":"smithsonian-pinktoe","publisher":"Smithsonian National Zoo","title":"Pink-toed tarantula","url":"https://nationalzoo.si.edu/animals/pink-toed-tarantula","source_type":"zoo","retrieved_at":"2026-09-27T07:00:00Z","reviewed_at":"2026-09-27T07:00:00Z"}
+      ],
+      "claims": [
+        {"claim_id":"spider-arboreal","source_id":"smithsonian-pinktoe","section":"habitat_enclosure","fact_key":"habitat_structure","label":"Natural setting","value_text":"Tree-dwelling in South American rainforests."},
+        {"claim_id":"spider-activity","source_id":"smithsonian-pinktoe","section":"at_a_glance","fact_key":"activity_pattern","label":"Activity","value_text":"Hunts at night."},
+        {"claim_id":"spider-prey","source_id":"smithsonian-pinktoe","section":"feeding","fact_key":"prey_types","label":"Prey in natural history","value_text":"Predatory on invertebrates and some small vertebrates.","qualifier":"Natural-history description, not an individual feeding plan."},
+        {"claim_id":"spider-lifespan","source_id":"smithsonian-pinktoe","section":"life_stage","fact_key":"female_lifespan","label":"Female lifespan in human care","minimum":10,"maximum":12,"unit":"years","life_stage":"Adult female"}
+      ]
+    },
+    {
+      "biological_group": "scorpion",
+      "scientific_name": "Pandinus imperator",
+      "version": 1,
+      "created_at": "2026-09-27T07:00:00Z",
+      "reviewed_at": "2026-09-27T07:00:00Z",
+      "sources": [
+        {"source_id":"adw-emperor","publisher":"University of Michigan Animal Diversity Web","title":"Pandinus imperator","url":"https://animaldiversity.org/accounts/Pandinus_imperator/","source_type":"university","retrieved_at":"2026-09-27T07:00:00Z","reviewed_at":"2026-09-27T07:00:00Z","published_at":"2011-06-19T00:00:00Z"}
+      ],
+      "claims": [
+        {"claim_id":"scorpion-habitat","source_id":"adw-emperor","section":"habitat_enclosure","fact_key":"natural_habitat","label":"Natural habitat","value_text":"Hot, humid West African forests; burrows and leaf litter are described."},
+        {"claim_id":"scorpion-activity","source_id":"adw-emperor","section":"at_a_glance","fact_key":"activity_pattern","label":"Activity","value_text":"Nocturnal."},
+        {"claim_id":"scorpion-food","source_id":"adw-emperor","section":"feeding","fact_key":"prey_types","label":"Natural prey","value_text":"Insects and other arthropods, especially termites, are described.","qualifier":"Natural-history account, not a feeding interval."},
+        {"claim_id":"scorpion-size","source_id":"adw-emperor","section":"at_a_glance","fact_key":"adult_length","label":"Reported average length","value_number":20,"unit":"cm","life_stage":"Adult","qualifier":"Approximate species average."},
+        {"claim_id":"scorpion-caution","source_id":"adw-emperor","section":"cautions","fact_key":"sting_caution","label":"Handling caution","value_text":"This is a venomous scorpion; avoid treating its usually mild sting as harmless."}
+      ]
+    },
+    {
+      "biological_group": "plant",
+      "scientific_name": "Monstera deliciosa",
+      "version": 1,
+      "created_at": "2026-09-27T07:00:00Z",
+      "reviewed_at": "2026-09-27T07:00:00Z",
+      "sources": [
+        {"source_id":"rhs-monstera","publisher":"Royal Horticultural Society","title":"Monstera deliciosa plant profile","url":"https://www.rhs.org.uk/plants/11192/monstera-deliciosa-f/details","source_type":"botanical","retrieved_at":"2026-09-27T07:00:00Z","reviewed_at":"2026-09-27T07:00:00Z"},
+        {"source_id":"aspca-monstera","publisher":"ASPCA Animal Poison Control","title":"Mexican breadfruit (Monstera deliciosa)","url":"https://www.aspca.org/pet-care/aspca-poison-control/toxic-and-non-toxic-plants/mexican-breadfruit","source_type":"veterinary","retrieved_at":"2026-09-27T07:00:00Z","reviewed_at":"2026-09-27T07:00:00Z"}
+      ],
+      "claims": [
+        {"claim_id":"plant-light","source_id":"rhs-monstera","section":"lighting","fact_key":"plant_light","label":"Light","value_text":"Bright, indirect light under glass."},
+        {"claim_id":"plant-water","source_id":"rhs-monstera","section":"water_substrate","fact_key":"plant_watering","label":"Watering guidance","value_text":"Water while actively growing; keep only just moist in winter.","context":"Pot-grown plant; not an enclosure watering schedule"},
+        {"claim_id":"plant-soil","source_id":"rhs-monstera","section":"water_substrate","fact_key":"plant_substrate","label":"Growing medium","value_text":"Peat-free, loam-based compost under glass."},
+        {"claim_id":"plant-habit","source_id":"rhs-monstera","section":"habitat_enclosure","fact_key":"plant_growth_habit","label":"Growth habit","value_text":"Evergreen climbing plant with aerial roots."},
+        {"claim_id":"plant-temperature","source_id":"rhs-monstera","section":"temperature_humidity","fact_key":"plant_minimum_temperature","label":"Outdoor minimum in RHS cultivation note","value_number":18,"unit":"c","context":"Outdoor cultivation in summer; not an enclosure target","qualifier":"At least"},
+        {"claim_id":"plant-toxicity","source_id":"aspca-monstera","section":"cautions","fact_key":"toxicity_cats_dogs","label":"Cat/dog toxicity","value_text":"Toxic to cats and dogs; insoluble calcium oxalates can irritate the mouth.","scope":"Cats and dogs only","caution":"No reptile or exotic-enclosure suitability conclusion follows from this source."}
+      ]
+    }
+  ]
+}

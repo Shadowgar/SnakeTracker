@@ -1,0 +1,419 @@
+{
+  "candidate": {
+    "build_sha": "21a0fca7c04bea090008d7fab180ef9db2e876f7",
+    "frozen_distributions": 35,
+    "frozen_versions_match": true,
+    "gid": 1001,
+    "image_id": "sha256:7caaa3cf3a078cb0d83c3d1958bc81854a412c44a073b85a70451186956a9691",
+    "image_tag": "snaketracker:m66b-compact-reference-21a0fca",
+    "oci_revision": "21a0fca7c04bea090008d7fab180ef9db2e876f7",
+    "production_mounts_used": false,
+    "schema_head": "0023_sourced_care_guides",
+    "source_tree_ids": {
+      "reference/care-guides": "6a9562ff60ab742c0cb01c544d435f04217d0efd",
+      "scripts/qualification": "a87b39e2846a88d846a8693a4968c085ec1ea7a9",
+      "src": "4abfb7f62fc41b466838673d1a340daa0b0645f2",
+      "tests": "3ca27a9c8d3be0847f51a1ecbf051d6d4a551f0b"
+    },
+    "uid": 1001
+  },
+  "concurrent_owner_activity": {
+    "all_active_owners": true,
+    "care_data_written_by_qualification": false,
+    "events_since_initial": [
+      {
+        "active_owner": true,
+        "event_type": "animal.profile_corrected",
+        "position": 1029,
+        "recorded_at": "2026-10-02T05:09:29.194253+00:00"
+      },
+      {
+        "active_owner": true,
+        "event_type": "animal.taxon_linked",
+        "position": 1030,
+        "recorded_at": "2026-10-02T05:09:29.880337+00:00"
+      },
+      {
+        "active_owner": true,
+        "event_type": "animal.profile_corrected",
+        "position": 1031,
+        "recorded_at": "2026-10-02T05:10:20.958439+00:00"
+      },
+      {
+        "active_owner": true,
+        "event_type": "animal.profile_corrected",
+        "position": 1032,
+        "recorded_at": "2026-10-02T05:21:22.207221+00:00"
+      },
+      {
+        "active_owner": true,
+        "event_type": "animal.taxon_linked",
+        "position": 1033,
+        "recorded_at": "2026-10-02T05:21:22.861326+00:00"
+      },
+      {
+        "active_owner": true,
+        "event_type": "animal.taxon_linked",
+        "position": 1034,
+        "recorded_at": "2026-10-02T05:21:51.897879+00:00"
+      },
+      {
+        "active_owner": true,
+        "event_type": "animal.taxon_linked",
+        "position": 1035,
+        "recorded_at": "2026-10-02T05:22:06.817800+00:00"
+      }
+    ],
+    "predeployment_event_cutoff": 1035,
+    "qualification_initial_event_cutoff": 1028
+  },
+  "date": "2026-10-02",
+  "integrity": {
+    "attachment_metadata_and_hashes_unchanged": true,
+    "attachment_versions": 46,
+    "event_after": 1035,
+    "event_before": 1035,
+    "guide_tables_unchanged": true,
+    "hash_mismatches": 0,
+    "inventory_unchanged": true,
+    "logical_dimensions_unchanged": 61,
+    "media_files": 77,
+    "normalized_dimensions_unchanged": 90,
+    "normalized_schema_objects": 114,
+    "operational_table_changes": [],
+    "projection_catalog_and_generations_unchanged": true,
+    "raw_schema_objects": 148,
+    "reminder_rules_unchanged": true,
+    "schema_revision": "0023_sourced_care_guides",
+    "schema_unchanged": true,
+    "unexpected_business_table_changes": []
+  },
+  "maintenance": {
+    "compose_flags": [
+      "--no-deps",
+      "--no-build",
+      "--pull never",
+      "--force-recreate",
+      "--wait",
+      "--wait-timeout 120"
+    ],
+    "end": "2026-10-02T06:09:58.609810+00:00",
+    "migrate_invoked": false,
+    "order": [
+      "stop worker",
+      "stop web",
+      "recreate same-image web and worker"
+    ],
+    "seconds": 14.438946,
+    "start": "2026-10-02T06:09:44.170864+00:00"
+  },
+  "original_qualified_recovery_point_reverified": {
+    "archive_unchanged": true,
+    "attachments": 46,
+    "event_cutoff": 1027,
+    "manifest_checksum": "11878c2e09ed66b833a64543a2d2cc7b7fae44f7b9ea8cecf0a6498994aebd76",
+    "run_id": "8777f5b4-545e-4384-81e6-e50c99553bb8",
+    "schema": "0023_sourced_care_guides",
+    "status": "verified"
+  },
+  "owner_captures": {
+    "captures": [
+      {
+        "axeViolations": [],
+        "label": "top",
+        "viewport": "desktop",
+        "width": {
+          "scroll": 1440,
+          "viewport": 1440
+        }
+      },
+      {
+        "axeViolations": [],
+        "label": "default-reference",
+        "viewport": "desktop",
+        "width": {
+          "scroll": 1440,
+          "viewport": 1440
+        }
+      },
+      {
+        "axeViolations": [],
+        "label": "collapsed-sections",
+        "viewport": "desktop",
+        "width": {
+          "scroll": 1440,
+          "viewport": 1440
+        }
+      },
+      {
+        "axeViolations": [],
+        "label": "temperature-disagreement",
+        "viewport": "desktop",
+        "width": {
+          "scroll": 1440,
+          "viewport": 1440
+        }
+      },
+      {
+        "axeViolations": [],
+        "label": "sources-expanded",
+        "viewport": "desktop",
+        "width": {
+          "scroll": 1440,
+          "viewport": 1440
+        }
+      },
+      {
+        "axeViolations": [],
+        "label": "top",
+        "viewport": "mobile",
+        "width": {
+          "scroll": 390,
+          "viewport": 390
+        }
+      },
+      {
+        "axeViolations": [],
+        "label": "default-reference",
+        "viewport": "mobile",
+        "width": {
+          "scroll": 390,
+          "viewport": 390
+        }
+      },
+      {
+        "axeViolations": [],
+        "label": "collapsed-sections",
+        "viewport": "mobile",
+        "width": {
+          "scroll": 390,
+          "viewport": 390
+        }
+      },
+      {
+        "axeViolations": [],
+        "label": "temperature-disagreement",
+        "viewport": "mobile",
+        "width": {
+          "scroll": 390,
+          "viewport": 390
+        }
+      },
+      {
+        "axeViolations": [],
+        "label": "sources-expanded",
+        "viewport": "mobile",
+        "width": {
+          "scroll": 390,
+          "viewport": 390
+        }
+      }
+    ],
+    "errors": [],
+    "method": "Actual read-only production GET-handler HTML, real returned Bitey media, and exact candidate static assets replayed locally with unchanged CSP. Authentication/middleware excluded; no production login or business writes.",
+    "nonGet": 0,
+    "outbound": []
+  },
+  "private_owner_capture_directory": "/tmp/m66b-compact-review.1440034/screenshots",
+  "profile_reads": {
+    "boa": {
+      "all_sources_same_page": true,
+      "contextual_facts": 28,
+      "exact_bundle_equal": true,
+      "html_inline_facts": 28,
+      "sections": [
+        "Natural history",
+        "Temperature & humidity",
+        "Feeding",
+        "Habitat & enclosure",
+        "Lighting",
+        "Water & substrate",
+        "Life history",
+        "Cautions"
+      ],
+      "sourced_positions": 34,
+      "sources": 7,
+      "support_states": {
+        "Corroborated": 2,
+        "Single source": 22,
+        "Sources differ": 4
+      },
+      "version": 1
+    },
+    "candidate_sha": "21a0fca7c04bea090008d7fab180ef9db2e876f7",
+    "cases": {
+      "keeper_photo": 20,
+      "linked_cached_image_available": 39,
+      "linked_cached_image_selected": 24,
+      "linked_missing_enrichment_fallback_selected": 1,
+      "linked_missing_optional_enrichment": 4
+    },
+    "households": 4,
+    "local_reference_asset_statuses": {
+      "200": 39,
+      "404": 4
+    },
+    "method": "Actual GET route endpoints and production composition in isolated exact-image process; real production data/media read-only; existing owner principal injected locally; no sessions issued; full HTTP authentication/middleware excluded",
+    "outbound_attempts": 0,
+    "profiles_rendered": 61,
+    "sql_write_attempts": 0
+  },
+  "public_ready_status": 200,
+  "recovery": {
+    "compatibility_mode": "normal",
+    "compatibility_reason": "compatible",
+    "database_count": 46,
+    "event_cutoff": 1031,
+    "foreign_key_errors": 0,
+    "hash_mismatches": 0,
+    "integrity_check": "ok",
+    "manifest_checksum": "f35b577dce2a5408913e8ef8c4069a02293a0b272bd6acc25eff0de238cf63e9",
+    "manifest_count": 46,
+    "metadata_mismatches": 0,
+    "reset_credentials": 0,
+    "restored_count": 46,
+    "run_id": "12fa3806-128d-4fde-83b1-b72d728919a9",
+    "schema": "0023_sourced_care_guides",
+    "sessions": 0,
+    "source_sha": "f1d4d33c27bdb79be31b7c9fbf33b5291c036377",
+    "status": "verified"
+  },
+  "recovery_RPO_hours": 6,
+  "recovery_limitation": "Normal worker verification failed on16MiB/tmp; same exact existing image/leased runner succeeded with bounded private scratch. Production tmpfs/config remains unchanged; future routine backup verification may need separate scratch-space correction. Original qualified8777 recovery point and failed-run audit preserved.",
+  "recovery_policy_before_deployment": {
+    "active_lease": 0,
+    "backup_runs_columns": [
+      "run_id",
+      "request_id",
+      "household_id",
+      "status",
+      "started_at",
+      "completed_at",
+      "archive_path",
+      "manifest_checksum",
+      "error_message"
+    ],
+    "last_event": {
+      "event_type": "animal.taxon_linked",
+      "global_position": 1035,
+      "recorded_at": "2026-10-02T05:22:06.817800+00:00"
+    },
+    "latest_backup": {
+      "completed_at": "2026-10-02T05:20:47.148749+00:00",
+      "manifest_checksum": "f35b577dce2a5408913e8ef8c4069a02293a0b272bd6acc25eff0de238cf63e9",
+      "run_id": "12fa3806-128d-4fde-83b1-b72d728919a9",
+      "status": "completed"
+    },
+    "now": "2026-10-02T06:09:44.069741+00:00",
+    "pending_backup_requests": 0
+  },
+  "release_status": "Ready for owner review; acceptance pending",
+  "rollback": {
+    "image": "snaketracker:m66b-owner-review-f1d4d33",
+    "normal_readiness": true,
+    "older_pre_f1_image": "not qualified as a plain rollback",
+    "performed": false,
+    "reason": "compatible"
+  },
+  "services": {
+    "/health/live": {
+      "body": "{\"status\":\"alive\"}",
+      "status": 200
+    },
+    "/health/ready": {
+      "body": "{\"status\":\"ready\"}",
+      "status": 200
+    },
+    "candidate_sha": "21a0fca7c04bea090008d7fab180ef9db2e876f7",
+    "dotenv_unchanged": true,
+    "migrate_untouched": true,
+    "mounts_and_settings_unchanged": true,
+    "snaketracker-nginx-1": {
+      "container_id": "6c6ced7e7aa63ccb376dc43a8af45301d5aaef417b7a0bfcf0f6263f273792e2",
+      "health": "healthy",
+      "image_id": "sha256:faf280afcb57d1269dee9097230e104260d67de6be94156082e10504f954dc2e",
+      "image_tag": "nginx@sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e",
+      "revision": null,
+      "started_at": "2026-09-27T18:03:12.304321318Z",
+      "state": "running"
+    },
+    "snaketracker-web-1": {
+      "container_id": "a2039d515b9a7cc853b65e1308c7d18c59a0a2e347423f8894d9660e50e4bc23",
+      "health": "healthy",
+      "image_id": "sha256:7caaa3cf3a078cb0d83c3d1958bc81854a412c44a073b85a70451186956a9691",
+      "image_tag": "snaketracker:m66b-compact-reference-21a0fca",
+      "revision": "21a0fca7c04bea090008d7fab180ef9db2e876f7",
+      "started_at": "2026-10-02T06:09:48.590924469Z",
+      "state": "running"
+    },
+    "snaketracker-worker-1": {
+      "container_id": "89c919a0d2602470eb1df0aef49b98c2617b2d772cf948751834abdae2465d67",
+      "health": "healthy",
+      "image_id": "sha256:7caaa3cf3a078cb0d83c3d1958bc81854a412c44a073b85a70451186956a9691",
+      "image_tag": "snaketracker:m66b-compact-reference-21a0fca",
+      "revision": "21a0fca7c04bea090008d7fab180ef9db2e876f7",
+      "started_at": "2026-10-02T06:09:48.017848473Z",
+      "state": "running"
+    },
+    "tunnel_unchanged": true
+  },
+  "source_checks": {
+    "headRefOid": "21a0fca7c04bea090008d7fab180ef9db2e876f7",
+    "isDraft": true,
+    "mergedAt": null,
+    "state": "OPEN",
+    "statusCheckRollup": [
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-02T06:03:39Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/Shadowgar/SnakeTracker/actions/runs/36971546741/job/110726368292",
+        "name": "container",
+        "startedAt": "2026-10-02T06:01:08Z",
+        "status": "COMPLETED",
+        "workflowName": "Container"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-02T06:07:03Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/Shadowgar/SnakeTracker/actions/runs/36971546726/job/110726368395",
+        "name": "quality",
+        "startedAt": "2026-10-02T06:01:08Z",
+        "status": "COMPLETED",
+        "workflowName": "Quality"
+      },
+      {
+        "__typename": "StatusContext",
+        "context": "CodeRabbit",
+        "startedAt": "2026-10-02T06:01:10Z",
+        "state": "SUCCESS",
+        "targetUrl": ""
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-02T06:01:22Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://dashboard.gitguardian.com",
+        "name": "GitGuardian Security Checks",
+        "startedAt": "2026-10-02T06:01:04Z",
+        "status": "COMPLETED",
+        "workflowName": ""
+      }
+    ],
+    "url": "https://github.com/Shadowgar/SnakeTracker/pull/17"
+  },
+  "source_tree_vs_evidence_head": "Subsequent evidence-only commit preserves candidate src/tests/qualification/reference tree IDs. Deployed image remains21a0fca.",
+  "web_worker_log_exceptions_errors": 0,
+  "web_worker_restart_counts": 0,
+  "worker": {
+    "active_projection_checkpoints": 9,
+    "all_checkpoints_at_high_water": true,
+    "backup_worker_available": true,
+    "compatibility_mode": "normal",
+    "compatibility_reason": "compatible",
+    "event_cutoff": 1035,
+    "pending_backup_requests": 0,
+    "source_sha": "21a0fca7c04bea090008d7fab180ef9db2e876f7"
+  }
+}

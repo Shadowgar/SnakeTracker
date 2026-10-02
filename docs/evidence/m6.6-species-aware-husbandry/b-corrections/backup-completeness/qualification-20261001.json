@@ -1,0 +1,271 @@
+{
+  "authority": "Owner October 1 immutable attachment backup release-blocker request",
+  "boundaries": {
+    "adr0044": "Proposed",
+    "adr0048": "Proposed",
+    "backup_release_blocker_resolved": true,
+    "m66b_accepted": false,
+    "m66c_started": false,
+    "pr17": "open/draft/unmerged",
+    "product_deployment_authorized": false,
+    "x1_started": false
+  },
+  "captured_at": "2026-10-01T09:09:59.327206+00:00",
+  "image": {
+    "base_entrypoint_preserved": true,
+    "base_image_id": "sha256:5fe071ea797a7d723f5b40df5454aa7405cfbaf91037adf18bb13e80f0362771",
+    "base_layers_preserved": true,
+    "base_user_preserved": true,
+    "environment_changes": [
+      "SNAKETRACKER_BUILD_GIT_SHA"
+    ],
+    "image_file_changes": {
+      ".venv/lib/python3.13/site-packages/snaketracker/infrastructure/backups/pipeline.py": {
+        "base": "0cd0aff5582821392067631d070c8389199a0dcbe41496fbe341ea4452e625c9",
+        "temporary": "87eee9cfa2d496482853172fe9dd91ebda9aac654612d1e76fdbf548a1590a25"
+      },
+      "qualification/backup_worker_once.py": {
+        "base": null,
+        "temporary": "f75bf472f1b7bca02e02d6a499ffec20137dcc174a8c051f98906f6425a343c1"
+      },
+      "src/snaketracker/infrastructure/backups/pipeline.py": {
+        "base": "0cd0aff5582821392067631d070c8389199a0dcbe41496fbe341ea4452e625c9",
+        "temporary": "87eee9cfa2d496482853172fe9dd91ebda9aac654612d1e76fdbf548a1590a25"
+      }
+    },
+    "image_file_count": 3759,
+    "worker_image_id": "sha256:81b85543e874ee1eaf07afde9b1d20a153a937c70318a0feb6f9305257952f21",
+    "worker_image_tag": "snaketracker:backup-immutable-7d2f3de801c2",
+    "worker_source_sha": "7d2f3de801c295cda2768fc8b913e2a30fc82326"
+  },
+  "independent_review": {
+    "core_patch_sha256": "80ae3e552989d18b5f93271b4d300298b733971499ca5c1486c43afed51b7ddf",
+    "result": "No actionable pipeline/runner defect; reviewed packaging correction appropriate and final default-user qualification passed",
+    "review_report_sha256": "aa51726c9c638dd35817fb5f21e640f09f206f78391f824a833d95866dc30cab",
+    "scope": "Read-only static review; runtime/production qualification separately recorded"
+  },
+  "isolated_image_fixture": {
+    "attachment_count": 4,
+    "database_count": 4,
+    "encryption_key_id": "isolated-fixture",
+    "event_cutoff": 7,
+    "foreign_key_errors": 0,
+    "hash_mismatches": 0,
+    "integrity_check": "ok",
+    "manifest_checksum": "b4838334779af894c99ffa028fbc074e1c8c35af20402cb43ed6fb65affd1e77",
+    "manifest_count": 4,
+    "original_staged_file_preserved": true,
+    "request_id": "a9321d89-5944-4fb0-b3fa-d737dae2561c",
+    "restored_compatibility": "normal",
+    "restored_count": 4,
+    "run_id": "678b8800-288a-4399-9591-588772b9e7cf",
+    "schema": "0023_sourced_care_guides",
+    "source_sha": "7d2f3de801c295cda2768fc8b913e2a30fc82326",
+    "staged_excluded": true,
+    "status": "completed"
+  },
+  "old_incomplete_archive_retained": true,
+  "production_integrity_during_backup": {
+    "all_media_files_unchanged": true,
+    "all_table_dimensions": 83,
+    "attachment_count": 46,
+    "attachment_metadata_unchanged": true,
+    "business_tables_unchanged": 80,
+    "changed_tables": [
+      "backup_requests",
+      "backup_runs"
+    ],
+    "event_cutoff": 1027,
+    "media_file_count": 77,
+    "pending_requests": 0,
+    "remaining_leases": 0,
+    "schema": "0023_sourced_care_guides",
+    "strict_before_restart_match": true
+  },
+  "production_integrity_final": {
+    "all_media_files_unchanged": true,
+    "all_services_healthy": true,
+    "attachment_count": 46,
+    "attachment_metadata_unchanged": true,
+    "business_tables_unchanged": 80,
+    "container_ids_and_images_unchanged": true,
+    "dotenv_mode": "0600",
+    "dotenv_unchanged": true,
+    "event_cutoff": 1027,
+    "live_product_source": "c4740b32c1b80f054725c0a037d47689bc283474",
+    "media_file_count": 77,
+    "normal_worker_timestamp_refresh": "Only reminder_facts.calculated_at changed after original worker restart; every other column/row and all reminder rules/schedules are equal.",
+    "normalized_differences": [],
+    "operator_allowlist_environment_unchanged": true,
+    "original_worker_resumed": true,
+    "pending_backup_requests": 0,
+    "remaining_leases": 0,
+    "schema": "0023_sourced_care_guides",
+    "strict_changes_after_worker_restart": [
+      "reminder_facts"
+    ],
+    "web_nginx_not_restarted": true
+  },
+  "qualification": "AT-BACKUP-COMPLETE-01",
+  "quality": {
+    "architecture_freeze": "43 Accepted / 5 Proposed / 0 Superseded; unchanged",
+    "artifacts_sha256": {
+      "coverage.json": "a376fb3d382e413666aa92c42ab2c3283c1f18df6bc18e70114d74ba9ed00c18",
+      "coverage.xml": "aaa3779017ec6f1eef7f8245f478000b5cf69d0026d729988f641b6b834aceeb",
+      "junit.xml": "12801b487d003e744e84bced0a132093205229df3c3de13fe71ab7531118f8be"
+    },
+    "branch_percent": 85.35,
+    "command": "uv sync --frozen; TMPDIR=/dev/shm/extensible-baseline-jpq9nv3z ./scripts/quality/check.sh",
+    "core_python_source_unchanged_after_deployed_source_focused_run": true,
+    "dependency_audit": "no known vulnerabilities",
+    "deployed_source_focused_seconds": 12.02,
+    "deployed_source_focused_tests": 29,
+    "exit_code": 0,
+    "focused_seconds": 12.49,
+    "focused_tests": 29,
+    "frozen_sync_packages": 75,
+    "full_gate_log_sha256": "1b3c76f54eb0283e9a6f7fdc325ac5f706814026a1720afa8ed08bb1bda28791",
+    "github_qualified_head": {
+      "Container": {
+        "run_id": 36840351934,
+        "status": "success"
+      },
+      "Quality": {
+        "run_id": 36840351939,
+        "status": "success"
+      }
+    },
+    "initial_gate": {
+      "branch_percent": 85.35,
+      "exit_code": 0,
+      "line_percent": 94.53,
+      "pytest_seconds": 579.73,
+      "tests": 892
+    },
+    "line_percent": 94.53,
+    "packaging_reproduction": "First isolated image entrypoint directory was0444 and inaccessible. Created/chmod0755 before COPY; default-user script startup and final fixture passed. Production untouched during failure.",
+    "post_gate_changes": "Evidence Markdown/JSON only; source, tests, qualification tooling, Docker recipe and dependency lock match qualified head.",
+    "pytest_seconds": 597.7,
+    "source_commit": "65a0b3d3d582a0ee15ce3beb6027eaee45bfe1ff",
+    "tests": 892,
+    "timeouts_and_thresholds_unchanged": true,
+    "verified_source_tree_ids": {
+      "deploy/docker": "e4a99a920c61f320f90df3d38318122bebe79252",
+      "reference/care-guides": "6a9562ff60ab742c0cb01c544d435f04217d0efd",
+      "scripts/qualification": "e8a846adc3291eb552c44451ff84a7b50b15f9a3",
+      "src": "bc3032b6b982bb897d79f242ce869b35b67436a1",
+      "tests": "76a65b4d011c6ed69a181c54a3b8c6850687224c"
+    },
+    "warnings": 172
+  },
+  "recovery": {
+    "algorithm": "AES-256-GCM",
+    "application_read_dimensions": 1373,
+    "application_read_errors": 0,
+    "attachment_metadata_digest": "9f06a3a20b0daf5acd4846ea9846f2e312b8cebab13e03684168fbd08b84f615",
+    "compatibility_mode": "normal",
+    "compatibility_reason": "compatible",
+    "completed_at": "2026-10-01T09:05:08.866674+00:00",
+    "database_count": 46,
+    "encryption_key_id": "local-development-v1",
+    "event_cutoff": 1027,
+    "foreign_key_errors": 0,
+    "hash_mismatches": 0,
+    "historical_recovered": 6,
+    "historical_versions_digest": "6c6c6c712ae45d54c0b85fb45a90f853a579a6a367ce92ba8f589f13d59c13c8",
+    "integrity_check": "ok",
+    "live_schema_matches_pre_resume_backup": true,
+    "manifest_checksum": "11878c2e09ed66b833a64543a2d2cc7b7fae44f7b9ea8cecf0a6498994aebd76",
+    "manifest_count": 46,
+    "metadata_mismatches": 0,
+    "old_archive_rejected_by_completeness_verifier": true,
+    "old_incomplete_backup": "bfb0efc2-0b0b-4718-b2b1-88e7d1be2970",
+    "old_manifest_checksum": "9acc3d8af9833efdcfe9ed4d5a665a7713089e2c565b4584a2fbeac55e44a45a",
+    "old_manifest_count": 40,
+    "projection_registry_validated": true,
+    "reset_credentials": 0,
+    "restored_count": 46,
+    "restored_staged_files": 0,
+    "run_id": "8777f5b4-545e-4384-81e6-e50c99553bb8",
+    "schema": "0023_sourced_care_guides",
+    "schema_object_count": 140,
+    "sessions": 0,
+    "source_sha": "7d2f3de801c295cda2768fc8b913e2a30fc82326"
+  },
+  "reproduction": {
+    "expected_finalized_count": 4,
+    "first_assertion": "Manifest set omitted A and C",
+    "fixture": "A selected then B selected; C finalized never selected; D selected on second Animal; E staged only",
+    "focused_green_log_sha256": "f1052283a0deca61cd176a8000399980f7abba7718c6cc9e30ee9c6ef0e95cf3",
+    "initial_regressions_failed": 14,
+    "old_manifest_count": 2,
+    "red_log_sha256": "3dcdadc9f6924072197270b020ef25b2641ff5bb68b5a63e685753b53fff9567",
+    "runner_red_tests": 5
+  },
+  "root_cause": "Current-photo join omitted historical/finalized unselected attachment_versions rows",
+  "source": {
+    "base_source_sha": "c4740b32c1b80f054725c0a037d47689bc283474",
+    "correction_sha": "606e8a2024674a9c9c1f3d9903b6f41d61c31199",
+    "diff_paths": [
+      "deploy/docker/backup-worker.Dockerfile",
+      "docs/evidence/m6.6-species-aware-husbandry/b-corrections/backup-completeness/README.md",
+      "scripts/qualification/backup_worker_once.py",
+      "src/snaketracker/infrastructure/backups/pipeline.py",
+      "tests/integration/test_backup_completeness.py"
+    ],
+    "diff_sha256": "d4f61057fbc5cbbc49ba3d615777f768031fc199438ae468fdd51b5019320fe3",
+    "packaging_sha": "65a0b3d3d582a0ee15ce3beb6027eaee45bfe1ff",
+    "pipeline_sha256": "87eee9cfa2d496482853172fe9dd91ebda9aac654612d1e76fdbf548a1590a25",
+    "qualified_head": "65a0b3d3d582a0ee15ce3beb6027eaee45bfe1ff",
+    "runner_sha256": "f75bf472f1b7bca02e02d6a499ffec20137dcc174a8c051f98906f6425a343c1",
+    "same_as_qualified_correction": true,
+    "worker_source_sha": "7d2f3de801c295cda2768fc8b913e2a30fc82326",
+    "worker_tree_id": "6b4705820d59071b9cc29f754baf50a81cc0c1f5"
+  },
+  "status": "complete encrypted recovery point verified; product deployment deferred",
+  "worker_execution": {
+    "boa_imported": false,
+    "corrected_reproduction_cleanup": "Use docker start with the recorded original worker container ID, never compose start, to avoid dependency traversal.",
+    "full_candidate_deployed": false,
+    "lease_observation": {
+      "durable_lease_states": [
+        {
+          "acquired_at": "2026-10-01T09:05:00.972159+00:00",
+          "expires_at": "2026-10-01T09:10:00.972159+00:00",
+          "holder_digest": "e11c8e31bd677f24763233563b0874e988a310f39334cadc8b3218a32b381fcd"
+        },
+        {
+          "acquired_at": "2026-10-01T09:05:00.972159+00:00",
+          "expires_at": "2026-10-01T09:10:08.782573+00:00",
+          "holder_digest": "e11c8e31bd677f24763233563b0874e988a310f39334cadc8b3218a32b381fcd"
+        }
+      ],
+      "duration_seconds": 11.798,
+      "lease_observed": true,
+      "lease_released": true
+    },
+    "method": "Original worker stopped; BackupService request in existing web; compose run --rm --no-deps explicit backup_worker_once.py using temporary old-release-based image; durable leased worker creates/verifies backup; original worker restored with docker start after failed Compose resume",
+    "normal_worker_image_replaced": false,
+    "normal_worker_resume_succeeded_directly": true,
+    "normal_worker_resume_succeeded_in_trap": false,
+    "production_migration_command_attempted": true,
+    "production_migrations_applied": false,
+    "resume_dependency_incident": {
+      "attempted": true,
+      "exit_code": 255,
+      "live_schema": "0023_sourced_care_guides",
+      "log_sha256": "ed18a9d9eab62d07f5c42f26c1db1622768e6bea7fc8accdcda754fd0082b5dc",
+      "migration_image": "snaketracker:m66-a-interaction-c1",
+      "safe_failure": "Can't locate revision identified by '0023_sourced_care_guides'",
+      "schema_objects": 140,
+      "schema_objects_unchanged": true,
+      "trigger": "docker compose start worker followed existing migration dependency",
+      "upgrade_messages": 0,
+      "worker_recovery": "docker start snaketracker-worker-1; same original container and image healthy"
+    },
+    "running_container_patched": false,
+    "temporary_verification_storage": "Private host bind; production/runtime permissions unchanged",
+    "worker_pause_end": "2026-10-01T09:05:49.478622272Z",
+    "worker_pause_start": "2026-10-01T09:04:49Z"
+  }
+}
