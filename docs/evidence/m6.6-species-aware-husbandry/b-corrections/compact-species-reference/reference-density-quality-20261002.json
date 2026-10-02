@@ -8,6 +8,7 @@
   "command": "uv sync --frozen then ./scripts/quality/check.sh",
   "coverage_thresholds_and_test_timeouts_unchanged": true,
   "dependency_audit": "no known vulnerabilities",
+  "digest_type": "SHA-256 of repository file contents; these values are integrity digests, not authentication credentials.",
   "errors": 0,
   "exit_code": 0,
   "failures": 0,
@@ -16,429 +17,1692 @@
   "isolated_ram_tmpdir": true,
   "line_percent": 94.55,
   "pytest_seconds": 659.178,
-  "qualified_input_hashes": {
-    "reference/care-guides/reviewed-boa-constrictor-v1.json": "4c70f16e78be29257d63b1ecb6b619fa93a0db0386ed8c52a3f2135fc02ca5a7",
-    "reference/care-guides/reviewed-v1.json": "fd3e4d6e8d96173a51cfe7d7f5c20ecbfe24aae68127a3481f42a99e05097500",
-    "scripts/__init__.py": "5d52cc18175a8e1bdfae7a699af7adc655b5762ab3720002b16b531ddbe5b5c4",
-    "scripts/benchmarks/__init__.py": "978198e77dd6b0a7d7519e24cfe80dd69b2799cf933328c177913cfc1262dd59",
-    "scripts/benchmarks/phase1_qualification.py": "d5b75124052e28384b907e608ce88a3a02b3863d2feb86aac474559020c36847",
-    "scripts/benchmarks/phase6_qualification.py": "5fcb1041da2cb54fde21673e04d58e383e8f638e22f4a73f3118335799e7e10e",
-    "scripts/benchmarks/run_phase1_qualification.sh": "fd40eac673020ac3235dd5e45dd8db122309950121fc01a37350050d1410ffdd",
-    "scripts/benchmarks/storage_qualification.py": "cc096774bbb4b9ab83cd55e8d71f5723aefe033fa89f5ae2d56b8ecd4c49e546",
-    "scripts/benchmarks/verify_storage.sh": "1e96106eb6c1775121424c6ffd20c92baa48cb21edb9bac8f921b032037cd772",
-    "scripts/development/bootstrap.sh": "23c29b788802289ec4c2be69eb9f765fb0ea4ec40e4f7d8faaa27e06329bf577",
-    "scripts/development/m6_owner_review_demo.sh": "f958c1320a1f38928e536208eb6361224a567d05c18a025241b5b0d97d8bad06",
-    "scripts/fixtures/__init__.py": "606a4b0d2fbb1804a3de01b5fe549c8c0f00b27d08e0b395e08d554637e44fab",
-    "scripts/fixtures/generate_representative_dataset.py": "2e68f097fe40313d05a2cc20cdec7af948c5a340ced932f26cadf06886c11462",
-    "scripts/fixtures/seed_m6_owner_review.py": "3691719030a7a94347ca878f93eb4682346a6700a63e84f15008c18ed5490049",
-    "scripts/maintenance/__init__.py": "7b63f7c540862d403cfecbc12511e02ccfb7ba397daa31a7d6e4c1e55cad75e7",
-    "scripts/maintenance/check_database.sh": "bbaae8411096e520d0b95d418fcf09f83907d7a35aa6bb948306fcd0b6e3f1d5",
-    "scripts/maintenance/checkpoint_wal.sh": "e455090ed2c78043cf2571f282e1e856551dff3fb80745c8d6cf654717cc7abf",
-    "scripts/maintenance/database_maintenance.py": "062efa6b2845f94581dd415dc8eed95bd52e1e3e0703f80cac20182882ca0a1c",
-    "scripts/qualification/backup_worker_once.py": "f75bf472f1b7bca02e02d6a499ffec20137dcc174a8c051f98906f6425a343c1",
-    "scripts/qualification/m66a-browser.spec.js": "216a4e92f674effe20f1c043036028cbc46b27fc37b3733a34bf0d9c90c76e77",
-    "scripts/qualification/m66a-fidelity.spec.js": "76c4314f2118de374568c54dabe24b891a4986ad1f4d4fd4f184d850c312499a",
-    "scripts/qualification/m66a-outage.spec.js": "6f643db6e43155bcf2644128603b36964e1fe5113dd3fa75f71bc77730fcbbee",
-    "scripts/qualification/m66a-performance.spec.js": "9d5dea96fb6f2c7d23b668d18718b942d9d682140c52de4ccc0905c4f7de5d5e",
-    "scripts/qualification/m66a-phase2-visual.spec.js": "fd6c668d1302ef541e8efd4b34acfaf88942a688cbf10589a15acb22855bf1be",
-    "scripts/qualification/m66a-primary-interactions.spec.js": "2b9a61269b845492ab1790e58d57b9bb82f72e3baa7a43dd06910bdf58e984f1",
-    "scripts/qualification/m66a-visual-performance.spec.js": "7125ac8cd81ba2f39afa4774b753f9aa03a9b82253548844c3df7a32dcaf6dd8",
-    "scripts/qualification/m66b_browser_review.js": "afd08d598942ae5be89b8b0d24683d0733d0faa14ec8d5dec89f9dd2fc12e5e9",
-    "scripts/qualification/m66b_compact_reference_browser.js": "c1a2630fbf4461db20660c4bcd415b20b2de853be5cd11f9373f3e46f863adaf",
-    "scripts/qualification/m66b_correction_browser.js": "7d7f8718ef0f372c28b8bbbe4713f88e1085bd44f8f1724df7cc4808f32b8943",
-    "scripts/qualification/m66b_correction_prepare_browser.py": "7412d5815e6ce78ae013623ab04645044287ca2bc339657de334cae343eceb30",
-    "scripts/qualification/m66b_prepare_browser.py": "7b1c60ad76bf072be09daeed6a60a0fd49b6ebcbd8b907b67b32367f6d86b692",
-    "scripts/qualification/m66b_production_compatibility.py": "ccf5394f1130e14ac06580400b4108367753e770150134629af81c0062197228",
-    "scripts/qualification/m66b_profile_reference_review.js": "5e9f914f2c66ec49286e6d2b0f2af23e58044488546c2d59993635448dbb5357",
-    "scripts/qualification/m66b_reference_density_browser.js": "01037f4c18149a0689a3fcd2af32a5e7f7a0ee849c29b351c786319095422683",
-    "scripts/qualification/m66b_reference_navigation_browser.js": "c944f50d3f72d871fe8e6bec0529cc9bfc5b0faeea07c908af363289f96170ab",
-    "scripts/qualification/m66b_visual_review.js": "fa9030357b1e735e6935556bcb57aafa2c408b00ed4afa2609eb92082e779b85",
-    "scripts/quality/check.sh": "a5e2053f758cb6188878f70bf8fb689de1e03c4027206a566598fda2133579e7",
-    "scripts/quality/verify_architecture.py": "dfe83be805656df63b325baeaeb21493c45fd39b9f137f06e9bbbc05acbedab7",
-    "scripts/quality/verify_architecture_freeze.py": "9608aa43152405488ec477676a34efa2324625262099eb531bc15489101956d4",
-    "scripts/quality/verify_coverage.py": "b43f202037e5a26a1a99ac9abe33aeeabcd0f426385d0784f856c35ebb7cdd35",
-    "scripts/quality/verify_docs_links.py": "7f72e81fc953690d8924054888ff94d268098f71f75be11e1a064ff51477d3d0",
-    "src/snaketracker/__init__.py": "3884ceef2d058f4f09cb4692599e41ff5450eae30a451d8bb1f65007d9953dc8",
-    "src/snaketracker/application/__init__.py": "03f9ccc535da4067bbcf43804b0e00d72498500b46c8ab09e136d58f838a1c62",
-    "src/snaketracker/application/admin.py": "e4cd4413b813d2e5e1c60266c9d2e83ba09a4dbe10768c403494d12fe02efcdb",
-    "src/snaketracker/application/analytics.py": "cbd1963888feebccada7d416aea4df534b3659f1dda15ccd3460365ae66eb4c8",
-    "src/snaketracker/application/animals.py": "c9fcd02db61f4fc8d06fa2b88eae3a65b04eb5c61ebf82e33242798a93bbe3ff",
-    "src/snaketracker/application/attachments.py": "24a1a3853638830b5658dc26c846bef9c9436c7dac419833c24e27b07be931c0",
-    "src/snaketracker/application/backups.py": "4832ca4caf4e38e9222eda84b38b5e44528b480edbff60853d0d834720eb77ac",
-    "src/snaketracker/application/care_guides.py": "6a8797dba0fc5bddf810f4878c0c9546ebcbe7b4e6180ae1c6ebef0e2f8acb16",
-    "src/snaketracker/application/dashboard.py": "00d3faf407978537ca9a308611446afd34aa10e62be52d53e20c927ad10a39cc",
-    "src/snaketracker/application/enclosures.py": "279d9350ab4ddef1aa0ed2b69340c94af59d5a0ad9f2bfa0c02bc9c1cf17914c",
-    "src/snaketracker/application/expenses.py": "4b55dfe3e3db13c681ccb0c8414a06a60406513666d784fded6240f8c30b6360",
-    "src/snaketracker/application/household_bootstrap.py": "f07894a92f54b4bf68714bb585f368220acad72684a5b433dd08cfad047af25e",
-    "src/snaketracker/application/identity.py": "b92113c5d1454595f5d443794ed7f115fd65dcf76dc1cb164dbc5c196f2a273a",
-    "src/snaketracker/application/inventory.py": "b2c8d5632b9bb4123955315a3fec187db7b4b6eb309b939688c05f0205a88335",
-    "src/snaketracker/application/inventory_intelligence.py": "d787ceaebf8f3985af1512fc011f8540f223767a9439b4c846c27253c1c3377a",
-    "src/snaketracker/application/keeper_history.py": "05589bc14460a012bbb9eac0e3dd677abaaf7b8fce6017654ab5c8544de6889d",
-    "src/snaketracker/application/length_measurements.py": "d752c239328bf2d3c84c8600163c06c5bf94f6b30b1d0453cc34cd6ba1209a76",
-    "src/snaketracker/application/ports/__init__.py": "b55eb7958f8468c3302715c299994557f90cc1fe52dcf92b47cd6d12728dad91",
-    "src/snaketracker/application/ports/database.py": "6a85be7356e2500bc0356517efe8ccd67d993417249e87900c0d96688bcf8ead",
-    "src/snaketracker/application/ports/readiness.py": "76040b4d0eccb6e2fa0858ccb8112a3aa7c506cc521255b843535724e84b5f11",
-    "src/snaketracker/application/projected_events.py": "c0bc35dcfacb220b6d68888dee7f132fd4f92a80dae7b09329c09e79d522c9da",
-    "src/snaketracker/application/projection_health.py": "6f29fb9ed6db951a240a79ef169f20abdcb3e26ab7153bf93e78903a606e19d1",
-    "src/snaketracker/application/purchases.py": "398a41d3b9474385c41272dfeb9295d5451de61a7ae8a3022b67e0a9572e2baa",
-    "src/snaketracker/application/readiness.py": "e97337151cd451e8f90bb5c698b520085ed6f64c01fc500ad350719468489222",
-    "src/snaketracker/application/references.py": "3424034eb5a4f9609eb5b7244f0dcadda849a873cb39a64432b18e9d2e3149aa",
-    "src/snaketracker/application/reminders.py": "a3fa648f67edf417565b3882766a3debfd1d1fe190a996c13fdf30a195ebefb4",
-    "src/snaketracker/application/reports.py": "8b32280ef077ce9119f61b17e818e4e05ba869d272b1a070de2a34bf7f3e26a3",
-    "src/snaketracker/application/search.py": "109c8aff062d0909971656b1592022560f71fb484649653112b696b4904dba9a",
-    "src/snaketracker/application/species_directory.py": "2cb8bb8bbbe2d72117283327b5b6e92dffffdebe45d8b166c18c338d4eb14f44",
-    "src/snaketracker/application/suggestion_policy.py": "fd61b8179eca414853621e30a702403874a6f6c24b7bc7cf641c74458f658322",
-    "src/snaketracker/application/weight_measurements.py": "bbfa0f1ce2a321b03319625f47da109eabcfd6c4ea68a3851ddbdc12df4acc32",
-    "src/snaketracker/bootstrap/__init__.py": "5ec6c2eeaabe0fb08ac7d0dc25253e132ccfd238dcfa1e655f2fa1d057ddee7c",
-    "src/snaketracker/bootstrap/application.py": "38ec3e5988ca31c534ef59609cbcc38c7d1762ad758f5dfd95bf64b9a27ce139",
-    "src/snaketracker/bootstrap/compatibility.py": "2fa23b49f958cf99d462bc37e67fbf1a603ffc34fb73dff6a08005aac81ba295",
-    "src/snaketracker/bootstrap/configuration.py": "fa97bc6127b6911a9af7cabc3401d9596cbd9b197c3af289e7261389e4e87bf2",
-    "src/snaketracker/domains/__init__.py": "9993cac707c6bc866d59b4ac9d5b6a2fd6534b537c6566d501bdbe7069d189ea",
-    "src/snaketracker/domains/animals/__init__.py": "7239a10fd958491f508d56c3ed0dc0217100b98a65a78e610b579a6ba6236b64",
-    "src/snaketracker/domains/animals/capabilities.py": "ebcc83cfef6c0580c3ab948c7989c75bf4b35dd1cc81308345a5b632e97b39a1",
-    "src/snaketracker/domains/animals/contracts.py": "a75b3fbe47564fff6c98941b2f0710f2c088321b3b26efd8f510dbb559794b0c",
-    "src/snaketracker/domains/animals/measurements.py": "edb33597c60e36c93ffbabbfb3a087bd52f520b94d541d91dafb2be43a85271c",
-    "src/snaketracker/domains/enclosures/__init__.py": "a8be91c9a4c5b8dfb2d4dbcf576b405ee35e0d18e283760c15bf603fbe176c1f",
-    "src/snaketracker/domains/enclosures/contracts.py": "4e255a07ae345b04de796331e009dc678c5d8d0979ed3545865f882acd69ad4a",
-    "src/snaketracker/domains/expenses/__init__.py": "b3be870ef749a3708268bef0cb2e740581327ebd3d7f2587912abcf30b413f65",
-    "src/snaketracker/domains/expenses/contracts.py": "7dcd78c980c802938891869c50583dfa1036e01b6c97f8062c9da9a765a4858c",
-    "src/snaketracker/domains/households/__init__.py": "f3f7c70c2e53a8fd95ab9dfc2454b147b151e1da0bdf571bfcc1c2b27ebb4854",
-    "src/snaketracker/domains/households/contracts.py": "9139ace8fddfdb68b07e3bdb22ddc7eb44fa00521a42c422edb99c4aa6a2a96e",
-    "src/snaketracker/domains/households/replay.py": "8d25fb5cc9eff02a8ce3d07ccd79ba56d8fbb68c268751366aabb0b6e13b91b8",
-    "src/snaketracker/domains/inventory/__init__.py": "0ce59580f7d0494bc495812cfeaa362587d6c058fcbc7b3b5c67cbed8b6dc94f",
-    "src/snaketracker/domains/inventory/catalog.py": "f62e106705279584fa5071289afd0dcd92696e5c85a5e94864375cfd80474fc0",
-    "src/snaketracker/domains/inventory/contracts.py": "c8a0704645fffe8eae101cb24223e3ce4280c8258c5c623079d3c8c83664ebd8",
-    "src/snaketracker/domains/purchases/__init__.py": "f8f6ce823cb14daa923c9104fb77e4cb945465651efdb51962337bbc45955129",
-    "src/snaketracker/domains/purchases/contracts.py": "55c0cea72970da8ca96251d0c5acc1d0484cabadd4814c6075261524f9585104",
-    "src/snaketracker/domains/reminders/__init__.py": "c206e3c0807b74e9e1914be22b2a36c6a1face46366b210d1a9c1d0e78681bc8",
-    "src/snaketracker/domains/reminders/contracts.py": "b209185dc076612fa6a1e86466917110962e9f22343dff034dcb68ff46b15e91",
-    "src/snaketracker/infrastructure/__init__.py": "5476ccef2754b236492c3d6c22404d995a5583ea796988edca712268dd7bafe8",
-    "src/snaketracker/infrastructure/admin/read_repository.py": "4ece2e04603c61bb64cf0571cd7e09e47c9d9017848fe747bbb68dc5c447d2f3",
-    "src/snaketracker/infrastructure/animals/__init__.py": "b1a49ac46d7105229bdbef77e7e2dded4994ab1a5fb5794e4f67bd16b93f2d5a",
-    "src/snaketracker/infrastructure/animals/projections.py": "8b12dd61ad9a89e2bcbe722218bb8facf6b7946a7ce32d62b4a757f05655204c",
-    "src/snaketracker/infrastructure/attachments/__init__.py": "e475554222eeef43c3acf6f93a91f333debefba2b38608bf47da8471eb8ff0ea",
-    "src/snaketracker/infrastructure/attachments/repository.py": "aebdab9c8820da8b4aef91f6d6079a99c966b4b08f3d3db0bf8917a43fd4d7c1",
-    "src/snaketracker/infrastructure/attachments/storage.py": "76ddda4d5db0d9847ae2c66542728ec092b0406c5b762461029c65e7753a3e13",
-    "src/snaketracker/infrastructure/backups/__init__.py": "6b97e61fce78d2b99603e36e518b23bd11d90b3f9bd9f4b604e483ad38da527f",
-    "src/snaketracker/infrastructure/backups/pipeline.py": "87eee9cfa2d496482853172fe9dd91ebda9aac654612d1e76fdbf548a1590a25",
-    "src/snaketracker/infrastructure/backups/repository.py": "3d1151caca70202a47bf60aee5abb186ba92194032e4a2c6f0bb5be00b172f09",
-    "src/snaketracker/infrastructure/database/__init__.py": "af7592e67a1b058fd1dc32cbced680c20a0158169a0bfaa58a52c3f6e4fcc61d",
-    "src/snaketracker/infrastructure/database/engine.py": "34bd7c8865651643ea1c21d13e752c4305cb1f4bf1402d57748042c8b0511c13",
-    "src/snaketracker/infrastructure/database/health.py": "703d43934ebf223ca038dd0f2de44f81878ebf04f64eddf2f3b82ee880d0c031",
-    "src/snaketracker/infrastructure/database/maintenance.py": "45369d5898957c0eee02b5f39b2cdb50458665fcb0fd811e758c8b392577c080",
-    "src/snaketracker/infrastructure/database/sqlite_profile.py": "ffbb730671c4d62bef8495264ad501da58c879acbb148ba93b716861e55ef080",
-    "src/snaketracker/infrastructure/enclosures/__init__.py": "580df3bec3827b7cc96c16425c6681a82006f8f1944fce5580c99f0a05a110c7",
-    "src/snaketracker/infrastructure/enclosures/projections.py": "c28cd13dbf800a392f76d01d02c42463f1b38a96d4d41e66d0ffb1738fcc7293",
-    "src/snaketracker/infrastructure/events/__init__.py": "c2a49f6401a8cb93816ac9f3ed8efda0bda1f6aa3a925f4e65d91418401dabe3",
-    "src/snaketracker/infrastructure/events/sqlite_event_store.py": "a548bee48bf9e6afeb9cc9f6f42811d115aa167b00e668daf00627289d5655ab",
-    "src/snaketracker/infrastructure/events/sqlite_snapshots.py": "e75ce640217896e244136716dd25e34ee2cc74e6153ad9f7fea5d898be3e0845",
-    "src/snaketracker/infrastructure/events/sqlite_subjects.py": "ab6236f24a1fab7a3009a7d9585aded3be385152161b73c6e14f145fa1ca5992",
-    "src/snaketracker/infrastructure/expenses/__init__.py": "eeae8c7d4410840038f01e4fe6cecdcc2975aab2871c8d035605a410860d97ff",
-    "src/snaketracker/infrastructure/expenses/projections.py": "24de8e820dfd554bcd29a10712488ceec5eee4e7ff59f6b96cd252d343348067",
-    "src/snaketracker/infrastructure/identity/__init__.py": "f0f4af02e914d0a9e9664aef09a0d8934f6e30da8d614a106de0f806fe19ced4",
-    "src/snaketracker/infrastructure/identity/bootstrap_repository.py": "ad90a5f682f7461648976555b199ebabd6a61da5296eb87eed078bc8bc84011e",
-    "src/snaketracker/infrastructure/identity/identity_repository.py": "491ae220ff86053da6548539d21d9a732ac6c09bebb225e533e68b4ec744e9b3",
-    "src/snaketracker/infrastructure/identity/password_reset_delivery.py": "c4671f7a878352f3275e807ef285ac1a3995a47c3b1b8640e1496506ee7e8cf5",
-    "src/snaketracker/infrastructure/inventory/__init__.py": "f3f130da9d597bfea5ae9f1fb07c87d5e846c0a04748833a59803d4690791a8a",
-    "src/snaketracker/infrastructure/inventory/intelligence.py": "0de9e243dbfedf6626ff80a83c00b4a3fa3f70ea764d0fd43b60d0f4c562be9f",
-    "src/snaketracker/infrastructure/inventory/projections.py": "d57dd3c57858bfdc79193493ff0f92c68057545e3f0fba5e1340cbdb4db9f276",
-    "src/snaketracker/infrastructure/jobs/__init__.py": "85ea5c2ddcdb034f6b2fb6ea264274e7e4db05d56e5c2bf7c8d64b4ee3651a55",
-    "src/snaketracker/infrastructure/jobs/repository.py": "813844a850d69fbbedbf5803e7e500cecb9367547b6f9df8709df29a70204956",
-    "src/snaketracker/infrastructure/notifications/__init__.py": "14a254001342759dabd76901bc3b650db1e80acde2ac91b88340b4b5bab79ade",
-    "src/snaketracker/infrastructure/notifications/provider.py": "bae2945c1ffdc3bf39b1f84b5fb74b42a15e452729c495ad7493374789ca99e8",
-    "src/snaketracker/infrastructure/notifications/repository.py": "cad0b3f2e53a6d901ba1c28525bc4af5815ff6ecffe47e3bf7d455c41919fda4",
-    "src/snaketracker/infrastructure/observability/__init__.py": "1c1835c9671cc8ac83e0a0b92d3c47c1c99b3c40d3c0f462fa0d0de482c55867",
-    "src/snaketracker/infrastructure/observability/correlation.py": "9c44fbac5ddbb06cccdcc8602c0608529e3544de16918aebc4a248f8b0250762",
-    "src/snaketracker/infrastructure/observability/logging.py": "4411d24b3036aa7d616b79f2ea8da40ffed81b3767f901d0d66c5390e07c21be",
-    "src/snaketracker/infrastructure/observability/metrics.py": "80c60db9b004b457c8201fcf839f553296227711344524de888756832ed49ad8",
-    "src/snaketracker/infrastructure/product_experience/__init__.py": "7f92eddf96e125654ff774cc849a94adc1ff4649771d0c298f43dafa32989c14",
-    "src/snaketracker/infrastructure/product_experience/projections.py": "459a6296176a449b615bbe2a892c9cd3ab9ac28a67c82c314961a1092dbbcc3c",
-    "src/snaketracker/infrastructure/product_experience/read_models.py": "5fea9182571536d72c1f2b0f06275452423d30a2057bdb83fa74fb192b0791c8",
-    "src/snaketracker/infrastructure/projections/__init__.py": "d3a9ee3fa26a626b8be081c8a3eb209b0cb3f366263b95910cc6bc74ea7b3e09",
-    "src/snaketracker/infrastructure/projections/sqlite_generations.py": "02c2586cdc97b6bc793eb82d6c855808a69220d091de358770866589ee2f52ab",
-    "src/snaketracker/infrastructure/purchases/__init__.py": "6a4b44212613c6765f34d1a6307074496ef2d6f2db68e7806c5ef77fad1ed6e6",
-    "src/snaketracker/infrastructure/purchases/projections.py": "24a11bb8285535bc62ad2df920ac2b614c50fca1abc48376b6d4fc9ac82c9a8d",
-    "src/snaketracker/infrastructure/reminders/__init__.py": "0192bafaf201db980fcf0e7a137c120ecd40fef453ba78a890e4ad5ef4b53945",
-    "src/snaketracker/infrastructure/reminders/projections.py": "87b1ab6399b899ffadd04a2bb40b492c5eec0701a51e479b6c18b9e089a3944d",
-    "src/snaketracker/infrastructure/search/__init__.py": "b6619bd064cc49d105b81de39aa080d441be75a3cdfe25dafed45a3dd3e4ab23",
-    "src/snaketracker/infrastructure/search/fts.py": "26e6e2a4505f5b5ac2a927b64a12d00c60a2c0bb6b4d7532dbe3f1d86127e465",
-    "src/snaketracker/infrastructure/security/__init__.py": "1a7161a05e3f2cd39eb0af23d79f3b71755647253a9c48eccb2f5210236f4951",
-    "src/snaketracker/infrastructure/security/passwords.py": "79ebd9665256fbc76ac3864ded165126f878df903d8832b511bdea4bfda00e52",
-    "src/snaketracker/infrastructure/taxonomy/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "src/snaketracker/infrastructure/taxonomy/care_guides.py": "56276f72bbaab18ad7d9ad35db2a09772e38594e561caa060d70eae59879baa0",
-    "src/snaketracker/infrastructure/taxonomy/inaturalist.py": "a02a798e3413f2f04b9ef3cb58571b80f73399d8a463d57535eeeb069ff08938",
-    "src/snaketracker/infrastructure/taxonomy/reference_images.py": "ac288e4b0eac6e5715bd2f5d468f4550e806a9b73b888b51830104f366cfbe22",
-    "src/snaketracker/infrastructure/taxonomy/reference_providers.py": "68051e6542a6f23ee40d7ba9b2330e47fa4e18185e461612d164907f1a30fba9",
-    "src/snaketracker/infrastructure/taxonomy/repository.py": "649fd3df36ac9ede5029835bf8e58ccf54b1d7a9dc0161467f43113532743c4b",
-    "src/snaketracker/operations/__init__.py": "d53b5ff572c08c51909621dd783935608d91ccc38be7af09f60e20fc659b6ffe",
-    "src/snaketracker/operations/account_recovery.py": "e2a89249f23bbb443418f036fe85bb2c5c75d8b92c69736c06828b6997e37bb9",
-    "src/snaketracker/operations/backup_restore.py": "75fd4761eed1f4ebc692a72b99f502df985b1bde814cb4b25e9a8991beaaa745",
-    "src/snaketracker/operations/demo_household.py": "70d5c2124f44ec7b587e5d6b46109db16bf2ed515ace9a133edee7368d4859b1",
-    "src/snaketracker/operations/import_care_guides.py": "e39cfbb838440e6c12f943018725f0ad450389d10f8295abcc966a607d0418a7",
-    "src/snaketracker/platform/__init__.py": "24c6ea85224f0614da1baee783777c38d0164cde33223bba37daa6543412e209",
-    "src/snaketracker/platform/events/__init__.py": "56e5b36febd2d6632598dbc7122790880b7a4ff355da97c3c7f95282bd8c5282",
-    "src/snaketracker/platform/events/control_contracts.py": "706c87d2e69cf7af1deb5f694a2345cafd9a9a496d29bf92e63fc6de1e13a455",
-    "src/snaketracker/platform/events/corrections.py": "ddedb714a9c19f943a51ed9203ea2b0d2614ff2305b6638d81e2dfb8e1a3ad92",
-    "src/snaketracker/platform/events/envelope.py": "c36a6c45d4b9aa7f3001b5784f01c7e9e56ce0d0b8b19470d2d1443b38424662",
-    "src/snaketracker/platform/events/registry.py": "6ebd0e5ed7a73f0252953b1bf77f6271355fe0f563846c1eda45052b810ee642",
-    "src/snaketracker/platform/events/snapshots.py": "2035efee9d939ab72eb8f5e4dcc070c4ee081fd8e66b2cd7285f2e187a75e812",
-    "src/snaketracker/platform/events/store.py": "dbfcf57c139a4504cb168d9f9a58d73b95343c15ad659bcd2ae927efbe55fcd3",
-    "src/snaketracker/platform/events/validation.py": "6a065b2882439ee9857091b0ad6ae480618d11e9bbfb68588b9db489d83a0ace",
-    "src/snaketracker/platform/jobs/__init__.py": "8ae3d317e9c375dc6862de1f447e6c25cf5e4478fbfc37ca5a341617741e8264",
-    "src/snaketracker/platform/jobs/handoff.py": "b53eaa9fddc3ab3969a21b86b9631c222f30d12e5f7f816e620c4e88b61a105c",
-    "src/snaketracker/platform/jobs/models.py": "aa0783b558aa873a673670e56f4b28360302ee6134641a5f4396ae01526798d2",
-    "src/snaketracker/platform/jobs/operations.py": "4b972bc7434e5e77e0876c2c7d2ef4e555c9dcdd26ed42280b29022db6cad579",
-    "src/snaketracker/platform/notifications/__init__.py": "a44e786eefd978002f5a97dd010b8f302db6d13509477e8d3ce4c319bff3c787",
-    "src/snaketracker/platform/notifications/service.py": "f05fb64de2c94de5957bda0fbef48f6afdcabcfce1a5d5f6484ad5b50d2367b4",
-    "src/snaketracker/platform/projections/__init__.py": "74e599279a64978c6ccfaa63f7c51676f11967618add6e1b148356374990d71b",
-    "src/snaketracker/platform/projections/definitions.py": "3201bc90ec018d41286b84db005afe699b8d0d1d301b3f6c288727a9b697151b",
-    "src/snaketracker/presentation/__init__.py": "6d475e9a7aa0dccaabcc392a015d8b2a4c1478f94986a7d974e9bc6e541d7d1e",
-    "src/snaketracker/presentation/admin.py": "28831d6d2497932271e876152f0f1484bb7a8a34db6306f8427b02508d915901",
-    "src/snaketracker/presentation/admin_display.py": "d3b3c9c0702ad07af9477c3ab5a1da3cf87fe7cb7e922ecbee36c1b376033a38",
-    "src/snaketracker/presentation/animal_care_views.py": "bb6c4752396a44b351eec73696c90acfee7418fb92f7ad470b6674c7adc50abd",
-    "src/snaketracker/presentation/animal_visuals.py": "683fba6744707cf6f90600dd2afc795f22b2193d9757c7940ae55e3b171760b0",
-    "src/snaketracker/presentation/health.py": "6dce266a54c0b4b3cdf1d5e29232b3cce8ce9c28ab09b0942f99e89b94e1a2b3",
-    "src/snaketracker/presentation/static/admin.css": "54444252e0789c45b264d789be7ec5bd2fac37072b38d134c75594ba005a3685",
-    "src/snaketracker/presentation/static/admin.js": "175dcce251dbf7ff52f0aec60f527721959ab9e5fd6aebdfd3f1840e78e145d3",
-    "src/snaketracker/presentation/static/animal-fallbacks/README.md": "f3386fe79c973bc5d5896fde8d0ea1d0941c610d4e464d90e95e918988eb547e",
-    "src/snaketracker/presentation/static/animal-fallbacks/lizard.webp": "42112c345e94faa758e717419352936c4ecb91765738b71c3936f1aabc4bd04e",
-    "src/snaketracker/presentation/static/animal-fallbacks/scorpion.webp": "d94f2b7da2fa14c549de124e2ecb20b7d3b5c23548728e4008a9205f3b68e815",
-    "src/snaketracker/presentation/static/animal-fallbacks/snake.webp": "12066ba27fd5a025a00097754ee97d4fe914fefff75b0c5b6293d0fdc0ea2237",
-    "src/snaketracker/presentation/static/animal-fallbacks/spider.webp": "2ee0553328ee5f4043401b3aa8a07e6502d1111f6624b5c185095fcfc78526b0",
-    "src/snaketracker/presentation/static/animal-sections.js": "f4186c04af5e16e500c2ec53c6acfb25875071bdb25d33e9fbe4274f50e0e9c3",
-    "src/snaketracker/presentation/static/app.css": "5ff5ed1516f02ace13771aa9cfadff07d97348ed5ab409ce6743973259e7b25f",
-    "src/snaketracker/presentation/static/charts.js": "21d447a99eae0efe1e2acaf6875a009d9ec2adefdb317ef39504110c26958d97",
-    "src/snaketracker/presentation/static/enclosure-type.js": "6d6d9772882e0d35b1b3303ec6266901998112923bc31de18309ac5cdb58fd85",
-    "src/snaketracker/presentation/static/favicon.svg": "1e33d7c650c31099d07f9cde9c8b3e8d7b281983289ddc61d01c523001e25818",
-    "src/snaketracker/presentation/static/feeding-form.js": "6d5a01ffb00cd708a3291ce8801950e5b8b7d8bf5fff1d8284b3fa47e869ea99",
-    "src/snaketracker/presentation/static/inventory-acquisition.js": "6a1c6bb7ce044b0694133f9d4f3a5ffb094c4f62e94b4ba011e5761c5ac48607",
-    "src/snaketracker/presentation/static/inventory-form.js": "f2565d46cd2d0fe3d03bedb24892a3a18f6f4183f9b3de6b49e89af239b6f0be",
-    "src/snaketracker/presentation/static/length-form.js": "c08b0cd8fa05c1eb873737282b8f24a54b291f4ae88f6a1deecff1a12296e376",
-    "src/snaketracker/presentation/static/manifest.webmanifest": "dcbf54ce13eca2893ee727b2f1e015acebe56d0f802e96e905c429c77c643947",
-    "src/snaketracker/presentation/static/offline.html": "2f96e785ae089091a288b5588f48c2e4454942b0277cd02c0d281f51695ab7fe",
-    "src/snaketracker/presentation/static/overflow-menu.js": "b06f0ebe244a0eced586bbc973e1b50aaf9657ee841b54bd467d8c58018ad49e",
-    "src/snaketracker/presentation/static/password-reset.js": "3bcdcd17ba107da4667a8946cd45af9f320ec9c893045bbd9ee09236899b1b91",
-    "src/snaketracker/presentation/static/purchase-form.js": "1cf9861ca6a93172ae5c880be2459c6aa974fb94e60df9fd2f2606590e13e9e4",
-    "src/snaketracker/presentation/static/pwa.js": "870e94d157104942b22138e5c6bd3570abd1adfbc8217926cf7670b29428c0d5",
-    "src/snaketracker/presentation/static/quick-log.js": "9ceaf091a46eb5db27d3787fe192fee8f0ea03668a0d94269f8601efc9d826a1",
-    "src/snaketracker/presentation/static/report-charts.js": "66ed8fb744c28fe66b635ccd7a9df8f71a51568f07c4675bb080ca25ba216be5",
-    "src/snaketracker/presentation/static/service-worker.js": "f6c15644332970d90522583fec7c7cf1329acd886ba87421f0965dfb3465211c",
-    "src/snaketracker/presentation/static/species-directory.js": "e327788f9eb78c768a24742b9cc22e08a2466aa4e1e048169e4d89d953368fc7",
-    "src/snaketracker/presentation/static/species-illustrations/manifest.json": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
-    "src/snaketracker/presentation/static/species-references/anolis-carolinensis.webp": "495c4a92a1942c798b6fd24e0139be1546eaa37ccd68c08b2752149364d05831",
-    "src/snaketracker/presentation/static/species-references/avicularia-avicularia.webp": "8512ad4ff2eb3acbf6a33898777fd57e71ad81aabb07c4f6ece2a106825101f6",
-    "src/snaketracker/presentation/static/species-references/boa-constrictor.webp": "d978d7b0197b868ee8f80fff9093601c4ed75200c9e3995010297a568622ac80",
-    "src/snaketracker/presentation/static/species-references/boa-imperator.webp": "4f5c01cdcfd8d6c86cc25a43ccbd2d455ecb7872b3cf59d1166156461b4cbf56",
-    "src/snaketracker/presentation/static/species-references/brachypelma-hamorii.webp": "56a43c8689ce438a6c0becad10ee082db7a450b665127322dc315578ef1da04f",
-    "src/snaketracker/presentation/static/species-references/caribena-versicolor.webp": "cf920c9fc7e097b8e6a49249e62ba542e9d3f943e4ff4fcd346673883d874f73",
-    "src/snaketracker/presentation/static/species-references/centruroides-sculpturatus.webp": "52b612254616ba7bc1824fd62e4ab78079b6187a5f7ee2d42c02ed13e7387e25",
-    "src/snaketracker/presentation/static/species-references/correlophus-ciliatus.webp": "0668a02ba112b506914a205dde97f7af25f5fd09991c652e38960146aa0f9c05",
-    "src/snaketracker/presentation/static/species-references/eublepharis-macularius.webp": "1469998d89190dce1ca19652a0f9f63f6c8df1b4d66ff87c14312f2bdf19f62f",
-    "src/snaketracker/presentation/static/species-references/euscorpius-italicus.webp": "3c8b97943dae2f32151a37a2b7a50b485bf9adf53205e3cbae01b3807cdcd177",
-    "src/snaketracker/presentation/static/species-references/grammostola-pulchripes.webp": "2c0d049fe7abb06302acadb8858ef0a509143d682cd15711c06f4c8339d659bc",
-    "src/snaketracker/presentation/static/species-references/hadrurus-arizonensis.webp": "e4f370102acf9ea50a6a4663d9c4dfee8c715e02815e0ac1a05cecec4b1a8bcf",
-    "src/snaketracker/presentation/static/species-references/heterometrus-spinifer.webp": "43e7bec141bfd6476258b859fc1b9d2b7d48c692a165d9898d7d2e564a3597d7",
-    "src/snaketracker/presentation/static/species-references/lampropeltis-getula.webp": "34d8cb547989a4e374ada7f81fd67639efdee9f6c9c017aac749e3e5c4c4d977",
-    "src/snaketracker/presentation/static/species-references/manifest.json": "cebdb79efb690b22f7653239cf42002084d225fb214484050bc83a4971379c52",
-    "src/snaketracker/presentation/static/species-references/pandinus-imperator.webp": "d1d3fa9310ba6779ffbbb839fb24490ede7ed6aa814c2baabe08631f248583d6",
-    "src/snaketracker/presentation/static/species-references/pantherophis-guttatus.webp": "568efdafd60503a4c2331f1d037064adc2e96fee655a819ef7dd3a9ca87f71b4",
-    "src/snaketracker/presentation/static/species-references/pogona-vitticeps.webp": "e12a1407bf6c41b8795df96f5108c4b871e7d70bb58fb657105b16470777f7a4",
-    "src/snaketracker/presentation/static/species-references/python-regius.webp": "cc8958771f9c4b4a858028db941d50202169b4b4351fed6ce70e841d1504be93",
-    "src/snaketracker/presentation/static/species-references/tiliqua-scincoides.webp": "418a5d87b0240c67d6f72bf9d9fe04ee8abb195ce7981b95e520d221de8ba3a6",
-    "src/snaketracker/presentation/static/species-references/tliltocatl-albopilosus.webp": "0c1049bcf34202afab88f9cfbec6f02abe695bbcc6f2a234a3a6fe581d94c132",
-    "src/snaketracker/presentation/static/vendor/chart.js/LICENSE.md": "41a84aa2caba645f966a18d9c2056b73e6d3a81d80bc0046bc0011a2634d4cce",
-    "src/snaketracker/presentation/static/vendor/chart.js/chart.umd.min.js": "48444a82d4edcb5bec0f1965faacdde18d9c17db3063d042abada2f705c9f54a",
-    "src/snaketracker/presentation/templates/_inventory_catalog_fields.html": "0a140772cb89b4785acbe1498d7ba5db6bc282951b0800fdb25e8c58f56e5aed",
-    "src/snaketracker/presentation/templates/admin.html": "da90fd44528c55cd197e8b8e6c08468befadce8186e849485f9c8b2bdbc8fe94",
-    "src/snaketracker/presentation/templates/animal_analytics.html": "1635e081a4b65a94938426007f06fa6b97959fa402f0d493f41ea28773fac97b",
-    "src/snaketracker/presentation/templates/animal_care.html": "9807119d5b74158312e8fd618ac3eaa4f70740fd3ddee3a355591918b0e4ea45",
-    "src/snaketracker/presentation/templates/animal_care_form.html": "9a6fc87634b70de13ab45da1e12f274a722b6f3e72d005433d90d47bf5b79a81",
-    "src/snaketracker/presentation/templates/animal_edit.html": "6d82666eaa28e785f9bdddcd2760793d56fe20b2f605f8ab3cfb1867a2238c6f",
-    "src/snaketracker/presentation/templates/animal_event_correct.html": "f9d65577860de88242e1d777088ce21751886090b09a8e0fe0cbe8a79741a8af",
-    "src/snaketracker/presentation/templates/animal_event_delete.html": "5075c329f76f508fae77f35d804befd94eaf925e79eac6b87e09ebfc21290da7",
-    "src/snaketracker/presentation/templates/animal_list.html": "36aafda80a6f0aa315d4ceaa62778f31ded76d6ba48bfb8854762aedd3a4f9c6",
-    "src/snaketracker/presentation/templates/animal_manage.html": "3c6cd58eadb3aff06db8b49bbe591823904a5d43574d6afe216481f279cbc372",
-    "src/snaketracker/presentation/templates/animal_measurement_report.html": "7dd7082b57903eece3aaa46a10be4798b2f3950c6d8c7395e66db6cee1646aa9",
-    "src/snaketracker/presentation/templates/animal_new.html": "087090ed3b6edc6c5665e1fb2a0e32e51b1990e376adb62ac355e349439ce42c",
-    "src/snaketracker/presentation/templates/animal_profile.html": "ebf2ac8e4ad52b671e471479cc55cbf7b2d7e70e8c8cdf10f73071edc40fb96c",
-    "src/snaketracker/presentation/templates/animal_profile_header.html": "32a7fae229e18f619befbe7bc0129efa94ab2e87a3938326a75ffa69888a82b2",
-    "src/snaketracker/presentation/templates/animal_reference.html": "930c0087efe7b8688cc3c051ff795f881f98f216d214622dfda9e2ef76704d4c",
-    "src/snaketracker/presentation/templates/animal_schedule_edit.html": "9bd1722ea7f80678f843556d89f8da05b98eefbcf28efcc16a63d73d821d1de9",
-    "src/snaketracker/presentation/templates/animal_species_link.html": "e1eb3f348e2f601a7349513891fa07062959b95c9f511956f7517b536999c16c",
-    "src/snaketracker/presentation/templates/animal_timeline.html": "cef2f38b228460b6e2224f9872bcec625cc0b35ee38ec402b23ad9d7472ad6a1",
-    "src/snaketracker/presentation/templates/backup_settings.html": "62df0f85b7cdc878c4ed6d6d47d82108b87110fc90ff9196ee47027af507cc6f",
-    "src/snaketracker/presentation/templates/base.html": "4b5abd02c3c362cc028163c3081bc71b3489d7ecffee61d67b64ba5fd627e573",
-    "src/snaketracker/presentation/templates/calendar.html": "dbc52e2f28008db60aa73e9821bf213a9363fb891b8f70d3851cf6e9793b3ad5",
-    "src/snaketracker/presentation/templates/care_guide.html": "649a6c07742f8dca6326962a40a04e06bc975b1ecd0c56499713d7d6a4fa414b",
-    "src/snaketracker/presentation/templates/directory.html": "e16533cc0d61bd19ef637a7b995090057ea495c697521ed2791e9b8fb441a836",
-    "src/snaketracker/presentation/templates/directory_detail.html": "991b529159ae02b64a1b6e8c2a590d12ae5398f9a86801132c696aa1e3ad2423",
-    "src/snaketracker/presentation/templates/enclosure_edit.html": "932177f34e805924d69199fa9e6169b4c7c0586a80de7b68edfc8fd9d8f788b3",
-    "src/snaketracker/presentation/templates/enclosure_list.html": "a2c43a28d28e16cce95b048e29af82910e3219390c1495ed9d7bdc18a9cec12e",
-    "src/snaketracker/presentation/templates/enclosure_new.html": "97cdb562b8453aabb5955ae7f19d7665fd746d1298df2049bf3c839e57ff7f69",
-    "src/snaketracker/presentation/templates/enclosure_plant_detail.html": "f615a6150c175c37517814fdbe007a4c4b88f6dbde077bbefec693120e175eff",
-    "src/snaketracker/presentation/templates/enclosure_plant_form.html": "6fc3c6efa43edc8150d66d18b12453f508d30fa2851ec23d51cbb71f41d97c33",
-    "src/snaketracker/presentation/templates/enclosure_plant_remove.html": "6172ae1978d080fda321f5bcf1295d7074e9c652ec372dc75809cb2687a78cea",
-    "src/snaketracker/presentation/templates/enclosure_profile.html": "59ecadbe4a01b3adc7105bfc0bc5ac9a336634dd8befdcaf7d905d9f2f97f680",
-    "src/snaketracker/presentation/templates/error.html": "3dae7505d3973fbac6d8dbe03c763341e80a7bf0c84639a7afe660003f32bd4f",
-    "src/snaketracker/presentation/templates/expense_detail.html": "5a67a6017a645dcca725ace0eccec14ffa6bbe8f66a2d6879dd70dcb501e0a11",
-    "src/snaketracker/presentation/templates/expense_list.html": "ef332073dd07564c5a6a3bd889b2398a682b46f3d424e46e9484eb1c5cfbba04",
-    "src/snaketracker/presentation/templates/expense_new.html": "5b675d9c2e2bb1bd82f9633595257bc7482812fa04356108a2a928192f3c7e82",
-    "src/snaketracker/presentation/templates/forgot_password.html": "03368d6d563e831b16a0bb3ed53928b109a6f1817d1128f07d24cb58de8fbd04",
-    "src/snaketracker/presentation/templates/home.html": "7d8a5686f89e20aab74151aa8ad040ca1d2977b51ceefe45ae4c15baebbe9db4",
-    "src/snaketracker/presentation/templates/icons.html": "434ae781c7e9c39b227a8e1efd52e5c34950277e9f9134ed0e869f4ae3b5c04a",
-    "src/snaketracker/presentation/templates/inventory_action.html": "2509bdcfcb72215c009dffa6164a81ece41bdcdd39c15aaa8d7d44f77ff97cc7",
-    "src/snaketracker/presentation/templates/inventory_count.html": "fbb831211906628c934f0d53fbe7e0485e8c5a07c0f4e573798b1ecb1c33a743",
-    "src/snaketracker/presentation/templates/inventory_count_complete.html": "96974da64adc7b9a185c0d77c04fa299feed3cfede6958a1d13bd76439d40fff",
-    "src/snaketracker/presentation/templates/inventory_count_correct.html": "d04a4418aba4a667ba0ce74e2775d77eb4e4ad5ebcbcdb4649f770e8e43d9684",
-    "src/snaketracker/presentation/templates/inventory_count_start.html": "d2acca5467ef444ef492e9e02fda0d915d93df3ee6987d29e39d1f36a7259e6e",
-    "src/snaketracker/presentation/templates/inventory_detail.html": "a2eb91e8a95a305de5f95dfdb7111e9ac694934f948e268ec11b7bc9b8a7b3e6",
-    "src/snaketracker/presentation/templates/inventory_edit.html": "97fe2b3314c9c435e08feb1f5c450b923504f488045a8df6240ae4bbfa266f09",
-    "src/snaketracker/presentation/templates/inventory_item_report.html": "14b369ce3f0a7c9afa68eaf7c9801f72fb3bd283f31415e14d1dd02e86548063",
-    "src/snaketracker/presentation/templates/inventory_list.html": "03a5a22178748027c62961ef85a3b97854479e3a55eecd4092d1dcc5f15e78f0",
-    "src/snaketracker/presentation/templates/inventory_new.html": "fd33f6025c410eada34af0e52f229371e25cb0160e676537bb8683a966f81055",
-    "src/snaketracker/presentation/templates/inventory_policy.html": "8dee4a1bc8eed06c6cf4af14cbbc69289579460d66f9cac120180e797979c116",
-    "src/snaketracker/presentation/templates/inventory_report.html": "6fc7bcecdfc3769b7c20d3212d83977c40ea0355a0722a45d752c61c0efdf915",
-    "src/snaketracker/presentation/templates/inventory_use.html": "8a73d5cbe7441278724e4d283b94a76741ab604e53a49c448d6bd0f63d995a1b",
-    "src/snaketracker/presentation/templates/login.html": "6afb0ecae8b76780de44a762d3aec7cd9509435b525fde8f6c0c7c064de5eecb",
-    "src/snaketracker/presentation/templates/more.html": "34af4bc3d98819627462c5ec240530a6b75c1ac6da1a0c4f3ca9563a9089b5f2",
-    "src/snaketracker/presentation/templates/onboarding.html": "8d9aa18223f1efc527f59a040f4c51e2eabfb44d15dab2c9fa72b42fa25d7f27",
-    "src/snaketracker/presentation/templates/operations_jobs.html": "3b9e2ad16248cd746c6c97d0e73e2887f0a4793bf51e4b4edd35faf91cc9e5c1",
-    "src/snaketracker/presentation/templates/password_reset_invalid.html": "16900d09d31266378934e53608e7638c782adb59c87b42649864910021d74696",
-    "src/snaketracker/presentation/templates/password_reset_sent.html": "260f86811bfddc50e6aa6cc953e8ea7b665129c9c95c587688ddc3a701fc9c04",
-    "src/snaketracker/presentation/templates/profile_reference_content.html": "f9182516d08d6307f7ab8b62589db5197f62d26ca33da4d9599bf08ab292474b",
-    "src/snaketracker/presentation/templates/profile_reference_glance.html": "29ae706169fabc52dac28390a105faf2ed497b1deee284fc7a86049c1c52233c",
-    "src/snaketracker/presentation/templates/profile_reference_sources.html": "e98de5a7d8dd8f3c68f8d8235812cbb5f4e16df868a713f866ef646b2ab60003",
-    "src/snaketracker/presentation/templates/purchase_detail.html": "d33a062b74a85b23652b83c2a8fb7e6434bd7aa01477d9eae5fcc14ad8016cf7",
-    "src/snaketracker/presentation/templates/purchase_list.html": "7b3064ac6060c53dbaf17c4515f40eb33bdcfcc0d9299992d0922749d66607d7",
-    "src/snaketracker/presentation/templates/purchase_new.html": "6e250823b228a45a14b9a7c622f1496fe565719718bdc1bddb81f395c5960cd3",
-    "src/snaketracker/presentation/templates/quick_log.html": "d15e4f474ebc5ac2d4bd1a5120e774a747071f621234173fa0562ea19fd2e692",
-    "src/snaketracker/presentation/templates/register.html": "639719f7d1ddb68a1ceca91264cfede3320007cae7ba9a36dc83deb719823254",
-    "src/snaketracker/presentation/templates/reminder_list.html": "fd0bcb31570a304d4367f7c1d5629f5df9106c070c3a06dd2e1bc16fc3cca3d3",
-    "src/snaketracker/presentation/templates/reminder_new.html": "be14452450f0092874bf4cbd9185a2527bcb397eeaf8f9d95521258a84e34ebb",
-    "src/snaketracker/presentation/templates/reports.html": "50996785463c2c7421ad06663ed59269b564a8a853f087e748a627c2d796150d",
-    "src/snaketracker/presentation/templates/reset_password.html": "21a36b468c4223a6debd608d5168fc655aac0bf47aca3bff5e3508b01914f992",
-    "src/snaketracker/presentation/templates/search.html": "84bc7c3847becf98632e829b54d89cf7dcf094a99144ef6ef3d20846cbdf86c8",
-    "src/snaketracker/presentation/templates/setup.html": "9c2c5a5b221f3545e09867caaa519d0a8a99556511a3c3f4c80e1ad9a8651c71",
-    "src/snaketracker/presentation/web.py": "6028f31281a5604a1b9231f0f6fa4dcb8db5ed1f0794131945d72e6b279bf71c",
-    "src/snaketracker/py.typed": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
-    "src/snaketracker/worker/__init__.py": "f5de06a9282d8a06a4773ccac92256e9d42d92a799d68ea2a4a2ca226faff237",
-    "src/snaketracker/worker/backups.py": "4ca5f681f00c2a45964083458d7be9afdac28901d39b2aa3171bc3bf5930414f",
-    "src/snaketracker/worker/jobs.py": "f382151fe5b9d0932167ffcf09be4c8c35660026e5b20855e230856f8692adb0",
-    "src/snaketracker/worker/main.py": "1ed78957ce0141e80490221b701ef2b032b32a705cf5754ff3134eacaaffc4fd",
-    "src/snaketracker/worker/projections.py": "bf4065e90c77c2eb40a9de529ea6de50ba36f09e1f44dbb6fceb21d07749aefb",
-    "src/snaketracker/worker/reminders.py": "c0c504f3e838268c56ff588230fc4284177b6f5f20ca714fa4c4459cf3c054da",
-    "tests/architecture/test_dependency_boundaries.py": "01e9d4e129a69cdf7741fc698d8906c4a9aa528575050c8a2c20d5be177bfac6",
-    "tests/architecture/test_phase_scope.py": "3a51dcea9695d389e0d652f3b1e2b42841ad559ebe152f344031113e18160737",
-    "tests/browser/test_account_registration.py": "f4802b1c70a0dd12e4a0daf795d88ff8e57b6a3285652f92f3a15d48af5a6f8f",
-    "tests/browser/test_animal_care_workflow.py": "b3ae8043d3f5498f06ace8804774bb662da7361c2ee824b3857deebba15f2bcb",
-    "tests/browser/test_animal_experience.py": "236100a3b158cc82c6d5d21c378c0931179a4691af2867b8600022e27bdb39da",
-    "tests/browser/test_animal_form_actions.py": "dd988c5c1a7eafb9b1237f07f31b69b79fb4610926bfc7afd080b669955d439a",
-    "tests/browser/test_identity_flow.py": "74096ab1366c88e4cb5de9b7c6f0772e06309ddbdc86c4c6ffb5f3f8a8e4a3e7",
-    "tests/browser/test_inventory_guided_creation.py": "a1ecb6c08733eed14994120060b53ab82139ab103fbc441d11a55cb1c8dd14ba",
-    "tests/browser/test_inventory_intelligence_workflow.py": "9cfc1bf3bfed1ae4add17698f475f7f75dd47f755f8793609494122369925c8d",
-    "tests/browser/test_multispecies_workflow.py": "52931ebd336e609bde73f6971a6da9f77b1f836d420609a5185f4898866129ef",
-    "tests/browser/test_operational_workflows.py": "19380f82eba6c9bbc97ed43407a6b7f8a94da0a10b1d4a65dc74bb04970b62a5",
-    "tests/browser/test_password_recovery.py": "3f410a283825c34a71bd47c1735a3f6397e00d2826ac99a326d8fd1335333d60",
-    "tests/browser/test_precise_lengths.py": "5594e0d0212250ca12ce26a7a1dbb09601c46dd66b2f6857cd3181c06238ee0f",
-    "tests/browser/test_product_experience.py": "fafaf6aca608393606b21bc235309ec47cfa27aaa1a088b288d4b687d78f2105",
-    "tests/browser/test_purchase_workflow.py": "b8c880040d471790392a2494461eca47572c34b518dfc10946ce29d0ae885aa4",
-    "tests/browser/test_secondary_experience.py": "d81d0787e2830ffb673787dba64a9622be5c487073c7cd4424ecd2217cbea939",
-    "tests/browser/test_species_directory_workflow.py": "315b7e16a5b9a528181420d91b3aebcb3b9ef4752480f170ecaa8a9d1618c198",
-    "tests/conftest.py": "ba9f42002915d88e5b10f4189ef62473bb7f31aeeb5f73993b8df9343442242c",
-    "tests/fixtures/events/phase2-household-v1.json": "57c1a04cf3d3d0e0c7330a989c9e98b5a39a6a886712b2afd67b7e4496560b19",
-    "tests/fixtures/events/phase4-animal-registered-v1.json": "8e5529dc9c2db76e7d2ef21712df86b7ca6fb249a17388735c376355182493a1",
-    "tests/integration/test_alembic_lifecycle.py": "2fe00e9e5bbac76aca0034008f5ed03ec3e19c5c9cdf63dbc67fa364aacfc626",
-    "tests/integration/test_animal_care.py": "9f5743454a6b97205fdbdc3f9c0ddccdc99807fe16ec4fc5252c8b34a783f5ca",
-    "tests/integration/test_animal_profiles.py": "96778a7105686c4c0c35cd02ed5fa7027c2c2aa946b8706a1794ce3523141307",
-    "tests/integration/test_application_startup.py": "2985341f50694158491b051f2ebc486583a1a5f1b12a882046cee96c7c180dd7",
-    "tests/integration/test_atomic_append.py": "6b728898243e4604a69c7e88fbba1001899f22d8178949231f1d4d35846044bc",
-    "tests/integration/test_backup_completeness.py": "8a73ef7cae388d791d3a4f871e38a7501187006cdf19e441936d8634868e3f29",
-    "tests/integration/test_boa_care_guide.py": "2074d013423791e68edba55002943e02602ec619335aeb862c1eaeb19f97dba4",
-    "tests/integration/test_care_guides.py": "69ca6593cbb0cde00f4b25a700396f9b16b1cca1203a42d218fcb7b8187c95fb",
-    "tests/integration/test_container_contract.py": "76bbf5d798c7fc3567ae7fc0968b5bb224eb8ac24176aa470b14c9beadc58ce7",
-    "tests/integration/test_database_port.py": "8eb9ad13aff79896eb1d2ffed43218b2ba83f85ad827d8a9c71b35ca7aa7b5c6",
-    "tests/integration/test_demo_household_provisioning.py": "132964a2f6b18e6c817173f5f0c6968715f38fae3e61ea898fae434a498b9890",
-    "tests/integration/test_durable_jobs.py": "bf1ddc43c2d314c7f7072151b1d2942dfa2b6b3fa4b33df35d22e56b7ce020f9",
-    "tests/integration/test_enclosures.py": "e83b8bec6fb9f63f0c6a8c47374971abfd44302725ced18840f5307cc691150c",
-    "tests/integration/test_event_store.py": "9cdb3e4ce5e0bfa23171192b77fb3f2877cc8c928161dc0e2abfade91756feea",
-    "tests/integration/test_expenses.py": "0d9e894e8ebcc8e03138f362ccff02ea3387588e73bb7640bab08c19cce7abcd",
-    "tests/integration/test_health_endpoints.py": "cffc339dfeec4c7e139044bb82e007db9e6a37244298422fa53b07bbd9faf13e",
-    "tests/integration/test_household_bootstrap.py": "138805e2d190e003ca1733294ea646273c3a6fc14745614ec0d370e37c71e77f",
-    "tests/integration/test_inventory.py": "7d62203ed632d40cbae7dc7a9ff9d810a6cd74615bc4970c3ebacd99285ad9f0",
-    "tests/integration/test_inventory_intelligence.py": "355311588ddd9b6fca6e7c3d920c8c8261b08022a3188d517e3ff891e6f41fe5",
-    "tests/integration/test_local_backups.py": "e49db44831a9be813b8e93d0803dc5771227690b8fa3b61e01fd6e48ad3dc7f4",
-    "tests/integration/test_m6_owner_review_demo.py": "dde1530076a32d1a54c53759e4db95b473954b0a76d568daf9206fe3a61c5da3",
-    "tests/integration/test_maintenance_cli.py": "eff9c16e316bce7f0879fad71a925832607b2ed09a826e79d9b0367352810e3c",
-    "tests/integration/test_measurement_analytics.py": "6ae839c41b533f8b9b0b0bc066f548e5696733dd7ea6686abfa9caa2938fb1b0",
-    "tests/integration/test_multispecies_animals.py": "54387310ef40ac4b44bcc0f7c3f12d8ae4cb4f7d04332a0898e85b16a8a62984",
-    "tests/integration/test_notification_delivery.py": "18f6e26edc56708e9b308959513170959e6c08ba68639d10e580550a88615de5",
-    "tests/integration/test_notification_pipeline.py": "872600dccd9c3381dd18da171aa022e2296e5528f16aea48b4200c0e8a3a946a",
-    "tests/integration/test_precise_lengths.py": "7097547f3dd586dffd7bbb35260d9dd617a4f189623ec2a34c5e7ef5c9621559",
-    "tests/integration/test_product_projection_worker.py": "14ebb7bfc28047c04a7f3e8680d248f4465e704ab25e9bd7e656793289100642",
-    "tests/integration/test_production_operator_qualification.py": "66ab3c2d231cf8bb316eae6e414d2d8436e8e14316839fd994b8190bf05c29ec",
-    "tests/integration/test_profile_photos.py": "7de37112ad551ffe1577c7832082f1cad6ef1ab990ba30e1e1025c9d5aff8a06",
-    "tests/integration/test_projection_rebuilds.py": "92caa01f120812e86d95e224f0561fa985c7bf53d74699118bfe383232b1d8fa",
-    "tests/integration/test_purchases_fifo.py": "99a56b79679f6935f77dd2a94ff8e5dc0dc5dec69089b86795fb6cfcd61040a1",
-    "tests/integration/test_quality_contract.py": "4c1083b94086485926d8a05024458bae7fa6b2cae6cdf004ad1898ae6e1a4467",
-    "tests/integration/test_reminders.py": "13f6fd613503fafb2df9bd21344b2320b7ed5eec599f07b45187fbaac23238d9",
-    "tests/integration/test_search.py": "fd3eb310954bc1512776afe4beff79cde9f9cf8958dc13156fe354943e029d8b",
-    "tests/integration/test_snapshots.py": "d3acf49a1557264900c3a713c5cd162fbc9448588c78aadd2de6a589bb5825b1",
-    "tests/integration/test_species_directory.py": "10e2492625aded5ffa64c9215a5161e89fff4896b297172d29ae62c18fdf7d14",
-    "tests/integration/test_sqlite_profile.py": "7e1d233c3b971481a01b465be87997b0594fb61ecd1e011bdfc4cda9366b7962",
-    "tests/integration/test_structured_inventory_feeding.py": "e6d717e707d7ff6895d6d463e12b083a1f0566a5c3c422c3cf815da0bfbbca46",
-    "tests/qualification/__init__.py": "4c1ed825c88befda66d3971125d4cbba463a674fd0600a17d3a576f90ef32c1d",
-    "tests/qualification/phase3_event_platform.py": "6f0bb7a577912302d8fb2ad77f0633cd9117821721cd7fce0337b5fa5251ea11",
-    "tests/security/test_admin_console.py": "8ed97e9460791a2c514f8ad4045a7b7ee6c5326531d74c54ef919cbe8c548be0",
-    "tests/security/test_demo_household_isolation.py": "37d5068ac3e2efa8d9c44843ccc6be26a5ee3f00fbd2d040323153da26efc53b",
-    "tests/security/test_identity_security.py": "60b1aac5e27544d58a65d67508089b892fd8ece880a853edcd308daa696736eb",
-    "tests/security/test_password_recovery.py": "178f360de886f98491d20248e95c75b1e84b53cb805c7fe40315394dde78dc26",
-    "tests/support/__init__.py": "5a998d6ed848af34064911d7613146af3782f14bdb8c7a26ba6936f94dacd4e8",
-    "tests/support/inventory.py": "7cf7dac847db743982fb8b183df744000bec59510e7d0a55045df2f764b2803e",
-    "tests/support/synthetic_events.py": "0c5d9faa876d5fa6bb69e2eda4f42dee1f497d887f177afec5bcbb8f0faf2736",
-    "tests/support/synthetic_projections.py": "d85d6353c381794a266d84b1a7dbeec6141610ab41f886dcc3bbf98e4599aa6f",
-    "tests/unit/application/test_care_guides.py": "6585480ed6f4107609db4e0d5421eacde94ec441b89633418231cde5f04b8e3e",
-    "tests/unit/application/test_length_measurements.py": "c79e3c6d9bdefb9dcc799e9486c30227967dab992752bd60a4762b023da4110b",
-    "tests/unit/application/test_profile_photo_processing.py": "a1ff15a66b7c33fc1d2d54761eb9bfb52d1f4147bc5e5914fdaf72661349d03f",
-    "tests/unit/application/test_readiness.py": "c81a21af8d38a11c0691b16fbffd2845ce6aab97137bf2a02b2b593805c4bb76",
-    "tests/unit/application/test_reference_bundles.py": "f9d3b8786b611440cd6429dd3477d1d6a7558c03da3f8e7494a0bf4b2ed37f99",
-    "tests/unit/application/test_reports.py": "b50b60aa7161865aa0dcb2fb18ffd569e49ab542c44a967b3f5ed1c1258a45df",
-    "tests/unit/application/test_suggestion_policy.py": "5200ea7a2a15ba4b5ac70cab3fda0e5ad898a4e8ff00f94181b88cf7e79988ae",
-    "tests/unit/application/test_weight_measurements.py": "c2db486d0e7c1d0e4ec47b4df1331bfcd378b51e8c20733cd3e5aa96c4fb4b20",
-    "tests/unit/bootstrap/test_compatibility.py": "ed291c2c9141e5787d15322fb77cefa3aa74112d8be6ffbe0f05a58ae11da439",
-    "tests/unit/bootstrap/test_configuration.py": "8427ed7e0107bd595e42f36b2ab0c1af315c0cf320bc1837eacd5a7342d2c5a1",
-    "tests/unit/domains/test_animal_capabilities.py": "b9fcb03bf06e0ca302c501c5160f344f292040fc0294664aeb3091757eb465ea",
-    "tests/unit/domains/test_animal_contracts.py": "eb8a7fa2de3b0fde9e8148eea8624a8381ef47ceeecb35ed88d1da197cefc119",
-    "tests/unit/domains/test_household_events.py": "3051940752588f41bac82185109240af163ef42f00a3aa140e21abe46dba762b",
-    "tests/unit/domains/test_inventory_catalog.py": "607cf6ca3bba06206d0606e48ef0f7133255d681ed506977529aaa65876d11ea",
-    "tests/unit/domains/test_operational_contracts.py": "bce2b89d7787337b3a7758824e1628092483cf8118655d34de9a752e51d3da55",
-    "tests/unit/infrastructure/test_correlation.py": "cfc016d4c932eec450ca9f691495157df8a0d587736a5b3ac1d844b9299c4e7a",
-    "tests/unit/infrastructure/test_inaturalist_taxonomy.py": "6b894547b2fc8f179dd549ec7dd8eb6aa62a5ef67dc17db6575d1c76b06e6450",
-    "tests/unit/infrastructure/test_inventory_intelligence.py": "a2834bebaee5c3d5e7e06c0a573397ed39b31fbe35fa5dc7f2aac8342181cf09",
-    "tests/unit/infrastructure/test_logging.py": "5e0fee3e133e82b63cadc8a9c4387ae9a5c5ba698e88324096b8cabc825a4bc9",
-    "tests/unit/infrastructure/test_reference_image_providers.py": "5e4aa5e1046624246e0fb75b77a231f2fa91dc6c97236edaecbea93a70560138",
-    "tests/unit/infrastructure/test_reference_images.py": "d999770f8c1477d7c0171c55602e2c630af523031390018a5f2d33cca306cb7f",
-    "tests/unit/infrastructure/test_search_projection.py": "10a2b8f25281d7984f6dec8e01806d6176b946e37d35c923cbda6add4730a8c0",
-    "tests/unit/infrastructure/test_sqlite_profile.py": "b2c201507c4844eb84d4585e32b24c6b6e9de59069af3ce2c1893cb2d599bda8",
-    "tests/unit/operations/test_account_recovery.py": "f77f4432f8f1efc6f17668e699fce1ba22987fd6ace452fd1b22e654df7575b8",
-    "tests/unit/operations/test_demo_household.py": "a9015690790022906f97574a4348659f110422df30f08a953c15c329b9a50e9a",
-    "tests/unit/platform/test_corrections.py": "915597c5d8147b38afa480ee9659ce4175875604b72ed00784192e1039d3f288",
-    "tests/unit/platform/test_event_registry.py": "84d19dad80f38fc67f545772fd0f952c79cc7fd88ba966f1535db1136cce441f",
-    "tests/unit/platform/test_event_store_contracts.py": "d4ec4325b0dad9197f2e01fca5867ab9be29d3b13e5106dca584faec20fc0cc6",
-    "tests/unit/platform/test_event_validation.py": "49c376de6b5decd0af3abf40469660931348e58181d9f590a1619ab71dade294",
-    "tests/unit/platform/test_projection_registry.py": "523db7945b609487c6645e214c1e391ca1613ff53060b4a296c5122eccc1be5b",
-    "tests/unit/platform/test_snapshot_loading.py": "f48b3b27da8d2d70a97156ee530d01009aa50bc190ca2fec29c71db156861744",
-    "tests/unit/platform/test_snapshot_policy.py": "38da19bb51c427b18b915e1aef01a14289871bfb0f34082ddf8e135a99ff60ea",
-    "tests/unit/presentation/test_admin_display.py": "8111d706ae85c8d67a9ed9e0717b24567067d11b3bb25e201349ce22cd9a9bb5",
-    "tests/unit/presentation/test_agenda_actions.py": "6adb32edb24f0bda41a51759f42561db4674e4874ce47da9aff16f1b7da37908",
-    "tests/unit/presentation/test_animal_visuals.py": "dd1c0abc8ed5249a41f2ae3df62cb5cf06610e0871e2659b14e39992d2f7960e",
-    "tests/unit/presentation/test_core_daily_views.py": "806f0cf4b1d046d1306143a0847522b91e5d29089bfbce8783e49bc52ddaf98b",
-    "tests/unit/presentation/test_inventory_feeding_views.py": "ea18441137105d20d29e0a4d60e3c191e97615fa5ffcc4ab209ea45d8f31ea70",
-    "tests/unit/qualification/test_phase3_qualification.py": "fc6b3aba6987b79c5ed8522b3cdab719c3b427b9b1144925ae0b4751ecdca703",
-    "tests/unit/qualification/test_phase6_qualification.py": "007525522fb2535c41ab1db3d0213b2aee7ee9132059d04ffe7036a210cf7be0",
-    "tests/unit/scripts/test_architecture_freeze.py": "118d40a2a88b86b222592ffde76826533e1d5cf7a11fce8b2416278139d5668f",
-    "tests/unit/scripts/test_phase1_qualification.py": "bf32272bf6b377a51f7a055eda0f19148ba207d594c113bd830393dddfc3b9f6",
-    "tests/unit/test_m66b_production_compatibility.py": "e0468af5a07babbecc5af25b9febc59b2daab3527fccc2604741686d515c4bd7"
-  },
+  "qualified_input_files": [
+    {
+      "path": "reference/care-guides/reviewed-boa-constrictor-v1.json",
+      "sha256": "4c70f16e78be29257d63b1ecb6b619fa93a0db0386ed8c52a3f2135fc02ca5a7"
+    },
+    {
+      "path": "reference/care-guides/reviewed-v1.json",
+      "sha256": "fd3e4d6e8d96173a51cfe7d7f5c20ecbfe24aae68127a3481f42a99e05097500"
+    },
+    {
+      "path": "scripts/__init__.py",
+      "sha256": "5d52cc18175a8e1bdfae7a699af7adc655b5762ab3720002b16b531ddbe5b5c4"
+    },
+    {
+      "path": "scripts/benchmarks/__init__.py",
+      "sha256": "978198e77dd6b0a7d7519e24cfe80dd69b2799cf933328c177913cfc1262dd59"
+    },
+    {
+      "path": "scripts/benchmarks/phase1_qualification.py",
+      "sha256": "d5b75124052e28384b907e608ce88a3a02b3863d2feb86aac474559020c36847"
+    },
+    {
+      "path": "scripts/benchmarks/phase6_qualification.py",
+      "sha256": "5fcb1041da2cb54fde21673e04d58e383e8f638e22f4a73f3118335799e7e10e"
+    },
+    {
+      "path": "scripts/benchmarks/run_phase1_qualification.sh",
+      "sha256": "fd40eac673020ac3235dd5e45dd8db122309950121fc01a37350050d1410ffdd"
+    },
+    {
+      "path": "scripts/benchmarks/storage_qualification.py",
+      "sha256": "cc096774bbb4b9ab83cd55e8d71f5723aefe033fa89f5ae2d56b8ecd4c49e546"
+    },
+    {
+      "path": "scripts/benchmarks/verify_storage.sh",
+      "sha256": "1e96106eb6c1775121424c6ffd20c92baa48cb21edb9bac8f921b032037cd772"
+    },
+    {
+      "path": "scripts/development/bootstrap.sh",
+      "sha256": "23c29b788802289ec4c2be69eb9f765fb0ea4ec40e4f7d8faaa27e06329bf577"
+    },
+    {
+      "path": "scripts/development/m6_owner_review_demo.sh",
+      "sha256": "f958c1320a1f38928e536208eb6361224a567d05c18a025241b5b0d97d8bad06"
+    },
+    {
+      "path": "scripts/fixtures/__init__.py",
+      "sha256": "606a4b0d2fbb1804a3de01b5fe549c8c0f00b27d08e0b395e08d554637e44fab"
+    },
+    {
+      "path": "scripts/fixtures/generate_representative_dataset.py",
+      "sha256": "2e68f097fe40313d05a2cc20cdec7af948c5a340ced932f26cadf06886c11462"
+    },
+    {
+      "path": "scripts/fixtures/seed_m6_owner_review.py",
+      "sha256": "3691719030a7a94347ca878f93eb4682346a6700a63e84f15008c18ed5490049"
+    },
+    {
+      "path": "scripts/maintenance/__init__.py",
+      "sha256": "7b63f7c540862d403cfecbc12511e02ccfb7ba397daa31a7d6e4c1e55cad75e7"
+    },
+    {
+      "path": "scripts/maintenance/check_database.sh",
+      "sha256": "bbaae8411096e520d0b95d418fcf09f83907d7a35aa6bb948306fcd0b6e3f1d5"
+    },
+    {
+      "path": "scripts/maintenance/checkpoint_wal.sh",
+      "sha256": "e455090ed2c78043cf2571f282e1e856551dff3fb80745c8d6cf654717cc7abf"
+    },
+    {
+      "path": "scripts/maintenance/database_maintenance.py",
+      "sha256": "062efa6b2845f94581dd415dc8eed95bd52e1e3e0703f80cac20182882ca0a1c"
+    },
+    {
+      "path": "scripts/qualification/backup_worker_once.py",
+      "sha256": "f75bf472f1b7bca02e02d6a499ffec20137dcc174a8c051f98906f6425a343c1"
+    },
+    {
+      "path": "scripts/qualification/m66a-browser.spec.js",
+      "sha256": "216a4e92f674effe20f1c043036028cbc46b27fc37b3733a34bf0d9c90c76e77"
+    },
+    {
+      "path": "scripts/qualification/m66a-fidelity.spec.js",
+      "sha256": "76c4314f2118de374568c54dabe24b891a4986ad1f4d4fd4f184d850c312499a"
+    },
+    {
+      "path": "scripts/qualification/m66a-outage.spec.js",
+      "sha256": "6f643db6e43155bcf2644128603b36964e1fe5113dd3fa75f71bc77730fcbbee"
+    },
+    {
+      "path": "scripts/qualification/m66a-performance.spec.js",
+      "sha256": "9d5dea96fb6f2c7d23b668d18718b942d9d682140c52de4ccc0905c4f7de5d5e"
+    },
+    {
+      "path": "scripts/qualification/m66a-phase2-visual.spec.js",
+      "sha256": "fd6c668d1302ef541e8efd4b34acfaf88942a688cbf10589a15acb22855bf1be"
+    },
+    {
+      "path": "scripts/qualification/m66a-primary-interactions.spec.js",
+      "sha256": "2b9a61269b845492ab1790e58d57b9bb82f72e3baa7a43dd06910bdf58e984f1"
+    },
+    {
+      "path": "scripts/qualification/m66a-visual-performance.spec.js",
+      "sha256": "7125ac8cd81ba2f39afa4774b753f9aa03a9b82253548844c3df7a32dcaf6dd8"
+    },
+    {
+      "path": "scripts/qualification/m66b_browser_review.js",
+      "sha256": "afd08d598942ae5be89b8b0d24683d0733d0faa14ec8d5dec89f9dd2fc12e5e9"
+    },
+    {
+      "path": "scripts/qualification/m66b_compact_reference_browser.js",
+      "sha256": "c1a2630fbf4461db20660c4bcd415b20b2de853be5cd11f9373f3e46f863adaf"
+    },
+    {
+      "path": "scripts/qualification/m66b_correction_browser.js",
+      "sha256": "7d7f8718ef0f372c28b8bbbe4713f88e1085bd44f8f1724df7cc4808f32b8943"
+    },
+    {
+      "path": "scripts/qualification/m66b_correction_prepare_browser.py",
+      "sha256": "7412d5815e6ce78ae013623ab04645044287ca2bc339657de334cae343eceb30"
+    },
+    {
+      "path": "scripts/qualification/m66b_prepare_browser.py",
+      "sha256": "7b1c60ad76bf072be09daeed6a60a0fd49b6ebcbd8b907b67b32367f6d86b692"
+    },
+    {
+      "path": "scripts/qualification/m66b_production_compatibility.py",
+      "sha256": "ccf5394f1130e14ac06580400b4108367753e770150134629af81c0062197228"
+    },
+    {
+      "path": "scripts/qualification/m66b_profile_reference_review.js",
+      "sha256": "5e9f914f2c66ec49286e6d2b0f2af23e58044488546c2d59993635448dbb5357"
+    },
+    {
+      "path": "scripts/qualification/m66b_reference_density_browser.js",
+      "sha256": "01037f4c18149a0689a3fcd2af32a5e7f7a0ee849c29b351c786319095422683"
+    },
+    {
+      "path": "scripts/qualification/m66b_reference_navigation_browser.js",
+      "sha256": "c944f50d3f72d871fe8e6bec0529cc9bfc5b0faeea07c908af363289f96170ab"
+    },
+    {
+      "path": "scripts/qualification/m66b_visual_review.js",
+      "sha256": "fa9030357b1e735e6935556bcb57aafa2c408b00ed4afa2609eb92082e779b85"
+    },
+    {
+      "path": "scripts/quality/check.sh",
+      "sha256": "a5e2053f758cb6188878f70bf8fb689de1e03c4027206a566598fda2133579e7"
+    },
+    {
+      "path": "scripts/quality/verify_architecture.py",
+      "sha256": "dfe83be805656df63b325baeaeb21493c45fd39b9f137f06e9bbbc05acbedab7"
+    },
+    {
+      "path": "scripts/quality/verify_architecture_freeze.py",
+      "sha256": "9608aa43152405488ec477676a34efa2324625262099eb531bc15489101956d4"
+    },
+    {
+      "path": "scripts/quality/verify_coverage.py",
+      "sha256": "b43f202037e5a26a1a99ac9abe33aeeabcd0f426385d0784f856c35ebb7cdd35"
+    },
+    {
+      "path": "scripts/quality/verify_docs_links.py",
+      "sha256": "7f72e81fc953690d8924054888ff94d268098f71f75be11e1a064ff51477d3d0"
+    },
+    {
+      "path": "src/snaketracker/__init__.py",
+      "sha256": "3884ceef2d058f4f09cb4692599e41ff5450eae30a451d8bb1f65007d9953dc8"
+    },
+    {
+      "path": "src/snaketracker/application/__init__.py",
+      "sha256": "03f9ccc535da4067bbcf43804b0e00d72498500b46c8ab09e136d58f838a1c62"
+    },
+    {
+      "path": "src/snaketracker/application/admin.py",
+      "sha256": "e4cd4413b813d2e5e1c60266c9d2e83ba09a4dbe10768c403494d12fe02efcdb"
+    },
+    {
+      "path": "src/snaketracker/application/analytics.py",
+      "sha256": "cbd1963888feebccada7d416aea4df534b3659f1dda15ccd3460365ae66eb4c8"
+    },
+    {
+      "path": "src/snaketracker/application/animals.py",
+      "sha256": "c9fcd02db61f4fc8d06fa2b88eae3a65b04eb5c61ebf82e33242798a93bbe3ff"
+    },
+    {
+      "path": "src/snaketracker/application/attachments.py",
+      "sha256": "24a1a3853638830b5658dc26c846bef9c9436c7dac419833c24e27b07be931c0"
+    },
+    {
+      "path": "src/snaketracker/application/backups.py",
+      "sha256": "4832ca4caf4e38e9222eda84b38b5e44528b480edbff60853d0d834720eb77ac"
+    },
+    {
+      "path": "src/snaketracker/application/care_guides.py",
+      "sha256": "6a8797dba0fc5bddf810f4878c0c9546ebcbe7b4e6180ae1c6ebef0e2f8acb16"
+    },
+    {
+      "path": "src/snaketracker/application/dashboard.py",
+      "sha256": "00d3faf407978537ca9a308611446afd34aa10e62be52d53e20c927ad10a39cc"
+    },
+    {
+      "path": "src/snaketracker/application/enclosures.py",
+      "sha256": "279d9350ab4ddef1aa0ed2b69340c94af59d5a0ad9f2bfa0c02bc9c1cf17914c"
+    },
+    {
+      "path": "src/snaketracker/application/expenses.py",
+      "sha256": "4b55dfe3e3db13c681ccb0c8414a06a60406513666d784fded6240f8c30b6360"
+    },
+    {
+      "path": "src/snaketracker/application/household_bootstrap.py",
+      "sha256": "f07894a92f54b4bf68714bb585f368220acad72684a5b433dd08cfad047af25e"
+    },
+    {
+      "path": "src/snaketracker/application/identity.py",
+      "sha256": "b92113c5d1454595f5d443794ed7f115fd65dcf76dc1cb164dbc5c196f2a273a"
+    },
+    {
+      "path": "src/snaketracker/application/inventory.py",
+      "sha256": "b2c8d5632b9bb4123955315a3fec187db7b4b6eb309b939688c05f0205a88335"
+    },
+    {
+      "path": "src/snaketracker/application/inventory_intelligence.py",
+      "sha256": "d787ceaebf8f3985af1512fc011f8540f223767a9439b4c846c27253c1c3377a"
+    },
+    {
+      "path": "src/snaketracker/application/keeper_history.py",
+      "sha256": "05589bc14460a012bbb9eac0e3dd677abaaf7b8fce6017654ab5c8544de6889d"
+    },
+    {
+      "path": "src/snaketracker/application/length_measurements.py",
+      "sha256": "d752c239328bf2d3c84c8600163c06c5bf94f6b30b1d0453cc34cd6ba1209a76"
+    },
+    {
+      "path": "src/snaketracker/application/ports/__init__.py",
+      "sha256": "b55eb7958f8468c3302715c299994557f90cc1fe52dcf92b47cd6d12728dad91"
+    },
+    {
+      "path": "src/snaketracker/application/ports/database.py",
+      "sha256": "6a85be7356e2500bc0356517efe8ccd67d993417249e87900c0d96688bcf8ead"
+    },
+    {
+      "path": "src/snaketracker/application/ports/readiness.py",
+      "sha256": "76040b4d0eccb6e2fa0858ccb8112a3aa7c506cc521255b843535724e84b5f11"
+    },
+    {
+      "path": "src/snaketracker/application/projected_events.py",
+      "sha256": "c0bc35dcfacb220b6d68888dee7f132fd4f92a80dae7b09329c09e79d522c9da"
+    },
+    {
+      "path": "src/snaketracker/application/projection_health.py",
+      "sha256": "6f29fb9ed6db951a240a79ef169f20abdcb3e26ab7153bf93e78903a606e19d1"
+    },
+    {
+      "path": "src/snaketracker/application/purchases.py",
+      "sha256": "398a41d3b9474385c41272dfeb9295d5451de61a7ae8a3022b67e0a9572e2baa"
+    },
+    {
+      "path": "src/snaketracker/application/readiness.py",
+      "sha256": "e97337151cd451e8f90bb5c698b520085ed6f64c01fc500ad350719468489222"
+    },
+    {
+      "path": "src/snaketracker/application/references.py",
+      "sha256": "3424034eb5a4f9609eb5b7244f0dcadda849a873cb39a64432b18e9d2e3149aa"
+    },
+    {
+      "path": "src/snaketracker/application/reminders.py",
+      "sha256": "a3fa648f67edf417565b3882766a3debfd1d1fe190a996c13fdf30a195ebefb4"
+    },
+    {
+      "path": "src/snaketracker/application/reports.py",
+      "sha256": "8b32280ef077ce9119f61b17e818e4e05ba869d272b1a070de2a34bf7f3e26a3"
+    },
+    {
+      "path": "src/snaketracker/application/search.py",
+      "sha256": "109c8aff062d0909971656b1592022560f71fb484649653112b696b4904dba9a"
+    },
+    {
+      "path": "src/snaketracker/application/species_directory.py",
+      "sha256": "2cb8bb8bbbe2d72117283327b5b6e92dffffdebe45d8b166c18c338d4eb14f44"
+    },
+    {
+      "path": "src/snaketracker/application/suggestion_policy.py",
+      "sha256": "fd61b8179eca414853621e30a702403874a6f6c24b7bc7cf641c74458f658322"
+    },
+    {
+      "path": "src/snaketracker/application/weight_measurements.py",
+      "sha256": "bbfa0f1ce2a321b03319625f47da109eabcfd6c4ea68a3851ddbdc12df4acc32"
+    },
+    {
+      "path": "src/snaketracker/bootstrap/__init__.py",
+      "sha256": "5ec6c2eeaabe0fb08ac7d0dc25253e132ccfd238dcfa1e655f2fa1d057ddee7c"
+    },
+    {
+      "path": "src/snaketracker/bootstrap/application.py",
+      "sha256": "38ec3e5988ca31c534ef59609cbcc38c7d1762ad758f5dfd95bf64b9a27ce139"
+    },
+    {
+      "path": "src/snaketracker/bootstrap/compatibility.py",
+      "sha256": "2fa23b49f958cf99d462bc37e67fbf1a603ffc34fb73dff6a08005aac81ba295"
+    },
+    {
+      "path": "src/snaketracker/bootstrap/configuration.py",
+      "sha256": "fa97bc6127b6911a9af7cabc3401d9596cbd9b197c3af289e7261389e4e87bf2"
+    },
+    {
+      "path": "src/snaketracker/domains/__init__.py",
+      "sha256": "9993cac707c6bc866d59b4ac9d5b6a2fd6534b537c6566d501bdbe7069d189ea"
+    },
+    {
+      "path": "src/snaketracker/domains/animals/__init__.py",
+      "sha256": "7239a10fd958491f508d56c3ed0dc0217100b98a65a78e610b579a6ba6236b64"
+    },
+    {
+      "path": "src/snaketracker/domains/animals/capabilities.py",
+      "sha256": "ebcc83cfef6c0580c3ab948c7989c75bf4b35dd1cc81308345a5b632e97b39a1"
+    },
+    {
+      "path": "src/snaketracker/domains/animals/contracts.py",
+      "sha256": "a75b3fbe47564fff6c98941b2f0710f2c088321b3b26efd8f510dbb559794b0c"
+    },
+    {
+      "path": "src/snaketracker/domains/animals/measurements.py",
+      "sha256": "edb33597c60e36c93ffbabbfb3a087bd52f520b94d541d91dafb2be43a85271c"
+    },
+    {
+      "path": "src/snaketracker/domains/enclosures/__init__.py",
+      "sha256": "a8be91c9a4c5b8dfb2d4dbcf576b405ee35e0d18e283760c15bf603fbe176c1f"
+    },
+    {
+      "path": "src/snaketracker/domains/enclosures/contracts.py",
+      "sha256": "4e255a07ae345b04de796331e009dc678c5d8d0979ed3545865f882acd69ad4a"
+    },
+    {
+      "path": "src/snaketracker/domains/expenses/__init__.py",
+      "sha256": "b3be870ef749a3708268bef0cb2e740581327ebd3d7f2587912abcf30b413f65"
+    },
+    {
+      "path": "src/snaketracker/domains/expenses/contracts.py",
+      "sha256": "7dcd78c980c802938891869c50583dfa1036e01b6c97f8062c9da9a765a4858c"
+    },
+    {
+      "path": "src/snaketracker/domains/households/__init__.py",
+      "sha256": "f3f7c70c2e53a8fd95ab9dfc2454b147b151e1da0bdf571bfcc1c2b27ebb4854"
+    },
+    {
+      "path": "src/snaketracker/domains/households/contracts.py",
+      "sha256": "9139ace8fddfdb68b07e3bdb22ddc7eb44fa00521a42c422edb99c4aa6a2a96e"
+    },
+    {
+      "path": "src/snaketracker/domains/households/replay.py",
+      "sha256": "8d25fb5cc9eff02a8ce3d07ccd79ba56d8fbb68c268751366aabb0b6e13b91b8"
+    },
+    {
+      "path": "src/snaketracker/domains/inventory/__init__.py",
+      "sha256": "0ce59580f7d0494bc495812cfeaa362587d6c058fcbc7b3b5c67cbed8b6dc94f"
+    },
+    {
+      "path": "src/snaketracker/domains/inventory/catalog.py",
+      "sha256": "f62e106705279584fa5071289afd0dcd92696e5c85a5e94864375cfd80474fc0"
+    },
+    {
+      "path": "src/snaketracker/domains/inventory/contracts.py",
+      "sha256": "c8a0704645fffe8eae101cb24223e3ce4280c8258c5c623079d3c8c83664ebd8"
+    },
+    {
+      "path": "src/snaketracker/domains/purchases/__init__.py",
+      "sha256": "f8f6ce823cb14daa923c9104fb77e4cb945465651efdb51962337bbc45955129"
+    },
+    {
+      "path": "src/snaketracker/domains/purchases/contracts.py",
+      "sha256": "55c0cea72970da8ca96251d0c5acc1d0484cabadd4814c6075261524f9585104"
+    },
+    {
+      "path": "src/snaketracker/domains/reminders/__init__.py",
+      "sha256": "c206e3c0807b74e9e1914be22b2a36c6a1face46366b210d1a9c1d0e78681bc8"
+    },
+    {
+      "path": "src/snaketracker/domains/reminders/contracts.py",
+      "sha256": "b209185dc076612fa6a1e86466917110962e9f22343dff034dcb68ff46b15e91"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/__init__.py",
+      "sha256": "5476ccef2754b236492c3d6c22404d995a5583ea796988edca712268dd7bafe8"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/admin/read_repository.py",
+      "sha256": "4ece2e04603c61bb64cf0571cd7e09e47c9d9017848fe747bbb68dc5c447d2f3"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/animals/__init__.py",
+      "sha256": "b1a49ac46d7105229bdbef77e7e2dded4994ab1a5fb5794e4f67bd16b93f2d5a"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/animals/projections.py",
+      "sha256": "8b12dd61ad9a89e2bcbe722218bb8facf6b7946a7ce32d62b4a757f05655204c"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/attachments/__init__.py",
+      "sha256": "e475554222eeef43c3acf6f93a91f333debefba2b38608bf47da8471eb8ff0ea"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/attachments/repository.py",
+      "sha256": "aebdab9c8820da8b4aef91f6d6079a99c966b4b08f3d3db0bf8917a43fd4d7c1"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/attachments/storage.py",
+      "sha256": "76ddda4d5db0d9847ae2c66542728ec092b0406c5b762461029c65e7753a3e13"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/backups/__init__.py",
+      "sha256": "6b97e61fce78d2b99603e36e518b23bd11d90b3f9bd9f4b604e483ad38da527f"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/backups/pipeline.py",
+      "sha256": "87eee9cfa2d496482853172fe9dd91ebda9aac654612d1e76fdbf548a1590a25"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/backups/repository.py",
+      "sha256": "3d1151caca70202a47bf60aee5abb186ba92194032e4a2c6f0bb5be00b172f09"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/database/__init__.py",
+      "sha256": "af7592e67a1b058fd1dc32cbced680c20a0158169a0bfaa58a52c3f6e4fcc61d"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/database/engine.py",
+      "sha256": "34bd7c8865651643ea1c21d13e752c4305cb1f4bf1402d57748042c8b0511c13"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/database/health.py",
+      "sha256": "703d43934ebf223ca038dd0f2de44f81878ebf04f64eddf2f3b82ee880d0c031"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/database/maintenance.py",
+      "sha256": "45369d5898957c0eee02b5f39b2cdb50458665fcb0fd811e758c8b392577c080"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/database/sqlite_profile.py",
+      "sha256": "ffbb730671c4d62bef8495264ad501da58c879acbb148ba93b716861e55ef080"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/enclosures/__init__.py",
+      "sha256": "580df3bec3827b7cc96c16425c6681a82006f8f1944fce5580c99f0a05a110c7"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/enclosures/projections.py",
+      "sha256": "c28cd13dbf800a392f76d01d02c42463f1b38a96d4d41e66d0ffb1738fcc7293"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/events/__init__.py",
+      "sha256": "c2a49f6401a8cb93816ac9f3ed8efda0bda1f6aa3a925f4e65d91418401dabe3"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/events/sqlite_event_store.py",
+      "sha256": "a548bee48bf9e6afeb9cc9f6f42811d115aa167b00e668daf00627289d5655ab"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/events/sqlite_snapshots.py",
+      "sha256": "e75ce640217896e244136716dd25e34ee2cc74e6153ad9f7fea5d898be3e0845"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/events/sqlite_subjects.py",
+      "sha256": "ab6236f24a1fab7a3009a7d9585aded3be385152161b73c6e14f145fa1ca5992"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/expenses/__init__.py",
+      "sha256": "eeae8c7d4410840038f01e4fe6cecdcc2975aab2871c8d035605a410860d97ff"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/expenses/projections.py",
+      "sha256": "24de8e820dfd554bcd29a10712488ceec5eee4e7ff59f6b96cd252d343348067"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/identity/__init__.py",
+      "sha256": "f0f4af02e914d0a9e9664aef09a0d8934f6e30da8d614a106de0f806fe19ced4"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/identity/bootstrap_repository.py",
+      "sha256": "ad90a5f682f7461648976555b199ebabd6a61da5296eb87eed078bc8bc84011e"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/identity/identity_repository.py",
+      "sha256": "491ae220ff86053da6548539d21d9a732ac6c09bebb225e533e68b4ec744e9b3"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/identity/password_reset_delivery.py",
+      "sha256": "c4671f7a878352f3275e807ef285ac1a3995a47c3b1b8640e1496506ee7e8cf5"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/inventory/__init__.py",
+      "sha256": "f3f130da9d597bfea5ae9f1fb07c87d5e846c0a04748833a59803d4690791a8a"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/inventory/intelligence.py",
+      "sha256": "0de9e243dbfedf6626ff80a83c00b4a3fa3f70ea764d0fd43b60d0f4c562be9f"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/inventory/projections.py",
+      "sha256": "d57dd3c57858bfdc79193493ff0f92c68057545e3f0fba5e1340cbdb4db9f276"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/jobs/__init__.py",
+      "sha256": "85ea5c2ddcdb034f6b2fb6ea264274e7e4db05d56e5c2bf7c8d64b4ee3651a55"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/jobs/repository.py",
+      "sha256": "813844a850d69fbbedbf5803e7e500cecb9367547b6f9df8709df29a70204956"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/notifications/__init__.py",
+      "sha256": "14a254001342759dabd76901bc3b650db1e80acde2ac91b88340b4b5bab79ade"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/notifications/provider.py",
+      "sha256": "bae2945c1ffdc3bf39b1f84b5fb74b42a15e452729c495ad7493374789ca99e8"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/notifications/repository.py",
+      "sha256": "cad0b3f2e53a6d901ba1c28525bc4af5815ff6ecffe47e3bf7d455c41919fda4"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/observability/__init__.py",
+      "sha256": "1c1835c9671cc8ac83e0a0b92d3c47c1c99b3c40d3c0f462fa0d0de482c55867"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/observability/correlation.py",
+      "sha256": "9c44fbac5ddbb06cccdcc8602c0608529e3544de16918aebc4a248f8b0250762"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/observability/logging.py",
+      "sha256": "4411d24b3036aa7d616b79f2ea8da40ffed81b3767f901d0d66c5390e07c21be"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/observability/metrics.py",
+      "sha256": "80c60db9b004b457c8201fcf839f553296227711344524de888756832ed49ad8"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/product_experience/__init__.py",
+      "sha256": "7f92eddf96e125654ff774cc849a94adc1ff4649771d0c298f43dafa32989c14"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/product_experience/projections.py",
+      "sha256": "459a6296176a449b615bbe2a892c9cd3ab9ac28a67c82c314961a1092dbbcc3c"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/product_experience/read_models.py",
+      "sha256": "5fea9182571536d72c1f2b0f06275452423d30a2057bdb83fa74fb192b0791c8"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/projections/__init__.py",
+      "sha256": "d3a9ee3fa26a626b8be081c8a3eb209b0cb3f366263b95910cc6bc74ea7b3e09"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/projections/sqlite_generations.py",
+      "sha256": "02c2586cdc97b6bc793eb82d6c855808a69220d091de358770866589ee2f52ab"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/purchases/__init__.py",
+      "sha256": "6a4b44212613c6765f34d1a6307074496ef2d6f2db68e7806c5ef77fad1ed6e6"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/purchases/projections.py",
+      "sha256": "24a11bb8285535bc62ad2df920ac2b614c50fca1abc48376b6d4fc9ac82c9a8d"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/reminders/__init__.py",
+      "sha256": "0192bafaf201db980fcf0e7a137c120ecd40fef453ba78a890e4ad5ef4b53945"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/reminders/projections.py",
+      "sha256": "87b1ab6399b899ffadd04a2bb40b492c5eec0701a51e479b6c18b9e089a3944d"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/search/__init__.py",
+      "sha256": "b6619bd064cc49d105b81de39aa080d441be75a3cdfe25dafed45a3dd3e4ab23"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/search/fts.py",
+      "sha256": "26e6e2a4505f5b5ac2a927b64a12d00c60a2c0bb6b4d7532dbe3f1d86127e465"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/security/__init__.py",
+      "sha256": "1a7161a05e3f2cd39eb0af23d79f3b71755647253a9c48eccb2f5210236f4951"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/security/passwords.py",
+      "sha256": "79ebd9665256fbc76ac3864ded165126f878df903d8832b511bdea4bfda00e52"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/taxonomy/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/taxonomy/care_guides.py",
+      "sha256": "56276f72bbaab18ad7d9ad35db2a09772e38594e561caa060d70eae59879baa0"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/taxonomy/inaturalist.py",
+      "sha256": "a02a798e3413f2f04b9ef3cb58571b80f73399d8a463d57535eeeb069ff08938"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/taxonomy/reference_images.py",
+      "sha256": "ac288e4b0eac6e5715bd2f5d468f4550e806a9b73b888b51830104f366cfbe22"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/taxonomy/reference_providers.py",
+      "sha256": "68051e6542a6f23ee40d7ba9b2330e47fa4e18185e461612d164907f1a30fba9"
+    },
+    {
+      "path": "src/snaketracker/infrastructure/taxonomy/repository.py",
+      "sha256": "649fd3df36ac9ede5029835bf8e58ccf54b1d7a9dc0161467f43113532743c4b"
+    },
+    {
+      "path": "src/snaketracker/operations/__init__.py",
+      "sha256": "d53b5ff572c08c51909621dd783935608d91ccc38be7af09f60e20fc659b6ffe"
+    },
+    {
+      "path": "src/snaketracker/operations/account_recovery.py",
+      "sha256": "e2a89249f23bbb443418f036fe85bb2c5c75d8b92c69736c06828b6997e37bb9"
+    },
+    {
+      "path": "src/snaketracker/operations/backup_restore.py",
+      "sha256": "75fd4761eed1f4ebc692a72b99f502df985b1bde814cb4b25e9a8991beaaa745"
+    },
+    {
+      "path": "src/snaketracker/operations/demo_household.py",
+      "sha256": "70d5c2124f44ec7b587e5d6b46109db16bf2ed515ace9a133edee7368d4859b1"
+    },
+    {
+      "path": "src/snaketracker/operations/import_care_guides.py",
+      "sha256": "e39cfbb838440e6c12f943018725f0ad450389d10f8295abcc966a607d0418a7"
+    },
+    {
+      "path": "src/snaketracker/platform/__init__.py",
+      "sha256": "24c6ea85224f0614da1baee783777c38d0164cde33223bba37daa6543412e209"
+    },
+    {
+      "path": "src/snaketracker/platform/events/__init__.py",
+      "sha256": "56e5b36febd2d6632598dbc7122790880b7a4ff355da97c3c7f95282bd8c5282"
+    },
+    {
+      "path": "src/snaketracker/platform/events/control_contracts.py",
+      "sha256": "706c87d2e69cf7af1deb5f694a2345cafd9a9a496d29bf92e63fc6de1e13a455"
+    },
+    {
+      "path": "src/snaketracker/platform/events/corrections.py",
+      "sha256": "ddedb714a9c19f943a51ed9203ea2b0d2614ff2305b6638d81e2dfb8e1a3ad92"
+    },
+    {
+      "path": "src/snaketracker/platform/events/envelope.py",
+      "sha256": "c36a6c45d4b9aa7f3001b5784f01c7e9e56ce0d0b8b19470d2d1443b38424662"
+    },
+    {
+      "path": "src/snaketracker/platform/events/registry.py",
+      "sha256": "6ebd0e5ed7a73f0252953b1bf77f6271355fe0f563846c1eda45052b810ee642"
+    },
+    {
+      "path": "src/snaketracker/platform/events/snapshots.py",
+      "sha256": "2035efee9d939ab72eb8f5e4dcc070c4ee081fd8e66b2cd7285f2e187a75e812"
+    },
+    {
+      "path": "src/snaketracker/platform/events/store.py",
+      "sha256": "dbfcf57c139a4504cb168d9f9a58d73b95343c15ad659bcd2ae927efbe55fcd3"
+    },
+    {
+      "path": "src/snaketracker/platform/events/validation.py",
+      "sha256": "6a065b2882439ee9857091b0ad6ae480618d11e9bbfb68588b9db489d83a0ace"
+    },
+    {
+      "path": "src/snaketracker/platform/jobs/__init__.py",
+      "sha256": "8ae3d317e9c375dc6862de1f447e6c25cf5e4478fbfc37ca5a341617741e8264"
+    },
+    {
+      "path": "src/snaketracker/platform/jobs/handoff.py",
+      "sha256": "b53eaa9fddc3ab3969a21b86b9631c222f30d12e5f7f816e620c4e88b61a105c"
+    },
+    {
+      "path": "src/snaketracker/platform/jobs/models.py",
+      "sha256": "aa0783b558aa873a673670e56f4b28360302ee6134641a5f4396ae01526798d2"
+    },
+    {
+      "path": "src/snaketracker/platform/jobs/operations.py",
+      "sha256": "4b972bc7434e5e77e0876c2c7d2ef4e555c9dcdd26ed42280b29022db6cad579"
+    },
+    {
+      "path": "src/snaketracker/platform/notifications/__init__.py",
+      "sha256": "a44e786eefd978002f5a97dd010b8f302db6d13509477e8d3ce4c319bff3c787"
+    },
+    {
+      "path": "src/snaketracker/platform/notifications/service.py",
+      "sha256": "f05fb64de2c94de5957bda0fbef48f6afdcabcfce1a5d5f6484ad5b50d2367b4"
+    },
+    {
+      "path": "src/snaketracker/platform/projections/__init__.py",
+      "sha256": "74e599279a64978c6ccfaa63f7c51676f11967618add6e1b148356374990d71b"
+    },
+    {
+      "path": "src/snaketracker/platform/projections/definitions.py",
+      "sha256": "3201bc90ec018d41286b84db005afe699b8d0d1d301b3f6c288727a9b697151b"
+    },
+    {
+      "path": "src/snaketracker/presentation/__init__.py",
+      "sha256": "6d475e9a7aa0dccaabcc392a015d8b2a4c1478f94986a7d974e9bc6e541d7d1e"
+    },
+    {
+      "path": "src/snaketracker/presentation/admin.py",
+      "sha256": "28831d6d2497932271e876152f0f1484bb7a8a34db6306f8427b02508d915901"
+    },
+    {
+      "path": "src/snaketracker/presentation/admin_display.py",
+      "sha256": "d3b3c9c0702ad07af9477c3ab5a1da3cf87fe7cb7e922ecbee36c1b376033a38"
+    },
+    {
+      "path": "src/snaketracker/presentation/animal_care_views.py",
+      "sha256": "bb6c4752396a44b351eec73696c90acfee7418fb92f7ad470b6674c7adc50abd"
+    },
+    {
+      "path": "src/snaketracker/presentation/animal_visuals.py",
+      "sha256": "683fba6744707cf6f90600dd2afc795f22b2193d9757c7940ae55e3b171760b0"
+    },
+    {
+      "path": "src/snaketracker/presentation/health.py",
+      "sha256": "6dce266a54c0b4b3cdf1d5e29232b3cce8ce9c28ab09b0942f99e89b94e1a2b3"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/admin.css",
+      "sha256": "54444252e0789c45b264d789be7ec5bd2fac37072b38d134c75594ba005a3685"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/admin.js",
+      "sha256": "175dcce251dbf7ff52f0aec60f527721959ab9e5fd6aebdfd3f1840e78e145d3"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/animal-fallbacks/README.md",
+      "sha256": "f3386fe79c973bc5d5896fde8d0ea1d0941c610d4e464d90e95e918988eb547e"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/animal-fallbacks/lizard.webp",
+      "sha256": "42112c345e94faa758e717419352936c4ecb91765738b71c3936f1aabc4bd04e"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/animal-fallbacks/scorpion.webp",
+      "sha256": "d94f2b7da2fa14c549de124e2ecb20b7d3b5c23548728e4008a9205f3b68e815"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/animal-fallbacks/snake.webp",
+      "sha256": "12066ba27fd5a025a00097754ee97d4fe914fefff75b0c5b6293d0fdc0ea2237"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/animal-fallbacks/spider.webp",
+      "sha256": "2ee0553328ee5f4043401b3aa8a07e6502d1111f6624b5c185095fcfc78526b0"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/animal-sections.js",
+      "sha256": "f4186c04af5e16e500c2ec53c6acfb25875071bdb25d33e9fbe4274f50e0e9c3"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/app.css",
+      "sha256": "5ff5ed1516f02ace13771aa9cfadff07d97348ed5ab409ce6743973259e7b25f"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/charts.js",
+      "sha256": "21d447a99eae0efe1e2acaf6875a009d9ec2adefdb317ef39504110c26958d97"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/enclosure-type.js",
+      "sha256": "6d6d9772882e0d35b1b3303ec6266901998112923bc31de18309ac5cdb58fd85"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/favicon.svg",
+      "sha256": "1e33d7c650c31099d07f9cde9c8b3e8d7b281983289ddc61d01c523001e25818"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/feeding-form.js",
+      "sha256": "6d5a01ffb00cd708a3291ce8801950e5b8b7d8bf5fff1d8284b3fa47e869ea99"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/inventory-acquisition.js",
+      "sha256": "6a1c6bb7ce044b0694133f9d4f3a5ffb094c4f62e94b4ba011e5761c5ac48607"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/inventory-form.js",
+      "sha256": "f2565d46cd2d0fe3d03bedb24892a3a18f6f4183f9b3de6b49e89af239b6f0be"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/length-form.js",
+      "sha256": "c08b0cd8fa05c1eb873737282b8f24a54b291f4ae88f6a1deecff1a12296e376"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/manifest.webmanifest",
+      "sha256": "dcbf54ce13eca2893ee727b2f1e015acebe56d0f802e96e905c429c77c643947"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/offline.html",
+      "sha256": "2f96e785ae089091a288b5588f48c2e4454942b0277cd02c0d281f51695ab7fe"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/overflow-menu.js",
+      "sha256": "b06f0ebe244a0eced586bbc973e1b50aaf9657ee841b54bd467d8c58018ad49e"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/password-reset.js",
+      "sha256": "3bcdcd17ba107da4667a8946cd45af9f320ec9c893045bbd9ee09236899b1b91"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/purchase-form.js",
+      "sha256": "1cf9861ca6a93172ae5c880be2459c6aa974fb94e60df9fd2f2606590e13e9e4"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/pwa.js",
+      "sha256": "870e94d157104942b22138e5c6bd3570abd1adfbc8217926cf7670b29428c0d5"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/quick-log.js",
+      "sha256": "9ceaf091a46eb5db27d3787fe192fee8f0ea03668a0d94269f8601efc9d826a1"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/report-charts.js",
+      "sha256": "66ed8fb744c28fe66b635ccd7a9df8f71a51568f07c4675bb080ca25ba216be5"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/service-worker.js",
+      "sha256": "f6c15644332970d90522583fec7c7cf1329acd886ba87421f0965dfb3465211c"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-directory.js",
+      "sha256": "e327788f9eb78c768a24742b9cc22e08a2466aa4e1e048169e4d89d953368fc7"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-illustrations/manifest.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/anolis-carolinensis.webp",
+      "sha256": "495c4a92a1942c798b6fd24e0139be1546eaa37ccd68c08b2752149364d05831"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/avicularia-avicularia.webp",
+      "sha256": "8512ad4ff2eb3acbf6a33898777fd57e71ad81aabb07c4f6ece2a106825101f6"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/boa-constrictor.webp",
+      "sha256": "d978d7b0197b868ee8f80fff9093601c4ed75200c9e3995010297a568622ac80"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/boa-imperator.webp",
+      "sha256": "4f5c01cdcfd8d6c86cc25a43ccbd2d455ecb7872b3cf59d1166156461b4cbf56"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/brachypelma-hamorii.webp",
+      "sha256": "56a43c8689ce438a6c0becad10ee082db7a450b665127322dc315578ef1da04f"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/caribena-versicolor.webp",
+      "sha256": "cf920c9fc7e097b8e6a49249e62ba542e9d3f943e4ff4fcd346673883d874f73"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/centruroides-sculpturatus.webp",
+      "sha256": "52b612254616ba7bc1824fd62e4ab78079b6187a5f7ee2d42c02ed13e7387e25"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/correlophus-ciliatus.webp",
+      "sha256": "0668a02ba112b506914a205dde97f7af25f5fd09991c652e38960146aa0f9c05"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/eublepharis-macularius.webp",
+      "sha256": "1469998d89190dce1ca19652a0f9f63f6c8df1b4d66ff87c14312f2bdf19f62f"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/euscorpius-italicus.webp",
+      "sha256": "3c8b97943dae2f32151a37a2b7a50b485bf9adf53205e3cbae01b3807cdcd177"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/grammostola-pulchripes.webp",
+      "sha256": "2c0d049fe7abb06302acadb8858ef0a509143d682cd15711c06f4c8339d659bc"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/hadrurus-arizonensis.webp",
+      "sha256": "e4f370102acf9ea50a6a4663d9c4dfee8c715e02815e0ac1a05cecec4b1a8bcf"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/heterometrus-spinifer.webp",
+      "sha256": "43e7bec141bfd6476258b859fc1b9d2b7d48c692a165d9898d7d2e564a3597d7"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/lampropeltis-getula.webp",
+      "sha256": "34d8cb547989a4e374ada7f81fd67639efdee9f6c9c017aac749e3e5c4c4d977"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/manifest.json",
+      "sha256": "cebdb79efb690b22f7653239cf42002084d225fb214484050bc83a4971379c52"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/pandinus-imperator.webp",
+      "sha256": "d1d3fa9310ba6779ffbbb839fb24490ede7ed6aa814c2baabe08631f248583d6"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/pantherophis-guttatus.webp",
+      "sha256": "568efdafd60503a4c2331f1d037064adc2e96fee655a819ef7dd3a9ca87f71b4"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/pogona-vitticeps.webp",
+      "sha256": "e12a1407bf6c41b8795df96f5108c4b871e7d70bb58fb657105b16470777f7a4"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/python-regius.webp",
+      "sha256": "cc8958771f9c4b4a858028db941d50202169b4b4351fed6ce70e841d1504be93"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/tiliqua-scincoides.webp",
+      "sha256": "418a5d87b0240c67d6f72bf9d9fe04ee8abb195ce7981b95e520d221de8ba3a6"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/species-references/tliltocatl-albopilosus.webp",
+      "sha256": "0c1049bcf34202afab88f9cfbec6f02abe695bbcc6f2a234a3a6fe581d94c132"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/vendor/chart.js/LICENSE.md",
+      "sha256": "41a84aa2caba645f966a18d9c2056b73e6d3a81d80bc0046bc0011a2634d4cce"
+    },
+    {
+      "path": "src/snaketracker/presentation/static/vendor/chart.js/chart.umd.min.js",
+      "sha256": "48444a82d4edcb5bec0f1965faacdde18d9c17db3063d042abada2f705c9f54a"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/_inventory_catalog_fields.html",
+      "sha256": "0a140772cb89b4785acbe1498d7ba5db6bc282951b0800fdb25e8c58f56e5aed"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/admin.html",
+      "sha256": "da90fd44528c55cd197e8b8e6c08468befadce8186e849485f9c8b2bdbc8fe94"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/animal_analytics.html",
+      "sha256": "1635e081a4b65a94938426007f06fa6b97959fa402f0d493f41ea28773fac97b"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/animal_care.html",
+      "sha256": "9807119d5b74158312e8fd618ac3eaa4f70740fd3ddee3a355591918b0e4ea45"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/animal_care_form.html",
+      "sha256": "9a6fc87634b70de13ab45da1e12f274a722b6f3e72d005433d90d47bf5b79a81"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/animal_edit.html",
+      "sha256": "6d82666eaa28e785f9bdddcd2760793d56fe20b2f605f8ab3cfb1867a2238c6f"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/animal_event_correct.html",
+      "sha256": "f9d65577860de88242e1d777088ce21751886090b09a8e0fe0cbe8a79741a8af"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/animal_event_delete.html",
+      "sha256": "5075c329f76f508fae77f35d804befd94eaf925e79eac6b87e09ebfc21290da7"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/animal_list.html",
+      "sha256": "36aafda80a6f0aa315d4ceaa62778f31ded76d6ba48bfb8854762aedd3a4f9c6"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/animal_manage.html",
+      "sha256": "3c6cd58eadb3aff06db8b49bbe591823904a5d43574d6afe216481f279cbc372"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/animal_measurement_report.html",
+      "sha256": "7dd7082b57903eece3aaa46a10be4798b2f3950c6d8c7395e66db6cee1646aa9"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/animal_new.html",
+      "sha256": "087090ed3b6edc6c5665e1fb2a0e32e51b1990e376adb62ac355e349439ce42c"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/animal_profile.html",
+      "sha256": "ebf2ac8e4ad52b671e471479cc55cbf7b2d7e70e8c8cdf10f73071edc40fb96c"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/animal_profile_header.html",
+      "sha256": "32a7fae229e18f619befbe7bc0129efa94ab2e87a3938326a75ffa69888a82b2"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/animal_reference.html",
+      "sha256": "930c0087efe7b8688cc3c051ff795f881f98f216d214622dfda9e2ef76704d4c"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/animal_schedule_edit.html",
+      "sha256": "9bd1722ea7f80678f843556d89f8da05b98eefbcf28efcc16a63d73d821d1de9"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/animal_species_link.html",
+      "sha256": "e1eb3f348e2f601a7349513891fa07062959b95c9f511956f7517b536999c16c"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/animal_timeline.html",
+      "sha256": "cef2f38b228460b6e2224f9872bcec625cc0b35ee38ec402b23ad9d7472ad6a1"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/backup_settings.html",
+      "sha256": "62df0f85b7cdc878c4ed6d6d47d82108b87110fc90ff9196ee47027af507cc6f"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/base.html",
+      "sha256": "4b5abd02c3c362cc028163c3081bc71b3489d7ecffee61d67b64ba5fd627e573"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/calendar.html",
+      "sha256": "dbc52e2f28008db60aa73e9821bf213a9363fb891b8f70d3851cf6e9793b3ad5"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/care_guide.html",
+      "sha256": "649a6c07742f8dca6326962a40a04e06bc975b1ecd0c56499713d7d6a4fa414b"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/directory.html",
+      "sha256": "e16533cc0d61bd19ef637a7b995090057ea495c697521ed2791e9b8fb441a836"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/directory_detail.html",
+      "sha256": "991b529159ae02b64a1b6e8c2a590d12ae5398f9a86801132c696aa1e3ad2423"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/enclosure_edit.html",
+      "sha256": "932177f34e805924d69199fa9e6169b4c7c0586a80de7b68edfc8fd9d8f788b3"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/enclosure_list.html",
+      "sha256": "a2c43a28d28e16cce95b048e29af82910e3219390c1495ed9d7bdc18a9cec12e"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/enclosure_new.html",
+      "sha256": "97cdb562b8453aabb5955ae7f19d7665fd746d1298df2049bf3c839e57ff7f69"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/enclosure_plant_detail.html",
+      "sha256": "f615a6150c175c37517814fdbe007a4c4b88f6dbde077bbefec693120e175eff"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/enclosure_plant_form.html",
+      "sha256": "6fc3c6efa43edc8150d66d18b12453f508d30fa2851ec23d51cbb71f41d97c33"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/enclosure_plant_remove.html",
+      "sha256": "6172ae1978d080fda321f5bcf1295d7074e9c652ec372dc75809cb2687a78cea"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/enclosure_profile.html",
+      "sha256": "59ecadbe4a01b3adc7105bfc0bc5ac9a336634dd8befdcaf7d905d9f2f97f680"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/error.html",
+      "sha256": "3dae7505d3973fbac6d8dbe03c763341e80a7bf0c84639a7afe660003f32bd4f"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/expense_detail.html",
+      "sha256": "5a67a6017a645dcca725ace0eccec14ffa6bbe8f66a2d6879dd70dcb501e0a11"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/expense_list.html",
+      "sha256": "ef332073dd07564c5a6a3bd889b2398a682b46f3d424e46e9484eb1c5cfbba04"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/expense_new.html",
+      "sha256": "5b675d9c2e2bb1bd82f9633595257bc7482812fa04356108a2a928192f3c7e82"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/forgot_password.html",
+      "sha256": "03368d6d563e831b16a0bb3ed53928b109a6f1817d1128f07d24cb58de8fbd04"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/home.html",
+      "sha256": "7d8a5686f89e20aab74151aa8ad040ca1d2977b51ceefe45ae4c15baebbe9db4"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/icons.html",
+      "sha256": "434ae781c7e9c39b227a8e1efd52e5c34950277e9f9134ed0e869f4ae3b5c04a"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/inventory_action.html",
+      "sha256": "2509bdcfcb72215c009dffa6164a81ece41bdcdd39c15aaa8d7d44f77ff97cc7"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/inventory_count.html",
+      "sha256": "fbb831211906628c934f0d53fbe7e0485e8c5a07c0f4e573798b1ecb1c33a743"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/inventory_count_complete.html",
+      "sha256": "96974da64adc7b9a185c0d77c04fa299feed3cfede6958a1d13bd76439d40fff"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/inventory_count_correct.html",
+      "sha256": "d04a4418aba4a667ba0ce74e2775d77eb4e4ad5ebcbcdb4649f770e8e43d9684"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/inventory_count_start.html",
+      "sha256": "d2acca5467ef444ef492e9e02fda0d915d93df3ee6987d29e39d1f36a7259e6e"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/inventory_detail.html",
+      "sha256": "a2eb91e8a95a305de5f95dfdb7111e9ac694934f948e268ec11b7bc9b8a7b3e6"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/inventory_edit.html",
+      "sha256": "97fe2b3314c9c435e08feb1f5c450b923504f488045a8df6240ae4bbfa266f09"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/inventory_item_report.html",
+      "sha256": "14b369ce3f0a7c9afa68eaf7c9801f72fb3bd283f31415e14d1dd02e86548063"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/inventory_list.html",
+      "sha256": "03a5a22178748027c62961ef85a3b97854479e3a55eecd4092d1dcc5f15e78f0"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/inventory_new.html",
+      "sha256": "fd33f6025c410eada34af0e52f229371e25cb0160e676537bb8683a966f81055"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/inventory_policy.html",
+      "sha256": "8dee4a1bc8eed06c6cf4af14cbbc69289579460d66f9cac120180e797979c116"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/inventory_report.html",
+      "sha256": "6fc7bcecdfc3769b7c20d3212d83977c40ea0355a0722a45d752c61c0efdf915"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/inventory_use.html",
+      "sha256": "8a73d5cbe7441278724e4d283b94a76741ab604e53a49c448d6bd0f63d995a1b"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/login.html",
+      "sha256": "6afb0ecae8b76780de44a762d3aec7cd9509435b525fde8f6c0c7c064de5eecb"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/more.html",
+      "sha256": "34af4bc3d98819627462c5ec240530a6b75c1ac6da1a0c4f3ca9563a9089b5f2"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/onboarding.html",
+      "sha256": "8d9aa18223f1efc527f59a040f4c51e2eabfb44d15dab2c9fa72b42fa25d7f27"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/operations_jobs.html",
+      "sha256": "3b9e2ad16248cd746c6c97d0e73e2887f0a4793bf51e4b4edd35faf91cc9e5c1"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/password_reset_invalid.html",
+      "sha256": "16900d09d31266378934e53608e7638c782adb59c87b42649864910021d74696"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/password_reset_sent.html",
+      "sha256": "260f86811bfddc50e6aa6cc953e8ea7b665129c9c95c587688ddc3a701fc9c04"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/profile_reference_content.html",
+      "sha256": "f9182516d08d6307f7ab8b62589db5197f62d26ca33da4d9599bf08ab292474b"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/profile_reference_glance.html",
+      "sha256": "29ae706169fabc52dac28390a105faf2ed497b1deee284fc7a86049c1c52233c"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/profile_reference_sources.html",
+      "sha256": "e98de5a7d8dd8f3c68f8d8235812cbb5f4e16df868a713f866ef646b2ab60003"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/purchase_detail.html",
+      "sha256": "d33a062b74a85b23652b83c2a8fb7e6434bd7aa01477d9eae5fcc14ad8016cf7"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/purchase_list.html",
+      "sha256": "7b3064ac6060c53dbaf17c4515f40eb33bdcfcc0d9299992d0922749d66607d7"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/purchase_new.html",
+      "sha256": "6e250823b228a45a14b9a7c622f1496fe565719718bdc1bddb81f395c5960cd3"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/quick_log.html",
+      "sha256": "d15e4f474ebc5ac2d4bd1a5120e774a747071f621234173fa0562ea19fd2e692"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/register.html",
+      "sha256": "639719f7d1ddb68a1ceca91264cfede3320007cae7ba9a36dc83deb719823254"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/reminder_list.html",
+      "sha256": "fd0bcb31570a304d4367f7c1d5629f5df9106c070c3a06dd2e1bc16fc3cca3d3"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/reminder_new.html",
+      "sha256": "be14452450f0092874bf4cbd9185a2527bcb397eeaf8f9d95521258a84e34ebb"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/reports.html",
+      "sha256": "50996785463c2c7421ad06663ed59269b564a8a853f087e748a627c2d796150d"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/reset_password.html",
+      "sha256": "21a36b468c4223a6debd608d5168fc655aac0bf47aca3bff5e3508b01914f992"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/search.html",
+      "sha256": "84bc7c3847becf98632e829b54d89cf7dcf094a99144ef6ef3d20846cbdf86c8"
+    },
+    {
+      "path": "src/snaketracker/presentation/templates/setup.html",
+      "sha256": "9c2c5a5b221f3545e09867caaa519d0a8a99556511a3c3f4c80e1ad9a8651c71"
+    },
+    {
+      "path": "src/snaketracker/presentation/web.py",
+      "sha256": "6028f31281a5604a1b9231f0f6fa4dcb8db5ed1f0794131945d72e6b279bf71c"
+    },
+    {
+      "path": "src/snaketracker/py.typed",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "src/snaketracker/worker/__init__.py",
+      "sha256": "f5de06a9282d8a06a4773ccac92256e9d42d92a799d68ea2a4a2ca226faff237"
+    },
+    {
+      "path": "src/snaketracker/worker/backups.py",
+      "sha256": "4ca5f681f00c2a45964083458d7be9afdac28901d39b2aa3171bc3bf5930414f"
+    },
+    {
+      "path": "src/snaketracker/worker/jobs.py",
+      "sha256": "f382151fe5b9d0932167ffcf09be4c8c35660026e5b20855e230856f8692adb0"
+    },
+    {
+      "path": "src/snaketracker/worker/main.py",
+      "sha256": "1ed78957ce0141e80490221b701ef2b032b32a705cf5754ff3134eacaaffc4fd"
+    },
+    {
+      "path": "src/snaketracker/worker/projections.py",
+      "sha256": "bf4065e90c77c2eb40a9de529ea6de50ba36f09e1f44dbb6fceb21d07749aefb"
+    },
+    {
+      "path": "src/snaketracker/worker/reminders.py",
+      "sha256": "c0c504f3e838268c56ff588230fc4284177b6f5f20ca714fa4c4459cf3c054da"
+    },
+    {
+      "path": "tests/architecture/test_dependency_boundaries.py",
+      "sha256": "01e9d4e129a69cdf7741fc698d8906c4a9aa528575050c8a2c20d5be177bfac6"
+    },
+    {
+      "path": "tests/architecture/test_phase_scope.py",
+      "sha256": "3a51dcea9695d389e0d652f3b1e2b42841ad559ebe152f344031113e18160737"
+    },
+    {
+      "path": "tests/browser/test_account_registration.py",
+      "sha256": "f4802b1c70a0dd12e4a0daf795d88ff8e57b6a3285652f92f3a15d48af5a6f8f"
+    },
+    {
+      "path": "tests/browser/test_animal_care_workflow.py",
+      "sha256": "b3ae8043d3f5498f06ace8804774bb662da7361c2ee824b3857deebba15f2bcb"
+    },
+    {
+      "path": "tests/browser/test_animal_experience.py",
+      "sha256": "236100a3b158cc82c6d5d21c378c0931179a4691af2867b8600022e27bdb39da"
+    },
+    {
+      "path": "tests/browser/test_animal_form_actions.py",
+      "sha256": "dd988c5c1a7eafb9b1237f07f31b69b79fb4610926bfc7afd080b669955d439a"
+    },
+    {
+      "path": "tests/browser/test_identity_flow.py",
+      "sha256": "74096ab1366c88e4cb5de9b7c6f0772e06309ddbdc86c4c6ffb5f3f8a8e4a3e7"
+    },
+    {
+      "path": "tests/browser/test_inventory_guided_creation.py",
+      "sha256": "a1ecb6c08733eed14994120060b53ab82139ab103fbc441d11a55cb1c8dd14ba"
+    },
+    {
+      "path": "tests/browser/test_inventory_intelligence_workflow.py",
+      "sha256": "9cfc1bf3bfed1ae4add17698f475f7f75dd47f755f8793609494122369925c8d"
+    },
+    {
+      "path": "tests/browser/test_multispecies_workflow.py",
+      "sha256": "52931ebd336e609bde73f6971a6da9f77b1f836d420609a5185f4898866129ef"
+    },
+    {
+      "path": "tests/browser/test_operational_workflows.py",
+      "sha256": "19380f82eba6c9bbc97ed43407a6b7f8a94da0a10b1d4a65dc74bb04970b62a5"
+    },
+    {
+      "path": "tests/browser/test_password_recovery.py",
+      "sha256": "3f410a283825c34a71bd47c1735a3f6397e00d2826ac99a326d8fd1335333d60"
+    },
+    {
+      "path": "tests/browser/test_precise_lengths.py",
+      "sha256": "5594e0d0212250ca12ce26a7a1dbb09601c46dd66b2f6857cd3181c06238ee0f"
+    },
+    {
+      "path": "tests/browser/test_product_experience.py",
+      "sha256": "fafaf6aca608393606b21bc235309ec47cfa27aaa1a088b288d4b687d78f2105"
+    },
+    {
+      "path": "tests/browser/test_purchase_workflow.py",
+      "sha256": "b8c880040d471790392a2494461eca47572c34b518dfc10946ce29d0ae885aa4"
+    },
+    {
+      "path": "tests/browser/test_secondary_experience.py",
+      "sha256": "d81d0787e2830ffb673787dba64a9622be5c487073c7cd4424ecd2217cbea939"
+    },
+    {
+      "path": "tests/browser/test_species_directory_workflow.py",
+      "sha256": "315b7e16a5b9a528181420d91b3aebcb3b9ef4752480f170ecaa8a9d1618c198"
+    },
+    {
+      "path": "tests/conftest.py",
+      "sha256": "ba9f42002915d88e5b10f4189ef62473bb7f31aeeb5f73993b8df9343442242c"
+    },
+    {
+      "path": "tests/fixtures/events/phase2-household-v1.json",
+      "sha256": "57c1a04cf3d3d0e0c7330a989c9e98b5a39a6a886712b2afd67b7e4496560b19"
+    },
+    {
+      "path": "tests/fixtures/events/phase4-animal-registered-v1.json",
+      "sha256": "8e5529dc9c2db76e7d2ef21712df86b7ca6fb249a17388735c376355182493a1"
+    },
+    {
+      "path": "tests/integration/test_alembic_lifecycle.py",
+      "sha256": "2fe00e9e5bbac76aca0034008f5ed03ec3e19c5c9cdf63dbc67fa364aacfc626"
+    },
+    {
+      "path": "tests/integration/test_animal_care.py",
+      "sha256": "9f5743454a6b97205fdbdc3f9c0ddccdc99807fe16ec4fc5252c8b34a783f5ca"
+    },
+    {
+      "path": "tests/integration/test_animal_profiles.py",
+      "sha256": "96778a7105686c4c0c35cd02ed5fa7027c2c2aa946b8706a1794ce3523141307"
+    },
+    {
+      "path": "tests/integration/test_application_startup.py",
+      "sha256": "2985341f50694158491b051f2ebc486583a1a5f1b12a882046cee96c7c180dd7"
+    },
+    {
+      "path": "tests/integration/test_atomic_append.py",
+      "sha256": "6b728898243e4604a69c7e88fbba1001899f22d8178949231f1d4d35846044bc"
+    },
+    {
+      "path": "tests/integration/test_backup_completeness.py",
+      "sha256": "8a73ef7cae388d791d3a4f871e38a7501187006cdf19e441936d8634868e3f29"
+    },
+    {
+      "path": "tests/integration/test_boa_care_guide.py",
+      "sha256": "2074d013423791e68edba55002943e02602ec619335aeb862c1eaeb19f97dba4"
+    },
+    {
+      "path": "tests/integration/test_care_guides.py",
+      "sha256": "69ca6593cbb0cde00f4b25a700396f9b16b1cca1203a42d218fcb7b8187c95fb"
+    },
+    {
+      "path": "tests/integration/test_container_contract.py",
+      "sha256": "76bbf5d798c7fc3567ae7fc0968b5bb224eb8ac24176aa470b14c9beadc58ce7"
+    },
+    {
+      "path": "tests/integration/test_database_port.py",
+      "sha256": "8eb9ad13aff79896eb1d2ffed43218b2ba83f85ad827d8a9c71b35ca7aa7b5c6"
+    },
+    {
+      "path": "tests/integration/test_demo_household_provisioning.py",
+      "sha256": "132964a2f6b18e6c817173f5f0c6968715f38fae3e61ea898fae434a498b9890"
+    },
+    {
+      "path": "tests/integration/test_durable_jobs.py",
+      "sha256": "bf1ddc43c2d314c7f7072151b1d2942dfa2b6b3fa4b33df35d22e56b7ce020f9"
+    },
+    {
+      "path": "tests/integration/test_enclosures.py",
+      "sha256": "e83b8bec6fb9f63f0c6a8c47374971abfd44302725ced18840f5307cc691150c"
+    },
+    {
+      "path": "tests/integration/test_event_store.py",
+      "sha256": "9cdb3e4ce5e0bfa23171192b77fb3f2877cc8c928161dc0e2abfade91756feea"
+    },
+    {
+      "path": "tests/integration/test_expenses.py",
+      "sha256": "0d9e894e8ebcc8e03138f362ccff02ea3387588e73bb7640bab08c19cce7abcd"
+    },
+    {
+      "path": "tests/integration/test_health_endpoints.py",
+      "sha256": "cffc339dfeec4c7e139044bb82e007db9e6a37244298422fa53b07bbd9faf13e"
+    },
+    {
+      "path": "tests/integration/test_household_bootstrap.py",
+      "sha256": "138805e2d190e003ca1733294ea646273c3a6fc14745614ec0d370e37c71e77f"
+    },
+    {
+      "path": "tests/integration/test_inventory.py",
+      "sha256": "7d62203ed632d40cbae7dc7a9ff9d810a6cd74615bc4970c3ebacd99285ad9f0"
+    },
+    {
+      "path": "tests/integration/test_inventory_intelligence.py",
+      "sha256": "355311588ddd9b6fca6e7c3d920c8c8261b08022a3188d517e3ff891e6f41fe5"
+    },
+    {
+      "path": "tests/integration/test_local_backups.py",
+      "sha256": "e49db44831a9be813b8e93d0803dc5771227690b8fa3b61e01fd6e48ad3dc7f4"
+    },
+    {
+      "path": "tests/integration/test_m6_owner_review_demo.py",
+      "sha256": "dde1530076a32d1a54c53759e4db95b473954b0a76d568daf9206fe3a61c5da3"
+    },
+    {
+      "path": "tests/integration/test_maintenance_cli.py",
+      "sha256": "eff9c16e316bce7f0879fad71a925832607b2ed09a826e79d9b0367352810e3c"
+    },
+    {
+      "path": "tests/integration/test_measurement_analytics.py",
+      "sha256": "6ae839c41b533f8b9b0b0bc066f548e5696733dd7ea6686abfa9caa2938fb1b0"
+    },
+    {
+      "path": "tests/integration/test_multispecies_animals.py",
+      "sha256": "54387310ef40ac4b44bcc0f7c3f12d8ae4cb4f7d04332a0898e85b16a8a62984"
+    },
+    {
+      "path": "tests/integration/test_notification_delivery.py",
+      "sha256": "18f6e26edc56708e9b308959513170959e6c08ba68639d10e580550a88615de5"
+    },
+    {
+      "path": "tests/integration/test_notification_pipeline.py",
+      "sha256": "872600dccd9c3381dd18da171aa022e2296e5528f16aea48b4200c0e8a3a946a"
+    },
+    {
+      "path": "tests/integration/test_precise_lengths.py",
+      "sha256": "7097547f3dd586dffd7bbb35260d9dd617a4f189623ec2a34c5e7ef5c9621559"
+    },
+    {
+      "path": "tests/integration/test_product_projection_worker.py",
+      "sha256": "14ebb7bfc28047c04a7f3e8680d248f4465e704ab25e9bd7e656793289100642"
+    },
+    {
+      "path": "tests/integration/test_production_operator_qualification.py",
+      "sha256": "66ab3c2d231cf8bb316eae6e414d2d8436e8e14316839fd994b8190bf05c29ec"
+    },
+    {
+      "path": "tests/integration/test_profile_photos.py",
+      "sha256": "7de37112ad551ffe1577c7832082f1cad6ef1ab990ba30e1e1025c9d5aff8a06"
+    },
+    {
+      "path": "tests/integration/test_projection_rebuilds.py",
+      "sha256": "92caa01f120812e86d95e224f0561fa985c7bf53d74699118bfe383232b1d8fa"
+    },
+    {
+      "path": "tests/integration/test_purchases_fifo.py",
+      "sha256": "99a56b79679f6935f77dd2a94ff8e5dc0dc5dec69089b86795fb6cfcd61040a1"
+    },
+    {
+      "path": "tests/integration/test_quality_contract.py",
+      "sha256": "4c1083b94086485926d8a05024458bae7fa6b2cae6cdf004ad1898ae6e1a4467"
+    },
+    {
+      "path": "tests/integration/test_reminders.py",
+      "sha256": "13f6fd613503fafb2df9bd21344b2320b7ed5eec599f07b45187fbaac23238d9"
+    },
+    {
+      "path": "tests/integration/test_search.py",
+      "sha256": "fd3eb310954bc1512776afe4beff79cde9f9cf8958dc13156fe354943e029d8b"
+    },
+    {
+      "path": "tests/integration/test_snapshots.py",
+      "sha256": "d3acf49a1557264900c3a713c5cd162fbc9448588c78aadd2de6a589bb5825b1"
+    },
+    {
+      "path": "tests/integration/test_species_directory.py",
+      "sha256": "10e2492625aded5ffa64c9215a5161e89fff4896b297172d29ae62c18fdf7d14"
+    },
+    {
+      "path": "tests/integration/test_sqlite_profile.py",
+      "sha256": "7e1d233c3b971481a01b465be87997b0594fb61ecd1e011bdfc4cda9366b7962"
+    },
+    {
+      "path": "tests/integration/test_structured_inventory_feeding.py",
+      "sha256": "e6d717e707d7ff6895d6d463e12b083a1f0566a5c3c422c3cf815da0bfbbca46"
+    },
+    {
+      "path": "tests/qualification/__init__.py",
+      "sha256": "4c1ed825c88befda66d3971125d4cbba463a674fd0600a17d3a576f90ef32c1d"
+    },
+    {
+      "path": "tests/qualification/phase3_event_platform.py",
+      "sha256": "6f0bb7a577912302d8fb2ad77f0633cd9117821721cd7fce0337b5fa5251ea11"
+    },
+    {
+      "path": "tests/security/test_admin_console.py",
+      "sha256": "8ed97e9460791a2c514f8ad4045a7b7ee6c5326531d74c54ef919cbe8c548be0"
+    },
+    {
+      "path": "tests/security/test_demo_household_isolation.py",
+      "sha256": "37d5068ac3e2efa8d9c44843ccc6be26a5ee3f00fbd2d040323153da26efc53b"
+    },
+    {
+      "path": "tests/security/test_identity_security.py",
+      "sha256": "60b1aac5e27544d58a65d67508089b892fd8ece880a853edcd308daa696736eb"
+    },
+    {
+      "path": "tests/security/test_password_recovery.py",
+      "sha256": "178f360de886f98491d20248e95c75b1e84b53cb805c7fe40315394dde78dc26"
+    },
+    {
+      "path": "tests/support/__init__.py",
+      "sha256": "5a998d6ed848af34064911d7613146af3782f14bdb8c7a26ba6936f94dacd4e8"
+    },
+    {
+      "path": "tests/support/inventory.py",
+      "sha256": "7cf7dac847db743982fb8b183df744000bec59510e7d0a55045df2f764b2803e"
+    },
+    {
+      "path": "tests/support/synthetic_events.py",
+      "sha256": "0c5d9faa876d5fa6bb69e2eda4f42dee1f497d887f177afec5bcbb8f0faf2736"
+    },
+    {
+      "path": "tests/support/synthetic_projections.py",
+      "sha256": "d85d6353c381794a266d84b1a7dbeec6141610ab41f886dcc3bbf98e4599aa6f"
+    },
+    {
+      "path": "tests/unit/application/test_care_guides.py",
+      "sha256": "6585480ed6f4107609db4e0d5421eacde94ec441b89633418231cde5f04b8e3e"
+    },
+    {
+      "path": "tests/unit/application/test_length_measurements.py",
+      "sha256": "c79e3c6d9bdefb9dcc799e9486c30227967dab992752bd60a4762b023da4110b"
+    },
+    {
+      "path": "tests/unit/application/test_profile_photo_processing.py",
+      "sha256": "a1ff15a66b7c33fc1d2d54761eb9bfb52d1f4147bc5e5914fdaf72661349d03f"
+    },
+    {
+      "path": "tests/unit/application/test_readiness.py",
+      "sha256": "c81a21af8d38a11c0691b16fbffd2845ce6aab97137bf2a02b2b593805c4bb76"
+    },
+    {
+      "path": "tests/unit/application/test_reference_bundles.py",
+      "sha256": "f9d3b8786b611440cd6429dd3477d1d6a7558c03da3f8e7494a0bf4b2ed37f99"
+    },
+    {
+      "path": "tests/unit/application/test_reports.py",
+      "sha256": "b50b60aa7161865aa0dcb2fb18ffd569e49ab542c44a967b3f5ed1c1258a45df"
+    },
+    {
+      "path": "tests/unit/application/test_suggestion_policy.py",
+      "sha256": "5200ea7a2a15ba4b5ac70cab3fda0e5ad898a4e8ff00f94181b88cf7e79988ae"
+    },
+    {
+      "path": "tests/unit/application/test_weight_measurements.py",
+      "sha256": "c2db486d0e7c1d0e4ec47b4df1331bfcd378b51e8c20733cd3e5aa96c4fb4b20"
+    },
+    {
+      "path": "tests/unit/bootstrap/test_compatibility.py",
+      "sha256": "ed291c2c9141e5787d15322fb77cefa3aa74112d8be6ffbe0f05a58ae11da439"
+    },
+    {
+      "path": "tests/unit/bootstrap/test_configuration.py",
+      "sha256": "8427ed7e0107bd595e42f36b2ab0c1af315c0cf320bc1837eacd5a7342d2c5a1"
+    },
+    {
+      "path": "tests/unit/domains/test_animal_capabilities.py",
+      "sha256": "b9fcb03bf06e0ca302c501c5160f344f292040fc0294664aeb3091757eb465ea"
+    },
+    {
+      "path": "tests/unit/domains/test_animal_contracts.py",
+      "sha256": "eb8a7fa2de3b0fde9e8148eea8624a8381ef47ceeecb35ed88d1da197cefc119"
+    },
+    {
+      "path": "tests/unit/domains/test_household_events.py",
+      "sha256": "3051940752588f41bac82185109240af163ef42f00a3aa140e21abe46dba762b"
+    },
+    {
+      "path": "tests/unit/domains/test_inventory_catalog.py",
+      "sha256": "607cf6ca3bba06206d0606e48ef0f7133255d681ed506977529aaa65876d11ea"
+    },
+    {
+      "path": "tests/unit/domains/test_operational_contracts.py",
+      "sha256": "bce2b89d7787337b3a7758824e1628092483cf8118655d34de9a752e51d3da55"
+    },
+    {
+      "path": "tests/unit/infrastructure/test_correlation.py",
+      "sha256": "cfc016d4c932eec450ca9f691495157df8a0d587736a5b3ac1d844b9299c4e7a"
+    },
+    {
+      "path": "tests/unit/infrastructure/test_inaturalist_taxonomy.py",
+      "sha256": "6b894547b2fc8f179dd549ec7dd8eb6aa62a5ef67dc17db6575d1c76b06e6450"
+    },
+    {
+      "path": "tests/unit/infrastructure/test_inventory_intelligence.py",
+      "sha256": "a2834bebaee5c3d5e7e06c0a573397ed39b31fbe35fa5dc7f2aac8342181cf09"
+    },
+    {
+      "path": "tests/unit/infrastructure/test_logging.py",
+      "sha256": "5e0fee3e133e82b63cadc8a9c4387ae9a5c5ba698e88324096b8cabc825a4bc9"
+    },
+    {
+      "path": "tests/unit/infrastructure/test_reference_image_providers.py",
+      "sha256": "5e4aa5e1046624246e0fb75b77a231f2fa91dc6c97236edaecbea93a70560138"
+    },
+    {
+      "path": "tests/unit/infrastructure/test_reference_images.py",
+      "sha256": "d999770f8c1477d7c0171c55602e2c630af523031390018a5f2d33cca306cb7f"
+    },
+    {
+      "path": "tests/unit/infrastructure/test_search_projection.py",
+      "sha256": "10a2b8f25281d7984f6dec8e01806d6176b946e37d35c923cbda6add4730a8c0"
+    },
+    {
+      "path": "tests/unit/infrastructure/test_sqlite_profile.py",
+      "sha256": "b2c201507c4844eb84d4585e32b24c6b6e9de59069af3ce2c1893cb2d599bda8"
+    },
+    {
+      "path": "tests/unit/operations/test_account_recovery.py",
+      "sha256": "f77f4432f8f1efc6f17668e699fce1ba22987fd6ace452fd1b22e654df7575b8"
+    },
+    {
+      "path": "tests/unit/operations/test_demo_household.py",
+      "sha256": "a9015690790022906f97574a4348659f110422df30f08a953c15c329b9a50e9a"
+    },
+    {
+      "path": "tests/unit/platform/test_corrections.py",
+      "sha256": "915597c5d8147b38afa480ee9659ce4175875604b72ed00784192e1039d3f288"
+    },
+    {
+      "path": "tests/unit/platform/test_event_registry.py",
+      "sha256": "84d19dad80f38fc67f545772fd0f952c79cc7fd88ba966f1535db1136cce441f"
+    },
+    {
+      "path": "tests/unit/platform/test_event_store_contracts.py",
+      "sha256": "d4ec4325b0dad9197f2e01fca5867ab9be29d3b13e5106dca584faec20fc0cc6"
+    },
+    {
+      "path": "tests/unit/platform/test_event_validation.py",
+      "sha256": "49c376de6b5decd0af3abf40469660931348e58181d9f590a1619ab71dade294"
+    },
+    {
+      "path": "tests/unit/platform/test_projection_registry.py",
+      "sha256": "523db7945b609487c6645e214c1e391ca1613ff53060b4a296c5122eccc1be5b"
+    },
+    {
+      "path": "tests/unit/platform/test_snapshot_loading.py",
+      "sha256": "f48b3b27da8d2d70a97156ee530d01009aa50bc190ca2fec29c71db156861744"
+    },
+    {
+      "path": "tests/unit/platform/test_snapshot_policy.py",
+      "sha256": "38da19bb51c427b18b915e1aef01a14289871bfb0f34082ddf8e135a99ff60ea"
+    },
+    {
+      "path": "tests/unit/presentation/test_admin_display.py",
+      "sha256": "8111d706ae85c8d67a9ed9e0717b24567067d11b3bb25e201349ce22cd9a9bb5"
+    },
+    {
+      "path": "tests/unit/presentation/test_agenda_actions.py",
+      "sha256": "6adb32edb24f0bda41a51759f42561db4674e4874ce47da9aff16f1b7da37908"
+    },
+    {
+      "path": "tests/unit/presentation/test_animal_visuals.py",
+      "sha256": "dd1c0abc8ed5249a41f2ae3df62cb5cf06610e0871e2659b14e39992d2f7960e"
+    },
+    {
+      "path": "tests/unit/presentation/test_core_daily_views.py",
+      "sha256": "806f0cf4b1d046d1306143a0847522b91e5d29089bfbce8783e49bc52ddaf98b"
+    },
+    {
+      "path": "tests/unit/presentation/test_inventory_feeding_views.py",
+      "sha256": "ea18441137105d20d29e0a4d60e3c191e97615fa5ffcc4ab209ea45d8f31ea70"
+    },
+    {
+      "path": "tests/unit/qualification/test_phase3_qualification.py",
+      "sha256": "fc6b3aba6987b79c5ed8522b3cdab719c3b427b9b1144925ae0b4751ecdca703"
+    },
+    {
+      "path": "tests/unit/qualification/test_phase6_qualification.py",
+      "sha256": "007525522fb2535c41ab1db3d0213b2aee7ee9132059d04ffe7036a210cf7be0"
+    },
+    {
+      "path": "tests/unit/scripts/test_architecture_freeze.py",
+      "sha256": "118d40a2a88b86b222592ffde76826533e1d5cf7a11fce8b2416278139d5668f"
+    },
+    {
+      "path": "tests/unit/scripts/test_phase1_qualification.py",
+      "sha256": "bf32272bf6b377a51f7a055eda0f19148ba207d594c113bd830393dddfc3b9f6"
+    },
+    {
+      "path": "tests/unit/test_m66b_production_compatibility.py",
+      "sha256": "e0468af5a07babbecc5af25b9febc59b2daab3527fccc2604741686d515c4bd7"
+    }
+  ],
   "skipped": 0,
   "tests": 900
 }
