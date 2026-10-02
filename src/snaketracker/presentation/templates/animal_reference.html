@@ -4,13 +4,15 @@
 <section class="animal-experience" aria-labelledby="page-title">
   {% include "animal_profile_header.html" %}
   <div class="animal-reference-content">
-    <div class="section-heading"><div><p class="page-kicker">Species reference</p><h2>Guides &amp; Species Reference</h2></div></div>
-    <p class="profile-reference-boundary">Reference information for the linked species — separate from {{ animal.name }}'s individual records or care settings.</p>
+    <div class="section-heading">
+      <div><p class="page-kicker">Species reference</p><h2>Guides &amp; Species Reference</h2></div>
+      <p class="profile-reference-boundary">Linked species reference — separate from {{ animal.name }}'s individual records or care settings.</p>
+    </div>
     <section class="profile-species-overview" aria-labelledby="species-overview-title">
       <h2 id="species-overview-title">Species Overview / Natural History</h2>
       {% if linked_taxon %}
       {% set taxon = linked_taxon.taxon %}
-      <p class="profile-reference-identity"><strong>{{ taxon.display_name }}</strong><br><i>{{ taxon.accepted_scientific_name }}</i></p>
+      <p class="profile-reference-identity"><strong>{{ taxon.display_name }}</strong><br> <i>{{ taxon.accepted_scientific_name }}</i></p>
       {% set classification = [taxon.class_name, taxon.order_name, taxon.family, taxon.genus]|select|list %}
       {% if classification %}<p class="profile-taxonomy-line">{{ classification|join(' · ') }}</p>{% endif %}
       {% if taxon.alternative_common_names %}<p class="profile-taxonomy-other">Other name: {{ taxon.alternative_common_names[0] }}</p>{% endif %}

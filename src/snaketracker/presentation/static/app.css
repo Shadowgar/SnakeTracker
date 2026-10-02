@@ -1815,3 +1815,15 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
 .animal-reference-content { gap: .4rem; }
 .animal-reference-content > section { gap: .25rem; }
 .animal-reference-content .profile-source-overview > .field-help a { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 .25rem; vertical-align: middle; }
+@media (min-width: 64rem) {
+  .animal-reference-content .profile-reference-identity br { display: none; }
+  .animal-reference-content .profile-reference-identity strong { margin-right: .5rem; }
+}
+
+.animal-reference-content > .section-heading { flex-direction: column; align-items: start; gap: .4rem; }
+.animal-reference-content > .profile-source-overview { padding-top: .4rem; }
+@media (min-width: 64rem) {
+  .animal-reference-content > .section-heading { flex-direction: row; align-items: center; }
+  .animal-reference-content > .section-heading > div { flex: 0 0 auto; }
+  .animal-reference-content .profile-reference-boundary { flex: 1 1 auto; min-width: 0; }
+}

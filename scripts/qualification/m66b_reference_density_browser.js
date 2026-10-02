@@ -169,6 +169,8 @@ async function qualifiedDefault(page, name, route, viewport) {
       assert(new Set(current.tiles.map(tile => Math.round(tile.height))).size > 1, "Food wraps naturally without stretching simpler tiles");
       assert(current.tiles.filter(tile => tile.height <= 100).length >= 3, "Simple glance facts remain compact and readable");
       assert(current.sources.top < before.sources.top - 200, "More care rows and provenance visible within the same desktop viewport");
+      const sourcesHeadingBottom = await content.locator("#reference-provenance-title").evaluate(element => element.getBoundingClientRect().bottom + scrollY);
+      assert(sourcesHeadingBottom <= viewport.height, "Desktop Python Sources heading is fully visible in the initial viewport");
     }
   }
   return { reductionPercent: reductions, heights: Object.fromEntries(["species", "glance", "reviewed", "sources", "whole"].map(key => [key, current[key]?.height || null])) };
