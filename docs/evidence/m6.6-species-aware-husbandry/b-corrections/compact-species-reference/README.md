@@ -30,4 +30,44 @@ Run 12fa3806-128d-4fde-83b1-b72d728919a9 completed at cutoff 1031. Full encrypte
 
 ## Full quality
 
-Frozen sync and the complete quality script succeeded: 892 passed, zero failures/errors/skips; line coverage 94.53%, branch coverage 85.35%; no known dependency vulnerabilities. Formatting, Ruff, architecture/freeze, documentation links, mypy, Compose validation, and diff checks passed. No thresholds or 30-second test timeout changed. See the [full quality receipt](quality-20261002.json). Exact candidate/deployment receipts follow after their verification. Owner acceptance remains pending.
+Frozen sync and the complete quality script succeeded: 892 passed, zero failures/errors/skips; line coverage 94.53%, branch coverage 85.35%; no known dependency vulnerabilities. Formatting, Ruff, architecture/freeze, documentation links, mypy, Compose validation, and diff checks passed. No thresholds or 30-second test timeout changed. See the [full quality receipt](quality-20261002.json). Exact candidate/deployment receipts appear below. Owner acceptance remains pending.
+
+## Exact live candidate and deployment
+
+Deployed source: `21a0fca7c04bea090008d7fab180ef9db2e876f7`.
+Image: `snaketracker:m66b-compact-reference-21a0fca`.
+Image ID: `sha256:7caaa3cf3a078cb0d83c3d1958bc81854a412c44a073b85a70451186956a9691`.
+
+The source was clean and its exact GitHub Quality, Container, and secret checks were SUCCESS before replacement; CodeRabbit reported SUCCESS with review skipped for the draft PR. The normal Dockerfile built UID/GID 1001:1001. All 35 installed runtime distributions matched the lock, the OCI/application revision matched the commit, and migration head remained 0023.
+
+Maintenance lasted 14.438946 seconds. The guard captured a fresh read-only snapshot and confirmed the completed, restored backup remained inside the 6-hour RPO. It stopped the existing worker first, then web, and recreated only web/worker from the same exact image using no-deps/no-build/no-pull/force-recreate. No migration ran. Web/worker/nginx are healthy; local liveness/readiness and public browser-User-Agent readiness returned 200. Web/worker restart counts are 0 and captured new-container logs contain no exceptions/errors.
+
+Actual runtime setting hashes, operator allowlist, mounts/read-write flags, security settings, secret-file paths, and .env bytes/mode 0600 remain unchanged. Nginx/tunnel identities, images, and start times remain unchanged. The historical migration container State is byte-identical. Runtime remains on its existing local ext4 host storage; no storage-topology or hardware qualification is claimed.
+
+## Postdeployment integrity
+
+Immediate pre/post event cutoff: 1035→1035. All 90 normalized table dimensions and 61 logical table dimensions match. Schema remains 0023;148 raw SQL objects and 114 normalized active objects match exactly, including projection catalog/generations. All 9 active checkpoints are at 1035; the old retained inactive search-generation checkpoint was deliberately excluded from the active-checkpoint query. Backup worker construction is available with preserved encryption settings and 0 pending requests.
+
+All 6 guide versions and their source/claim/current tables are unchanged. Boa version 1 still equals its reviewed bundle: 28 facts, 34 positions, 7 sources; 22 Single source, 2 Corroborated, 4 Sources differ. No import or idempotency rerun was needed. Inventory, reminder rules, household/business/reference facts, attachment metadata, all 46 finalized versions, and 77 media files remain unchanged; mismatches 0.
+
+During qualification, cutoff 1028→1035 comprised 7 legitimate profile-correction/taxon-link events, each traced to an active owner in its own household. These were included in the immediate predeployment baseline and preserved. No care events, measurements, fake Animals, or sessions were written by qualification.
+
+The exact deployed image rendered 61 real Animal profiles across 4 households from read-only production data. There were 0 outbound/provider attempts and 0 SQL-write attempts. It exercised 39 cached-image cases (24 selected),4 missing-enrichment cases (including 1 selected local fallback),20 keeper-photo cases, and local reference handlers 39 × 200 / 4 × 404. Authentication was supplied only inside the diagnostic process; a genuine production owner login/middleware flow remains for owner review.
+
+Ten private/local real-Bitey captures at 1440×900 and 390×844 use actual read-only handler HTML, actual returned media, and exact candidate static assets replayed locally under unchanged CSP. Top/default, collapsed sections, Temperature/Humidity disagreement, and expanded Sources passed 0 axe violations/overflow/unexpected console errors/external requests/non-GET requests. The fixture captures additionally cover Bearded Dragon and standalone Plant/Directory surfaces. Real screenshots/HTML are not committed.
+
+The previous f1d4d33 image passed the actual read-only normal-startup compatibility probe after deployment. No rollback was performed; the older incompatible pre-f1 image is not implied to be a safe downgrade. The complete fresh recovery point and historical qualified point remain preserved. The 16 MiB temporary-space limit remains unchanged: future routine backup verification may require a separate operational correction; this pass used the qualified bounded scratch retry.
+
+See the [sanitized deployment receipt](deployment-20261002.json). This final evidence update changes documentation only and does not rebuild or replace the deployed candidate.
+
+## Live owner review
+
+Open [Care Keeper](https://tracker.theroccos.us), then:
+
+1. Animals→Bitey→Overview: check Your Records/Species Reference boundary, always-visible glance, and compact closed sections.
+2. Expand Temperature & humidity and read the complete claims on this page.
+3. Inspect Sources differ: each publisher's position remains separate, with no average or selected winner.
+4. Expand Sources: inspect all 7 publishers/titles/URLs/dates plus Version 1 and claim provenance.
+5. At approximately 390×844, check the 2-column glance, stacked disclosures, readable values/focus, and no horizontal overflow.
+
+PR #17 remains open, draft, and unmerged. M6.6-B and ADR-0044/0048 remain unaccepted. Stop for owner review; no X1 or M6.6-C work follows.
