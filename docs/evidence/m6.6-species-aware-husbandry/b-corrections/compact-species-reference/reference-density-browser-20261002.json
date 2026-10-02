@@ -1,0 +1,4790 @@
+{
+  "captures": [
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "python-default-full",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "python-default-viewport",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "python-taxonomy-expanded",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "boa-default-full",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "boa-default-viewport",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "boa-taxonomy-expanded",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "tarantula-default-full",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "tarantula-taxonomy-expanded",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "scorpion-default-full",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "scorpion-taxonomy-expanded",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "imperator-default-full",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "imperator-taxonomy-expanded",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "unlinked-default-full",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "boa-care-collapsed-rows",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "boa-one-care-section-expanded",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "boa-all-facts-and-claim-provenance-expanded",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "boa-sources-expanded",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "boa-sources-expanded-full",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "boa-overview-top",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "directory-index",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "directory-python",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "directory-python-guide",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "directory-tarantula-guide",
+      "viewport": "desktop",
+      "width": {
+        "scroll": 1440,
+        "viewport": 1440
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "python-default-full",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "python-default-viewport",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "python-taxonomy-expanded",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "boa-default-full",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "boa-default-viewport",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "boa-taxonomy-expanded",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "tarantula-default-full",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "tarantula-taxonomy-expanded",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "scorpion-default-full",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "scorpion-taxonomy-expanded",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "imperator-default-full",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "imperator-taxonomy-expanded",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "unlinked-default-full",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "boa-care-collapsed-rows",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "boa-one-care-section-expanded",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "boa-all-facts-and-claim-provenance-expanded",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "boa-sources-expanded",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "boa-sources-expanded-full",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": false,
+      "name": "boa-overview-top",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "directory-index",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "directory-python",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "directory-python-guide",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "axeViolations": [],
+      "fullPage": true,
+      "name": "directory-tarantula-guide",
+      "viewport": "mobile",
+      "width": {
+        "scroll": 390,
+        "viewport": 390
+      }
+    }
+  ],
+  "case_results": [
+    {
+      "facts": {
+        "heights": {
+          "glance": 136.125,
+          "reviewed": 366.71875,
+          "sources": 176.25,
+          "species": 125.09375,
+          "whole": 712.640625
+        },
+        "reductionPercent": {
+          "glance": 21,
+          "reviewed": 23.3,
+          "sources": 32.5,
+          "species": 54.6,
+          "whole": 37.5
+        }
+      },
+      "name": "python-default-density",
+      "status": "passed",
+      "viewport": "desktop"
+    },
+    {
+      "facts": {
+        "heights": {
+          "glance": 221.875,
+          "reviewed": 666.875,
+          "sources": 176.25,
+          "species": 125.09375,
+          "whole": 1012.796875
+        },
+        "reductionPercent": {
+          "glance": 21,
+          "reviewed": 21.5,
+          "sources": 32.5,
+          "species": 54.6,
+          "whole": 33.1
+        }
+      },
+      "name": "boa-default-density",
+      "status": "passed",
+      "viewport": "desktop"
+    },
+    {
+      "facts": {
+        "heights": {
+          "glance": 136.125,
+          "reviewed": 347.015625,
+          "sources": 176.25,
+          "species": 125.09375,
+          "whole": 711.96875
+        },
+        "reductionPercent": {
+          "glance": 21,
+          "reviewed": 24.3,
+          "sources": 32.5,
+          "species": 54.6,
+          "whole": 36.5
+        }
+      },
+      "name": "tarantula-default-density",
+      "status": "passed",
+      "viewport": "desktop"
+    },
+    {
+      "facts": {
+        "heights": {
+          "glance": 115.328125,
+          "reviewed": 345.921875,
+          "sources": 176.25,
+          "species": 125.09375,
+          "whole": 710.875
+        },
+        "reductionPercent": {
+          "glance": 23.5,
+          "reviewed": 24.2,
+          "sources": 32.5,
+          "species": 54.6,
+          "whole": 36.5
+        }
+      },
+      "name": "scorpion-default-density",
+      "status": "passed",
+      "viewport": "desktop"
+    },
+    {
+      "facts": {
+        "heights": {
+          "glance": null,
+          "reviewed": 60.328125,
+          "sources": 126.25,
+          "species": 125.09375,
+          "whole": 356.25
+        },
+        "reductionPercent": {
+          "glance": null,
+          "reviewed": 33.9,
+          "sources": 28.1,
+          "species": 54.6,
+          "whole": 46.7
+        }
+      },
+      "name": "imperator-default-density",
+      "status": "passed",
+      "viewport": "desktop"
+    },
+    {
+      "facts": {
+        "heights": {
+          "glance": null,
+          "reviewed": 60.328125,
+          "sources": 106.25,
+          "species": 142.453125,
+          "whole": 353.609375
+        },
+        "reductionPercent": {
+          "glance": null,
+          "reviewed": 33.9,
+          "sources": 39.5,
+          "species": 21.1,
+          "whole": 38.4
+        }
+      },
+      "name": "unlinked-default-density",
+      "status": "passed",
+      "viewport": "desktop"
+    },
+    {
+      "facts": {
+        "careSections": 8,
+        "facts": 28,
+        "positions": 34
+      },
+      "name": "boa-all-care-facts-and-disagreement-retained",
+      "status": "passed",
+      "viewport": "desktop"
+    },
+    {
+      "facts": {
+        "bibliographySources": 7,
+        "nativeEnterAndSpace": true,
+        "providerGeometry": {
+          "height": 44,
+          "outline": 3
+        },
+        "versionRetained": true
+      },
+      "name": "sources-native-keyboard-and-bibliography-retained",
+      "status": "passed",
+      "viewport": "desktop"
+    },
+    {
+      "facts": {
+        "fullFacts": 0,
+        "glanceFacts": 3
+      },
+      "name": "overview-remains-concise",
+      "status": "passed",
+      "viewport": "desktop"
+    },
+    {
+      "facts": {
+        "surfaces": 4
+      },
+      "name": "standalone-directory-and-care-guide-rendered",
+      "status": "passed",
+      "viewport": "desktop"
+    },
+    {
+      "facts": {
+        "heights": {
+          "glance": 263.46875,
+          "reviewed": 684.796875,
+          "sources": 200.25,
+          "species": 146.6875,
+          "whole": 1141.703125
+        },
+        "reductionPercent": {
+          "glance": 23,
+          "reviewed": 25.3,
+          "sources": 29.8,
+          "species": 57.8,
+          "whole": 33.4
+        }
+      },
+      "name": "python-default-density",
+      "status": "passed",
+      "viewport": "mobile"
+    },
+    {
+      "facts": {
+        "heights": {
+          "glance": 328.421875,
+          "reviewed": 1217.453125,
+          "sources": 200.25,
+          "species": 146.6875,
+          "whole": 1674.359375
+        },
+        "reductionPercent": {
+          "glance": 26.9,
+          "reviewed": 25.3,
+          "sources": 29.8,
+          "species": 57.8,
+          "whole": 31
+        }
+      },
+      "name": "boa-default-density",
+      "status": "passed",
+      "viewport": "mobile"
+    },
+    {
+      "facts": {
+        "heights": {
+          "glance": 280.09375,
+          "reviewed": 703.328125,
+          "sources": 200.25,
+          "species": 146.6875,
+          "whole": 1179.265625
+        },
+        "reductionPercent": {
+          "glance": 22,
+          "reviewed": 21.3,
+          "sources": 29.8,
+          "species": 57.8,
+          "whole": 30.3
+        }
+      },
+      "name": "tarantula-default-density",
+      "status": "passed",
+      "viewport": "mobile"
+    },
+    {
+      "facts": {
+        "heights": {
+          "glance": 131.953125,
+          "reviewed": 555.1875,
+          "sources": 200.25,
+          "species": 146.6875,
+          "whole": 1031.125
+        },
+        "reductionPercent": {
+          "glance": 21.6,
+          "reviewed": 25.3,
+          "sources": 29.8,
+          "species": 57.8,
+          "whole": 33
+        }
+      },
+      "name": "scorpion-default-density",
+      "status": "passed",
+      "viewport": "mobile"
+    },
+    {
+      "facts": {
+        "heights": {
+          "glance": null,
+          "reviewed": 60.328125,
+          "sources": 150.25,
+          "species": 146.6875,
+          "whole": 486.265625
+        },
+        "reductionPercent": {
+          "glance": null,
+          "reviewed": 33.9,
+          "sources": 24.7,
+          "species": 57.8,
+          "whole": 39.4
+        }
+      },
+      "name": "imperator-default-density",
+      "status": "passed",
+      "viewport": "mobile"
+    },
+    {
+      "facts": {
+        "heights": {
+          "glance": null,
+          "reviewed": 82.40625,
+          "sources": 130.25,
+          "species": 166.453125,
+          "whole": 489.078125
+        },
+        "reductionPercent": {
+          "glance": null,
+          "reviewed": 27.3,
+          "sources": 34.7,
+          "species": 34.1,
+          "whole": 33
+        }
+      },
+      "name": "unlinked-default-density",
+      "status": "passed",
+      "viewport": "mobile"
+    },
+    {
+      "facts": {
+        "careSections": 8,
+        "facts": 28,
+        "positions": 34
+      },
+      "name": "boa-all-care-facts-and-disagreement-retained",
+      "status": "passed",
+      "viewport": "mobile"
+    },
+    {
+      "facts": {
+        "bibliographySources": 7,
+        "nativeEnterAndSpace": true,
+        "providerGeometry": {
+          "height": 44,
+          "outline": 3
+        },
+        "versionRetained": true
+      },
+      "name": "sources-native-keyboard-and-bibliography-retained",
+      "status": "passed",
+      "viewport": "mobile"
+    },
+    {
+      "facts": {
+        "fullFacts": 0,
+        "glanceFacts": 3
+      },
+      "name": "overview-remains-concise",
+      "status": "passed",
+      "viewport": "mobile"
+    },
+    {
+      "facts": {
+        "surfaces": 4
+      },
+      "name": "standalone-directory-and-care-guide-rendered",
+      "status": "passed",
+      "viewport": "mobile"
+    },
+    {
+      "facts": {
+        "errors": 0,
+        "existingAuthenticationSessionRefreshes": 16,
+        "externalBrowserRequests": 0,
+        "externalSocketCalls": 0,
+        "literalZeroSqlWrites": false,
+        "referenceOrDomainSqlWrites": 0
+      },
+      "name": "network-errors-and-reference-sql-write-guards",
+      "status": "passed",
+      "viewport": "mobile"
+    }
+  ],
+  "exact_product_input_hashes_match_quality_gate": true,
+  "fictional_test_data_only": true,
+  "measurements": [
+    {
+      "after": {
+        "careRows": [
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 58.46875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 698.234375,
+            "whiteSpace": "normal",
+            "width": 590.796875
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 78.171875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 698.234375,
+            "whiteSpace": "normal",
+            "width": 590.8125
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 58.46875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 782.796875,
+            "whiteSpace": "normal",
+            "width": 590.796875
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 78.171875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 782.796875,
+            "whiteSpace": "normal",
+            "width": 590.8125
+          }
+        ],
+        "glance": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "1188px",
+          "height": 136.125,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 558.109375,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "reviewed": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "1188px",
+          "height": 366.71875,
+          "minHeight": "auto",
+          "padding": "10.4px 0px 0px",
+          "top": 494.25,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "sources": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "1188px",
+          "height": 176.25,
+          "minHeight": "auto",
+          "padding": "6.4px 0px 0px",
+          "top": 867.359375,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "species": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "3.2px",
+          "gridColumns": "1188px",
+          "height": 125.09375,
+          "minHeight": "auto",
+          "padding": "7.2px 0px 0px",
+          "top": 362.765625,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "tiles": [
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "272.609px",
+            "height": 79.359375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 594.078125,
+            "whiteSpace": "normal",
+            "width": 292.203125
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "272.609px",
+            "height": 79.359375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 594.078125,
+            "whiteSpace": "normal",
+            "width": 292.203125
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "272.609px",
+            "height": 79.359375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 594.078125,
+            "whiteSpace": "normal",
+            "width": 292.203125
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "272.625px",
+            "height": 100.15625,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 594.078125,
+            "whiteSpace": "normal",
+            "width": 292.21875
+          }
+        ],
+        "whole": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "6.4px",
+          "gridColumns": "1188px",
+          "height": 712.640625,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 330.96875,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "width": {
+          "scroll": 1440,
+          "viewport": 1440
+        }
+      },
+      "before": {
+        "careRows": [
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 74.484375,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 986.140625,
+            "whiteSpace": "normal",
+            "width": 575
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 94.1875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 986.140625,
+            "whiteSpace": "normal",
+            "width": 575.015625
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 74.484375,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1089.125,
+            "whiteSpace": "normal",
+            "width": 575
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 94.1875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1089.125,
+            "whiteSpace": "normal",
+            "width": 575.015625
+          }
+        ],
+        "contentText": "SPECIES REFERENCE\n\nGuides & Species Reference\n\nReference information for the linked species \u2014 separate from Fictional Monty's individual records or care settings.\n\nSpecies Overview / Natural History\n\nBall python\nPython regius\n\nRank\nSpecies\nKingdom\nAnimalia\nGenus\nPython\n\nSaved species identity and classification. Additional Natural History information is not available on this page yet.\n\nReviewed Captive Care\n\nReviewed reference guidance for Python regius. This guide retains its sourced care and life-history facts.\n\nAt a glance\nBasking zone\n30\u201332\u00b0C \u00b7 86\u201390\u00b0F\nSingle source\nCool end\n24\u201326\u00b0C \u00b7 75\u201379\u00b0F\nSingle source\nCool-end humidity\n50\u201360%\nSingle source\nFood\nCarnivorous; rodent prey size varies with life stage.\nSingle source\nTemperature & humidity\nCool-end humidity: 50\u201360% \u00b7 Basking zone: 30\u201332\u00b0C \u00b7 86\u201390\u00b0F\nFeeding\nFood (Hatchling and older): Carnivorous; rodent prey size varies with life stage.\nHabitat & enclosure\nHides: Provide secure hides at both warm and cool ends.\nLighting\nUVB: Low-percentage UVB is recommended; follow lamp distance and replacement guidance.\nSources / Provenance\n\nSpecies identity: Fixture \u00b7 Retrieved 2026-10-02 \u00b7 Saved 2026-10-02\n\nSources\n2 reviewed \u00b7 bibliography and provenance\nBrowse species in Directory \u2192",
+        "factRows": [
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 1054.81px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 544.0625,
+            "whiteSpace": "normal",
+            "width": 1158.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 1054.81px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 573.046875,
+            "whiteSpace": "normal",
+            "width": 1158.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 1054.81px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 602.03125,
+            "whiteSpace": "normal",
+            "width": 1158.8125
+          }
+        ],
+        "glance": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "8px",
+          "gridColumns": "1158.81px",
+          "height": 172.375,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 802.578125,
+          "whiteSpace": "normal",
+          "width": 1158.8125
+        },
+        "reviewed": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "1158.81px",
+          "height": 477.90625,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 720,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "sources": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "1158.81px",
+          "height": 261.234375,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 1210.703125,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "species": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "1158.81px",
+          "height": 275.296875,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 431.90625,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "taxonomy": [
+          "Rank\nSpecies",
+          "Kingdom\nAnimalia",
+          "Genus\nPython"
+        ],
+        "tiles": [
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "259.328px",
+            "height": 121.921875,
+            "minHeight": "auto",
+            "padding": "11.2px",
+            "top": 853.03125,
+            "whiteSpace": "normal",
+            "width": 283.703125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "259.328px",
+            "height": 121.921875,
+            "minHeight": "auto",
+            "padding": "11.2px",
+            "top": 853.03125,
+            "whiteSpace": "normal",
+            "width": 283.703125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "259.328px",
+            "height": 121.921875,
+            "minHeight": "auto",
+            "padding": "11.2px",
+            "top": 853.03125,
+            "whiteSpace": "normal",
+            "width": 283.703125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "259.328px",
+            "height": 121.921875,
+            "minHeight": "auto",
+            "padding": "11.2px",
+            "top": 853.03125,
+            "whiteSpace": "normal",
+            "width": 283.703125
+          }
+        ],
+        "whole": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "12.8px",
+          "gridColumns": "1188px",
+          "height": 1140.96875,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 330.96875,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "width": {
+          "scroll": 1440,
+          "viewport": 1440
+        }
+      },
+      "name": "python",
+      "reductionPercent": {
+        "glance": 21,
+        "reviewed": 23.3,
+        "sources": 32.5,
+        "species": 54.6,
+        "whole": 37.5
+      },
+      "viewport": "desktop"
+    },
+    {
+      "after": {
+        "careRows": [
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 58.46875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 783.984375,
+            "whiteSpace": "normal",
+            "width": 590.796875
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 84.046875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 783.984375,
+            "whiteSpace": "normal",
+            "width": 590.8125
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 78.171875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 874.421875,
+            "whiteSpace": "normal",
+            "width": 590.796875
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 97.875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 874.421875,
+            "whiteSpace": "normal",
+            "width": 590.8125
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 84.046875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 978.6875,
+            "whiteSpace": "normal",
+            "width": 590.796875
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 97.875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 978.6875,
+            "whiteSpace": "normal",
+            "width": 590.8125
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 78.171875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1082.953125,
+            "whiteSpace": "normal",
+            "width": 590.796875
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 58.46875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1082.953125,
+            "whiteSpace": "normal",
+            "width": 590.8125
+          }
+        ],
+        "glance": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "1188px",
+          "height": 221.875,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 558.109375,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "reviewed": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "1188px",
+          "height": 666.875,
+          "minHeight": "auto",
+          "padding": "10.4px 0px 0px",
+          "top": 494.25,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "sources": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "1188px",
+          "height": 176.25,
+          "minHeight": "auto",
+          "padding": "6.4px 0px 0px",
+          "top": 1167.515625,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "species": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "3.2px",
+          "gridColumns": "1188px",
+          "height": 125.09375,
+          "minHeight": "auto",
+          "padding": "7.2px 0px 0px",
+          "top": 362.765625,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "tiles": [
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "272.609px",
+            "height": 79.359375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 594.078125,
+            "whiteSpace": "normal",
+            "width": 292.203125
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "272.609px",
+            "height": 79.359375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 594.078125,
+            "whiteSpace": "normal",
+            "width": 292.203125
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "272.609px",
+            "height": 79.359375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 594.078125,
+            "whiteSpace": "normal",
+            "width": 292.203125
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "272.625px",
+            "height": 79.359375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 594.078125,
+            "whiteSpace": "normal",
+            "width": 292.21875
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "272.609px",
+            "height": 100.15625,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 679.828125,
+            "whiteSpace": "normal",
+            "width": 292.203125
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "272.609px",
+            "height": 79.359375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 679.828125,
+            "whiteSpace": "normal",
+            "width": 292.203125
+          }
+        ],
+        "whole": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "6.4px",
+          "gridColumns": "1188px",
+          "height": 1012.796875,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 330.96875,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "width": {
+          "scroll": 1440,
+          "viewport": 1440
+        }
+      },
+      "before": {
+        "careRows": [
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 74.484375,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1094.46875,
+            "whiteSpace": "normal",
+            "width": 575
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 103.265625,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1094.46875,
+            "whiteSpace": "normal",
+            "width": 575.015625
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 94.1875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1206.53125,
+            "whiteSpace": "normal",
+            "width": 575
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 113.890625,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1206.53125,
+            "whiteSpace": "normal",
+            "width": 575.015625
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 122.96875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1329.21875,
+            "whiteSpace": "normal",
+            "width": 575
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 113.890625,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1329.21875,
+            "whiteSpace": "normal",
+            "width": 575.015625
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 94.1875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1460.984375,
+            "whiteSpace": "normal",
+            "width": 575
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 74.484375,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1460.984375,
+            "whiteSpace": "normal",
+            "width": 575.015625
+          }
+        ],
+        "contentText": "SPECIES REFERENCE\n\nGuides & Species Reference\n\nReference information for the linked species \u2014 separate from Fictional Boa's individual records or care settings.\n\nSpecies Overview / Natural History\n\nBoa constrictor\nBoa constrictor\n\nRank\nSpecies\nKingdom\nAnimalia\nGenus\nBoa\n\nSaved species identity and classification. Additional Natural History information is not available on this page yet.\n\nReviewed Captive Care\n\nReviewed reference guidance for Boa constrictor. This guide retains its sourced care and life-history facts.\n\nAt a glance\nBasking air\n30\u201332\u00b0C \u00b7 86\u201390\u00b0F\nSingle source\nBasking spot\n35\u00b0C \u00b7 95\u00b0F\nSingle source\nCool end\nSee separate positions\nSources differ\nHumidity\nSee separate positions\nSources differ\nFood\nWhole rodents sized to the snake.\nCorroborated\nUVB\nSee separate positions\nSources differ\nNatural history\nNatural habitat: South American rainforest; ground, trees and water.\nTemperature & humidity\nHumidity: Sources differ \u00b7 Basking air: 30\u201332\u00b0C \u00b7 86\u201390\u00b0F\nSources differ Humidity \u00b7 Cool end \u00b7 Night temperature\nFeeding\nMature feeding interval (4 years and older): 28\u201356 days \u00b7 Young feeding interval (newborn to 12 months): 10\u201312 days\nHabitat & enclosure\nEnclosure proportions: General rule: length equals snake length; width and height each equal half its\u2026 \u00b7 Hides: Place secure hides at both the warm and cool ends.\nLighting\nDaytime lighting: 12 hours \u00b7 Night lighting: Keep the enclosure dark at night.\nSources differ UVB\nWater & substrate\nWater: Provide a soaking-sized water bowl and change the water daily. \u00b7 Substrate safety: Choose a lining or substrate that avoids ingestion and intestinal blockage risks.\nLife history\nTypical true red-tail length (adult): 210\u2013300 cm \u00b7 Captive lifespan: 20\u201330 years\nCautions\n6 reviewed caution facts\nSources / Provenance\n\nSpecies identity: Fixture \u00b7 Retrieved 2026-10-02 \u00b7 Saved 2026-10-02\n\nSources\n7 reviewed \u00b7 bibliography and provenance\nBrowse species in Directory \u2192",
+        "factRows": [
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 1054.81px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 544.0625,
+            "whiteSpace": "normal",
+            "width": 1158.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 1054.81px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 573.046875,
+            "whiteSpace": "normal",
+            "width": 1158.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 1054.81px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 602.03125,
+            "whiteSpace": "normal",
+            "width": 1158.8125
+          }
+        ],
+        "glance": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "8px",
+          "gridColumns": "1158.81px",
+          "height": 280.703125,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 802.578125,
+          "whiteSpace": "normal",
+          "width": 1158.8125
+        },
+        "reviewed": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "1158.81px",
+          "height": 849.765625,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 720,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "sources": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "1158.81px",
+          "height": 261.234375,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 1582.5625,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "species": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "1158.81px",
+          "height": 275.296875,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 431.90625,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "taxonomy": [
+          "Rank\nSpecies",
+          "Kingdom\nAnimalia",
+          "Genus\nBoa"
+        ],
+        "tiles": [
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "259.328px",
+            "height": 100.328125,
+            "minHeight": "auto",
+            "padding": "11.2px",
+            "top": 853.03125,
+            "whiteSpace": "normal",
+            "width": 283.703125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "259.328px",
+            "height": 100.328125,
+            "minHeight": "auto",
+            "padding": "11.2px",
+            "top": 853.03125,
+            "whiteSpace": "normal",
+            "width": 283.703125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "259.328px",
+            "height": 100.328125,
+            "minHeight": "auto",
+            "padding": "11.2px",
+            "top": 853.03125,
+            "whiteSpace": "normal",
+            "width": 283.703125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "259.328px",
+            "height": 100.328125,
+            "minHeight": "auto",
+            "padding": "11.2px",
+            "top": 853.03125,
+            "whiteSpace": "normal",
+            "width": 283.703125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "259.328px",
+            "height": 121.921875,
+            "minHeight": "auto",
+            "padding": "11.2px",
+            "top": 961.359375,
+            "whiteSpace": "normal",
+            "width": 283.703125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "259.328px",
+            "height": 121.921875,
+            "minHeight": "auto",
+            "padding": "11.2px",
+            "top": 961.359375,
+            "whiteSpace": "normal",
+            "width": 283.703125
+          }
+        ],
+        "whole": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "12.8px",
+          "gridColumns": "1188px",
+          "height": 1512.828125,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 330.96875,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "width": {
+          "scroll": 1440,
+          "viewport": 1440
+        }
+      },
+      "name": "boa",
+      "reductionPercent": {
+        "glance": 21,
+        "reviewed": 21.5,
+        "sources": 32.5,
+        "species": 54.6,
+        "whole": 33.1
+      },
+      "viewport": "desktop"
+    },
+    {
+      "after": {
+        "careRows": [
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 58.46875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 717.265625,
+            "whiteSpace": "normal",
+            "width": 590.796875
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 78.171875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 717.265625,
+            "whiteSpace": "normal",
+            "width": 590.8125
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 58.46875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 801.828125,
+            "whiteSpace": "normal",
+            "width": 590.796875
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 58.46875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 801.828125,
+            "whiteSpace": "normal",
+            "width": 590.8125
+          }
+        ],
+        "glance": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "1188px",
+          "height": 136.125,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 577.140625,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "reviewed": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "1188px",
+          "height": 347.015625,
+          "minHeight": "auto",
+          "padding": "10.4px 0px 0px",
+          "top": 513.28125,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "sources": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "1188px",
+          "height": 176.25,
+          "minHeight": "auto",
+          "padding": "6.4px 0px 0px",
+          "top": 866.6875,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "species": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "3.2px",
+          "gridColumns": "1188px",
+          "height": 125.09375,
+          "minHeight": "auto",
+          "padding": "7.2px 0px 0px",
+          "top": 381.796875,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "tiles": [
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "272.609px",
+            "height": 79.359375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 613.109375,
+            "whiteSpace": "normal",
+            "width": 292.203125
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "272.609px",
+            "height": 100.15625,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 613.109375,
+            "whiteSpace": "normal",
+            "width": 292.203125
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "272.609px",
+            "height": 79.359375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 613.109375,
+            "whiteSpace": "normal",
+            "width": 292.203125
+          }
+        ],
+        "whole": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "6.4px",
+          "gridColumns": "1188px",
+          "height": 711.96875,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 330.96875,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "width": {
+          "scroll": 1440,
+          "viewport": 1440
+        }
+      },
+      "before": {
+        "careRows": [
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 74.484375,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 986.140625,
+            "whiteSpace": "normal",
+            "width": 575
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 94.1875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 986.140625,
+            "whiteSpace": "normal",
+            "width": 575.015625
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 74.484375,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1089.125,
+            "whiteSpace": "normal",
+            "width": 575
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 74.484375,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1089.125,
+            "whiteSpace": "normal",
+            "width": 575.015625
+          }
+        ],
+        "contentText": "SPECIES REFERENCE\n\nGuides & Species Reference\n\nReference information for the linked species \u2014 separate from Fictional spider selected 085427947's individual records or care settings.\n\nSpecies Overview / Natural History\n\nPink-toed tarantula\nAvicularia avicularia\n\nRank\nSpecies\nKingdom\nAnimalia\nGenus\nAvicularia\n\nSaved species identity and classification. Additional Natural History information is not available on this page yet.\n\nReviewed Captive Care\n\nReviewed reference guidance for Avicularia avicularia. This guide retains its sourced care and life-history facts.\n\nAt a glance\nActivity\nHunts at night.\nSingle source\nPrey in natural history\nPredatory on invertebrates and some small vertebrates.\nSingle source\nFemale lifespan in human care\n10\u201312 years\nSingle source\nNatural history\nActivity: Hunts at night.\nFeeding\nPrey in natural history: Predatory on invertebrates and some small vertebrates.\nHabitat & enclosure\nNatural setting: Tree-dwelling in South American rainforests.\nLife history\nFemale lifespan in human care (Adult female): 10\u201312 years\nSources / Provenance\n\nSpecies identity: Fixture \u00b7 Retrieved 2026-10-02 \u00b7 Saved 2026-10-02\n\nSources\n1 reviewed \u00b7 bibliography and provenance\nBrowse species in Directory \u2192",
+        "factRows": [
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 1054.81px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 544.0625,
+            "whiteSpace": "normal",
+            "width": 1158.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 1054.81px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 573.046875,
+            "whiteSpace": "normal",
+            "width": 1158.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 1054.81px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 602.03125,
+            "whiteSpace": "normal",
+            "width": 1158.8125
+          }
+        ],
+        "glance": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "8px",
+          "gridColumns": "1158.81px",
+          "height": 172.375,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 802.578125,
+          "whiteSpace": "normal",
+          "width": 1158.8125
+        },
+        "reviewed": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "1158.81px",
+          "height": 458.203125,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 720,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "sources": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "1158.81px",
+          "height": 261.234375,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 1191,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "species": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "1158.81px",
+          "height": 275.296875,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 431.90625,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "taxonomy": [
+          "Rank\nSpecies",
+          "Kingdom\nAnimalia",
+          "Genus\nAvicularia"
+        ],
+        "tiles": [
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "259.328px",
+            "height": 121.921875,
+            "minHeight": "auto",
+            "padding": "11.2px",
+            "top": 853.03125,
+            "whiteSpace": "normal",
+            "width": 283.703125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "259.328px",
+            "height": 121.921875,
+            "minHeight": "auto",
+            "padding": "11.2px",
+            "top": 853.03125,
+            "whiteSpace": "normal",
+            "width": 283.703125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "259.328px",
+            "height": 121.921875,
+            "minHeight": "auto",
+            "padding": "11.2px",
+            "top": 853.03125,
+            "whiteSpace": "normal",
+            "width": 283.703125
+          }
+        ],
+        "whole": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "12.8px",
+          "gridColumns": "1188px",
+          "height": 1121.265625,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 330.96875,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "width": {
+          "scroll": 1440,
+          "viewport": 1440
+        }
+      },
+      "name": "tarantula",
+      "reductionPercent": {
+        "glance": 21,
+        "reviewed": 24.3,
+        "sources": 32.5,
+        "species": 54.6,
+        "whole": 36.5
+      },
+      "viewport": "desktop"
+    },
+    {
+      "after": {
+        "careRows": [
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 58.46875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 696.46875,
+            "whiteSpace": "normal",
+            "width": 590.796875
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 78.171875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 696.46875,
+            "whiteSpace": "normal",
+            "width": 590.8125
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 78.171875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 781.03125,
+            "whiteSpace": "normal",
+            "width": 590.796875
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 58.46875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 781.03125,
+            "whiteSpace": "normal",
+            "width": 590.8125
+          }
+        ],
+        "glance": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "1188px",
+          "height": 115.328125,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 577.140625,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "reviewed": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "1188px",
+          "height": 345.921875,
+          "minHeight": "auto",
+          "padding": "10.4px 0px 0px",
+          "top": 513.28125,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "sources": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "1188px",
+          "height": 176.25,
+          "minHeight": "auto",
+          "padding": "6.4px 0px 0px",
+          "top": 865.59375,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "species": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "3.2px",
+          "gridColumns": "1188px",
+          "height": 125.09375,
+          "minHeight": "auto",
+          "padding": "7.2px 0px 0px",
+          "top": 381.796875,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "tiles": [
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "272.609px",
+            "height": 79.359375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 613.109375,
+            "whiteSpace": "normal",
+            "width": 292.203125
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "272.609px",
+            "height": 79.359375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 613.109375,
+            "whiteSpace": "normal",
+            "width": 292.203125
+          }
+        ],
+        "whole": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "6.4px",
+          "gridColumns": "1188px",
+          "height": 710.875,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 330.96875,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "width": {
+          "scroll": 1440,
+          "viewport": 1440
+        }
+      },
+      "before": {
+        "careRows": [
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 74.484375,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 964.546875,
+            "whiteSpace": "normal",
+            "width": 575
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 94.1875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 964.546875,
+            "whiteSpace": "normal",
+            "width": 575.015625
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 94.1875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1067.53125,
+            "whiteSpace": "normal",
+            "width": 575
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 74.484375,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1067.53125,
+            "whiteSpace": "normal",
+            "width": 575.015625
+          }
+        ],
+        "contentText": "SPECIES REFERENCE\n\nGuides & Species Reference\n\nReference information for the linked species \u2014 separate from Fictional scorpion selected 085427947's individual records or care settings.\n\nSpecies Overview / Natural History\n\nEmperor scorpion\nPandinus imperator\n\nRank\nSpecies\nKingdom\nAnimalia\nGenus\nPandinus\n\nSaved species identity and classification. Additional Natural History information is not available on this page yet.\n\nReviewed Captive Care\n\nReviewed reference guidance for Pandinus imperator. This guide retains its sourced care and life-history facts.\n\nAt a glance\nActivity\nNocturnal.\nSingle source\nReported average length\n20 cm\nSingle source\nNatural history\nActivity: Nocturnal. \u00b7 Reported average length (Adult): 20 cm\nFeeding\nNatural prey: Insects and other arthropods, especially termites, are described.\nHabitat & enclosure\nNatural habitat: Hot, humid West African forests; burrows and leaf litter are described.\nCautions\n1 reviewed caution fact\nSources / Provenance\n\nSpecies identity: Fixture \u00b7 Retrieved 2026-10-02 \u00b7 Saved 2026-10-02\n\nSources\n1 reviewed \u00b7 bibliography and provenance\nBrowse species in Directory \u2192",
+        "factRows": [
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 1054.81px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 544.0625,
+            "whiteSpace": "normal",
+            "width": 1158.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 1054.81px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 573.046875,
+            "whiteSpace": "normal",
+            "width": 1158.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 1054.81px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 602.03125,
+            "whiteSpace": "normal",
+            "width": 1158.8125
+          }
+        ],
+        "glance": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "8px",
+          "gridColumns": "1158.81px",
+          "height": 150.78125,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 802.578125,
+          "whiteSpace": "normal",
+          "width": 1158.8125
+        },
+        "reviewed": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "1158.81px",
+          "height": 456.3125,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 720,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "sources": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "1158.81px",
+          "height": 261.234375,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 1189.109375,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "species": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "1158.81px",
+          "height": 275.296875,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 431.90625,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "taxonomy": [
+          "Rank\nSpecies",
+          "Kingdom\nAnimalia",
+          "Genus\nPandinus"
+        ],
+        "tiles": [
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "259.328px",
+            "height": 100.328125,
+            "minHeight": "auto",
+            "padding": "11.2px",
+            "top": 853.03125,
+            "whiteSpace": "normal",
+            "width": 283.703125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "259.328px",
+            "height": 100.328125,
+            "minHeight": "auto",
+            "padding": "11.2px",
+            "top": 853.03125,
+            "whiteSpace": "normal",
+            "width": 283.703125
+          }
+        ],
+        "whole": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "12.8px",
+          "gridColumns": "1188px",
+          "height": 1119.375,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 330.96875,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "width": {
+          "scroll": 1440,
+          "viewport": 1440
+        }
+      },
+      "name": "scorpion",
+      "reductionPercent": {
+        "glance": 23.5,
+        "reviewed": 24.2,
+        "sources": 32.5,
+        "species": 54.6,
+        "whole": 36.5
+      },
+      "viewport": "desktop"
+    },
+    {
+      "after": {
+        "careRows": [],
+        "glance": null,
+        "reviewed": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "1188px",
+          "height": 60.328125,
+          "minHeight": "auto",
+          "padding": "10.4px 0px 0px",
+          "top": 494.25,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "sources": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "1188px",
+          "height": 126.25,
+          "minHeight": "auto",
+          "padding": "6.4px 0px 0px",
+          "top": 560.96875,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "species": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "3.2px",
+          "gridColumns": "1188px",
+          "height": 125.09375,
+          "minHeight": "auto",
+          "padding": "7.2px 0px 0px",
+          "top": 362.765625,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "tiles": [],
+        "whole": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "6.4px",
+          "gridColumns": "1188px",
+          "height": 356.25,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 330.96875,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "width": {
+          "scroll": 1440,
+          "viewport": 1440
+        }
+      },
+      "before": {
+        "careRows": [],
+        "contentText": "SPECIES REFERENCE\n\nGuides & Species Reference\n\nReference information for the linked species \u2014 separate from Fictional Central American Boa's individual records or care settings.\n\nSpecies Overview / Natural History\n\nCentral American Boa\nBoa imperator\n\nRank\nSpecies\nKingdom\nAnimalia\nGenus\nBoa\n\nSaved species identity and classification. Additional Natural History information is not available on this page yet.\n\nReviewed Captive Care\n\nNo reviewed captive-care guide is available yet.\n\nSources / Provenance\n\nSpecies identity: Inaturalist \u00b7 Retrieved 2026-10-02 \u00b7 Saved 2026-10-02\n\nBrowse species in Directory \u2192",
+        "factRows": [
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 1054.81px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 544.0625,
+            "whiteSpace": "normal",
+            "width": 1158.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 1054.81px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 573.046875,
+            "whiteSpace": "normal",
+            "width": 1158.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 1054.81px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 602.03125,
+            "whiteSpace": "normal",
+            "width": 1158.8125
+          }
+        ],
+        "glance": null,
+        "reviewed": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "1158.81px",
+          "height": 91.234375,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 720,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "sources": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "1158.81px",
+          "height": 175.5625,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 824.03125,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "species": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "1158.81px",
+          "height": 275.296875,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 431.90625,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "taxonomy": [
+          "Rank\nSpecies",
+          "Kingdom\nAnimalia",
+          "Genus\nBoa"
+        ],
+        "tiles": [],
+        "whole": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "12.8px",
+          "gridColumns": "1188px",
+          "height": 668.625,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 330.96875,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "width": {
+          "scroll": 1440,
+          "viewport": 1440
+        }
+      },
+      "name": "imperator",
+      "reductionPercent": {
+        "glance": null,
+        "reviewed": 33.9,
+        "sources": 28.1,
+        "species": 54.6,
+        "whole": 46.7
+      },
+      "viewport": "desktop"
+    },
+    {
+      "after": {
+        "careRows": [],
+        "glance": null,
+        "reviewed": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "1188px",
+          "height": 60.328125,
+          "minHeight": "auto",
+          "padding": "10.4px 0px 0px",
+          "top": 511.609375,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "sources": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "1188px",
+          "height": 106.25,
+          "minHeight": "auto",
+          "padding": "6.4px 0px 0px",
+          "top": 578.328125,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "species": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "3.2px",
+          "gridColumns": "1188px",
+          "height": 142.453125,
+          "minHeight": "auto",
+          "padding": "7.2px 0px 0px",
+          "top": 362.765625,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "tiles": [],
+        "whole": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "6.4px",
+          "gridColumns": "1188px",
+          "height": 353.609375,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 330.96875,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "width": {
+          "scroll": 1440,
+          "viewport": 1440
+        }
+      },
+      "before": {
+        "careRows": [],
+        "contentText": "SPECIES REFERENCE\n\nGuides & Species Reference\n\nReference information for the linked species \u2014 separate from Fictional Unlinked's individual records or care settings.\n\nSpecies Overview / Natural History\n\nLink a species to see its reference information. Your manual species record remains valid.\n\nLink species\nReviewed Captive Care\n\nChoose a linked species to check for a reviewed captive-care guide.\n\nSources / Provenance\n\nSources will appear here for the species you link.\n\nBrowse Species Directory \u2192",
+        "factRows": [],
+        "glance": null,
+        "reviewed": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "1158.81px",
+          "height": 91.234375,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 625.296875,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "sources": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "1158.81px",
+          "height": 175.5625,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 729.328125,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "species": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "1158.81px",
+          "height": 180.59375,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 431.90625,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "taxonomy": [],
+        "tiles": [],
+        "whole": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "12.8px",
+          "gridColumns": "1188px",
+          "height": 573.921875,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 330.96875,
+          "whiteSpace": "normal",
+          "width": 1188
+        },
+        "width": {
+          "scroll": 1440,
+          "viewport": 1440
+        }
+      },
+      "name": "unlinked",
+      "reductionPercent": {
+        "glance": null,
+        "reviewed": 33.9,
+        "sources": 39.5,
+        "species": 21.1,
+        "whole": 38.4
+      },
+      "viewport": "desktop"
+    },
+    {
+      "after": {
+        "careRows": [
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 58.46875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 970.5625,
+            "whiteSpace": "normal",
+            "width": 390
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 78.171875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1035.421875,
+            "whiteSpace": "normal",
+            "width": 390
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 78.171875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1119.984375,
+            "whiteSpace": "normal",
+            "width": 390
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 97.875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1204.546875,
+            "whiteSpace": "normal",
+            "width": 390
+          }
+        ],
+        "glance": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "390px",
+          "height": 263.46875,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 703.09375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "reviewed": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "390px",
+          "height": 684.796875,
+          "minHeight": "auto",
+          "padding": "10.4px 0px 0px",
+          "top": 617.625,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "sources": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "390px",
+          "height": 200.25,
+          "minHeight": "auto",
+          "padding": "6.4px 0px 0px",
+          "top": 1308.8125,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "species": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "3.2px",
+          "gridColumns": "390px",
+          "height": 146.6875,
+          "minHeight": "auto",
+          "padding": "7.2px 0px 0px",
+          "top": 464.546875,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "tiles": [
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "172.203px",
+            "height": 79.359375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 739.0625,
+            "whiteSpace": "normal",
+            "width": 191.796875
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "172.219px",
+            "height": 79.359375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 739.0625,
+            "whiteSpace": "normal",
+            "width": 191.8125
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "172.203px",
+            "height": 79.359375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 824.8125,
+            "whiteSpace": "normal",
+            "width": 191.796875
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "172.219px",
+            "height": 141.75,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 824.8125,
+            "whiteSpace": "normal",
+            "width": 191.8125
+          }
+        ],
+        "whole": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "6.4px",
+          "gridColumns": "390px",
+          "height": 1141.703125,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 367.359375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "width": {
+          "scroll": 390,
+          "viewport": 390
+        }
+      },
+      "before": {
+        "careRows": [
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 94.1875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1345.734375,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 94.1875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1448.71875,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 94.1875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1551.703125,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 113.890625,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1654.6875,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          }
+        ],
+        "contentText": "SPECIES REFERENCE\n\nGuides & Species Reference\n\nReference information for the linked species \u2014 separate from Fictional Monty's individual records or care settings.\n\nSpecies Overview / Natural History\n\nBall python\nPython regius\n\nRank\nSpecies\nKingdom\nAnimalia\nGenus\nPython\n\nSaved species identity and classification. Additional Natural History information is not available on this page yet.\n\nReviewed Captive Care\n\nReviewed reference guidance for Python regius. This guide retains its sourced care and life-history facts.\n\nAt a glance\nBasking zone\n30\u201332\u00b0C \u00b7 86\u201390\u00b0F\nSingle source\nCool end\n24\u201326\u00b0C \u00b7 75\u201379\u00b0F\nSingle source\nCool-end humidity\n50\u201360%\nSingle source\nFood\nCarnivorous; rodent prey size varies with life stage.\nSingle source\nTemperature & humidity\nCool-end humidity: 50\u201360% \u00b7 Basking zone: 30\u201332\u00b0C \u00b7 86\u201390\u00b0F\nFeeding\nFood (Hatchling and older): Carnivorous; rodent prey size varies with life stage.\nHabitat & enclosure\nHides: Provide secure hides at both warm and cool ends.\nLighting\nUVB: Low-percentage UVB is recommended; follow lamp distance and replacement guidance.\nSources / Provenance\n\nSpecies identity: Fixture \u00b7 Retrieved 2026-10-02 \u00b7 Saved 2026-10-02\n\nSources\n2 reviewed \u00b7 bibliography and provenance\nBrowse species in Directory \u2192",
+        "factRows": [
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 256.812px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 642.515625,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 256.812px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 671.5,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 256.812px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 700.484375,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          }
+        ],
+        "glance": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "8px",
+          "gridColumns": "360.812px",
+          "height": 342.296875,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 992.25,
+          "whiteSpace": "normal",
+          "width": 360.8125
+        },
+        "reviewed": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "360.812px",
+          "height": 916.71875,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 866.453125,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "sources": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "360.812px",
+          "height": 285.234375,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 1795.96875,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "species": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "360.812px",
+          "height": 347.296875,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 506.359375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "taxonomy": [
+          "Rank\nSpecies",
+          "Kingdom\nAnimalia",
+          "Genus\nPython"
+        ],
+        "tiles": [
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "150.406px",
+            "height": 120.328125,
+            "minHeight": "auto",
+            "padding": "10.4px 12px",
+            "top": 1042.703125,
+            "whiteSpace": "normal",
+            "width": 176.40625
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "150.406px",
+            "height": 120.328125,
+            "minHeight": "auto",
+            "padding": "10.4px 12px",
+            "top": 1042.703125,
+            "whiteSpace": "normal",
+            "width": 176.40625
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "150.406px",
+            "height": 163.515625,
+            "minHeight": "auto",
+            "padding": "10.4px 12px",
+            "top": 1171.03125,
+            "whiteSpace": "normal",
+            "width": 176.40625
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "150.406px",
+            "height": 163.515625,
+            "minHeight": "auto",
+            "padding": "10.4px 12px",
+            "top": 1171.03125,
+            "whiteSpace": "normal",
+            "width": 176.40625
+          }
+        ],
+        "whole": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "12.8px",
+          "gridColumns": "390px",
+          "height": 1713.84375,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 367.359375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "width": {
+          "scroll": 390,
+          "viewport": 390
+        }
+      },
+      "name": "python",
+      "reductionPercent": {
+        "glance": 23,
+        "reviewed": 25.3,
+        "sources": 29.8,
+        "species": 57.8,
+        "whole": 33.4
+      },
+      "viewport": "mobile"
+    },
+    {
+      "after": {
+        "careRows": [
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 78.171875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1035.515625,
+            "whiteSpace": "normal",
+            "width": 390
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 103.234375,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1120.078125,
+            "whiteSpace": "normal",
+            "width": 390
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 97.875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1229.703125,
+            "whiteSpace": "normal",
+            "width": 390
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 117.578125,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1333.96875,
+            "whiteSpace": "normal",
+            "width": 390
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 103.75,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1457.9375,
+            "whiteSpace": "normal",
+            "width": 390
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 117.578125,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1568.078125,
+            "whiteSpace": "normal",
+            "width": 390
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 78.171875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1692.046875,
+            "whiteSpace": "normal",
+            "width": 390
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 58.46875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1776.609375,
+            "whiteSpace": "normal",
+            "width": 390
+          }
+        ],
+        "glance": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "390px",
+          "height": 328.421875,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 703.09375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "reviewed": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "390px",
+          "height": 1217.453125,
+          "minHeight": "auto",
+          "padding": "10.4px 0px 0px",
+          "top": 617.625,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "sources": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "390px",
+          "height": 200.25,
+          "minHeight": "auto",
+          "padding": "6.4px 0px 0px",
+          "top": 1841.46875,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "species": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "3.2px",
+          "gridColumns": "390px",
+          "height": 146.6875,
+          "minHeight": "auto",
+          "padding": "7.2px 0px 0px",
+          "top": 464.546875,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "tiles": [
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "172.203px",
+            "height": 79.359375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 739.0625,
+            "whiteSpace": "normal",
+            "width": 191.796875
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "172.219px",
+            "height": 79.359375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 739.0625,
+            "whiteSpace": "normal",
+            "width": 191.8125
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "172.203px",
+            "height": 100.15625,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 824.8125,
+            "whiteSpace": "normal",
+            "width": 191.796875
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "172.219px",
+            "height": 100.15625,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 824.8125,
+            "whiteSpace": "normal",
+            "width": 191.8125
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "172.203px",
+            "height": 100.15625,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 931.359375,
+            "whiteSpace": "normal",
+            "width": 191.796875
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "172.219px",
+            "height": 100.15625,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 931.359375,
+            "whiteSpace": "normal",
+            "width": 191.8125
+          }
+        ],
+        "whole": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "6.4px",
+          "gridColumns": "390px",
+          "height": 1674.359375,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 367.359375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "width": {
+          "scroll": 390,
+          "viewport": 390
+        }
+      },
+      "before": {
+        "careRows": [
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 94.1875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1452.46875,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 142.15625,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1555.453125,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 133.59375,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1706.40625,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 153.296875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1848.796875,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 122.96875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 2010.890625,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 153.296875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 2142.65625,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 94.1875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 2304.75,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 74.484375,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 2407.734375,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          }
+        ],
+        "contentText": "SPECIES REFERENCE\n\nGuides & Species Reference\n\nReference information for the linked species \u2014 separate from Fictional Boa's individual records or care settings.\n\nSpecies Overview / Natural History\n\nBoa constrictor\nBoa constrictor\n\nRank\nSpecies\nKingdom\nAnimalia\nGenus\nBoa\n\nSaved species identity and classification. Additional Natural History information is not available on this page yet.\n\nReviewed Captive Care\n\nReviewed reference guidance for Boa constrictor. This guide retains its sourced care and life-history facts.\n\nAt a glance\nBasking air\n30\u201332\u00b0C \u00b7 86\u201390\u00b0F\nSingle source\nBasking spot\n35\u00b0C \u00b7 95\u00b0F\nSingle source\nCool end\nSee separate positions\nSources differ\nHumidity\nSee separate positions\nSources differ\nFood\nWhole rodents sized to the snake.\nCorroborated\nUVB\nSee separate positions\nSources differ\nNatural history\nNatural habitat: South American rainforest; ground, trees and water.\nTemperature & humidity\nHumidity: Sources differ \u00b7 Basking air: 30\u201332\u00b0C \u00b7 86\u201390\u00b0F\nSources differ Humidity \u00b7 Cool end \u00b7 Night temperature\nFeeding\nMature feeding interval (4 years and older): 28\u201356 days \u00b7 Young feeding interval (newborn to 12 months): 10\u201312 days\nHabitat & enclosure\nEnclosure proportions: General rule: length equals snake length; width and height each equal half its\u2026 \u00b7 Hides: Place secure hides at both the warm and cool ends.\nLighting\nDaytime lighting: 12 hours \u00b7 Night lighting: Keep the enclosure dark at night.\nSources differ UVB\nWater & substrate\nWater: Provide a soaking-sized water bowl and change the water daily. \u00b7 Substrate safety: Choose a lining or substrate that avoids ingestion and intestinal blockage risks.\nLife history\nTypical true red-tail length (adult): 210\u2013300 cm \u00b7 Captive lifespan: 20\u201330 years\nCautions\n6 reviewed caution facts\nSources / Provenance\n\nSpecies identity: Fixture \u00b7 Retrieved 2026-10-02 \u00b7 Saved 2026-10-02\n\nSources\n7 reviewed \u00b7 bibliography and provenance\nBrowse species in Directory \u2192",
+        "factRows": [
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 256.812px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 642.515625,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 256.812px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 671.5,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 256.812px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 700.484375,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          }
+        ],
+        "glance": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "8px",
+          "gridColumns": "360.812px",
+          "height": 449.03125,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 992.25,
+          "whiteSpace": "normal",
+          "width": 360.8125
+        },
+        "reviewed": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "360.812px",
+          "height": 1630.359375,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 866.453125,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "sources": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "360.812px",
+          "height": 285.234375,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 2509.609375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "species": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "360.812px",
+          "height": 347.296875,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 506.359375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "taxonomy": [
+          "Rank\nSpecies",
+          "Kingdom\nAnimalia",
+          "Genus\nBoa"
+        ],
+        "tiles": [
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "150.406px",
+            "height": 120.328125,
+            "minHeight": "auto",
+            "padding": "10.4px 12px",
+            "top": 1042.703125,
+            "whiteSpace": "normal",
+            "width": 176.40625
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "150.406px",
+            "height": 120.328125,
+            "minHeight": "auto",
+            "padding": "10.4px 12px",
+            "top": 1042.703125,
+            "whiteSpace": "normal",
+            "width": 176.40625
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "150.406px",
+            "height": 120.328125,
+            "minHeight": "auto",
+            "padding": "10.4px 12px",
+            "top": 1171.03125,
+            "whiteSpace": "normal",
+            "width": 176.40625
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "150.406px",
+            "height": 120.328125,
+            "minHeight": "auto",
+            "padding": "10.4px 12px",
+            "top": 1171.03125,
+            "whiteSpace": "normal",
+            "width": 176.40625
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "150.406px",
+            "height": 141.921875,
+            "minHeight": "auto",
+            "padding": "10.4px 12px",
+            "top": 1299.359375,
+            "whiteSpace": "normal",
+            "width": 176.40625
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "150.406px",
+            "height": 141.921875,
+            "minHeight": "auto",
+            "padding": "10.4px 12px",
+            "top": 1299.359375,
+            "whiteSpace": "normal",
+            "width": 176.40625
+          }
+        ],
+        "whole": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "12.8px",
+          "gridColumns": "390px",
+          "height": 2427.484375,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 367.359375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "width": {
+          "scroll": 390,
+          "viewport": 390
+        }
+      },
+      "name": "boa",
+      "reductionPercent": {
+        "glance": 26.9,
+        "reviewed": 25.3,
+        "sources": 29.8,
+        "species": 57.8,
+        "whole": 31
+      },
+      "viewport": "mobile"
+    },
+    {
+      "after": {
+        "careRows": [
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 58.46875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1027.828125,
+            "whiteSpace": "normal",
+            "width": 390
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 78.171875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1092.6875,
+            "whiteSpace": "normal",
+            "width": 390
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 78.171875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1177.25,
+            "whiteSpace": "normal",
+            "width": 390
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 78.171875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1261.8125,
+            "whiteSpace": "normal",
+            "width": 390
+          }
+        ],
+        "glance": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "390px",
+          "height": 280.09375,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 743.734375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "reviewed": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "390px",
+          "height": 703.328125,
+          "minHeight": "auto",
+          "padding": "10.4px 0px 0px",
+          "top": 636.65625,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "sources": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "390px",
+          "height": 200.25,
+          "minHeight": "auto",
+          "padding": "6.4px 0px 0px",
+          "top": 1346.375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "species": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "3.2px",
+          "gridColumns": "390px",
+          "height": 146.6875,
+          "minHeight": "auto",
+          "padding": "7.2px 0px 0px",
+          "top": 483.578125,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "tiles": [
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "172.203px",
+            "height": 79.359375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 779.703125,
+            "whiteSpace": "normal",
+            "width": 191.796875
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "172.219px",
+            "height": 141.75,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 779.703125,
+            "whiteSpace": "normal",
+            "width": 191.8125
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "172.203px",
+            "height": 95.984375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 927.84375,
+            "whiteSpace": "normal",
+            "width": 191.796875
+          }
+        ],
+        "whole": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "6.4px",
+          "gridColumns": "390px",
+          "height": 1179.265625,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 367.359375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "width": {
+          "scroll": 390,
+          "viewport": 390
+        }
+      },
+      "before": {
+        "careRows": [
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 74.484375,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1362.515625,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 94.1875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1445.796875,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 94.1875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1548.78125,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 94.1875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1651.765625,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          }
+        ],
+        "contentText": "SPECIES REFERENCE\n\nGuides & Species Reference\n\nReference information for the linked species \u2014 separate from Fictional spider selected 085427947's individual records or care settings.\n\nSpecies Overview / Natural History\n\nPink-toed tarantula\nAvicularia avicularia\n\nRank\nSpecies\nKingdom\nAnimalia\nGenus\nAvicularia\n\nSaved species identity and classification. Additional Natural History information is not available on this page yet.\n\nReviewed Captive Care\n\nReviewed reference guidance for Avicularia avicularia. This guide retains its sourced care and life-history facts.\n\nAt a glance\nActivity\nHunts at night.\nSingle source\nPrey in natural history\nPredatory on invertebrates and some small vertebrates.\nSingle source\nFemale lifespan in human care\n10\u201312 years\nSingle source\nNatural history\nActivity: Hunts at night.\nFeeding\nPrey in natural history: Predatory on invertebrates and some small vertebrates.\nHabitat & enclosure\nNatural setting: Tree-dwelling in South American rainforests.\nLife history\nFemale lifespan in human care (Adult female): 10\u201312 years\nSources / Provenance\n\nSpecies identity: Fixture \u00b7 Retrieved 2026-10-02 \u00b7 Saved 2026-10-02\n\nSources\n1 reviewed \u00b7 bibliography and provenance\nBrowse species in Directory \u2192",
+        "factRows": [
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 256.812px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 642.515625,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 256.812px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 671.5,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 256.812px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 700.484375,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          }
+        ],
+        "glance": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "8px",
+          "gridColumns": "360.812px",
+          "height": 359.078125,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 992.25,
+          "whiteSpace": "normal",
+          "width": 360.8125
+        },
+        "reviewed": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "360.812px",
+          "height": 894.09375,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 866.453125,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "sources": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "360.812px",
+          "height": 285.234375,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 1773.34375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "species": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "360.812px",
+          "height": 347.296875,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 506.359375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "taxonomy": [
+          "Rank\nSpecies",
+          "Kingdom\nAnimalia",
+          "Genus\nAvicularia"
+        ],
+        "tiles": [
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "150.406px",
+            "height": 182.703125,
+            "minHeight": "auto",
+            "padding": "10.4px 12px",
+            "top": 1042.703125,
+            "whiteSpace": "normal",
+            "width": 176.40625
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "150.406px",
+            "height": 182.703125,
+            "minHeight": "auto",
+            "padding": "10.4px 12px",
+            "top": 1042.703125,
+            "whiteSpace": "normal",
+            "width": 176.40625
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "150.406px",
+            "height": 117.921875,
+            "minHeight": "auto",
+            "padding": "10.4px 12px",
+            "top": 1233.40625,
+            "whiteSpace": "normal",
+            "width": 176.40625
+          }
+        ],
+        "whole": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "12.8px",
+          "gridColumns": "390px",
+          "height": 1691.21875,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 367.359375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "width": {
+          "scroll": 390,
+          "viewport": 390
+        }
+      },
+      "name": "tarantula",
+      "reductionPercent": {
+        "glance": 22,
+        "reviewed": 21.3,
+        "sources": 29.8,
+        "species": 57.8,
+        "whole": 30.3
+      },
+      "viewport": "mobile"
+    },
+    {
+      "after": {
+        "careRows": [
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 78.171875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 879.6875,
+            "whiteSpace": "normal",
+            "width": 390
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 78.171875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 964.25,
+            "whiteSpace": "normal",
+            "width": 390
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 78.171875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1048.8125,
+            "whiteSpace": "normal",
+            "width": 390
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "auto",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 58.46875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1133.375,
+            "whiteSpace": "normal",
+            "width": 390
+          }
+        ],
+        "glance": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "390px",
+          "height": 131.953125,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 743.734375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "reviewed": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "390px",
+          "height": 555.1875,
+          "minHeight": "auto",
+          "padding": "10.4px 0px 0px",
+          "top": 636.65625,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "sources": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "390px",
+          "height": 200.25,
+          "minHeight": "auto",
+          "padding": "6.4px 0px 0px",
+          "top": 1198.234375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "species": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "3.2px",
+          "gridColumns": "390px",
+          "height": 146.6875,
+          "minHeight": "auto",
+          "padding": "7.2px 0px 0px",
+          "top": 483.578125,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "tiles": [
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "172.203px",
+            "height": 79.359375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 779.703125,
+            "whiteSpace": "normal",
+            "width": 191.796875
+          },
+          {
+            "alignItems": "normal",
+            "alignSelf": "start",
+            "display": "grid",
+            "gap": "3.2px",
+            "gridColumns": "172.219px",
+            "height": 95.984375,
+            "minHeight": "auto",
+            "padding": "6.4px 8.8px",
+            "top": 779.703125,
+            "whiteSpace": "normal",
+            "width": 191.8125
+          }
+        ],
+        "whole": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "6.4px",
+          "gridColumns": "390px",
+          "height": 1031.125,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 367.359375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "width": {
+          "scroll": 390,
+          "viewport": 390
+        }
+      },
+      "before": {
+        "careRows": [
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 94.1875,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1171.8125,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 113.890625,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1274.796875,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 113.890625,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1397.484375,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "block",
+            "gap": "normal",
+            "gridColumns": "none",
+            "height": 74.484375,
+            "minHeight": "auto",
+            "padding": "0px",
+            "top": 1520.171875,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          }
+        ],
+        "contentText": "SPECIES REFERENCE\n\nGuides & Species Reference\n\nReference information for the linked species \u2014 separate from Fictional scorpion selected 085427947's individual records or care settings.\n\nSpecies Overview / Natural History\n\nEmperor scorpion\nPandinus imperator\n\nRank\nSpecies\nKingdom\nAnimalia\nGenus\nPandinus\n\nSaved species identity and classification. Additional Natural History information is not available on this page yet.\n\nReviewed Captive Care\n\nReviewed reference guidance for Pandinus imperator. This guide retains its sourced care and life-history facts.\n\nAt a glance\nActivity\nNocturnal.\nSingle source\nReported average length\n20 cm\nSingle source\nNatural history\nActivity: Nocturnal. \u00b7 Reported average length (Adult): 20 cm\nFeeding\nNatural prey: Insects and other arthropods, especially termites, are described.\nHabitat & enclosure\nNatural habitat: Hot, humid West African forests; burrows and leaf litter are described.\nCautions\n1 reviewed caution fact\nSources / Provenance\n\nSpecies identity: Fixture \u00b7 Retrieved 2026-10-02 \u00b7 Saved 2026-10-02\n\nSources\n1 reviewed \u00b7 bibliography and provenance\nBrowse species in Directory \u2192",
+        "factRows": [
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 256.812px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 642.515625,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 256.812px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 671.5,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 256.812px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 700.484375,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          }
+        ],
+        "glance": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "8px",
+          "gridColumns": "360.812px",
+          "height": 168.375,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 992.25,
+          "whiteSpace": "normal",
+          "width": 360.8125
+        },
+        "reviewed": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "360.812px",
+          "height": 742.796875,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 866.453125,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "sources": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "360.812px",
+          "height": 285.234375,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 1622.046875,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "species": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "360.812px",
+          "height": 347.296875,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 506.359375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "taxonomy": [
+          "Rank\nSpecies",
+          "Kingdom\nAnimalia",
+          "Genus\nPandinus"
+        ],
+        "tiles": [
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "150.406px",
+            "height": 117.921875,
+            "minHeight": "auto",
+            "padding": "10.4px 12px",
+            "top": 1042.703125,
+            "whiteSpace": "normal",
+            "width": 176.40625
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "4.8px",
+            "gridColumns": "150.406px",
+            "height": 117.921875,
+            "minHeight": "auto",
+            "padding": "10.4px 12px",
+            "top": 1042.703125,
+            "whiteSpace": "normal",
+            "width": 176.40625
+          }
+        ],
+        "whole": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "12.8px",
+          "gridColumns": "390px",
+          "height": 1539.921875,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 367.359375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "width": {
+          "scroll": 390,
+          "viewport": 390
+        }
+      },
+      "name": "scorpion",
+      "reductionPercent": {
+        "glance": 21.6,
+        "reviewed": 25.3,
+        "sources": 29.8,
+        "species": 57.8,
+        "whole": 33
+      },
+      "viewport": "mobile"
+    },
+    {
+      "after": {
+        "careRows": [],
+        "glance": null,
+        "reviewed": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "390px",
+          "height": 60.328125,
+          "minHeight": "auto",
+          "padding": "10.4px 0px 0px",
+          "top": 636.65625,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "sources": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "390px",
+          "height": 150.25,
+          "minHeight": "auto",
+          "padding": "6.4px 0px 0px",
+          "top": 703.375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "species": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "3.2px",
+          "gridColumns": "390px",
+          "height": 146.6875,
+          "minHeight": "auto",
+          "padding": "7.2px 0px 0px",
+          "top": 483.578125,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "tiles": [],
+        "whole": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "6.4px",
+          "gridColumns": "390px",
+          "height": 486.265625,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 367.359375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "width": {
+          "scroll": 390,
+          "viewport": 390
+        }
+      },
+      "before": {
+        "careRows": [],
+        "contentText": "SPECIES REFERENCE\n\nGuides & Species Reference\n\nReference information for the linked species \u2014 separate from Fictional Central American Boa's individual records or care settings.\n\nSpecies Overview / Natural History\n\nCentral American Boa\nBoa imperator\n\nRank\nSpecies\nKingdom\nAnimalia\nGenus\nBoa\n\nSaved species identity and classification. Additional Natural History information is not available on this page yet.\n\nReviewed Captive Care\n\nNo reviewed captive-care guide is available yet.\n\nSources / Provenance\n\nSpecies identity: Inaturalist \u00b7 Retrieved 2026-10-02 \u00b7 Saved 2026-10-02\n\nBrowse species in Directory \u2192",
+        "factRows": [
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 256.812px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 642.515625,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 256.812px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 671.5,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          },
+          {
+            "alignItems": "normal",
+            "display": "grid",
+            "gap": "8px",
+            "gridColumns": "96px 256.812px",
+            "height": 23.390625,
+            "minHeight": "auto",
+            "padding": "0px 0px 5.6px",
+            "top": 700.484375,
+            "whiteSpace": "normal",
+            "width": 360.8125
+          }
+        ],
+        "glance": null,
+        "reviewed": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "360.812px",
+          "height": 91.234375,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 866.453125,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "sources": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "360.812px",
+          "height": 199.5625,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 970.484375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "species": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "360.812px",
+          "height": 347.296875,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 506.359375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "taxonomy": [
+          "Rank\nSpecies",
+          "Kingdom\nAnimalia",
+          "Genus\nBoa"
+        ],
+        "tiles": [],
+        "whole": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "12.8px",
+          "gridColumns": "390px",
+          "height": 802.6875,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 367.359375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "width": {
+          "scroll": 390,
+          "viewport": 390
+        }
+      },
+      "name": "imperator",
+      "reductionPercent": {
+        "glance": null,
+        "reviewed": 33.9,
+        "sources": 24.7,
+        "species": 57.8,
+        "whole": 39.4
+      },
+      "viewport": "mobile"
+    },
+    {
+      "after": {
+        "careRows": [],
+        "glance": null,
+        "reviewed": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "390px",
+          "height": 82.40625,
+          "minHeight": "auto",
+          "padding": "10.4px 0px 0px",
+          "top": 637.390625,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "sources": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "4px",
+          "gridColumns": "390px",
+          "height": 130.25,
+          "minHeight": "auto",
+          "padding": "6.4px 0px 0px",
+          "top": 726.1875,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "species": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "3.2px",
+          "gridColumns": "390px",
+          "height": 166.453125,
+          "minHeight": "auto",
+          "padding": "7.2px 0px 0px",
+          "top": 464.546875,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "tiles": [],
+        "whole": {
+          "alignItems": "normal",
+          "alignSelf": "auto",
+          "display": "grid",
+          "gap": "6.4px",
+          "gridColumns": "390px",
+          "height": 489.078125,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 367.359375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "width": {
+          "scroll": 390,
+          "viewport": 390
+        }
+      },
+      "before": {
+        "careRows": [],
+        "contentText": "SPECIES REFERENCE\n\nGuides & Species Reference\n\nReference information for the linked species \u2014 separate from Fictional Unlinked's individual records or care settings.\n\nSpecies Overview / Natural History\n\nLink a species to see its reference information. Your manual species record remains valid.\n\nLink species\nReviewed Captive Care\n\nChoose a linked species to check for a reviewed captive-care guide.\n\nSources / Provenance\n\nSources will appear here for the species you link.\n\nBrowse Species Directory \u2192",
+        "factRows": [],
+        "glance": null,
+        "reviewed": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "360.812px",
+          "height": 113.3125,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 771.75,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "sources": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "360.812px",
+          "height": 199.5625,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 897.859375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "species": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "11.2px",
+          "gridColumns": "360.812px",
+          "height": 252.59375,
+          "minHeight": "auto",
+          "padding": "13.6px",
+          "top": 506.359375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "taxonomy": [],
+        "tiles": [],
+        "whole": {
+          "alignItems": "normal",
+          "display": "grid",
+          "gap": "12.8px",
+          "gridColumns": "390px",
+          "height": 730.0625,
+          "minHeight": "auto",
+          "padding": "0px",
+          "top": 367.359375,
+          "whiteSpace": "normal",
+          "width": 390
+        },
+        "width": {
+          "scroll": 390,
+          "viewport": 390
+        }
+      },
+      "name": "unlinked",
+      "reductionPercent": {
+        "glance": null,
+        "reviewed": 27.3,
+        "sources": 34.7,
+        "species": 34.1,
+        "whole": 33
+      },
+      "viewport": "mobile"
+    }
+  ],
+  "normal_csp": true,
+  "production_read_evidence": "See deployment receipt; production GET-handler diagnostics inject an existing Principal in a read-only exact-image process. Full HTTP session authentication is qualified on fictional TEST data.",
+  "totals": {
+    "axeViolations": 0,
+    "captures": 46,
+    "cases": 21,
+    "externalRequests": 0,
+    "failed": 0,
+    "pageOverflow": 0,
+    "passed": 21,
+    "providerRequests": 0,
+    "unexpectedErrors": 0
+  }
+}

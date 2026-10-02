@@ -1,0 +1,478 @@
+{
+  "backup_restored": {
+    "compatibility_mode": "normal",
+    "compatibility_reason": "compatible",
+    "database_count": 46,
+    "event_cutoff": 1031,
+    "foreign_key_errors": 0,
+    "hash_mismatches": 0,
+    "integrity_check": "ok",
+    "manifest_checksum": "f35b577dce2a5408913e8ef8c4069a02293a0b272bd6acc25eff0de238cf63e9",
+    "manifest_count": 46,
+    "metadata_mismatches": 0,
+    "reset_credentials": 0,
+    "restored_count": 46,
+    "run_id": "12fa3806-128d-4fde-83b1-b72d728919a9",
+    "schema": "0023_sourced_care_guides",
+    "sessions": 0,
+    "source_sha": "f1d4d33c27bdb79be31b7c9fbf33b5291c036377",
+    "status": "verified"
+  },
+  "baseline_event_note": {
+    "during_this_deployment_changed": false,
+    "immediate_preserved_cutoff": 1036,
+    "last_event_before_maintenance": "animal.taxon_linked",
+    "recorded_at": "2026-10-02T09:42:15.542258+00:00"
+  },
+  "deployment_method": "Stopped worker before web; recreated only pair with --no-deps --no-build --pull never --force-recreate; no migration/import; unchanged environment, storage, nginx and tunnel.",
+  "exact_source_ci": {
+    "headRefOid": "04364cc4cad6c600dc167f32f4a9099b84667e98",
+    "isDraft": true,
+    "mergedAt": null,
+    "number": 17,
+    "state": "OPEN",
+    "statusCheckRollup": [
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-02T10:22:24Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/Shadowgar/SnakeTracker/actions/runs/36994895546/job/110799259504",
+        "name": "container",
+        "startedAt": "2026-10-02T10:20:13Z",
+        "status": "COMPLETED",
+        "workflowName": "Container"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-02T10:26:24Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/Shadowgar/SnakeTracker/actions/runs/36994895444/job/110799259154",
+        "name": "quality",
+        "startedAt": "2026-10-02T10:20:13Z",
+        "status": "COMPLETED",
+        "workflowName": "Quality"
+      },
+      {
+        "__typename": "StatusContext",
+        "context": "CodeRabbit",
+        "startedAt": "2026-10-02T10:20:16Z",
+        "state": "SUCCESS",
+        "targetUrl": ""
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-02T10:20:09Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://dashboard.gitguardian.com",
+        "name": "GitGuardian Security Checks",
+        "startedAt": "2026-10-02T10:20:08Z",
+        "status": "COMPLETED",
+        "workflowName": ""
+      }
+    ]
+  },
+  "future_work_not_begun": true,
+  "historical_backup": {
+    "archive_unchanged": true,
+    "attachments": 46,
+    "event_cutoff": 1027,
+    "manifest_checksum": "11878c2e09ed66b833a64543a2d2cc7b7fae44f7b9ea8cecf0a6498994aebd76",
+    "run_id": "8777f5b4-545e-4384-81e6-e50c99553bb8",
+    "schema": "0023_sourced_care_guides",
+    "status": "verified"
+  },
+  "integrity": {
+    "attachment_metadata_and_hashes_unchanged": true,
+    "attachment_versions": 46,
+    "event_after": 1036,
+    "event_before": 1036,
+    "guide_tables_unchanged": true,
+    "hash_mismatches": 0,
+    "inventory_unchanged": true,
+    "logical_dimensions_unchanged": 61,
+    "media_files": 77,
+    "normalized_dimensions_unchanged": 90,
+    "normalized_schema_objects": 114,
+    "operational_table_changes": [],
+    "projection_catalog_and_generations_unchanged": true,
+    "raw_schema_objects": 148,
+    "reminder_rules_unchanged": true,
+    "schema_revision": "0023_sourced_care_guides",
+    "schema_unchanged": true,
+    "unexpected_business_table_changes": []
+  },
+  "maintenance_seconds": 15.377022,
+  "owner_review_pending": true,
+  "pr_open_draft_unmerged": true,
+  "production_get_reads": {
+    "boa": {
+      "all_sources_same_page": true,
+      "contextual_facts": 28,
+      "exact_bundle_equal": true,
+      "overview_full_facts": 0,
+      "reference_full_facts": 28,
+      "sections": [
+        "Natural history",
+        "Temperature & humidity",
+        "Feeding",
+        "Habitat & enclosure",
+        "Lighting",
+        "Water & substrate",
+        "Life history",
+        "Cautions"
+      ],
+      "sourced_positions": 34,
+      "sources": 7,
+      "support_states": {
+        "Corroborated": 2,
+        "Single source": 22,
+        "Sources differ": 4
+      },
+      "version": 1
+    },
+    "boa_imperator": {
+      "common_name": "Central American Boa",
+      "guide_available": false,
+      "provider": "inaturalist",
+      "provider_id": "539399",
+      "scientific_name": "Boa imperator"
+    },
+    "candidate_sha": "04364cc4cad6c600dc167f32f4a9099b84667e98",
+    "cases": {
+      "keeper_photo": 20,
+      "linked_cached_image_available": 40,
+      "linked_cached_image_selected": 25,
+      "linked_missing_enrichment_fallback_selected": 1,
+      "linked_missing_optional_enrichment": 4
+    },
+    "households": 4,
+    "local_reference_asset_statuses": {
+      "200": 40,
+      "404": 4
+    },
+    "method": "Actual GET route endpoints and production composition in isolated exact-image process; real production data/media read-only; existing owner principal injected locally; no sessions issued; full HTTP authentication/middleware excluded",
+    "outbound_attempts": 0,
+    "profiles_rendered": 61,
+    "references_rendered": 61,
+    "sql_write_attempts": 0
+  },
+  "production_owner_captures": {
+    "axe_violations": 0,
+    "count": 22,
+    "measurements": [
+      {
+        "care_rows_after_px": [
+          58.5,
+          78.2,
+          58.5,
+          78.2
+        ],
+        "name": "python",
+        "sections": {
+          "care": {
+            "after_px": 366.7,
+            "before_px": 477.9,
+            "reduction_percent": 23.3
+          },
+          "glance": {
+            "after_px": 136.1,
+            "before_px": 172.4,
+            "reduction_percent": 21.0
+          },
+          "sources": {
+            "after_px": 176.2,
+            "before_px": 261.2,
+            "reduction_percent": 32.5
+          },
+          "species": {
+            "after_px": 125.1,
+            "before_px": 420.2,
+            "reduction_percent": 70.2
+          },
+          "whole": {
+            "after_px": 712.6,
+            "before_px": 1285.9,
+            "reduction_percent": 44.6
+          }
+        },
+        "tiles_after_px": [
+          79.4,
+          79.4,
+          79.4,
+          100.2
+        ],
+        "viewport": "desktop"
+      },
+      {
+        "care_rows_after_px": [
+          58.5,
+          84.0,
+          78.2,
+          97.9,
+          84.0,
+          97.9,
+          78.2,
+          58.5
+        ],
+        "name": "bitey",
+        "sections": {
+          "care": {
+            "after_px": 666.9,
+            "before_px": 849.8,
+            "reduction_percent": 21.5
+          },
+          "glance": {
+            "after_px": 221.9,
+            "before_px": 280.7,
+            "reduction_percent": 21.0
+          },
+          "sources": {
+            "after_px": 176.2,
+            "before_px": 261.2,
+            "reduction_percent": 32.5
+          },
+          "species": {
+            "after_px": 125.1,
+            "before_px": 420.2,
+            "reduction_percent": 70.2
+          },
+          "whole": {
+            "after_px": 1012.8,
+            "before_px": 1657.8,
+            "reduction_percent": 38.9
+          }
+        },
+        "tiles_after_px": [
+          79.4,
+          79.4,
+          79.4,
+          79.4,
+          100.2,
+          79.4
+        ],
+        "viewport": "desktop"
+      },
+      {
+        "care_rows_after_px": [],
+        "name": "imperator",
+        "sections": {
+          "care": {
+            "after_px": 60.3,
+            "before_px": 91.2,
+            "reduction_percent": 33.9
+          },
+          "sources": {
+            "after_px": 126.2,
+            "before_px": 175.6,
+            "reduction_percent": 28.1
+          },
+          "species": {
+            "after_px": 125.1,
+            "before_px": 391.2,
+            "reduction_percent": 68.0
+          },
+          "whole": {
+            "after_px": 356.2,
+            "before_px": 784.6,
+            "reduction_percent": 54.6
+          }
+        },
+        "tiles_after_px": [],
+        "viewport": "desktop"
+      },
+      {
+        "care_rows_after_px": [
+          58.5,
+          78.2,
+          78.2,
+          97.9
+        ],
+        "name": "python",
+        "sections": {
+          "care": {
+            "after_px": 684.8,
+            "before_px": 916.7,
+            "reduction_percent": 25.3
+          },
+          "glance": {
+            "after_px": 263.5,
+            "before_px": 342.3,
+            "reduction_percent": 23.0
+          },
+          "sources": {
+            "after_px": 200.2,
+            "before_px": 285.2,
+            "reduction_percent": 29.8
+          },
+          "species": {
+            "after_px": 146.7,
+            "before_px": 492.2,
+            "reduction_percent": 70.2
+          },
+          "whole": {
+            "after_px": 1141.7,
+            "before_px": 1858.8,
+            "reduction_percent": 38.6
+          }
+        },
+        "tiles_after_px": [
+          79.4,
+          79.4,
+          79.4,
+          141.8
+        ],
+        "viewport": "mobile"
+      },
+      {
+        "care_rows_after_px": [
+          78.2,
+          103.2,
+          97.9,
+          117.6,
+          103.8,
+          117.6,
+          78.2,
+          58.5
+        ],
+        "name": "bitey",
+        "sections": {
+          "care": {
+            "after_px": 1217.5,
+            "before_px": 1630.4,
+            "reduction_percent": 25.3
+          },
+          "glance": {
+            "after_px": 328.4,
+            "before_px": 449.0,
+            "reduction_percent": 26.9
+          },
+          "sources": {
+            "after_px": 200.2,
+            "before_px": 285.2,
+            "reduction_percent": 29.8
+          },
+          "species": {
+            "after_px": 146.7,
+            "before_px": 492.2,
+            "reduction_percent": 70.2
+          },
+          "whole": {
+            "after_px": 1674.4,
+            "before_px": 2572.4,
+            "reduction_percent": 34.9
+          }
+        },
+        "tiles_after_px": [
+          79.4,
+          79.4,
+          100.2,
+          100.2,
+          100.2,
+          100.2
+        ],
+        "viewport": "mobile"
+      },
+      {
+        "care_rows_after_px": [],
+        "name": "imperator",
+        "sections": {
+          "care": {
+            "after_px": 60.3,
+            "before_px": 91.2,
+            "reduction_percent": 33.9
+          },
+          "sources": {
+            "after_px": 150.2,
+            "before_px": 199.6,
+            "reduction_percent": 24.7
+          },
+          "species": {
+            "after_px": 146.7,
+            "before_px": 463.2,
+            "reduction_percent": 68.3
+          },
+          "whole": {
+            "after_px": 467.2,
+            "before_px": 918.6,
+            "reduction_percent": 49.1
+          }
+        },
+        "tiles_after_px": [],
+        "viewport": "mobile"
+      }
+    ],
+    "method": "Actual production GET-handler HTML and returned media, exact image static assets replayed under unchanged CSP. Production data read-only; existing Principal injected locally; full production HTTP authentication/middleware excluded.",
+    "non_get": 0,
+    "outbound": 0,
+    "overflow": 0,
+    "private_outside_repository": true,
+    "unexpected_errors": 0
+  },
+  "public_readiness": {
+    "body": "{\"status\":\"ready\"}",
+    "edge_configuration_changed": false,
+    "initial_default_urllib_status": 403,
+    "request_user_agent": "Mozilla/5.0 CareKeeperOwnerReview",
+    "status": 200
+  },
+  "rollback_compatibility": {
+    "normal_readiness": true,
+    "reason": "compatible"
+  },
+  "runtime_log_validation": {
+    "snaketracker-web-1": {
+      "errors_or_exceptions": 0,
+      "healthy": true,
+      "restarts": 0
+    },
+    "snaketracker-worker-1": {
+      "errors_or_exceptions": 0,
+      "healthy": true,
+      "restarts": 0
+    }
+  },
+  "services": {
+    "/health/live": {
+      "body": "{\"status\":\"alive\"}",
+      "status": 200
+    },
+    "/health/ready": {
+      "body": "{\"status\":\"ready\"}",
+      "status": 200
+    },
+    "candidate_sha": "04364cc4cad6c600dc167f32f4a9099b84667e98",
+    "dotenv_unchanged": true,
+    "migrate_untouched": true,
+    "mounts_and_settings_unchanged": true,
+    "tunnel_unchanged": true
+  },
+  "source": {
+    "build_sha": "04364cc4cad6c600dc167f32f4a9099b84667e98",
+    "frozen_distributions": 35,
+    "frozen_versions_match": true,
+    "gid": 1001,
+    "image_id": "sha256:aa1133b1ca516a780fb6164ba83c315bcb766949415bcceb276e9449744bd2f1",
+    "image_tag": "snaketracker:m66b-reference-density-04364cc",
+    "oci_revision": "04364cc4cad6c600dc167f32f4a9099b84667e98",
+    "production_mounts_used": false,
+    "schema_head": "0023_sourced_care_guides",
+    "source_tree_ids": {
+      "reference/care-guides": "6a9562ff60ab742c0cb01c544d435f04217d0efd",
+      "scripts/qualification": "ae0f22823591ec51a38e81ad90a7286164891b24",
+      "src": "097b6c86bef0b4547eb3ca4ebce03b5c6529341e",
+      "tests": "d840641c3ce04b208db5af1001517cbd1a9e00ae"
+    },
+    "uid": 1001
+  },
+  "source_ci_note": "CodeRabbit SUCCESS reflects the draft review being skipped; independent local source review found no outstanding Critical or Important findings after corrections.",
+  "worker": {
+    "active_projection_checkpoints": 9,
+    "all_checkpoints_at_high_water": true,
+    "backup_worker_available": true,
+    "compatibility_mode": "normal",
+    "compatibility_reason": "compatible",
+    "event_cutoff": 1036,
+    "pending_backup_requests": 0,
+    "source_sha": "04364cc4cad6c600dc167f32f4a9099b84667e98"
+  }
+}

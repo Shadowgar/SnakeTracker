@@ -1,3 +1,64 @@
+# M6.6-B Reference density owner correction
+
+The October 2 density correction preserves the approved dedicated tab and information hierarchy. PR #17 stays open, draft and unmerged; M6.6-B acceptance is pending. No X1/X2/X3 or M6.6-C implementation follows.
+
+## Current presentation and measured root causes
+
+The Animal reference page now reads as a flat sheet. Common and scientific names share a wrapping desktop identity line; mobile keeps separate lines. Only saved Class, Order, Family and Genus appear in the inline classification, with the first available alternative common name beneath it. Full Rank, Kingdom, Phylum/division, Class, Order, Family, Genus, all other common names and synonyms remain in a closed native **Taxonomy details** disclosure. Missing classification is omitted; long legitimate names can wrap without truncation or fixed heights. The section can grow with future reference content; no future Natural History descriptions or facts are added.
+
+Before editing, rendered CSS showed final `.card` padding of 13.6px, reference-card gaps of 11.2px, always-visible taxonomy rows with row/between-row spacing, stacked provenance paragraphs, 12.8px care-summary vertical padding, and glance grid stretching shorter tiles to the longest content in a row. The Animal page uses `.profile-reference-fact`, whose minimum height was already auto. `.guide-glance-item`'s 8rem minimum belongs to standalone guides and is unchanged. Dashboard, Overview, forms and standalone Directory styling remain unchanged.
+
+Reference-specific styles remove outer card nesting, use smaller gaps and restrained padding, and let tiles size independently. Four desktop columns and two mobile columns are retained. Simple desktop tiles measure about 79px; longer food values grow naturally. Native care rows retain labels/life stages where necessary, readable full facts, all contextual positions and textual support/disagreement states. Simple desktop care rows measure about 59px; wrapping rows grow. An independent review caught ambiguous feeding intervals and a small provider-link target; both were corrected and qualified.
+
+Sources default to saved identity/provider metadata, a compact reviewed-source-count disclosure and a Directory link. Expanded bibliography and claim sources retain publisher, title, URL, retrieved/reviewed/published dates and guide version. Interactive summaries and source links retain approximately 44px targets and visible focus. The title and keeper-boundary note share available desktop width and stack on mobile. Overview remains concise and existing Record action normalization is preserved.
+
+## Same production data before/after
+
+Rendered bounding-box heights in pixels at 1440×900 and 390×844, using the actual production read-only handler HTML/media with each exact image's assets. Care includes its glance block. Percentages apply to the whole reference content, top through collapsed Sources; these are measurements, not rigid sizing contracts.
+
+| Case | Species | Glance | Care | Sources | Whole | Reduction |
+|---|---:|---:|---:|---:|---:|---:|
+| Desktop Ball Python | 420.2 → 125.1 | 172.4 → 136.1 | 477.9 → 366.7 | 261.2 → 176.2 | 1285.9 → 712.6 | 44.6% |
+| Desktop Bitey / Boa | 420.2 → 125.1 | 280.7 → 221.9 | 849.8 → 666.9 | 261.2 → 176.2 | 1657.8 → 1012.8 | 38.9% |
+| Desktop Boa imperator | 391.2 → 125.1 | — | 91.2 → 60.3 | 175.6 → 126.2 | 784.6 → 356.2 | 54.6% |
+| Mobile Ball Python | 492.2 → 146.7 | 342.3 → 263.5 | 916.7 → 684.8 | 285.2 → 200.2 | 1858.8 → 1141.7 | 38.6% |
+| Mobile Bitey / Boa | 492.2 → 146.7 | 449 → 328.4 | 1630.4 → 1217.5 | 285.2 → 200.2 | 2572.4 → 1674.4 | 34.9% |
+| Mobile Boa imperator | 463.2 → 146.7 | — | 91.2 → 60.3 | 199.6 → 150.2 | 918.6 → 467.2 | 49.1% |
+
+The fictional Ball Python primary case additionally qualifies the actual Sources heading's bottom within the initial 900px desktop viewport. Both sparse guide cases, linked no-guide Boa imperator and unlinked Animals use content-driven sections. Taxonomy, guide values and production business data are unchanged.
+
+## Qualification
+
+[Browser receipt](reference-density-browser-20261002.json): **21/21 cases**, **46 private fictional captures**, zero axe violations, page overflow, unexpected errors, browser outbound requests or provider requests. Both viewports cover Python, the larger Boa guide, two sparse guides, no-guide and unlinked cases, taxonomy/keyboard focus, all 28 Boa facts/34 cited positions/7 bibliography sources, Sources disclosures, unchanged compact Overview and standalone Directory/guide surfaces. Normal CSP and actual HTTP authentication remain enabled.
+
+**SQL scope:** normal authenticated HTTP refreshes the existing session's last-seen and idle-expiry fields. The browser receipt explicitly counts those refreshes and reports literal zero SQL writes as false. It verifies zero reference/domain SQL mutations. Separately, exact-image production GET handlers use a SQL-authorized read-only connection and an existing Principal injected locally: **61 Overview + 61 Reference pages across 4 households, zero SQL-write attempts and zero outbound/provider attempts**. No production sessions are created; full production HTTP authentication/middleware is excluded from that diagnostic.
+
+[Full quality receipt](reference-density-quality-20261002.json): `uv sync --frozen` then the **entire** `./scripts/quality/check.sh` succeeded, **900 tests passed**, zero failures/errors/skips, lines **94.55%**, branches **85.37%**, no known dependency vulnerabilities. Formatting, Ruff, architecture/freeze, docs links, mypy, coverage, Compose and diff checks succeeded; thresholds/timeouts are unchanged. One unfinished gate was deliberately stopped for the primary desktop viewport refinement; no pass is claimed for it. This complete gate supersedes it.
+
+**22 private production-data captures** include desktop Ball Python default, Bitey default/care-expanded/Sources-expanded and mobile default top, care rows, care-expanded and Sources-expanded, plus full pages, no-guide and taxonomy-expanded views. Actual production handler HTML and returned media are replayed under unchanged CSP with exact image assets; this is not a production owner-login session. Screenshots/HTML/media remain outside the repository. Zero axe violations, overflow, errors, outbound and non-GET calls were observed.
+
+## Exact deployed candidate and integrity
+
+Source **`04364cc4cad6c600dc167f32f4a9099b84667e98`**. Image **`snaketracker:m66b-reference-density-04364cc`**. Image ID **`sha256:aa1133b1ca516a780fb6164ba83c315bcb766949415bcceb276e9449744bd2f1`**. Normal Dockerfile, UID/GID 1001:1001, all 35 runtime distributions match the frozen lock, source/application/OCI revisions match, schema head remains 0023.
+
+Exact source CI was green before deployment. The established guarded method stopped worker before web and recreated only that pair from the same image with no-deps/no-build/no-pull/force-recreate. Maintenance **15.377s**. No migration or guide import ran. Web/worker/nginx are healthy; local live/ready and public ready return 200. The default urllib user agent received an edge 403; the owner-review user agent returned 200 without changing edge configuration. `.env` bytes/mode 0600, actual runtime settings/mounts/security, nginx/tunnel identity/start times and historical migration state are preserved.
+
+[Deployment receipt](reference-density-deployment-20261002.json): schema objects, guide tables, projection catalog/generations, all household/business dimensions, Inventory, reminders and attachments unchanged. Cutoff **1036→1036**; **90 normalized / 61 logical dimensions unchanged**. All **46 attachment versions / 77 media files** retain metadata/hashes, mismatches 0. All 9 active checkpoints are at the high water; backup worker is available with zero pending requests. Boa version 1 equals the unchanged reviewed bundle, retaining 28 facts / 34 positions / 7 sources and the existing support-state distribution. Every production profile/reference route renders locally without provider access.
+
+Recovery point `12fa3806-128d-4fde-83b1-b72d728919a9` was freshly restored and reverified within the six-hour RPO: 46 DB versions = 46 manifest entries = 46 restored files, hash/metadata mismatches 0, schema 0023 / cutoff 1031, integrity/FK checks valid, restored sessions/reset credentials 0. Historical recovery point `8777f5b4-545e-4384-81e6-e50c99553bb8` is unchanged. Previous live image `snaketracker:m66b-reference-navigation-dd1785f` passes normal read-only startup compatibility before and after replacement. No rollback was performed. The previously documented 16 MiB routine backup temporary-space limit remains unchanged by this presentation task.
+
+The final evidence commit changes documentation only, preserving the deployed source/test/qualification/reference trees.
+
+## Owner review
+
+Open Ball Python and Bitey → **Guides & Species Reference**. Check default density at desktop/mobile, open Taxonomy details, a care section and Sources, and inspect preserved feeding ages/disagreements/provenance. Check sparse, no-guide and unlinked cases and concise Overview.
+
+**Stop for owner review. Do not merge PR #17, mark M6.6-B Accepted, or begin X1/X2/X3/C.**
+
+## Historical navigation qualification
+
+The previous navigation source `dd1785fe5508127f8c292b28cc8363b3e70e735d` and its earlier full qualification remain historical evidence; the following section describes that earlier candidate, not the current deployed density correction.
+
 # M6.6-B Animal reference navigation owner correction
 
 The October 2 owner amendment supersedes the earlier full-reference-on-Overview presentation decision. PR #17 remains open, draft, and unmerged. M6.6-B and ADR-0044/0048 acceptance remain pending. No X1, X2/X3 implementation, Amphibians, or M6.6-C work is authorized by this correction.
