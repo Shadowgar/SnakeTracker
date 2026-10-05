@@ -31,12 +31,14 @@ structured Inventory and Feeding foundation; the financial/intelligence tranches
 Care Keeper taxon UUIDs, normalized optional provider mappings/cache, licensing, request privacy,
 and manual/offline species behavior. A was integrated in PR #14; standalone milestone owner
 acceptance remains unverified in repository evidence (see the [roadmap](roadmap/milestones.md)).
-[ADR-0044](adr/0044-versioned-sourced-care-guides.md)
-remains Proposed pending M6.6-B owner review. [ADR-0045](adr/0045-extensible-animal-capability-evolution.md),
+[ADR-0044](adr/0044-versioned-sourced-care-guides.md) is Accepted on October 5, 2026 for M6.6-B;
+see [owner acceptance](evidence/m6.6-species-aware-husbandry/b-sourced-care-guides/README.md#owner-acceptance).
+[ADR-0045](adr/0045-extensible-animal-capability-evolution.md),
 [ADR-0046](adr/0046-local-taxonomy-snapshot-and-provider-overlay.md),
-[ADR-0047](adr/0047-natural-history-reference-boundary.md), and
-[ADR-0048](adr/0048-precise-animal-length-measurements.md) are Proposed for the owner-approved
-pre-M6.6-C extension. M6.6 was inserted after M6.5 and before M7.
+[ADR-0047](adr/0047-natural-history-reference-boundary.md) remain Proposed for the owner-approved
+pre-M6.6-C extension. [ADR-0048](adr/0048-precise-animal-length-measurements.md) is Accepted on
+October 5 for exact length v2. M6.6-B is accepted/complete; Pre-X1 Architecture Reconciliation is
+next and unstarted. M6.6 was inserted after M6.5 and before M7.
 
 ## Document map
 

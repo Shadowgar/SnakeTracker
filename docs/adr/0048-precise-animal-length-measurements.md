@@ -1,6 +1,7 @@
 # ADR-0048: Exact length measurement representation and consumer semantics
 
-Status: Proposed
+Status: Accepted
+Acceptance date: 2026-10-05
 Decision date: 2026-10-01
 
 ## Context
@@ -88,3 +89,10 @@ payload rejection, effective history and isolated production replay before deplo
 do not automatically require Alembic under [ADR-0026](0026-migration-and-rollback.md): current Animal
 identity projection has no length column. Review projection contract allowlists/handlers separately;
 use a relational migration only if actual persisted schema changes require one.
+
+## Owner acceptance
+
+The owner accepted the implemented M6.6-B mixed-version length consumer matrix on October 5,
+2026. The [owner-acceptance record](../evidence/m6.6-species-aware-husbandry/b-sourced-care-guides/README.md#owner-acceptance)
+binds approval to this exact ADR content and the qualified correction/replay/report evidence.
+This acceptance does not promote ADRs 0045–0047 or begin the pre-C extension.

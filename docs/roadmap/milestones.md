@@ -338,7 +338,7 @@ derived only under the costing policy accepted during M6.5 design.
 ## Phase 6.6 / M6.6 — Species-aware husbandry and bioactive care
 
 Status: Owner-approved September 13, 2026; M6.6-A integrated, standalone owner acceptance unverified;
-M6.6-OPS-A accepted September 27, 2026; M6.6-B remains in owner review and M6.6 as a whole is
+M6.6-OPS-A accepted September 27, 2026; M6.6-B accepted/complete October 5, 2026. M6.6 as a whole is
 not accepted. Pre-C extension direction approved October 1, 2026; no extension implementation
 or acceptance yet.
 
@@ -402,28 +402,39 @@ refresh actions, and impersonation. No OPS-B mutation capability is accepted by 
 
 ### M6.6-B — Sourced care guides
 
-Status: Implemented and deployed for owner review according to the
-[B qualification record](../evidence/m6.6-species-aware-husbandry/b-sourced-care-guides/README.md);
-not owner-accepted. ADR-0044 remains Proposed.
+Status: **Accepted / Complete**, October 5, 2026. Evidence:
+[B owner acceptance](../evidence/m6.6-species-aware-husbandry/b-sourced-care-guides/README.md#owner-acceptance)
+and [final reference-density qualification](../evidence/m6.6-species-aware-husbandry/b-corrections/compact-species-reference/README.md).
+ADR-0044 and ADR-0048 are Accepted. Earlier owner-review stops remain historical evidence.
 
-- [ ] RB Versioned Animal and plant guide facts retain values/ranges/units, source references,
+- [x] RB Versioned Animal and plant guide facts retain values/ranges/units, source references,
   provider/source IDs, retrieved/reviewed dates, and support/confidence or disagreement state.
   Guides remain reference knowledge and never silently become household facts. (`R-091`,
   `AT-CAREGUIDE-01`)
 
-Before B acceptance, correct Spider/no-result manual Animal creation, retain explicit Add/Edit
-taxon selection within the same workflow, complete owner review of the deployed inline Animal
-Overview guide summary, qualify a reviewed Boa constrictor guide, and support fractional length
-such as `48.5` with
-the full mixed-version consumer matrix, precise report/export, zero-network profile/visual reads
-and isolated semantic compatibility qualification even without Alembic. (`R-095`, `R-096`,
-`R-102`, `R-103`; `AT-SPDIR-MANUAL-01`, `AT-MEASURE-01`, `AT-PRODCOMP-01`,
-`AT-PROFILE-REF-01`) Existing B evidence is not acceptance of these corrections.
+- [x] RB Spider/no-result manual creation and explicit Add/Edit/legacy linking are preserved;
+  the reviewed Boa constrictor guide, exact fractional length v2 and complete mixed-version
+  report/export/replay consumers passed owner review. Normal profile/reference/image reads
+  remain local, with isolated semantic compatibility and production preservation evidence.
+  (`R-095`, `R-096`, `R-102`, `R-103`; `AT-SPDIR-MANUAL-01`, `AT-MEASURE-01`,
+  `AT-PRODCOMP-01`, `AT-PROFILE-REF-01`)
+- [x] RB Overview remains compact; the dedicated **Guides & Species Reference** tab after Care
+  contains compact Species Overview, Taxonomy details, At-a-Glance and care disclosures, with
+  complete expanded facts and Sources / Provenance. Natural History currently contains saved
+  identity/classification/names only; richer X3 enrichment is unimplemented.
+
+Qualified recovery points include every finalized attachment version. The routine backup worker's
+documented 16 MiB temporary-space limitation remains open; private restore qualification did not
+fix that infrastructure constraint.
+
+Next sequence: **M6.6-B → Pre-X1 Architecture Reconciliation → X1 → X2 → X3 → X4 → X5 → M6.6-C**.
+Pre-X1 reconciliation and extension implementation remain unstarted.
 
 ### Pre-M6.6-C extension — X1 through X5
 
-The [controlling plan](../plans/2026-10-01-extensible-animal-and-species-platform.md) and proposed
-ADRs 0045–0048 govern these owner-approved implementation tranches. Each requires isolated data
+The [controlling plan](../plans/2026-10-01-extensible-animal-and-species-platform.md) and Proposed
+ADRs 0045–0047 govern these owner-approved implementation tranches. Accepted ADR-0048 governs
+the delivered length behavior that future tranches must preserve. Each requires isolated data
 safety, quality, browser/accessibility, applicable Pi, deployment and explicit owner review; no
 checklist item below is accepted yet. This inserts work without renumbering M6.6-C/D/E or M7.
 

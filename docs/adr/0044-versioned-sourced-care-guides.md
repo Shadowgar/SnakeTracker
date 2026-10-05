@@ -1,6 +1,8 @@
 # ADR-0044: Versioned sourced Care Guides are global reference data
 
-Status: Proposed for M6.6-B owner review
+Status: Accepted
+
+Acceptance date: 2026-10-05
 
 Decision date: 2026-09-27
 
@@ -36,7 +38,10 @@ explicit; values are not extrapolated, averaged, or widened. Plant toxicity reta
 scope of its source; cat/dog toxicity cannot establish reptile or bioactive suitability.
 
 The guide read path uses only local SQLite and the saved taxon cache. Provider failure cannot
-make a saved guide disappear. Animal and enclosure-plant views show only a link to the guide;
+make a saved guide disappear. Animal Overview contains a compact reference summary and a link
+to the dedicated **Guides & Species Reference** tab after Care. The tab contains saved species
+identity/classification/names, the complete reviewed guide and source/version provenance behind
+compact disclosures. Richer Natural History remains future X3. Enclosure-plant views link to the guide;
 there is no write path to schedules, reminders, care history, Inventory, Today, or Calendar.
 Jinja escapes imported text; source links require HTTPS, use `noopener noreferrer`, and do not
 add remote scripts, styles, or CSP exceptions. No household data is sent to guide sources.
@@ -54,5 +59,7 @@ add remote scripts, styles, or CSP exceptions. No household data is sent to guid
 
 ## Review boundary
 
-This ADR proposes M6.6-B only. M6.6-C keeper-confirmed suggestions, M6.6-D bioactive care,
-OPS-B, and M7 are outside this decision. The ADR remains Proposed until owner acceptance.
+The owner accepted M6.6-B on October 5, 2026, including the final reference-density correction.
+The [owner-acceptance record](../evidence/m6.6-species-aware-husbandry/b-sourced-care-guides/README.md#owner-acceptance)
+binds approval to this exact ADR content. M6.6-C keeper-confirmed suggestions, M6.6-D bioactive
+care, OPS-B, and M7 are outside this decision. ADRs 0045–0047 remain Proposed.

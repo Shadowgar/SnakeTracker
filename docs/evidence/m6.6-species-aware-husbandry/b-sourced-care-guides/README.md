@@ -1,6 +1,96 @@
 # M6.6-B sourced Care Guides qualification
 
-Status: owner review pending. All browser data below is fictional and isolated from production.
+Status: **M6.6-B Accepted / Complete**, owner acceptance October 5, 2026. PR #17 integration is
+finalized separately after the unchanged quality gate and current-head checks. The qualification
+sections below retain their original revisions, counts and review context; final correction
+receipts supersede the original presentation and 709-test gate.
+
+## Owner acceptance
+
+- Decision: ADR-0044, ADR-0048, ADR-0028
+- Acceptance date: 2026-10-05
+- Authority: Care Keeper owner explicit final acceptance, merge and source-synchronization instruction; subsequent explicit instruction to ignore GitGuardian failures and continue.
+- Review status: Accepted for the implemented M6.6-B product and the bounded governance updates listed below.
+
+The owner reviewed and accepts the live reference-density candidate at source
+`04364cc4cad6c600dc167f32f4a9099b84667e98`, image
+`snaketracker:m66b-reference-density-04364cc`. The starting PR head was
+`f2700404e691104a977f16673b0fb745f23801ec`; subsequent finalization changes are documentation only.
+
+Accepted scope: sourced/versioned global Care Guides with immutable source provenance, contextual
+claims and separate disagreement positions; explicit/manual species workflows; compact Animal
+Overview with limited reference highlights; the dedicated **Guides & Species Reference** tab after
+Care; dense reference-sheet presentation, compact Species Overview, **Taxonomy details** disclosure,
+At-a-Glance tiles and care disclosures; complete expanded guide detail and **Sources / Provenance**;
+consistent Record-form actions; exact fractional length v2 and all mixed-version consumers; local-only
+normal Animal/reference/image reads; production compatibility, recovery and live-data preservation.
+
+**Species Overview / Natural History** currently contains locally saved taxonomic identity,
+classification and names. Richer Natural History remains future X3. **Reviewed Captive Care** contains
+the complete reviewed guide when available. The no-guide wording remains **No reviewed captive-care
+guide is available yet.** No reference claim becomes a household fact, schedule or reminder.
+
+Evidence: [correctness and exact-length consumer matrix](../b-corrections/README.md),
+[backup completeness](../b-corrections/backup-completeness/README.md),
+[owner-review deployment](../b-corrections/owner-review-deployment/README.md), and
+[final reference-density qualification](../b-corrections/compact-species-reference/README.md).
+The final candidate gate passed 900 tests, 94.55% line and 85.37% branch coverage. It qualified
+21 browser cases, 46 fictional captures, 61 production profiles, 46 finalized attachment versions
+and 77 media files. These are the linked October 2 receipts, not a claim about a new finalization run.
+
+### Security-check exception
+
+Incidents 37809855, 37809856 and 37809857 were independently verified as cryptographic file-integrity
+SHA-256 digests, not credentials. The owner reports marking them ignored / false positive.
+GitHub still recorded **GitGuardian Security Checks: FAILURE** at the starting head. The owner's
+subsequent explicit instruction authorizes continuing despite that check. This records a check
+exception, not a claim of scanner success. New findings remain a stop condition. Other required
+checks and the full local quality gate remain mandatory; GitHub branch protections are not bypassed.
+No credential rotation, history rewrite, detector weakening or global suppression is authorized.
+
+### Preserved limits and next boundary
+
+The routine backup worker verification path still has its documented 16 MiB temporary-space
+limitation. Qualified private recovery points remain valid and include every finalized keeper
+attachment version; this acceptance does not fix routine scratch infrastructure.
+
+M6.6-A implementation/PR #14 and ADR-0043's established Accepted status remain recorded, but no
+standalone historical A owner-acceptance artifact was preserved. This record accepts B only.
+ADRs 0045, 0046 and 0047 remain Proposed; X1/X2/X3, Amphibians and M6.6-C are not begun or accepted.
+**Boa imperator / iNaturalist 539399** remains a future X3 Natural History acceptance case.
+Next task: **Pre-X1 Architecture Reconciliation**, then X1 → X2 → X3 → X4 → X5 → M6.6-C.
+
+The content-bound approval entries below cover ADR promotion and the minimal status/presentation
+consistency updates; they do not authorize Pre-X1 reconciliation or a new architecture design.
+- Approved file: `docs/adr/0044-versioned-sourced-care-guides.md` SHA-256: `2972e6db22fbf7463b010de2dfc8df0a8902847601111fdbad463dcd2756fb15`
+- Approved file: `docs/adr/0048-precise-animal-length-measurements.md` SHA-256: `ab85d2ac27656b828f27557708ef6a7c22a5eb5d6f6eb4c310ae5d3716863db2`
+- Approved file: `docs/roadmap/milestones.md` SHA-256: `8ec9db613d8aa57202de44d2b93e874e67cfd26381e7959ee5f16018fcf6fab3`
+- Approved file: `docs/requirements/traceability-matrix.md` SHA-256: `520a42e2f63ec39a5278b38ea229e6e365a3991fc94476b4ce0e6f83bb3a5cd2`
+- Approved file: `docs/plans/2026-10-01-extensible-animal-and-species-platform.md` SHA-256: `107dfa73d8c3c69b2d373dafa4c1f3b8c230d8e86c85822b0385a35eaf031d45`
+
+- Approved file: `docs/adr/README.md` SHA-256: `04e2363833ef4de451add37e76ea51347919374883798a0a3f0d13c4a9e4994d`
+
+- Approved file: `docs/README.md` SHA-256: `1b40182cc57b5ab0b8d702a9422248189f468b9cc99cfc93363e584c14a68eb4`
+
+## Final acceptance qualification — October 5
+
+`uv sync --frozen` and the entire unchanged `./scripts/quality/check.sh` passed after the
+acceptance/governance edits: **900 tests passed**, zero failures/errors/skips, **94.55% line**
+and **85.39% branch coverage**. Formatting, Ruff, architecture, content-bound freeze/ADR
+index/status validation, docs links, mypy, coverage, dependency audit, Compose and diff checks
+passed. [Finalization receipt](final-acceptance-quality-20261005.json) distinguishes this run from
+the historical deployment and browser receipts. Runtime trees remain identical to accepted source
+`04364cc4cad6c600dc167f32f4a9099b84667e98`; no deployment, migration or import is required.
+
+The read-only production baseline for source synchronization was schema 0023, event high-water
+1037, 46 finalized attachment versions with zero mismatches, 77 media files, six guide versions,
+15 sources and 64 claims. All services/readiness checks passed. Post-merge preservation is checked
+against that baseline; these counts are not substituted for the original October 2 receipt.
+
+## Historical initial qualification
+
+The remaining sections record the original September qualification. Browser data is fictional and
+isolated from production; production sections retain their original deployment context.
 
 ## Reviewed reference data
 

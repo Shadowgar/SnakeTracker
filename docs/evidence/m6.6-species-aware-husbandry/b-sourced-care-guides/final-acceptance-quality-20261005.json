@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-05",
+  "result": "success",
+  "commands": [
+    "uv sync --frozen",
+    "./scripts/quality/check.sh"
+  ],
+  "completed_at": "2026-10-05T13:51:53.920890+00:00",
+  "starting_pr_head": "f2700404e691104a977f16673b0fb745f23801ec",
+  "accepted_runtime_source": "04364cc4cad6c600dc167f32f4a9099b84667e98",
+  "qualification_context": "owner-acceptance documentation working tree; runtime content identical to accepted deployed source; receipt added after gate completion",
+  "working_tree_document_changes": [
+    "docs/README.md",
+    "docs/adr/0044-versioned-sourced-care-guides.md",
+    "docs/adr/0048-precise-animal-length-measurements.md",
+    "docs/adr/README.md",
+    "docs/evidence/m6.6-species-aware-husbandry/b-corrections/README.md",
+    "docs/evidence/m6.6-species-aware-husbandry/b-corrections/compact-species-reference/README.md",
+    "docs/evidence/m6.6-species-aware-husbandry/b-corrections/compact-species-reference/reference-density-browser-20261002.json",
+    "docs/evidence/m6.6-species-aware-husbandry/b-corrections/compact-species-reference/reference-density-deployment-20261002.json",
+    "docs/evidence/m6.6-species-aware-husbandry/b-corrections/compact-species-reference/reference-density-quality-20261002.json",
+    "docs/evidence/m6.6-species-aware-husbandry/b-sourced-care-guides/README.md",
+    "docs/plans/2026-10-01-extensible-animal-and-species-platform.md",
+    "docs/requirements/traceability-matrix.md",
+    "docs/roadmap/milestones.md"
+  ],
+  "runtime_relevant_changes": [],
+  "tests": {
+    "tests": 900,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "line_coverage_percent": 94.55,
+  "branch_coverage_percent": 85.39,
+  "formatting_ruff_architecture_governance_docs_mypy_coverage_dependency_audit_compose_diff": "passed",
+  "thresholds_and_validators_unchanged": true,
+  "gitguardian_starting_check": "failure",
+  "owner_authorized_gitguardian_exception": true,
+  "known_false_positive_incidents": [
+    37809855,
+    37809856,
+    37809857
+  ],
+  "production_before_source_synchronization": {
+    "read_only": true,
+    "schema": "0023_sourced_care_guides",
+    "event_high_water": 1037,
+    "finalized_attachment_versions": 46,
+    "verified_attachment_mismatches": 0,
+    "media_files": 77,
+    "guide_versions": 6,
+    "guide_sources": 15,
+    "guide_claims": 64,
+    "web_worker_nginx": "healthy",
+    "tunnel_ready": 200,
+    "tunnel_connections": 3,
+    "web_live_ready_local_public_http_status": 200
+  },
+  "isolated_ram_tmpdir": true,
+  "pre_index_disk_gate": "success before final index-status corrections; final gate supersedes it",
+  "private_full_log": "/tmp/m66b-finalization-20261005/quality.log"
+}

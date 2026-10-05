@@ -1,5 +1,14 @@
 # M6.6-B production correctness correction
 
+Current milestone status: **Accepted / Complete**, October 5, 2026; see
+[B owner acceptance](../b-sourced-care-guides/README.md#owner-acceptance) and
+[final density qualification](compact-species-reference/README.md).
+The original correction-stage state below is historical. Later backup completeness and deployed
+reference-density receipts supersede its production block and presentation, preserving exact-length
+and manual-species qualification. No X1–X5 implementation is accepted here.
+
+## Historical October 1 correction qualification
+
 Status: five objectives implemented; final full quality gate passed. Production release is
 blocked by incomplete encrypted attachment history. PR #17 remains draft; owner acceptance pending.
 Authority: owner's October 1 production-correctness request. ADR-0044 and ADR-0048 remain Proposed.

@@ -1,6 +1,10 @@
 # M6.6-B Reference density owner correction
 
-The October 2 density correction preserves the approved dedicated tab and information hierarchy. PR #17 stays open, draft and unmerged; M6.6-B acceptance is pending. No X1/X2/X3 or M6.6-C implementation follows.
+The October 2 density correction preserves the approved dedicated tab and information hierarchy.
+M6.6-B is **Accepted / Complete** following explicit owner review on October 5, 2026; see the
+[content-bound owner acceptance](../../b-sourced-care-guides/README.md#owner-acceptance).
+PR #17 integration follows final qualification. No Pre-X1 reconciliation, X1/X2/X3 or M6.6-C
+implementation follows this finalization. Earlier review stops below are historical evidence.
 
 ## Current presentation and measured root causes
 
@@ -49,7 +53,7 @@ Recovery point `12fa3806-128d-4fde-83b1-b72d728919a9` was freshly restored and r
 
 The final evidence commit changes documentation only, preserving the deployed source/test/qualification/reference trees.
 
-## Owner review
+## Historical owner-review request — October 2
 
 Open Ball Python and Bitey → **Guides & Species Reference**. Check default density at desktop/mobile, open Taxonomy details, a care section and Sources, and inspect preserved feeding ages/disagreements/provenance. Check sparse, no-guide and unlinked cases and concise Overview.
 

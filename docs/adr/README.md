@@ -15,16 +15,18 @@ Purchase, FIFO, costing, counting, and intelligence remain later M6.5 tranches.
 PR #14; standalone milestone owner acceptance remains unverified in repository evidence (see the
 [roadmap](../roadmap/milestones.md)). It records Care Keeper-owned taxon identity, provider/cache
 boundaries, licensing, privacy, and
-offline behavior. [ADR-0044](0044-versioned-sourced-care-guides.md) is **Proposed for M6.6-B
-owner review** and records the immutable guide/source/claim boundary.
+offline behavior. [ADR-0044](0044-versioned-sourced-care-guides.md) was **Accepted on 2026-10-05**
+for the immutable guide/source/claim boundary and final dedicated Animal reference presentation;
+see [B owner acceptance](../evidence/m6.6-species-aware-husbandry/b-sourced-care-guides/README.md#owner-acceptance).
 
 [ADR-0045](0045-extensible-animal-capability-evolution.md),
 [ADR-0046](0046-local-taxonomy-snapshot-and-provider-overlay.md),
-[ADR-0047](0047-natural-history-reference-boundary.md), and
-[ADR-0048](0048-precise-animal-length-measurements.md) are **Proposed** for the pre-M6.6-C
-extension. They add profile lifecycle/startup compatibility, permanent identity with replaceable
-reference generations, Natural History/legacy-guide coexistence, and exact length contracts
-without altering accepted historical meanings.
+[ADR-0047](0047-natural-history-reference-boundary.md) remain **Proposed** for the pre-M6.6-C
+extension. They propose profile lifecycle/startup compatibility, permanent identity with replaceable
+reference generations and Natural History/legacy-guide coexistence.
+[ADR-0048](0048-precise-animal-length-measurements.md) was **Accepted on 2026-10-05** for exact
+length v2 and mixed-history consumers. No historical meaning is rewritten; Pre-X1 reconciliation
+and X1–X5 implementation remain unstarted.
 
 | ADR | Decision |
 |---|---|

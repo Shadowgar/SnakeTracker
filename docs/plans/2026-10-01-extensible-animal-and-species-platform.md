@@ -1,6 +1,6 @@
 # Extensible Animal and Species Platform — controlling implementation plan
 
-Status: Owner-approved direction; implementation and owner acceptance pending (2026-10-01).
+Status: M6.6-B corrections accepted October 5, 2026; Pre-X1 reconciliation and X1–X5 implementation/acceptance remain pending. The original extension direction was approved October 1, 2026.
 Scope: documentation only. This plan inserts bounded work after M6.6-B corrections and before
 M6.6-C. No production migration, dataset import, deployment, or event rewrite is authorized here.
 
@@ -10,7 +10,7 @@ This plan adds the implementation sequence to the existing [roadmap](../roadmap/
 [traceability matrix](../requirements/traceability-matrix.md). It extends accepted
 [ADR-0039](../adr/0039-multispecies-animal-capabilities.md),
 [ADR-0041](../adr/0041-four-group-capability-expansion-and-neutral-molt-contracts.md), and
-[ADR-0043](../adr/0043-universal-species-directory.md), plus proposed
+[ADR-0043](../adr/0043-universal-species-directory.md), plus accepted
 [ADR-0044](../adr/0044-versioned-sourced-care-guides.md). New decisions are in
 [ADR-0045](../adr/0045-extensible-animal-capability-evolution.md),
 [ADR-0046](../adr/0046-local-taxonomy-snapshot-and-provider-overlay.md),
@@ -37,34 +37,29 @@ rewritten. The accepted M5.5/M6 milestones are unchanged.
 
 ## Immediate M6.6-B corrections
 
-The current production defect allows Spider creation to stall when taxonomy returns no match.
-Taxonomy selection is optional: no result, unknown trade name, outage, timeout, throttle, malformed
-or oversized response still allows manual Animal creation with an intentionally unlinked taxon.
-An explicit Add/Edit selection must retain the Care Keeper taxon link in that same workflow; a
-legacy Animal can link explicitly inline on its profile. Never fuzzy-link free text. The current
-[Animal Overview guide summary](../evidence/m6.6-species-aware-husbandry/b-sourced-care-guides/profile-reference/README.md)
-is deployed for owner review; finish its correction/review and add future Natural History directly
-on the Animal profile, with separate **Your
-Records**, **Species Reference**, **Species Overview / Natural History**, **Reviewed Captive Care**,
-and **Sources** sections when data exists. The Directory remains for browsing. Complete the Boa
-constrictor reviewed guide under [ADR-0044](../adr/0044-versioned-sourced-care-guides.md) and
-owner review before declaring B accepted. The [B qualification record](../evidence/m6.6-species-aware-husbandry/b-sourced-care-guides/README.md)
-documents implementation and deployment, but still says owner review pending.
+The October 1 Spider/no-result and explicit Add/Edit/legacy-link corrections are implemented,
+qualified and included in [M6.6-B owner acceptance](../evidence/m6.6-species-aware-husbandry/b-sourced-care-guides/README.md#owner-acceptance).
+Manual Animal creation remains independent of provider outcomes; free text is never fuzzy-linked.
+The final accepted UI supersedes the earlier inline/full-Overview direction: **Overview** is a
+compact summary with limited reviewed highlights and a link. The dedicated **Guides & Species
+Reference** tab after Care contains compact **Species Overview / Natural History** (locally saved
+identity/classification/names), complete **Reviewed Captive Care**, and **Sources / Provenance**,
+using Taxonomy, care and source disclosures without dropping content or disagreement positions.
+Richer Natural History remains future X3; missing guides say **No reviewed captive-care guide is
+available yet.** The reviewed Boa constrictor guide, local-only reads, exact length consumer matrix
+and production/backup preservation are accepted B scope. Historical receipts remain unchanged.
 
 ### Measurement precision
 
-The reported `48.5` Snake length is an end-to-end correctness case. Current record/correction
-[forms](../../src/snaketracker/presentation/templates/animal_care_form.html) use integer mm controls;
-[web parsing](../../src/snaketracker/presentation/web.py),
-[commands](../../src/snaketracker/application/animals.py),
-[contracts](../../src/snaketracker/domains/animals/contracts.py),
-[event deserialization](../../src/snaketracker/platform/events/registry.py), and
-[analytics](../../src/snaketracker/application/analytics.py) enforce/use integer `length_mm`.
-Changing HTML step alone or rounding into v1 cannot preserve all reasonable mm/cm/in inputs.
+The original `48.5` correctness case exposed integer-mm-only controls and v1 consumers.
+The accepted correction now supports exact mm/cm/in input using canonical integer `length_um`,
+retained entered value/scale/unit, and mixed v1/v2 readers. V1 history is unchanged; no authoritative
+binary float, truncation or silent rounding is introduced. Implementation evidence is the
+[B correction consumer matrix](../evidence/m6.6-species-aware-husbandry/b-corrections/README.md#exact-length-consumer-matrix--at-measure-01).
 
 [ADR-0048](../adr/0048-precise-animal-length-measurements.md) is the sole authority for v2 exact
 representation, precision, unit conversion/consistency, bounds, correction and display/export rules.
-PR 1 implements that contract through every consumer below; original v1 events stay unchanged.
+M6.6-B implements and qualifies that contract through every consumer below; original v1 events stay unchanged.
 The current Animal identity projection has no length column: review actual persistence needs before
 proposing Alembic. Event/deserializer/projection-handler changes still require compatibility evidence.
 Accessible forms expose unit selection, decimal entry, validation errors and mobile input.
@@ -75,7 +70,7 @@ Accessible forms expose unit selection, decimal entry, validation errors and mob
 payloads and precision/bounds from ADR-0048. Each row must have implementation evidence before B
 acceptance; a v2 correction of v1 must remain an effective fact and reminder source.
 
-| Consumer | PR 1 deliverable / planned acceptance |
+| Consumer | Accepted M6.6-B deliverable / preserved contract |
 |---|---|
 | Record and correction | Decimal/unit commands, v2 contracts/serialization and exact consistency checks; idempotent writes retain entered precision |
 | Void and reinstatement | Existing effective-history rules cover v1, v2, v2-corrected-v1 and correction chains; restore/remove the correct fact and linked effects |
@@ -274,7 +269,7 @@ never publish generic all-Frog advice. Owner reviews mobile and desktop referenc
 
 | PR / tranche | Bounded implementation and acceptance focus |
 |---|---|
-| PR 1 / M6.6-B correction | Spider manual/no-result flow, retained Add/Edit link, local-only profile/visual reads, owner-reviewed inline reference correction, Boa guide, complete length consumer matrix/report-export and `AT-SPDIR-MANUAL-01`, `AT-MEASURE-01`, `AT-PROFILE-REF-01` |
+| PR 1 / M6.6-B correction | Spider manual/no-result flow, retained Add/Edit link, local-only profile/visual reads, owner-accepted compact Overview and dedicated reference tab, Boa guide, complete length consumer matrix/report-export and `AT-SPDIR-MANUAL-01`, `AT-MEASURE-01`, `AT-PROFILE-REF-01` |
 | PR 2 / X1 | Read-support/registration lifecycle, frozen four identities, embedded-identity startup scan/manifest, schema/guide/selector audit, compatibility rehearsal and `AT-CAPREG-01` |
 | PR 3 / X2 | Permanent catalog and FK protection, staged reference generations, basic live-overlay reconciliation, rollback/cleanup/search qualification and `AT-TAXBAS-01` |
 | PR 4 / X3 | Live metadata overlay, provenance, sourced Natural History, profile integration and `AT-TAXOVER-01`, `AT-NATHIST-01` |
@@ -320,7 +315,7 @@ Taxonomy pointer rollback must preserve new durable identities; it is not househ
 
 Each tranche additionally needs the frozen quality gate, browser/accessibility qualification,
 applicable Pi measurements, production-safe deployment and explicit owner acceptance. Tests and
-deployment do not equal acceptance. B corrections → X1 → X2 → X3 → X4 → X5 → M6.6-C remains the
+deployment do not equal acceptance. Accepted M6.6-B → Pre-X1 Architecture Reconciliation → X1 → X2 → X3 → X4 → X5 → M6.6-C is the
 sequence; C stays unstarted until the required pre-C acceptance gates pass.
 
 | Risk | Impact | Mitigation | Required acceptance evidence |
@@ -352,4 +347,4 @@ content and frozen package changes require evidence bound to the exact reviewed 
 documents the inherited checkpoint, approval record fields, and this task's limited authority.
 It does not accept ADRs 0044–0048, M6.6-A or M6.6-B, or authorize PR 1 implementation.
 
-The plan remains a proposal; baseline closure changes documentation and governance tooling only.
+The extension remains proposed and unimplemented. October 5 B acceptance promotes only ADR-0044/0048 and records delivered B scope; it does not perform Pre-X1 architecture reconciliation.
