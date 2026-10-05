@@ -77,8 +77,16 @@ The [refresh runbook](../operations/taxonomy-snapshot-refresh.md) owns operation
 ### X3 interface and migration boundary
 
 Application-owned local ports resolve a permanent UUID, its selected taxonomy summary, qualified
-workflow-group mappings, selected taxonomic provenance and source associations. X3 may display
-these results but cannot independently choose identity, names or hierarchy. X3's source association
+workflow-group mappings, selected taxonomic provenance and qualified taxonomy provider/source
+references with their qualification/conflict state. X2 does not create or own Natural History
+source associations. X3 may use X2 provider mappings/references to resolve and validate a candidate
+content source under its own identity, scope, provenance, rights and publication rules. After
+validation, X3 creates or retains and owns its durable source association, introduced by its
+separate migration. Provider mappings, taxonomy archive sources, Wikipedia URL candidates and
+provider provenance alone do not create that association. X2 does not own or require X3 content
+versions, publication selection or rights/publication state.
+
+X3 may display X2 results but cannot independently choose identity, names or hierarchy. Its source association
 → retained content version → publication/withdrawal selection attaches to that UUID. A generation
 may record acquisition context only: it is never X3's identity, required FK, publication selector
 or cleanup dependency. Rolling B back to A must leave post-A Natural History usable.

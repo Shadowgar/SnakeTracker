@@ -150,11 +150,17 @@ their implementation into X1.
 |---|---|---|
 | X1 capability foundation | Exact persisted profile, stable workflow group, read support, eligibility/default policy, trusted presentation | X2 cannot assume every readable profile is eligible or every group enabled |
 | X2 taxonomy foundation | Permanent UUID; selected scientific/common names, hierarchy/classification, provider mappings/status evidence, provenance/freshness; qualified taxon-to-workflow mapping | Biological classification cannot grant capabilities; a taxon may have no registerable group |
-| X2 → X3 local ports | Resolve UUID, selected taxonomy summary/provenance, qualified group mappings and source associations | X3 displays X2-selected identity/names/classification without choosing them independently |
+| X2 → X3 local ports | Resolve permanent UUID, selected taxonomy summary/provenance, qualified workflow-group mappings, and taxonomy provider/source references with their qualification/conflict state | X3 displays X2-selected identity/names/classification and uses references to resolve and validate candidate content sources; X3 owns durable Natural History source associations after its separate migration |
 | X3 Natural History | UUID → source association → retained content version → publication/withdrawal selection | Generation is acquisition context only, never identity, required FK, selection or cleanup dependency |
 
 **Taxonomy owns identity/classification/names. Natural History owns descriptive biological content.**
 Care Guide coverage is independent of both taxonomy existence and Animal registration eligibility.
+
+X2 does not create or own Natural History source associations. An iNaturalist provider mapping,
+taxonomy archive source, Wikipedia URL candidate or provider provenance alone does not create
+such an association. X3 validates candidate content sources under its own identity, scope,
+provenance, rights and publication rules before creating or retaining the durable UUID-attached
+association. X2 does not own or require X3 content versions, publication selection or rights/publication state.
 
 ### Compatibility preflight before mutable startup
 
