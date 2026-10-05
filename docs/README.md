@@ -27,9 +27,18 @@ covering structured Inventory, Inventory-authoritative Feeding, multi-line Purch
 authority, FIFO valuation, canonical quantities, and physical counts. A1 implements only the
 structured Inventory and Feeding foundation; the financial/intelligence tranches remain pending.
 
-[ADR-0043](adr/0043-universal-species-directory.md) is the proposed M6.6-A decision for stable
+[ADR-0043](adr/0043-universal-species-directory.md) records Accepted status for stable
 Care Keeper taxon UUIDs, normalized optional provider mappings/cache, licensing, request privacy,
-and manual/offline species behavior. M6.6 was owner-approved after M6.5 and inserted before M7.
+and manual/offline species behavior. A was integrated in PR #14; standalone milestone owner
+acceptance remains unverified in repository evidence (see the [roadmap](roadmap/milestones.md)).
+[ADR-0044](adr/0044-versioned-sourced-care-guides.md) is Accepted on October 5, 2026 for M6.6-B;
+see [owner acceptance](evidence/m6.6-species-aware-husbandry/b-sourced-care-guides/README.md#owner-acceptance).
+[ADR-0045](adr/0045-extensible-animal-capability-evolution.md),
+[ADR-0046](adr/0046-local-taxonomy-snapshot-and-provider-overlay.md),
+[ADR-0047](adr/0047-natural-history-reference-boundary.md) remain Proposed for the owner-approved
+pre-M6.6-C extension. [ADR-0048](adr/0048-precise-animal-length-measurements.md) is Accepted on
+October 5 for exact length v2. M6.6-B is accepted/complete; Pre-X1 Architecture Reconciliation is
+next and unstarted. M6.6 was inserted after M6.5 and before M7.
 
 ## Document map
 
@@ -44,11 +53,13 @@ and manual/offline species behavior. M6.6 was owner-approved after M6.5 and inse
 - [Security architecture](security/security-architecture.md)
 - [Backup and restoration runbook](operations/backup-and-restoration.md)
 - [Operations runbook](operations/runtime-operations.md)
+- [Planned taxonomy snapshot refresh procedure](operations/taxonomy-snapshot-refresh.md)
 - [Requirements traceability matrix](requirements/traceability-matrix.md)
 - [Representative dataset](quality/representative-dataset.md)
 - [UX information architecture](ux/information-architecture.md)
 - [Roadmap and milestone checklist](roadmap/milestones.md)
 - [M6.5 Inventory Intelligence architecture proposal](plans/2026-09-04-m6.5-inventory-intelligence-architecture.md)
+- [Extensible Animal and Species Platform controlling plan](plans/2026-10-01-extensible-animal-and-species-platform.md)
 - [Raw owner problem log and roadmap triage](problems/README.md)
 - [Evidence policy](evidence/README.md)
 - [ADR index](adr/README.md)

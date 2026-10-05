@@ -337,13 +337,16 @@ derived only under the costing policy accepted during M6.5 design.
 
 ## Phase 6.6 / M6.6 — Species-aware husbandry and bioactive care
 
-Status: Owner-approved September 13, 2026; M6.6-OPS-A accepted September 27, 2026; remaining
-M6.6 tranches are not accepted as a whole
+Status: Owner-approved September 13, 2026; M6.6-A integrated, standalone owner acceptance unverified;
+M6.6-OPS-A accepted September 27, 2026; M6.6-B accepted/complete October 5, 2026. M6.6 as a whole is
+not accepted. Pre-C extension direction approved October 1, 2026; no extension implementation
+or acceptance yet.
 
 M6.6 was approved after M6.5 acceptance and inserted before M7 without changing any prior
 acceptance record. External sources provide optional reference knowledge; Care Keeper remains the
 authority for household Animals, enclosures, plants, schedules, reminders, history, and keeper
-decisions. M6.6 requires explicit owner acceptance after all five tranches.
+decisions. M6.6 requires explicit owner acceptance after all required tranches, including the pre-C
+extension.
 
 ### M6.6-A — Universal species directory
 
@@ -374,7 +377,12 @@ decisions. M6.6 requires explicit owner acceptance after all five tranches.
   from a bounded, checksum-verified local cache under `img-src 'self'`; the existing household photo
   workflow stays discoverable and its personal image always wins. (`R-090`, `AT-SPDIR-05`)
 
-Owner review is required after M6.6-A. Do not begin M6.6-B until it is accepted.
+M6.6-A implementation was integrated in PR #14. ADR-0043 later records Accepted status dated
+2026-09-26; this status assertion does not supply standalone milestone owner acceptance. The
+checked items above record integrated scope, not owner acceptance or closure of reported defects.
+The historical [A qualification record](../evidence/m6.6-species-aware-husbandry/a-universal-directory/README.md)
+still says owner review pending and contains no separate owner-acceptance record; that evidence
+gap must be resolved before claiming standalone A owner acceptance. Historical evidence is unchanged.
 
 ### M6.6-OPS-A — Platform administration and support
 
@@ -394,10 +402,63 @@ refresh actions, and impersonation. No OPS-B mutation capability is accepted by 
 
 ### M6.6-B — Sourced care guides
 
-- [ ] RB Versioned Animal and plant guide facts retain values/ranges/units, source references,
+Status: **Accepted / Complete**, October 5, 2026. Evidence:
+[B owner acceptance](../evidence/m6.6-species-aware-husbandry/b-sourced-care-guides/README.md#owner-acceptance)
+and [final reference-density qualification](../evidence/m6.6-species-aware-husbandry/b-corrections/compact-species-reference/README.md).
+ADR-0044 and ADR-0048 are Accepted. Earlier owner-review stops remain historical evidence.
+
+- [x] RB Versioned Animal and plant guide facts retain values/ranges/units, source references,
   provider/source IDs, retrieved/reviewed dates, and support/confidence or disagreement state.
   Guides remain reference knowledge and never silently become household facts. (`R-091`,
   `AT-CAREGUIDE-01`)
+
+- [x] RB Spider/no-result manual creation and explicit Add/Edit/legacy linking are preserved;
+  the reviewed Boa constrictor guide, exact fractional length v2 and complete mixed-version
+  report/export/replay consumers passed owner review. Normal profile/reference/image reads
+  remain local, with isolated semantic compatibility and production preservation evidence.
+  (`R-095`, `R-096`, `R-102`, `R-103`; `AT-SPDIR-MANUAL-01`, `AT-MEASURE-01`,
+  `AT-PRODCOMP-01`, `AT-PROFILE-REF-01`)
+- [x] RB Overview remains compact; the dedicated **Guides & Species Reference** tab after Care
+  contains compact Species Overview, Taxonomy details, At-a-Glance and care disclosures, with
+  complete expanded facts and Sources / Provenance. Natural History currently contains saved
+  identity/classification/names only; richer X3 enrichment is unimplemented.
+
+Qualified recovery points include every finalized attachment version. The routine backup worker's
+documented 16 MiB temporary-space limitation remains open; private restore qualification did not
+fix that infrastructure constraint.
+
+Next sequence: **M6.6-B → Pre-X1 Architecture Reconciliation → X1 → X2 → X3 → X4 → X5 → M6.6-C**.
+Pre-X1 reconciliation and extension implementation remain unstarted.
+
+### Pre-M6.6-C extension — X1 through X5
+
+The [controlling plan](../plans/2026-10-01-extensible-animal-and-species-platform.md) and Proposed
+ADRs 0045–0047 govern these owner-approved implementation tranches. Accepted ADR-0048 governs
+the delivered length behavior that future tranches must preserve. Each requires isolated data
+safety, quality, browser/accessibility, applicable Pi, deployment and explicit owner review; no
+checklist item below is accepted yet. This inserts work without renumbering M6.6-C/D/E or M7.
+
+- [ ] **X1 — Extensible Animal foundation:** trusted versioned registry, removal of scattered
+  four-group enumeration, permanent read support, eligible/default registration, supported-profile
+  manifest and embedded-identity startup checks. Audit taxonomy schema and Care Guide selectors
+  independently; qualify isolated compatibility. (`R-097`, `R-102`; `AT-CAPREG-01`, `AT-PRODCOMP-01`)
+- [ ] **X2 — Local taxonomy foundation:** official iNaturalist Taxonomy DarwinCore Archive,
+  permanent catalog/reference FKs, indexed content generations, basic live-overlay coexistence and
+  final promotion reconciliation. Rollback/cleanup preserve newly linked identities; imported
+  Amphibia/ancestors do not yet enable Animal registration.
+  (`R-098`, `R-099`, `R-102`; `AT-TAXBAS-01`, `AT-PRODCOMP-01`)
+- [ ] **X3 — Natural History reference:** bounded live metadata overlay, source/licence
+  provenance, natural-history/immutable-guide coexistence and local-only inline profile reference.
+  (`R-099`, `R-100`, `R-102`, `R-103`; `AT-TAXOVER-01`, `AT-NATHIST-01`,
+  `AT-PROFILE-REF-01`, `AT-PRODCOMP-01`)
+- [ ] **X4 — Amphibian expansion:** `amphibian.v1`, Amphibia ancestry, initial Frog workflows,
+  the exact proposed initial matrix, registration-v3 downgrade barrier, actual older-binary startup
+  rejection, distinct fallback and cross-profile/browser qualification. (`R-097`, `R-101`, `R-102`; `AT-AMPH-01`,
+  `AT-PRODCOMP-01`)
+- [ ] **X5 — Amphibian reference qualification:** representative sourced taxon-specific guides
+  and mobile/desktop owner review. (`R-101`, `R-102`; `AT-AMPHREF-01`, `AT-PRODCOMP-01`)
+
+M6.6-C starts only after B corrections and X1–X5 receive their required acceptance.
 
 ### M6.6-C — Smart care setup
 

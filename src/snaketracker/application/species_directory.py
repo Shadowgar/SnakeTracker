@@ -303,6 +303,36 @@ class SpeciesDirectoryService:
     def identity_suggestions(self, household_id: UUID, taxon_id: UUID) -> IdentitySuggestions:
         return self._repository.identity_suggestions(household_id, taxon_id)
 
+    def cached_reference_image(self, taxon_id: UUID) -> ReferenceImage | None:
+        """Read an eligible local asset without enrichment, downloads or metadata writes."""
+        taxon = self.get(taxon_id)
+        if (
+            taxon is None
+            or self._reference_image_cache is None
+            or not _has_approved_image(taxon)
+            or not taxon.image_local_filename
+            or not taxon.image_local_sha256
+            or taxon.image_cached_at is None
+        ):
+            return None
+        try:
+            content = self._reference_image_cache.load(
+                taxon.image_local_filename, taxon.image_local_sha256
+            )
+        except ProviderUnavailableError:
+            return None
+        return _reference_image(
+            taxon,
+            CachedReferenceImage(
+                filename=taxon.image_local_filename,
+                media_type=taxon.image_local_media_type or "image/webp",
+                byte_size=len(content),
+                sha256=taxon.image_local_sha256,
+                cached_at=taxon.image_cached_at,
+                content=content,
+            ),
+        )
+
     def reference_image(self, taxon_id: UUID) -> ReferenceImage | None:
         taxon = self.get(taxon_id)
         if taxon is None or self._reference_image_cache is None:

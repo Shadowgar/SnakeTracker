@@ -26,8 +26,13 @@
     {% endif %}
     {% elif target.event_type == "animal.weight_recorded" %}
     <label>Weight (g)<input name="weight_grams" type="number" inputmode="decimal" min="0.001" step="0.001" value="{{ format_weight(target.payload) }}" required></label>
-    {% elif target.event_type == "animal.length_recorded" %}
-    <label>Length (mm)<input name="length_mm" type="number" min="1" value="{{ target.payload.length_mm }}" required></label>
+    {% elif target.event_type in ("animal.length_recorded", "animal.length_corrected") %}
+    {% set submitted = values|default({}) %}
+    <p>Current recorded length: <strong>{{ format_length(target.payload) }} {{ length_unit(target.payload) }}</strong></p>
+    <label>Correct length<input name="length_value" data-length-value type="number" inputmode="decimal" min="0.01" step="any" value="{{ submitted.get('length_value', submitted.get('length_mm', format_length(target.payload))) }}" aria-describedby="length-precision length-confirmation" required></label>
+    <label>Length unit<select name="length_unit" data-length-unit required>{% for unit in ('mm', 'cm', 'in') %}<option value="{{ unit }}"{% if submitted.get('length_unit', length_unit(target.payload)) == unit %} selected{% endif %}>{{ {'mm':'Millimetres (mm)', 'cm':'Centimetres (cm)', 'in':'Inches (in)'}[unit] }}</option>{% endfor %}</select></label>
+    <small id="length-precision">Use up to 1 decimal place in mm or 2 in cm/in. Changing the unit keeps the entered number and records a new physical length.</small>
+    <output id="length-confirmation" data-length-original="{{ format_length(target.payload) }} {{ length_unit(target.payload) }}" aria-live="polite">Replace {{ format_length(target.payload) }} {{ length_unit(target.payload) }} with the length and unit above.</output>
     {% elif target.event_type == "animal.shed_recorded" %}
     <label>In blue state<select name="blue_state"><option value="false" {% if not target.payload.blue_state %}selected{% endif %}>No</option><option value="true" {% if target.payload.blue_state %}selected{% endif %}>Yes</option></select></label>
     <label>Completed<select name="completed"><option value="true" {% if target.payload.completed %}selected{% endif %}>Yes</option><option value="false" {% if not target.payload.completed %}selected{% endif %}>No</option></select></label>
@@ -36,7 +41,9 @@
     <label>Result<select name="result">{% for option in ("complete", "partial", "failed") %}<option value="{{ option }}" {% if target.payload.result == option %}selected{% endif %}>{{ option|capitalize }}</option>{% endfor %}</select></label>
     {% endif %}
     <label>Notes<textarea name="notes" rows="3">{{ target.notes or '' }}</textarea></label>
-    <div class="form-actions"><a href="/animals/{{ animal.animal_id }}/timeline">Cancel</a><button type="submit">Save correction</button></div>
+    <div class="form-actions"><a class="button-link secondary-link" href="/animals/{{ animal.animal_id }}/timeline">Cancel</a><button type="submit">Save correction</button></div>
   </form>
 </section>
 {% endblock %}
+
+{% block scripts %}{% if target.event_type in ("animal.length_recorded", "animal.length_corrected") %}<script defer src="/static/length-form.js"></script>{% endif %}{% endblock %}

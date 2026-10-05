@@ -18,6 +18,7 @@
     <div><dt>Directory identity</dt><dd>{% if plant.taxon_id %}<a href="/directory/{{ plant.taxon_id }}">View plant in directory</a>{% else %}Keeper-entered plant{% endif %}</dd></div>
     <div><dt>Notes</dt><dd>{{ plant.notes or 'None' }}</dd></div>
   </dl>
+  {% if plant.taxon_id and care_guide_available %}<section class="card"><h2>Plant reference</h2><p>Reviewed plant guidance is separate from this plant's keeper-entered state.</p><a href="/directory/{{ plant.taxon_id }}/care-guide">Read plant Care Guide</a></section>{% elif plant.taxon_id %}<section class="card"><h2>Plant reference</h2><p>No reviewed guidance available.</p></section>{% endif %}
   <div class="form-actions"><a href="/enclosures/{{ enclosure.enclosure_id }}">Back to enclosure</a>{% if plant.status == 'active' %}<a class="button-link secondary-link" href="/enclosures/{{ enclosure.enclosure_id }}/plants/{{ plant.enclosure_plant_id }}/edit">Edit plant</a><a class="button-link danger-link" href="/enclosures/{{ enclosure.enclosure_id }}/plants/{{ plant.enclosure_plant_id }}/remove">Remove plant</a>{% endif %}</div>
 </section>
 {% endblock %}

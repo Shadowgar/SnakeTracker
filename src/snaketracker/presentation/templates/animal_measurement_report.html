@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Measurement report · {{ animal.name }} · Care Keeper{% endblock %}
+{% block content %}
+<section aria-labelledby="page-title"><header><p class="eyebrow">{{ animal.name }}</p><h1 id="page-title">Measurement report</h1><p>Effective measurements in their recorded units. Corrections replace earlier facts; deleted facts are excluded.</p><a href="/animals/{{ animal.animal_id }}/measurements">Measurement history</a> · <a href="/animals/{{ animal.animal_id }}/measurements.csv">Download precise CSV</a></header>
+<div class="table-scroll" tabindex="0"><table><caption>Effective measurements for {{ animal.name }}</caption><thead><tr><th scope="col">When</th><th scope="col">Kind</th><th scope="col">Recorded value</th></tr></thead><tbody>{% for row in report.rows %}<tr><td>{{ row.values[3] }}</td><td>{{ row.values[4]|title }}</td><td>{{ row.values[8] }} {{ row.values[10] }}</td></tr>{% else %}<tr><td colspan="3">No measurements recorded yet.</td></tr>{% endfor %}</tbody></table></div></section>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% if reference_glance %}
+<section class="profile-reference-section" aria-labelledby="profile-glance-title">
+  <h3 id="profile-glance-title">At a glance</h3>
+  <dl class="profile-reference-grid">
+    {% for label, claims, state in reference_glance %}
+    <div class="profile-reference-fact"><dt>{{ label }}</dt><dd><strong>{% if state == 'Sources differ' %}See separate positions{% else %}{{ format_claim_value(claims[0]) }}{% endif %}</strong><span class="guide-state {% if state == 'Sources differ' %}guide-state-differ{% elif state == 'Corroborated' %}guide-state-corroborated{% else %}guide-state-single{% endif %}">{{ state }}</span></dd></div>
+    {% endfor %}
+  </dl>
+</section>
+{% endif %}

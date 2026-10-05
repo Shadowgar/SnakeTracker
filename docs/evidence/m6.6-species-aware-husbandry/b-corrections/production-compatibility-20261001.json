@@ -1,0 +1,91 @@
+{
+  "backup_gate": "blocked: encrypted archive restores 40 current versions; 46 immutable versions exist; six isolated diagnostic supplemental files are outside encrypted backup",
+  "candidate_release": "859ca2964953b26657cf4699bc128ac646c347e4",
+  "clock": "2026-10-01T07:20:17.000000+00:00",
+  "committed_candidate_comparison": "passed; zero unexpected differences",
+  "consumer_qualification": {
+    "changed_command_conflicts": 61,
+    "http": {
+      "anonymous_admin": 403,
+      "anonymous_profile": 303,
+      "care_report": 200,
+      "collection_report": 200,
+      "events_subjects_idempotency_unchanged": true,
+      "expenses_report": 200,
+      "foreign_animal": 404,
+      "history": 200,
+      "nonoperator_admin": 403,
+      "numeric_csv": 200,
+      "numeric_report": 200,
+      "operator_admin": 200,
+      "operator_animal": 200,
+      "operator_audit": 200,
+      "operator_events": 200,
+      "operator_system": 200,
+      "outbound_calls": 0,
+      "profile": 200,
+      "search": 200
+    },
+    "mixed_actual_stream_reload": true,
+    "mixed_correction_um": 485000,
+    "mixed_effective_numeric_export": true,
+    "mixed_record_um": 1231900,
+    "production_business_writes": false,
+    "retry_events_subjects_idempotency_unchanged": true,
+    "stored_registration_retries": 61
+  },
+  "cutoff": 1027,
+  "expected_differences": [
+    "boa_reference.care_guide_claims",
+    "boa_reference.care_guide_current",
+    "boa_reference.care_guide_sources",
+    "boa_reference.care_guide_versions",
+    "projection_release.validated_registry_evolution"
+  ],
+  "media": {
+    "attachments": {
+      "columns": null,
+      "row_count": 46,
+      "sha256": "23975abb867ee9c44feffb2b33e354bdec6e406ddeffefabe37eaa5e5100ac5f"
+    },
+    "reference_images": {
+      "columns": null,
+      "row_count": 30,
+      "sha256": "684d9e29f3d7ae51cbc351211d26680d6c5db0763bfe6ec48e2cfa17c5d2ec70"
+    }
+  },
+  "old_binary_rejection": {
+    "immutable_state_unchanged": true,
+    "normal_readiness": false,
+    "reason_code": "event_contract_unknown"
+  },
+  "old_release": "c4740b32c1b80f054725c0a037d47689bc283474",
+  "private_artifact_sha256": {
+    "candidate-manifest-859ca29.json": "52f714e07a36f21b19a05b9d878a4a7faffb246cc6033480eee7be6c10843f45",
+    "candidate-manifest-final.json": "caa4c68701e4fad29c8811c8e45bc739a6b3e004bd5907dcad5cc302bd7c5912",
+    "candidate-rebuild-final.json": "f432bc6099c36ad2a2470fea68d3476ceda0ae43e4ddf6e0690599408c94a37d",
+    "comparison-859ca29.json": "84bfb653c87dfd8a27926fb3f427be7a39f3a04b1a1094d6f631485e04a6e88c",
+    "comparison-final.json": "84bfb653c87dfd8a27926fb3f427be7a39f3a04b1a1094d6f631485e04a6e88c",
+    "consumer-qualification.json": "12b26905799aaf92bb18f56c17b7df54f260ea066ab3da411debb3f7cd243818",
+    "old-binary-rejection.json": "27a02305bd3ba910c58fa9e058285e1c39affa3697a0d5f7e6b985b43916e559",
+    "old-manifest-final.json": "35ea7ee6d3185a9f4fc1c4cb7c30cf0388123b8fe2e7120720912fbbf40380e6",
+    "old-rebuild.json": "c23d39fb74e194db05b77d973b71eb4a91c320a81b7702da817501654699cc6d"
+  },
+  "production_compatibility_release_gate": "not passed: complete encrypted backup restore required",
+  "production_readonly_integrity": {
+    "all_immutable_attachment_versions_unchanged": 46,
+    "expected_restore_exclusion": "Three existing historical ephemeral password-reset credentials are removed from backup by pipeline policy; live rows are unchanged old credentials, not new writes. Sessions are likewise excluded from encrypted backup.",
+    "live_high_water": 1027,
+    "private_live_manifest_sha256": "07cbb657a6b28750f78722f267ca2d667f56bd871ddd081dad4afbd65b1ae183",
+    "production_business_writes_by_correction": false,
+    "schema": "0023_sourced_care_guides",
+    "unchanged_base_business_tables": 42
+  },
+  "schema_objects_compared": 114,
+  "semantic_reads_candidate": 1373,
+  "semantic_reads_old": 1373,
+  "status": "semantic comparison passed; release blocked by backup incompleteness",
+  "synchronous_projection_reconstruction": "not performed; preserved synchronous tables and actual application reads compared",
+  "tables_compared": 64,
+  "unexpected_differences": []
+}

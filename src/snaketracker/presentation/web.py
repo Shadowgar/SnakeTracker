@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 from urllib.parse import urlencode
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -39,14 +39,14 @@ from snaketracker.application.animals import (
     ChangeReferenceImagePreferenceCommand,
     CorrectFeedingCommand,
     CorrectInventoryFeedingCommand,
-    CorrectLengthCommand,
+    CorrectLengthV2Command,
     CorrectMoltCommand,
     CorrectShedCommand,
     CorrectWeightCommand,
     DeleteAnimalCareRecordCommand,
     RecordBathCommand,
     RecordInventoryFeedingCommand,
-    RecordLengthCommand,
+    RecordLengthV2Command,
     RecordMoltCommand,
     RecordPremoltCommand,
     RecordShedCommand,
@@ -69,6 +69,13 @@ from snaketracker.application.backups import (
     BackupValidationError,
     ConfigureBackupScheduleCommand,
     RequestBackupCommand,
+)
+from snaketracker.application.care_guides import (
+    CareGuideReader,
+    format_claim_value,
+    glance_claims,
+    grouped_claims,
+    profile_reference_claims,
 )
 from snaketracker.application.dashboard import DashboardStatisticsService
 from snaketracker.application.enclosures import (
@@ -139,6 +146,12 @@ from snaketracker.application.inventory_intelligence import (
     stock_check_is_due,
 )
 from snaketracker.application.keeper_history import keeper_history_events
+from snaketracker.application.length_measurements import (
+    LengthPayload,
+    format_length_payload,
+    length_entered_unit,
+    parse_length_input,
+)
 from snaketracker.application.purchases import (
     AcquireNewInventoryCommand,
     AssignExistingStockCostCommand,
@@ -220,6 +233,7 @@ from snaketracker.domains.inventory.catalog import (
     validate_creation_unit,
 )
 from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
+from snaketracker.platform.events.corrections import effective_event_root, evaluate_effective_events
 from snaketracker.platform.events.envelope import DomainEvent
 from snaketracker.platform.events.registry import production_event_registry
 from snaketracker.platform.events.store import ExpectedVersionConflictError
@@ -240,11 +254,14 @@ templates = Jinja2Templates(directory=PACKAGE_DIR / "templates")
 templates.env.globals["current_year"] = datetime.now(UTC).year
 templates.env.globals["format_quantity"] = format_quantity_scaled
 templates.env.globals["format_weight"] = format_weight_payload
+templates.env.globals["format_length"] = format_length_payload
+templates.env.globals["length_unit"] = length_entered_unit
+templates.env.globals["format_claim_value"] = format_claim_value
 
 CARE_FORM_DETAILS: dict[str, tuple[str, str, str]] = {
     "feeding": ("Record feeding", "Choose food from Inventory and record the outcome.", "feedings"),
     "weight": ("Record weight", "Add the animal's measured weight in grams.", "weights"),
-    "length": ("Record length", "Add the animal's measured length in millimetres.", "lengths"),
+    "length": ("Record length", "Add a measured length in mm, cm or inches.", "lengths"),
     "shed": ("Record shed", "Add the observed shed state or completed result.", "sheds"),
     "bath": ("Record bath", "Add a completed bath or soak.", "baths"),
     "molt": ("Record molt", "Add the observed molt result.", "molts"),
@@ -890,6 +907,21 @@ def _care_record_kind(event_type: str) -> str:
     }[event_type]
 
 
+def _latest_length_correction_target(
+    animal_service: AnimalService, household_id: UUID, animal_id: UUID, target: DomainEvent
+) -> DomainEvent:
+    history = animal_service.audit_history(household_id, animal_id)
+    by_id = {event.event_id: event for event in history}
+    root = target
+    while (parent_id := getattr(root.payload, "target_event_id", None)) in by_id:
+        root = by_id[parent_id]
+    for effective in evaluate_effective_events(history):
+        effective_root = effective_event_root(history, effective.event_id)
+        if effective_root is not None and effective_root.event_id == root.event_id:
+            return effective
+    return target
+
+
 def _correct_animal_event_from_form(
     animal_service: AnimalService,
     principal: Principal,
@@ -950,9 +982,17 @@ def _correct_animal_event_from_form(
             )
         )
         return
-    if target.event_type == "animal.length_recorded":
+    if target.event_type in {"animal.length_recorded", "animal.length_corrected"}:
+        current = _latest_length_correction_target(
+            animal_service, principal.household_id, animal_id, target
+        )
+        current_length = cast(LengthPayload, current.payload)
+        length = parse_length_input(
+            form.get("length_value", form.get("length_mm", format_length_payload(current_length))),
+            form.get("length_unit", length_entered_unit(current_length)),
+        )
         animal_service.correct_length(
-            CorrectLengthCommand(
+            CorrectLengthV2Command(
                 household_id=principal.household_id,
                 actor_user_id=principal.user_id,
                 actor_role=principal.role,
@@ -961,7 +1001,10 @@ def _correct_animal_event_from_form(
                 idempotency_key=idempotency_key,
                 occurred_at=occurred_at,
                 notes=notes,
-                length_mm=_required_int(form.get("length_mm", ""), "length"),
+                length_um=length.length_um,
+                entered_value_scaled=length.entered_value_scaled,
+                entered_scale=length.entered_scale,
+                entered_unit=length.entered_unit,
             )
         )
         return
@@ -1132,6 +1175,7 @@ def create_web_router(
     secure_cookie: bool,
     expected_origin: str | None = None,
     directory_service: SpeciesDirectoryService | None = None,
+    care_guide_repository: CareGuideReader | None = None,
 ) -> APIRouter:
     router = APIRouter(include_in_schema=False)
     animal_visual_resolver = AnimalVisualResolver(directory_service)
@@ -1211,7 +1255,7 @@ def create_web_router(
         taxon = directory_service.get(taxon_id)
         if taxon is None:
             return None
-        if directory_service.reference_image(taxon_id) is None:
+        if directory_service.cached_reference_image(taxon_id) is None:
             return None
         return directory_service.get(taxon_id)
 
@@ -1379,6 +1423,11 @@ def create_web_router(
             if directory_service is not None
             else None
         )
+        profile_reference_guide = (
+            care_guide_repository.current(linked_taxon.taxon.taxon_id)
+            if linked_taxon is not None and care_guide_repository is not None
+            else None
+        )
         reference_taxon_available = (
             linked_taxon.taxon
             if linked_taxon is not None and animal_visual.is_species_reference
@@ -1387,6 +1436,25 @@ def create_web_router(
         return {
             "animal": animal,
             "linked_taxon": linked_taxon,
+            "care_guide_available": profile_reference_guide is not None,
+            "profile_reference_guide": profile_reference_guide,
+            "profile_reference_sections": grouped_claims(profile_reference_guide)
+            if profile_reference_guide is not None
+            else (),
+            "profile_reference_glance": glance_claims(profile_reference_guide)
+            if profile_reference_guide is not None
+            else (),
+            "profile_reference_sources": {
+                source.source_id: source for source in profile_reference_guide.sources
+            }
+            if profile_reference_guide is not None
+            else {},
+            "directory_available": directory_service is not None,
+            "profile_reference_facts": (
+                profile_reference_claims(profile_reference_guide)
+                if profile_reference_guide is not None
+                else ()
+            ),
             "reference_taxon": reference_taxon_available,
             "reference_taxon_available": reference_taxon_available,
             "animal_visual": animal_visual,
@@ -2099,7 +2167,55 @@ def create_web_router(
             request,
             "directory_detail.html",
             principal,
-            context={"taxon": taxon, "reference_taxon": reference_taxon},
+            context={
+                "taxon": taxon,
+                "reference_taxon": reference_taxon,
+                "care_guide_available": bool(
+                    care_guide_repository is not None
+                    and care_guide_repository.available(taxon.taxon_id)
+                ),
+            },
+        )
+
+    @router.get("/directory/{taxon_id}/care-guide", response_class=HTMLResponse)
+    async def care_guide_detail(
+        request: Request, taxon_id: str, version: int | None = None
+    ) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            taxon_uuid = UUID(taxon_id)
+        except ValueError:
+            return _not_found(request, "Directory entry not found")
+        taxon = directory_service.get(taxon_uuid) if directory_service is not None else None
+        if taxon is None:
+            return _not_found(request, "Directory entry not found")
+        guide = None
+        versions: tuple[int, ...] = ()
+        if care_guide_repository is not None:
+            versions = care_guide_repository.versions(taxon_uuid)
+            guide = (
+                care_guide_repository.current(taxon_uuid)
+                if version is None
+                else care_guide_repository.version(taxon_uuid, version)
+            )
+        if version is not None and guide is None:
+            return _not_found(request, "Care Guide version not found")
+        return protected_page(
+            request,
+            "care_guide.html",
+            principal,
+            context={
+                "taxon": taxon,
+                "guide": guide,
+                "sections": grouped_claims(guide) if guide is not None else (),
+                "glance_facts": glance_claims(guide) if guide is not None else (),
+                "sources_by_id": {source.source_id: source for source in guide.sources}
+                if guide is not None
+                else {},
+                "versions": versions,
+            },
         )
 
     @router.get("/api/directory/search", response_class=JSONResponse)
@@ -2189,7 +2305,9 @@ def create_web_router(
         if principal is None or directory_service is None:
             return Response(status_code=404)
         try:
-            reference = await run_in_threadpool(directory_service.reference_image, UUID(taxon_id))
+            reference = await run_in_threadpool(
+                directory_service.cached_reference_image, UUID(taxon_id)
+            )
         except ValueError:
             reference = None
         if reference is None:
@@ -2693,6 +2811,8 @@ def create_web_router(
                     "occurred_at": item.occurred_at.isoformat(),
                     "value": float(item.value) if isinstance(item.value, Decimal) else item.value,
                     "unit": item.unit,
+                    "display_value": item.display_value,
+                    "display_unit": item.display_unit or item.unit,
                 }
                 for item in analytics.measurements
             ],
@@ -4981,6 +5101,11 @@ def create_web_router(
                 "enclosure": enclosure,
                 "plant": plant,
                 "reference_taxon": reference_taxon,
+                "care_guide_available": bool(
+                    plant.taxon_id is not None
+                    and care_guide_repository is not None
+                    and care_guide_repository.available(plant.taxon_id)
+                ),
             },
         )
 
@@ -5265,14 +5390,6 @@ def create_web_router(
                     raise DirectoryValidationError("Choose a species that matches the Animal type.")
                 if photo_preference not in {"none", "species_reference"}:
                     raise DirectoryValidationError("Choose a valid profile-picture option.")
-                if photo_preference == "species_reference" and not (
-                    selected_taxon.image_source_url
-                    and selected_taxon.image_creator
-                    and selected_taxon.image_license_code in REFERENCE_IMAGE_LICENSES
-                ):
-                    raise DirectoryValidationError(
-                        "A licensed species reference image is not available."
-                    )
             result = animal_service.register(
                 RegisterAnimalCommand(
                     household_id=principal.household_id,
@@ -5454,6 +5571,27 @@ def create_web_router(
             context={
                 **animal_experience_context(principal, profile),
                 "active_section": "care",
+            },
+        )
+
+    @router.get("/animals/{animal_id}/reference", response_class=HTMLResponse)
+    async def animal_reference(request: Request, animal_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            profile = animal_service.profile_for(principal.household_id, UUID(animal_id))
+        except ValueError:
+            profile = None
+        if profile is None:
+            return _not_found(request, "Animal not found")
+        return protected_page(
+            request,
+            "animal_reference.html",
+            principal,
+            context={
+                **animal_experience_context(principal, profile),
+                "active_section": "reference",
             },
         )
 
@@ -5869,6 +6007,14 @@ def create_web_router(
             profile = animal_service.profile_for(principal.household_id, animal_uuid)
             if profile is None:
                 raise FormValidationError("Animal not found.")
+            selected_taxon_id = str(form.get("taxon_id", "")).strip()
+            selected_taxon = None
+            if selected_taxon_id:
+                selected_taxon = (
+                    directory_service.get(UUID(selected_taxon_id)) if directory_service else None
+                )
+                if selected_taxon is None or selected_taxon.supported_group != profile.animal_type:
+                    raise FormValidationError("Choose a species that matches the Animal type.")
             animal_service.update_profile(
                 UpdateAnimalProfileCommand(
                     household_id=principal.household_id,
@@ -5887,7 +6033,24 @@ def create_web_router(
                     notes=str(form.get("notes", "")),
                 )
             )
-        except (AnimalValidationError, FormValidationError, ValueError) as error:
+            if selected_taxon is not None and directory_service is not None:
+                await run_in_threadpool(
+                    directory_service.link_animal,
+                    LinkAnimalTaxonCommand(
+                        household_id=principal.household_id,
+                        actor_user_id=principal.user_id,
+                        animal_id=animal_uuid,
+                        taxon_id=selected_taxon.taxon_id,
+                        correlation_id=uuid4(),
+                        idempotency_key=_form_idempotency_key(form),
+                    ),
+                )
+        except (
+            AnimalValidationError,
+            DirectoryValidationError,
+            FormValidationError,
+            ValueError,
+        ) as error:
             return _animal_edit_error(
                 request,
                 principal,
@@ -6068,8 +6231,11 @@ def create_web_router(
             animal_uuid = UUID(animal_id)
             if animal_service.profile_for(principal.household_id, animal_uuid) is None:
                 raise FormValidationError("Animal not found.")
+            length = parse_length_input(
+                form.get("length_value", form.get("length_mm", "")), form.get("length_unit", "mm")
+            )
             animal_service.record_length(
-                RecordLengthCommand(
+                RecordLengthV2Command(
                     household_id=principal.household_id,
                     actor_user_id=principal.user_id,
                     animal_id=animal_uuid,
@@ -6078,7 +6244,10 @@ def create_web_router(
                     occurred_at=_form_datetime(
                         form.get("occurred_at", ""), principal.household_timezone
                     ),
-                    length_mm=_required_int(form.get("length_mm", ""), "length"),
+                    length_um=length.length_um,
+                    entered_value_scaled=length.entered_value_scaled,
+                    entered_scale=length.entered_scale,
+                    entered_unit=length.entered_unit,
                     notes=str(form.get("notes", "")),
                 )
             )
@@ -6305,6 +6474,14 @@ def create_web_router(
             event_uuid = UUID(event_id)
             profile = animal_service.profile_for(principal.household_id, animal_uuid)
             target = _animal_event(animal_service, principal.household_id, animal_uuid, event_uuid)
+            if target is not None and target.event_type in {
+                "animal.length_recorded",
+                "animal.length_corrected",
+            }:
+                current = _latest_length_correction_target(
+                    animal_service, principal.household_id, animal_uuid, target
+                )
+                target = current
         except ValueError:
             profile = None
             target = None
@@ -6383,7 +6560,12 @@ def create_web_router(
                 "animal_event_correct.html",
                 principal,
                 status_code=422,
-                context={"animal": profile, "target": target, "errors": {"form": str(error)}},
+                context={
+                    "animal": profile,
+                    "target": target,
+                    "errors": {"form": str(error)},
+                    "values": _form_values(form),
+                },
             )
         return RedirectResponse(f"/animals/{animal_id}/timeline", status_code=303)
 
@@ -6619,6 +6801,40 @@ def create_web_router(
             page_title="Feeding history",
             page_description="Effective feeding history, including accepted corrections.",
             empty_message="No feeding records yet.",
+        )
+
+    @router.get("/animals/{animal_id}/measurements.csv", response_class=PlainTextResponse)
+    @router.get("/animals/{animal_id}/measurements/report", response_class=HTMLResponse)
+    async def animal_measurement_report(request: Request, animal_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            animal_uuid = UUID(animal_id)
+            animal = animal_service.profile_for(principal.household_id, animal_uuid)
+        except ValueError:
+            animal = None
+        if animal is None:
+            return PlainTextResponse("Animal not found.", status_code=404)
+        if projection_catch_up is not None:
+            projection_catch_up()
+        try:
+            report = report_service.measurements(
+                principal.household_id, animal_id=animal_uuid, generated_at=datetime.now(UTC)
+            )
+        except RuntimeError:
+            return PlainTextResponse("Measurements are catching up.", status_code=503)
+        if request.url.path.endswith(".csv"):
+            return PlainTextResponse(
+                report_service.csv(report),
+                media_type="text/csv; charset=utf-8",
+                headers={"Content-Disposition": 'attachment; filename="animal-measurements.csv"'},
+            )
+        return protected_page(
+            request,
+            "animal_measurement_report.html",
+            principal,
+            context={"animal": animal, "report": report},
         )
 
     @router.get("/animals/{animal_id}/measurements", response_class=HTMLResponse)

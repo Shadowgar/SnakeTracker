@@ -1,0 +1,494 @@
+from __future__ import annotations
+
+import re
+import sys
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from uuid import UUID, uuid4
+
+import pytest
+from alembic import command
+from alembic.config import Config
+from fastapi.testclient import TestClient
+from pydantic import SecretStr
+from sqlalchemy import text
+
+from snaketracker.application.care_guides import GuideBundle
+from snaketracker.bootstrap.application import build_application
+from snaketracker.bootstrap.configuration import Environment, Settings
+from snaketracker.infrastructure.database.engine import create_sqlite_engine
+from snaketracker.infrastructure.taxonomy.care_guides import (
+    CareGuideImportError,
+    SQLAlchemyCareGuideRepository,
+)
+from snaketracker.operations.import_care_guides import MAX_BUNDLE_BYTES, load_bundle, main
+
+ROOT = Path(__file__).parents[2]
+
+
+def _database(tmp_path: Path) -> tuple[Path, dict[str, UUID]]:
+    path = tmp_path / "guides.sqlite3"
+    config = Config(ROOT / "alembic.ini")
+    config.set_main_option("script_location", str(ROOT / "migrations"))
+    config.set_main_option("sqlalchemy.url", f"sqlite+pysqlite:///{path}")
+    command.upgrade(config, "head")
+    bundle = GuideBundle.model_validate_json(
+        (ROOT / "reference/care-guides/reviewed-v1.json").read_bytes()
+    )
+    engine = create_sqlite_engine(path, require_local_storage=False)
+    ids: dict[str, UUID] = {}
+    with engine.begin() as connection:
+        for guide in bundle.guides:
+            taxon_id = uuid4()
+            ids[guide.scientific_name] = taxon_id
+            connection.execute(
+                text(
+                    "INSERT INTO taxa (taxon_id,supported_group,accepted_scientific_name,"
+                    "taxonomic_status,created_at,refreshed_at) "
+                    "VALUES (:id,:group,:name,'accepted',:at,:at)"
+                ),
+                {
+                    "id": str(taxon_id),
+                    "group": guide.biological_group.value,
+                    "name": guide.scientific_name,
+                    "at": datetime.now(UTC).isoformat(),
+                },
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO taxon_provider_mappings "
+                    "(taxon_id,provider,provider_id,source_url,retrieved_at,refreshed_at) "
+                    "VALUES (:id,'fixture',:provider_id,:url,:at,:at)"
+                ),
+                {
+                    "id": str(taxon_id),
+                    "provider_id": guide.scientific_name,
+                    "url": "https://example.test/taxon",
+                    "at": datetime.now(UTC).isoformat(),
+                },
+            )
+    engine.dispose()
+    return path, ids
+
+
+def _bundle() -> GuideBundle:
+    return GuideBundle.model_validate_json(
+        (ROOT / "reference/care-guides/reviewed-v1.json").read_bytes()
+    )
+
+
+def test_operator_import_command_requires_explicit_migrated_database(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    bundle_path = ROOT / "reference/care-guides/reviewed-v1.json"
+    with pytest.raises(ValueError, match="missing"):
+        load_bundle(tmp_path / "missing.json")
+    oversized = tmp_path / "oversized.json"
+    oversized.write_bytes(b"x" * (MAX_BUNDLE_BYTES + 1))
+    with pytest.raises(ValueError, match="1 MiB"):
+        load_bundle(oversized)
+
+    monkeypatch.setattr(sys, "argv", ["import_care_guides", str(bundle_path)])
+    main()
+    assert "Validated 5 reviewed guides and 30 sourced claims" in capsys.readouterr().out
+    for database in (None, "relative.sqlite3", str(tmp_path / "missing.sqlite3")):
+        arguments = ["import_care_guides", str(bundle_path), "--apply"]
+        if database is not None:
+            arguments.extend(("--database", database))
+        monkeypatch.setattr(sys, "argv", arguments)
+        with pytest.raises(SystemExit) as error:
+            main()
+        assert error.value.code == 2
+
+    path, _ = _database(tmp_path)
+    monkeypatch.setattr(
+        sys, "argv", ["import_care_guides", str(bundle_path), "--apply", "--database", str(path)]
+    )
+    main()
+    assert "Imported 5 guide versions" in capsys.readouterr().out
+    main()
+    assert "5 identical versions already present" in capsys.readouterr().out
+
+
+def test_atomic_idempotent_import_and_immutable_versions(tmp_path: Path) -> None:
+    path, ids = _database(tmp_path)
+    engine = create_sqlite_engine(path, require_local_storage=False)
+    repo = SQLAlchemyCareGuideRepository(engine)
+    bundle = _bundle()
+    try:
+        assert repo.import_bundle(bundle) == (5, 0)
+        assert repo.import_bundle(bundle) == (0, 5)
+        assert repo.available(ids["Python regius"])
+        assert repo.current(ids["Python regius"]) == bundle.guides[0]
+        assert repo.versions(ids["Python regius"]) == (1,)
+        assert repo.version(ids["Python regius"], 7) is None
+        with engine.connect() as connection:
+            source_count = connection.execute(text("SELECT count(*) FROM care_guide_sources"))
+            claim_count = connection.execute(text("SELECT count(*) FROM care_guide_claims"))
+            assert source_count.scalar_one() == 8
+            assert claim_count.scalar_one() == 30
+            assert connection.execute(text("SELECT count(*) FROM domain_events")).scalar_one() == 0
+            assert connection.execute(text("SELECT count(*) FROM users")).scalar_one() == 0
+        snake = bundle.guides[0]
+        changed = snake.model_copy(
+            update={
+                "version": 2,
+                "created_at": snake.reviewed_at + timedelta(days=1),
+                "reviewed_at": snake.reviewed_at + timedelta(days=1),
+            }
+        )
+        assert repo.import_bundle(GuideBundle(format_version=1, guides=(changed,))) == (1, 0)
+        assert repo.versions(ids["Python regius"]) == (2, 1)
+        assert repo.version(ids["Python regius"], 1) == snake
+        assert repo.current(ids["Python regius"]) == changed
+        with engine.begin() as connection, pytest.raises(Exception, match="immutable"):
+            connection.execute(
+                text("UPDATE care_guide_claims SET label='Changed' WHERE taxon_id=:id"),
+                {"id": str(ids["Python regius"])},
+            )
+    finally:
+        engine.dispose()
+
+
+def test_unknown_taxon_and_changed_version_roll_back_entire_bundle(tmp_path: Path) -> None:
+    path, ids = _database(tmp_path)
+    engine = create_sqlite_engine(path, require_local_storage=False)
+    repo = SQLAlchemyCareGuideRepository(engine)
+    bundle = _bundle()
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text("DELETE FROM taxa WHERE taxon_id=:id"),
+                {"id": str(ids["Pandinus imperator"])},
+            )
+        with pytest.raises(CareGuideImportError, match="exactly one cached"):
+            repo.import_bundle(bundle)
+        with engine.connect() as connection:
+            assert (
+                connection.execute(text("SELECT count(*) FROM care_guide_versions")).scalar_one()
+                == 0
+            )
+        first_only = GuideBundle(format_version=1, guides=(bundle.guides[0],))
+        assert repo.import_bundle(first_only) == (1, 0)
+        altered = bundle.guides[0].model_copy(update={"scientific_name": "Python regius "})
+        with pytest.raises(CareGuideImportError):
+            repo.import_bundle(GuideBundle(format_version=1, guides=(altered,)))
+        changed = bundle.guides[0].model_copy(update={"claims": bundle.guides[0].claims[:-1]})
+        with pytest.raises(CareGuideImportError, match="changed"):
+            repo.import_bundle(GuideBundle(format_version=1, guides=(changed,)))
+        assert repo.versions(ids["Python regius"]) == (1,)
+    finally:
+        engine.dispose()
+
+
+def test_authenticated_offline_guide_escapes_source_text_and_keeps_csp(tmp_path: Path) -> None:
+    path, ids = _database(tmp_path)
+    engine = create_sqlite_engine(path, require_local_storage=False)
+    guide = _bundle().guides[0]
+    claim = guide.claims[0].model_copy(update={"label": "<script>alert(1)</script>"})
+    source = guide.sources[0].model_copy(update={"title": "<img src=x onerror=alert(1)>"})
+    guide = guide.model_copy(
+        update={"claims": (claim, *guide.claims[1:]), "sources": (source, *guide.sources[1:])}
+    )
+    SQLAlchemyCareGuideRepository(engine).import_bundle(
+        GuideBundle(format_version=1, guides=(guide,))
+    )
+    engine.dispose()
+    app = build_application(
+        Settings(
+            environment=Environment.TEST,
+            database_path=path,
+            runtime_secret=SecretStr("care-guide-runtime-secret-at-least-32-bytes"),
+            session_cookie_secure=False,
+        )
+    )
+    with TestClient(app) as client:
+        unauthenticated = client.get(
+            f"/directory/{ids['Python regius']}/care-guide", follow_redirects=False
+        )
+        assert unauthenticated.status_code == 303
+        setup = client.get("/setup")
+        match = re.search(r'name="csrf_token" value="([^"]+)"', setup.text)
+        assert match is not None
+        created = client.post(
+            "/setup",
+            data={
+                "csrf_token": match.group(1),
+                "household_name": "Guide Test",
+                "timezone": "UTC",
+                "display_name": "Keeper",
+                "email": "guide@example.test",
+                "password": "correct horse battery staple",
+                "password_confirmation": "correct horse battery staple",
+            },
+            follow_redirects=False,
+        )
+        assert created.status_code == 303
+        with create_sqlite_engine(path, require_local_storage=False).connect() as connection:
+            event_rows = connection.execute(text("SELECT count(*) FROM domain_events"))
+            event_count = event_rows.scalar_one()
+        response = client.get(f"/directory/{ids['Python regius']}/care-guide")
+        assert response.status_code == 200
+        assert "Reference guidance" in response.text
+        assert "&lt;script&gt;" in response.text
+        assert "<script>alert(1)</script>" not in response.text
+        assert "&lt;img src=x onerror=alert(1)&gt;" in response.text
+        assert 'rel="noopener noreferrer"' in response.text
+        assert "script-src 'self'" in response.headers["content-security-policy"]
+        assert "30\u201332°C" in response.text
+        assert 'class="care-guide-page"' in response.text
+        assert 'class="guide-glance-item"' in response.text
+        assert f'href="#fact-{claim.claim_id}"' in response.text
+        assert 'class="guide-state guide-state-single"' in response.text
+        assert "<summary>Sources and review dates</summary>" in response.text
+        assert 'class="guide-source-card"' in response.text
+        assert (
+            "No reviewed guidance available"
+            in client.get(f"/directory/{ids['Monstera deliciosa']}/care-guide").text
+        )
+        assert client.get(f"/directory/{ids['Python regius']}").status_code == 200
+    with create_sqlite_engine(path, require_local_storage=False).connect() as connection:
+        event_rows = connection.execute(text("SELECT count(*) FROM domain_events"))
+        assert event_rows.scalar_one() == event_count
+
+
+def test_animal_reference_reads_only_its_explicitly_linked_current_guide(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path, ids = _database(tmp_path)
+    engine = create_sqlite_engine(path, require_local_storage=False)
+    SQLAlchemyCareGuideRepository(engine).import_bundle(_bundle())
+    no_guide_id = uuid4()
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO taxa (taxon_id,supported_group,accepted_scientific_name,"
+                "taxonomic_status,created_at,refreshed_at) "
+                "VALUES (:id,'snake','Boa constrictor','accepted',:at,:at)"
+            ),
+            {"id": str(no_guide_id), "at": datetime.now(UTC).isoformat()},
+        )
+        connection.execute(
+            text(
+                "INSERT INTO taxon_provider_mappings "
+                "(taxon_id,provider,provider_id,source_url,retrieved_at,refreshed_at) "
+                "VALUES (:id,'fixture','boa-no-guide','https://example.test/boa',:at,:at)"
+            ),
+            {"id": str(no_guide_id), "at": datetime.now(UTC).isoformat()},
+        )
+        connection.execute(
+            text(
+                "UPDATE taxa SET rank='species',kingdom='Animalia',phylum_division='Chordata',"
+                "class_name='Reptilia',order_name='Squamata',family='Pythonidae',genus='Python' "
+                "WHERE taxon_id=:id"
+            ),
+            {"id": str(ids["Python regius"])},
+        )
+        for name, kind in (
+            ("Royal Python", "alternative_common"),
+            ("A legitimate long historical synonym & author citation", "synonym"),
+        ):
+            connection.execute(
+                text(
+                    "INSERT INTO taxon_names (taxon_id,name,normalized_name,name_kind) "
+                    "VALUES (:id,:name,:normalized,:kind)"
+                ),
+                {
+                    "id": str(ids["Python regius"]),
+                    "name": name,
+                    "normalized": name.lower(),
+                    "kind": kind,
+                },
+            )
+    engine.dispose()
+
+    app = build_application(
+        Settings(
+            environment=Environment.TEST,
+            database_path=path,
+            runtime_secret=SecretStr("profile-reference-runtime-secret-32-bytes"),
+            session_cookie_secure=False,
+        )
+    )
+    with TestClient(app) as client:
+        setup = client.get("/setup")
+        token = re.search(r'name="csrf_token" value="([^"]+)"', setup.text)
+        assert token is not None
+        created = client.post(
+            "/setup",
+            data={
+                "csrf_token": token.group(1),
+                "household_name": "Reference Test",
+                "timezone": "UTC",
+                "display_name": "Keeper",
+                "email": "profile-guide@example.test",
+                "password": "correct horse battery staple",
+                "password_confirmation": "correct horse battery staple",
+            },
+            follow_redirects=False,
+        )
+        assert created.status_code == 303
+
+        def register(name: str, group: str, species: str, taxon_id: UUID | None) -> str:
+            form = client.get("/animals/new")
+            token = re.search(r'name="csrf_token" value="([^"]+)"', form.text)
+            assert token is not None
+            response = client.post(
+                "/animals",
+                data={
+                    "csrf_token": token.group(1),
+                    "idempotency_key": f"profile-reference-{name}",
+                    "animal_type": group,
+                    "name": name,
+                    "species": species,
+                    "taxon_id": str(taxon_id) if taxon_id is not None else "",
+                    "photo_preference": "none",
+                    "sex": "",
+                    "morph": "",
+                    "genetics": "",
+                    "birth_hatch_date": "",
+                    "acquisition_date": "",
+                    "breeder_source": "",
+                    "notes": "",
+                },
+                follow_redirects=False,
+            )
+            assert response.status_code == 303, response.text[:200]
+            return response.headers["location"]
+
+        snake_url = register("Linked snake", "snake", "Python regius", ids["Python regius"])
+        lizard_url = register(
+            "Linked lizard", "lizard", "Pogona vitticeps", ids["Pogona vitticeps"]
+        )
+        no_guide_url = register("Linked boa", "snake", "Boa constrictor", no_guide_id)
+        unlinked_url = register("Unlinked snake", "snake", "Python regius", None)
+
+        def snapshot() -> dict[str, tuple[tuple[object, ...], ...]]:
+            with create_sqlite_engine(path, require_local_storage=False).connect() as connection:
+                return {
+                    table: tuple(
+                        tuple(row)
+                        for row in connection.execute(text(f"SELECT * FROM {table} ORDER BY rowid"))
+                    )
+                    for table in (
+                        "taxa",
+                        "taxon_names",
+                        "taxon_provider_mappings",
+                        "animal_current",
+                        "domain_events",
+                        "reminder_rule_current",
+                        "reminder_facts",
+                        "care_guide_versions",
+                        "care_guide_current",
+                        "care_guide_sources",
+                        "care_guide_claims",
+                    )
+                }
+
+        before = snapshot()
+
+        from snaketracker.infrastructure.taxonomy.inaturalist import INaturalistTaxonomyProvider
+
+        def forbidden_provider(*args: object, **kwargs: object) -> None:
+            pytest.fail("Animal pages must read local reference data only")
+
+        monkeypatch.setattr(INaturalistTaxonomyProvider, "search", forbidden_provider)
+        monkeypatch.setattr(INaturalistTaxonomyProvider, "detail", forbidden_provider)
+
+        def reference_html(url: str) -> str:
+            response = client.get(f"{url}/reference")
+            assert response.status_code == 200
+            assert 'class="animal-reference-content"' in response.text
+            nav = response.text.split('class="animal-section-nav"', 1)[1].split("</nav>", 1)[0]
+            assert nav.count("<a ") == 5
+            assert nav.index(">Care</a>") < nav.index(">Guides &amp; Species Reference</a>")
+            assert f'href="{url}/reference" aria-current="page"' in nav
+            assert "Species Overview / Natural History" in response.text
+            assert "Reviewed Captive Care" in response.text
+            assert "Sources / Provenance" in response.text
+            return response.text
+
+        for url in (snake_url, lizard_url, no_guide_url, unlinked_url):
+            overview = client.get(url)
+            assert overview.status_code == 200
+            assert f'href="{url}/reference"' in overview.text
+            assert 'article class="guide-fact"' not in overview.text
+            assert 'class="profile-reference-disclosure' not in overview.text
+            assert overview.text.count('class="profile-reference-fact"') <= 3
+            assert f'href="{url}" aria-current="page"' in overview.text
+
+        snake = reference_html(snake_url)
+        taxonomy = re.search(
+            r'<details class="profile-taxonomy-disclosure"[^>]*>(.*?)</details>', snake, re.S
+        )
+        assert taxonomy is not None
+        assert " open" not in taxonomy.group(0).split(">", 1)[0]
+        assert "<summary>Taxonomy details</summary>" in taxonomy.group(1)
+        assert "Reptilia · Squamata · Pythonidae · Python" in snake
+        for value in (
+            "Animalia",
+            "Chordata",
+            "Reptilia",
+            "Squamata",
+            "Pythonidae",
+            "Python",
+            "Royal Python",
+            "A legitimate long historical synonym &amp; author citation",
+        ):
+            assert value in taxonomy.group(1)
+        feeding_summary = re.search(
+            r"<summary>\s*<h3[^>]*>Feeding</h3>(.*?)</summary>", snake, re.S
+        )
+        assert feeding_summary is not None
+        assert "Food (Hatchling and older):" in feeding_summary.group(1)
+        assert "Reviewed reference guidance for" in snake
+        assert "30\u201332°C · 86\u201390°F" in snake
+        assert "Single source" in snake
+        assert f'href="/directory/{ids["Python regius"]}"' in snake
+        assert "individual records or care settings." in snake
+        assert snake.count('article class="guide-fact"') == 6
+
+        lizard = reference_html(lizard_url)
+        assert "Sources differ" in lizard
+        assert "35\u201340°C" in lizard
+        assert "38\u201342°C" in lizard
+        assert f'href="/directory/{ids["Pogona vitticeps"]}"' in lizard
+        assert "Corroborated" in lizard
+        assert 'class="profile-reference-disclosure profile-reference-sources"' in lizard
+        assert "Version 1" in lizard
+
+        assert 'class="profile-taxonomy-line"' not in lizard
+        no_guide = reference_html(no_guide_url)
+        assert "No reviewed captive-care guide is available yet." in no_guide
+        assert "Boa constrictor" in no_guide
+        assert f"/directory/{no_guide_id}" in no_guide
+        assert "profile-reference-grid" not in no_guide
+        assert "No reviewed species guidance" not in no_guide
+
+        unlinked = reference_html(unlinked_url)
+        assert "Link a species" in unlinked
+        assert f"{unlinked_url}/species" in unlinked
+        assert "30\u201332°C" not in unlinked
+        assert "profile-reference-grid" not in unlinked
+        assert client.get("/directory").status_code == 200
+        assert client.get("/animals/not-a-uuid/reference").status_code == 404
+        assert client.get(f"/animals/{uuid4()}/reference").status_code == 404
+        assert snapshot() == before
+        from dataclasses import replace
+
+        from snaketracker.application.identity import IdentityService
+
+        authenticate = IdentityService.authenticate
+
+        def foreign_household(self: IdentityService, token: str, **kwargs: object):
+            return replace(authenticate(self, token), household_id=uuid4())
+
+        with monkeypatch.context() as foreign:
+            foreign.setattr(IdentityService, "authenticate", foreign_household)
+            response = client.get(f"{snake_url}/reference")
+            assert response.status_code == 404
+            assert "Linked snake" not in response.text
+        client.cookies.clear()
+        denied = client.get(f"{snake_url}/reference", follow_redirects=False)
+        assert denied.status_code == 303
+        assert denied.headers["location"] == "/login"

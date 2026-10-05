@@ -70,7 +70,7 @@ class AnimalVisualResolver:
         if self._directory is not None:
             linked = self._directory.linked_for(household_id, animal.animal_id)
             if linked is not None:
-                reference = self._directory.reference_image(linked.taxon.taxon_id)
+                reference = self._directory.cached_reference_image(linked.taxon.taxon_id)
                 if reference is not None:
                     visual_kind = (
                         "species_illustration"

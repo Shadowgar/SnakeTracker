@@ -7,6 +7,7 @@ import io
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import ROUND_CEILING, Decimal
+from typing import cast
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -19,6 +20,13 @@ from snaketracker.application.inventory_intelligence import (
     stock_check_is_due,
 )
 from snaketracker.application.keeper_history import keeper_history_events
+from snaketracker.application.length_measurements import (
+    LengthPayload,
+    format_length_payload,
+    length_entered_scale,
+    length_entered_unit,
+    length_um,
+)
 from snaketracker.application.projected_events import ProjectedEventReader
 from snaketracker.application.purchases import (
     CurrencyValue,
@@ -29,7 +37,12 @@ from snaketracker.application.purchases import (
     PurchaseLineCurrent,
     PurchaseService,
 )
-from snaketracker.platform.events.corrections import evaluate_effective_events
+from snaketracker.application.weight_measurements import (
+    WeightPayload,
+    format_weight_payload,
+    weight_grams_scaled,
+)
+from snaketracker.platform.events.corrections import effective_event_root, evaluate_effective_events
 from snaketracker.platform.events.envelope import DomainEvent
 
 
@@ -246,6 +259,80 @@ class ReportService:
         return KeeperReport(
             "Effective care history",
             ("Animal", "Occurred", "Record", "Notes"),
+            tuple(rows),
+            generated_at,
+        )
+
+    def measurements(
+        self, household_id: UUID, *, generated_at: datetime, animal_id: UUID | None = None
+    ) -> KeeperReport:
+        """Numeric effective facts with root identity and exact original precision."""
+        rows: list[ReportRow] = []
+        for animal in self._animals.list_profiles(household_id):
+            if animal_id is not None and animal.animal_id != animal_id:
+                continue
+            history = (
+                self._projected_events.events_for(
+                    household_id, stream_type="animal", stream_id=animal.animal_id
+                )
+                if self._projected_events is not None
+                else self._animals.audit_history(household_id, animal.animal_id)
+            )
+            for event in evaluate_effective_events(history):
+                if event.event_type in {"animal.length_recorded", "animal.length_corrected"}:
+                    length = cast(LengthPayload, event.payload)
+                    kind, canonical, canonical_unit = "length", length_um(length), "um"
+                    entered, scale, unit = (
+                        format_length_payload(length),
+                        length_entered_scale(length),
+                        length_entered_unit(length),
+                    )
+                elif event.event_type in {"animal.weight_recorded", "animal.weight_corrected"}:
+                    weight = cast(WeightPayload, event.payload)
+                    kind, canonical, canonical_unit = "weight", weight_grams_scaled(weight), "mg"
+                    entered, scale, unit = (
+                        format_weight_payload(weight),
+                        3 if event.schema_version == 2 else 0,
+                        "g",
+                    )
+                else:
+                    continue
+                root = effective_event_root(history, event.event_id)
+                rows.append(
+                    ReportRow(
+                        (
+                            animal.name,
+                            str(event.event_id),
+                            str(root.event_id if root is not None else event.event_id),
+                            event.occurred_at.isoformat(),
+                            kind,
+                            str(event.schema_version),
+                            str(canonical),
+                            canonical_unit,
+                            entered,
+                            str(scale),
+                            unit,
+                            str(getattr(event.payload, "target_event_id", "")),
+                        )
+                    )
+                )
+        rows.sort(key=lambda row: (row.values[0], row.values[3], row.values[1]))
+        return KeeperReport(
+            "Effective precise measurements",
+            (
+                "Animal",
+                "Event ID",
+                "Root event ID",
+                "Occurred",
+                "Kind",
+                "Schema version",
+                "Canonical value",
+                "Canonical unit",
+                "Entered value",
+                "Entered scale",
+                "Entered unit",
+                "Target event ID",
+            ),
             tuple(rows),
             generated_at,
         )

@@ -91,6 +91,7 @@ from snaketracker.infrastructure.purchases.projections import (
 from snaketracker.infrastructure.reminders.projections import SQLAlchemyReminderProjection
 from snaketracker.infrastructure.search.fts import SQLAlchemyFTSSearchRepository
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
+from snaketracker.infrastructure.taxonomy.care_guides import SQLAlchemyCareGuideRepository
 from snaketracker.infrastructure.taxonomy.inaturalist import INaturalistTaxonomyProvider
 from snaketracker.infrastructure.taxonomy.reference_images import LocalReferenceImageCache
 from snaketracker.infrastructure.taxonomy.reference_providers import (
@@ -343,6 +344,7 @@ def build_application(settings: Settings) -> FastAPI:
                 secure_cookie=settings.session_cookie_secure,
                 expected_origin=external_origin,
                 directory_service=directory_service,
+                care_guide_repository=SQLAlchemyCareGuideRepository(engine),
             )
         )
         app.include_router(

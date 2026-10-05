@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from snaketracker.application.keeper_history import keeper_history_events
+from snaketracker.application.length_measurements import format_length_payload, length_entered_unit
 from snaketracker.application.weight_measurements import format_weight_payload
 from snaketracker.domains.animals.contracts import (
     AnimalBathRecordedV1,
@@ -16,7 +17,9 @@ from snaketracker.domains.animals.contracts import (
     AnimalFeedingRecordedV1,
     AnimalFeedingRecordedV2,
     AnimalLengthCorrectedV1,
+    AnimalLengthCorrectedV2,
     AnimalLengthRecordedV1,
+    AnimalLengthRecordedV2,
     AnimalMoltCorrectedV1,
     AnimalMoltCorrectedV2,
     AnimalMoltRecordedV1,
@@ -60,6 +63,7 @@ class CareEventView:
             | AnimalWeightCorrectedV1
             | AnimalWeightCorrectedV2
             | AnimalLengthCorrectedV1
+            | AnimalLengthCorrectedV2
             | AnimalShedCorrectedV1
             | AnimalMoltCorrectedV1
             | AnimalMoltCorrectedV2,
@@ -86,7 +90,13 @@ class CareEventView:
             | AnimalWeightCorrectedV2,
         ):
             title = "Recorded weight"
-        elif isinstance(payload, AnimalLengthRecordedV1 | AnimalLengthCorrectedV1):
+        elif isinstance(
+            payload,
+            AnimalLengthRecordedV1
+            | AnimalLengthCorrectedV1
+            | AnimalLengthRecordedV2
+            | AnimalLengthCorrectedV2,
+        ):
             title = "Length"
         elif isinstance(payload, AnimalShedRecordedV1 | AnimalShedCorrectedV1):
             title = "Shed completed" if payload.completed else "Shed update"
@@ -167,8 +177,14 @@ def present_care_event(
         | AnimalWeightCorrectedV2,
     ):
         description = f"{format_weight_payload(payload)} g"
-    elif isinstance(payload, AnimalLengthRecordedV1 | AnimalLengthCorrectedV1):
-        description = f"{payload.length_mm:,} mm"
+    elif isinstance(
+        payload,
+        AnimalLengthRecordedV1
+        | AnimalLengthCorrectedV1
+        | AnimalLengthRecordedV2
+        | AnimalLengthCorrectedV2,
+    ):
+        description = f"{format_length_payload(payload)} {length_entered_unit(payload)}"
     elif isinstance(payload, AnimalShedRecordedV1 | AnimalShedCorrectedV1):
         state = "Completed" if payload.completed else "Not completed"
         result = _label(payload.result) if payload.result else "Result not recorded"

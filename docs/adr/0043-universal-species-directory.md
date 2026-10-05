@@ -1,6 +1,8 @@
 # ADR-0043: Own Taxon Identity and Isolate External Species Providers
 
-Status: Proposed for M6.6-A owner review
+Status: Accepted
+
+Acceptance date: 2026-09-26
 
 Decision date: 2026-09-13
 
