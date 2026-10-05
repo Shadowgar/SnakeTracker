@@ -427,8 +427,12 @@ Qualified recovery points include every finalized attachment version. The routin
 documented 16 MiB temporary-space limitation remains open; private restore qualification did not
 fix that infrastructure constraint.
 
-Next sequence: **M6.6-B → Pre-X1 Architecture Reconciliation → X1 → X2 → X3 → X4 → X5 → M6.6-C**.
-Pre-X1 reconciliation and extension implementation remain unstarted.
+Next sequence: **M6.6-B (Accepted / Complete / Merged) → Pre-X1 Architecture Reconciliation → X1 →
+X2 → X2 production taxonomy import/qualification → small job/provider prerequisite if required →
+X3 → X4 → X5 → M6.6-C**.
+Pre-X1 documentation is prepared for owner review under the
+[bounded owner direction](../evidence/m6.6-species-aware-husbandry/README.md#pre-x1-documentation-direction).
+X1–X5 remain unstarted; documentation reconciliation does not accept their implementation.
 
 ### Pre-M6.6-C extension — X1 through X5
 
@@ -438,17 +442,33 @@ the delivered length behavior that future tranches must preserve. Each requires 
 safety, quality, browser/accessibility, applicable Pi, deployment and explicit owner review; no
 checklist item below is accepted yet. This inserts work without renumbering M6.6-C/D/E or M7.
 
-- [ ] **X1 — Extensible Animal foundation:** trusted versioned registry, removal of scattered
-  four-group enumeration, permanent read support, eligible/default registration, supported-profile
-  manifest and embedded-identity startup checks. Audit taxonomy schema and Care Guide selectors
-  independently; qualify isolated compatibility. (`R-097`, `R-102`; `AT-CAPREG-01`, `AT-PRODCOMP-01`)
-- [ ] **X2 — Local taxonomy foundation:** official iNaturalist Taxonomy DarwinCore Archive,
-  permanent catalog/reference FKs, indexed content generations, basic live-overlay coexistence and
-  final promotion reconciliation. Rollback/cleanup preserve newly linked identities; imported
-  Amphibia/ancestors do not yet enable Animal registration.
-  (`R-098`, `R-099`, `R-102`; `AT-TAXBAS-01`, `AT-PRODCOMP-01`)
-- [ ] **X3 — Natural History reference:** bounded live metadata overlay, source/licence
-  provenance, natural-history/immutable-guide coexistence and local-only inline profile reference.
+- [ ] **X1 — Extensible Animal Capability Foundation:** exact frozen four v1 profiles, stable
+  workflow-group/presentation metadata, separate read support and registration eligibility/defaults,
+  completed retries across default changes and compatibility preflight before mutable startup.
+  Existing Animals remain editable/actionable at their original version; no provider ancestry,
+  taxonomy implementation, new guides or Amphibians. No Alembic expected; qualify actual reconstruction
+  and applicable rollback binary. Ordinary production-equivalent backup/verification must pass before
+  release acceptance, including the smallest qualified scratch correction if needed.
+  (`R-097`, `R-102`; `AT-CAPREG-01`, `AT-PRODCOMP-01`)
+- [ ] **X2 — Local Taxonomy Foundation:** its own FK-preserving migration, permanent UUID catalog,
+  selected names/classification/provenance and qualified taxon-to-workflow mapping; replaceable
+  generations and durable overlay/catalog fallback search. SQLite promotion/rollback/cleanup preserve
+  post-generation identities and X3 content. Reference-only Amphibia does not enable registration.
+  Development uses synthetic fixtures. (`R-098`, `R-099`, `R-102`; `AT-TAXBAS-01`, `AT-PRODCOMP-01`)
+- [ ] **X2 production import/qualification:** actual archive, intended use, provenance and
+  attribution/rights policy qualified; Pi/local-search and production-sized database/generation/index,
+  WAL, backup scratch/memory/duration/restore/replay and normal-duty impact measured. No unsupported
+  archive CC0 assertion. (`R-098`, `R-102`; `AT-TAXBAS-01`, `AT-PRODCOMP-01`)
+- [ ] **Small job/provider prerequisite, if required:** before the second queued workload,
+  type-filtered SQLite claiming/lease recovery, typed payload/handlers/retries and bounded shared
+  aggregate provider transport. Initial X2 import may remain an operator workflow; no new queue,
+  broker or Redis without demonstrated need. (`R-099`; `AT-TAXOVER-01`)
+- [ ] **X3 — Species Overview / Natural History:** separate additive migration after accepted X2;
+  permanent-UUID source associations, retained versions and publication/withdrawal selection,
+  source-specific rights/provenance and immutable-guide coexistence. Taxonomy owns names/classification;
+  X3 owns descriptive biological content and supports taxa without active profiles. Qualify
+  **Boa imperator / iNaturalist 539399** with no reviewed guide, generation-independent content,
+  actual-origin deduplication and local-only reads allowing existing auth/security bookkeeping.
   (`R-099`, `R-100`, `R-102`, `R-103`; `AT-TAXOVER-01`, `AT-NATHIST-01`,
   `AT-PROFILE-REF-01`, `AT-PRODCOMP-01`)
 - [ ] **X4 — Amphibian expansion:** `amphibian.v1`, Amphibia ancestry, initial Frog workflows,
@@ -458,7 +478,13 @@ checklist item below is accepted yet. This inserts work without renumbering M6.6
 - [ ] **X5 — Amphibian reference qualification:** representative sourced taxon-specific guides
   and mobile/desktop owner review. (`R-101`, `R-102`; `AT-AMPHREF-01`, `AT-PRODCOMP-01`)
 
-M6.6-C starts only after B corrections and X1–X5 receive their required acceptance.
+M6.6-C starts only after accepted B and X1–X5 pass their required acceptance, including applicable
+production import/publication gates. ADRs 0045–0047 stay Proposed until future implementation/owner
+acceptance warrants promotion; ADRs 0044/0048 stay Accepted. Household-private FTS, global taxonomy
+search and Natural History prose remain separate. Defer prose FTS, speculative profiles/providers,
+mass enrichment and streaming backup absent measurements. PCRE2/Perl production package remediation
+is a separate [security/operations follow-up](../operations/runtime-operations.md#separate-production-security-follow-up),
+not X1 architecture work.
 
 ### M6.6-C — Smart care setup
 

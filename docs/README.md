@@ -38,7 +38,8 @@ see [owner acceptance](evidence/m6.6-species-aware-husbandry/b-sourced-care-guid
 [ADR-0047](adr/0047-natural-history-reference-boundary.md) remain Proposed for the owner-approved
 pre-M6.6-C extension. [ADR-0048](adr/0048-precise-animal-length-measurements.md) is Accepted on
 October 5 for exact length v2. M6.6-B is accepted/complete; Pre-X1 Architecture Reconciliation is
-next and unstarted. M6.6 was inserted after M6.5 and before M7.
+prepared for owner review in the existing controlling plan. X1–X5 remain unstarted. M6.6 was
+inserted after M6.5 and before M7.
 
 ## Document map
 

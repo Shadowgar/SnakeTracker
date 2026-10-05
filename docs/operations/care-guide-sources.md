@@ -38,7 +38,8 @@ daily UVB lighting. The source facts, publication context, and URLs were checked
 The separate [Boa constrictor version 1 bundle](../../reference/care-guides/reviewed-boa-constrictor-v1.json)
 adds one taxon, seven source pages from two publishers, and 34 sourced claims. The existing
 `reviewed-v1.json` bytes are preserved so its reviewed versions remain idempotent. Source text was
-retrieved and reviewed on October 1, 2026; ADR-0044 remains Proposed and M6.6-B awaits owner review.
+retrieved and reviewed on October 1, 2026. ADR-0044 is Accepted and M6.6-B is Accepted / Complete
+as of the [October 5 owner record](../evidence/m6.6-species-aware-husbandry/b-sourced-care-guides/README.md#owner-acceptance).
 
 Royal Veterinary College's *Boa Constrictor Care* explicitly identifies `Boa constrictor
 constrictor`. Its captive care positions cover temperature, qualitative humidity, enclosure/hides,
@@ -92,3 +93,20 @@ verify the exact scientific identity before importing. Never infer a taxon ID fr
 Animal name. Production promotion requires the milestone's migration, quality, browser, backup,
 and data-integrity gates. Once a reviewed version exists, downgrade is intentionally blocked;
 restore rehearsal uses an isolated target, and production recovery follows ADR-0026.
+
+## Future Natural History coexistence
+
+[ADR-0047](../adr/0047-natural-history-reference-boundary.md) remains Proposed. X2 taxonomy selects
+identity, names/classification and taxonomic provenance; X3 selects sourced descriptive biological
+content versions and publication/withdrawal. Wild facts do not establish captive-care guidance.
+Existing guide payloads, full detail and provenance remain immutable; X3 is not another Care Guide
+system and cannot rewrite or bulk-copy historical claims into a competing authority.
+
+A small trusted presentation adapter may compare qualified biological claims by taxon, fact kind,
+life stage, wild/captive context, geography, sex, value/unit, qualifiers and actual originating source.
+Equivalent contextual facts display once with combined provenance. One originating source through
+two intermediaries counts once. Distinct contexts and true disagreements remain separate; unknown
+legacy classifications retain original guide context. Reviewed Captive Care retains its own authority.
+Sourced prose does not become structured habitat/lifespan/diet/size/range without a qualified claim
+source/workflow. Revision-specific acquisition, actual-origin rights/attribution/modification evidence
+and explicit publication selection qualify future content; acquisition alone is insufficient.

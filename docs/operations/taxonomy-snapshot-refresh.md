@@ -8,9 +8,13 @@ Status: Planned; no import command or production promotion exists yet. Applies t
 
 ADR-0046 owns durable identity, generation/overlay freshness, concurrency and rollback semantics;
 this runbook owns operations. A/B are replaceable reference generations. The permanent catalog,
-provider mappings and Animal/Plant/guide references are outside their rollback/cleanup scope.
+provider mappings/retained labels, durable overlay, Animal/Plant/guide/media references and X3
+content/source/publication state are outside their rollback/cleanup scope. X2 owns selected names/
+classification/provenance; X3 consumes permanent UUIDs and cannot select taxonomy independently.
 
-1. Resolve the official HTTPS archive endpoint and current terms/licence. Download into isolated
+1. Qualify the actual archive, intended use, provenance and attribution/rights policy; do not
+   assume CC0. Resolve the official HTTPS archive endpoint and current terms/licence. Download into
+   isolated
    staging outside active database, attachments and reference generation paths. Record URL,
    retrieval time, announced snapshot date, import time, byte count and checksum; bound download
    size. Keep these dates distinct; later import does not make source facts newer.
@@ -36,22 +40,30 @@ provider mappings and Animal/Plant/guide references are outside their rollback/c
    to publish permanent identity and overlay/search deltas atomically while B stages.
 7. Before production promotion, complete the controlling plan's isolated encrypted-backup restore,
    applicable upgrade, replay, projection and semantic compatibility manifest at a common cutoff/
-   controlled clock, even without Alembic. Rehearse B-introduced taxon → link → rollback A, live
-   discovery during staging/promotion, cleanup protection and failed reconciliation. Keep normal
+   controlled clock, even without Alembic. Rehearse B-introduced taxon → link/content → rollback A
+   with useful retained labels/search, live discovery during staging/promotion, cleanup protection and failed reconciliation. Keep normal
    profiles and manual creation available locally during refresh, with zero outbound profile calls.
-8. Reconcile deltas since B's starting watermark. Under the bounded shared publication/promotion
-   writer lock, capture the final cutoff, reconcile through it, verify durable references and
-   combined search, then atomically promote B plus its search watermark. Abort/defer on timeout,
-   unresolved identity conflict or failed validation; leave A active. Publish subsequent discoveries
-   against B after releasing the lock. Retain A for rollback and verify links/search after promotion.
+8. Reconcile deltas since B's starting watermark. Use a bounded SQLite writer transaction shared
+   by identity/overlay publication and promotion: capture the final cutoff, reconcile through it,
+   verify durable references and combined search, then atomically promote B plus its search watermark.
+   No distributed lock is needed. Abort/defer on timeout, unresolved identity conflict or failed validation; leave A active. Publish subsequent discoveries
+   against B after transaction completion. Retain A for rollback and verify links/search after promotion.
    Roll back only the reference/search pointer using ADR-0046's reconciliation protocol; catalog and
-   live overlay remain current. Never restore over active household data as a test.
+   live overlay remain current, including discoveries and X3 content created after A. Never restore
+   over active household data as a test.
 9. Remove only expired generation content/indexes under explicit retention after rollback/backup
    windows expire. Never delete referenced catalog identities/mappings, links, guide versions or
-   local assets as generation cleanup. Record checksums, all three dates, schema/import version,
+   local assets or X3 associations/versions/publication as generation cleanup. Record checksums,
+   all three dates, schema/import version,
    source/licence, reviewer, reconciliation cutoffs, before/after metrics and rollback evidence.
 
 Live iNaturalist calls remain bounded by the
 [API recommended practices](https://www.inaturalist.org/pages/api%2Brecommended%2Bpractices)
 and ADR-0043; do not use the API to reconstruct the archive. Only public scientific queries may
 leave Care Keeper. No import, download or production action is part of the documentation pass.
+
+Before production-sized import, the [backup release gate](backup-and-restoration.md#extension-release-gates)
+requires measured database/generation/index size, WAL, scratch high water, memory/duration, restore
+compatibility/replay and normal-duty impact. Synthetic fixtures qualify development, not production
+archive rights or production-scale backup reliability. Initial import remains a bounded operator
+workflow; no new queued job is required merely to implement X2.
