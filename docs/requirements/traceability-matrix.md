@@ -124,7 +124,7 @@ v2 consumers and isolated semantic compatibility; X1–X5 still require their ow
 case. M6.6-B provides saved identity/classification/names and reviewed captive care only; it does
 not deliver X2 bulk taxonomy or X3 enrichment. Next: Pre-X1 Architecture Reconciliation → X1 →
 X2 → X2 production import/qualification → small job/provider prerequisite if required → X3 →
-X4 → X5 → M6.6-C. Pre-X1 documentation is prepared for owner review; X1–X5 remain unstarted.
+X4 → X5 → M6.6-C. Pre-X1 Architecture Reconciliation was owner-approved and completed October 5, 2026; X1–X5 remain unstarted.
 The [scoped documentation direction](../evidence/m6.6-species-aware-husbandry/README.md#pre-x1-documentation-direction)
 does not accept future implementation or promote ADRs 0045–0047.
 

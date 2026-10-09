@@ -427,10 +427,10 @@ Qualified recovery points include every finalized attachment version. The routin
 documented 16 MiB temporary-space limitation remains open; private restore qualification did not
 fix that infrastructure constraint.
 
-Next sequence: **M6.6-B (Accepted / Complete / Merged) → Pre-X1 Architecture Reconciliation → X1 →
+Next sequence: **M6.6-B (Accepted / Complete / Merged) → Pre-X1 Architecture Reconciliation (Approved / Complete) → X1 →
 X2 → X2 production taxonomy import/qualification → small job/provider prerequisite if required →
 X3 → X4 → X5 → M6.6-C**.
-Pre-X1 documentation is prepared for owner review under the
+Pre-X1 Architecture Reconciliation was owner-approved and completed October 5, 2026 under the
 [bounded owner direction](../evidence/m6.6-species-aware-husbandry/README.md#pre-x1-documentation-direction).
 X1–X5 remain unstarted; documentation reconciliation does not accept their implementation.
 

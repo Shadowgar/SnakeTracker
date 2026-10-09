@@ -1,6 +1,6 @@
 # Extensible Animal and Species Platform — controlling implementation plan
 
-Status: M6.6-B Accepted / Complete / Merged; Pre-X1 documentation reconciliation prepared for owner review October 5, 2026. X1–X5 implementation and acceptance remain unstarted. The original extension direction was approved October 1, 2026.
+Status: M6.6-B Accepted / Complete / Merged; Pre-X1 Architecture Reconciliation Approved / Complete October 5, 2026. X1–X5 implementation and acceptance remain unstarted. The original extension direction was approved October 1, 2026.
 Scope: documentation only. This plan inserts bounded work after M6.6-B corrections and before
 M6.6-C. No production migration, dataset import, deployment, or event rewrite is authorized here.
 
@@ -500,7 +500,7 @@ binds this bounded documentation amendment under ADR-0028; it does not accept AD
 or future implementation. The supplied owner reconciliation instruction is retained as authority;
 no missing audit transcript or review evidence is reconstructed.
 
-The extension remains Proposed and unimplemented. This Pre-X1 reconciliation prepares the
-implementation contracts for owner review; X1 has not started. Future implementation qualification
+The extension remains Proposed and unimplemented. This Pre-X1 reconciliation completed owner
+review of the implementation contracts October 5, 2026; X1 has not started. Future implementation qualification
 and explicit owner acceptance govern ADR promotion under repository policy, not architecture-review
 conclusions alone. Accepted ADR-0044/0048 and the historical M6.6-A acceptance caveat are unchanged.
