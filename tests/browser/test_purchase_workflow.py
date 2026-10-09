@@ -3,11 +3,13 @@ from __future__ import annotations
 import html
 import json
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta, tzinfo
 from pathlib import Path
 from types import SimpleNamespace
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
+import pytest
 from sqlalchemy import text
 
 from snaketracker.application.purchases import CurrencyValue
@@ -439,9 +441,28 @@ def test_unified_add_inventory_rejects_incomplete_or_ambiguous_choices(tmp_path:
             assert message in response.text
 
 
-def test_purchase_correction_void_and_reinstate_browser_flow(tmp_path: Path) -> None:
+@pytest.mark.parametrize("clock", ["real", "before_midnight", "after_midnight"])
+def test_purchase_correction_void_and_reinstate_browser_flow(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, clock: str
+) -> None:
+    household_zone = ZoneInfo("America/New_York")  # Configured by complete_setup.
+    if clock != "real":
+        midnight = datetime.combine(
+            datetime.now(household_zone).date(), time.min, tzinfo=household_zone
+        )
+        instant = midnight + timedelta(seconds=-1 if clock == "before_midnight" else 1)
+
+        class FixedDateTime(datetime):
+            @classmethod
+            def now(cls, tz: tzinfo | None = None) -> datetime:
+                value = instant.astimezone(tz)
+                return value if tz is not None else value.replace(tzinfo=None)
+
+        monkeypatch.setattr(f"{__name__}.datetime", FixedDateTime)
+        monkeypatch.setattr("snaketracker.presentation.web.datetime", FixedDateTime)
     with client_for(tmp_path) as client:
         complete_setup(client)
+        household_today = datetime.now(household_zone).date()
         item_id = _add_food_item(client, "Lifecycle Mouse")
         page = client.get("/inventory/new")
         posted = client.post(
@@ -450,7 +471,7 @@ def test_purchase_correction_void_and_reinstate_browser_flow(tmp_path: Path) -> 
                 "csrf_token": csrf_from(page.text),
                 "idempotency_key": _command_id(page.text),
                 "vendor": "Original Supply",
-                "occurred_at": (date.today() - timedelta(days=2)).isoformat() + "T12:00",
+                "occurred_at": (household_today - timedelta(days=2)).isoformat() + "T12:00",
                 "currency": "USD",
                 "inventory_item_id": f"{item_id}:1",
                 "quantity": "5",
@@ -471,7 +492,7 @@ def test_purchase_correction_void_and_reinstate_browser_flow(tmp_path: Path) -> 
                 "target_event_id": _hidden(edit.text, "target_event_id"),
                 "expected_stream_version": _hidden(edit.text, "expected_stream_version"),
                 "vendor": "Corrected Supply",
-                "occurred_at": (date.today() - timedelta(days=1)).isoformat() + "T12:00",
+                "occurred_at": (household_today - timedelta(days=1)).isoformat() + "T12:00",
                 "currency": "USD",
                 "purchase_line_id": _hidden(edit.text, "purchase_line_id"),
                 "inventory_item_id": f"{item_id}:2",

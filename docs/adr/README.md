@@ -25,8 +25,8 @@ see [B owner acceptance](../evidence/m6.6-species-aware-husbandry/b-sourced-care
 extension. They propose profile lifecycle/startup compatibility, permanent identity with replaceable
 reference generations and Natural History/legacy-guide coexistence.
 [ADR-0048](0048-precise-animal-length-measurements.md) was **Accepted on 2026-10-05** for exact
-length v2 and mixed-history consumers. No historical meaning is rewritten; Pre-X1 reconciliation
-and X1–X5 implementation remain unstarted.
+length v2 and mixed-history consumers. No historical meaning is rewritten. Pre-X1 Architecture
+Reconciliation was owner-approved and completed October 5, 2026. X1–X5 implementation remains unstarted.
 
 | ADR | Decision |
 |---|---|

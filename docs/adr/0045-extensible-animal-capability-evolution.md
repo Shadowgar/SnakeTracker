@@ -42,19 +42,32 @@ The application-owned registry separates:
 
 - **Read support:** all identities the release can replay/render, including historical profiles.
 - **Registration eligibility:** the explicit subset permitted for new Animals.
-- **Registration default:** exactly one eligible default per enabled biological group. Ordinary
+- **Registration default:** exactly one eligible default per enabled workflow group. Ordinary
   Add Animal shows one group choice and resolves its default; any supported advanced version
   choice must have a distinct label. Commands validate eligibility as well as read support.
 
 For example, `snake.v1` remains readable when new Snake registration defaults to `snake.v2`.
 Existing Animals keep their persisted profile forever; editing taxonomy never upgrades it.
 Removing registration eligibility does not remove read support or change a profile's meaning.
+Their edit, action, reminder, analytics and replay paths use that exact historical profile,
+not today's registration policy. Historical events are not revalidated against current eligibility.
 
-A trusted group mapping interface relates provider ancestry to Care Keeper biological group keys,
-then to eligible/default profiles. Provider namespace/ancestor IDs are qualified adapter data;
-free text, a matching name, and mere existence in the taxonomy tree cannot select a profile.
-Historical event validation uses retained versioned mappings, rather than today's registration
-eligibility. Reference taxonomy may include ancestors and groups with no eligible Animal profile.
+X1 owns stable workflow-group metadata, exact profile-to-group membership, trusted presentation,
+read support, eligibility and defaults. It implements no provider IDs, ancestry, taxonomy archive,
+generations, Natural History, new Care Guides or Amphibian profile. X2 separately owns qualified
+taxon-to-workflow-group mappings under ADR-0046. Biological classification cannot automatically
+grant application capabilities. A reference taxon may have no registerable group; a group may be
+disabled; a readable profile may be ineligible for registration. Historical mapping validation uses
+the retained version-specific contract, not today's registration choices.
+
+### Completed registration retries
+
+A completed registration operation retains its resolved profile/default and original result.
+An identical request retried under the same idempotency key after a default change returns that
+original Animal and response. Resolve the stored operation before applying today's default;
+do not recompute its command identity using the new default, rewrite stored hashes or turn a
+previous success into a conflict. A changed request under the same key still conflicts under
+[ADR-0012](0012-command-idempotency.md). New operations alone use today's eligibility/default.
 
 ### Supported-profile release manifest and startup
 
@@ -64,12 +77,23 @@ extensible identities embedded in otherwise-known contracts (including taxon-lin
 Each such contract has a version-specific identity extractor/validator. Registration v1 implies
 `snake.v1`; v2 combines persisted type/version, without substituting today's default.
 
-Before normal traffic, mutable startup work or replay serving, conservatively scan all persisted
+Before mutable engine initialization, normal traffic or replay, conservatively scan all persisted
 events, including corrected/voided history, for unknown type/version pairs **and** unsupported
 required identities. Malformed identities or failed inspection also fail closed. Recovery mode
 reports the offending contract/profile and compatible-release requirement through operator
 diagnostics, with safe public wording. No partial normal startup or later deserialization crash
 is an acceptable compatibility result. Projection/schema checks remain independently required.
+
+The required startup sequence for existing storage is: read-only inspection → schema/Alembic
+compatibility → event-contract compatibility → required embedded profile identities → projection
+catalog → X2 active-reference structures when present → X3 selected-content/publication structures
+when present → mutable engine initialization, replay/catch-up, generation-state changes, schedulers,
+workers, job claiming and traffic. X1 supplies extension points, not unimplemented X2/X3 validators.
+Initial database creation and explicit migrations are separately authorized workflows.
+
+At the reconciled baseline, `build_application` calls `create_sqlite_engine` before compatibility
+inspection; that factory applies mutable SQLite setup. The sequence above is a future X1 contract,
+not a claim that current startup already satisfies it.
 
 ### Downgrade barrier
 
@@ -93,11 +117,17 @@ After the first older-unreadable fact is written, normal binary downgrade is pro
 [ADR-0026](0026-migration-and-rollback.md). Do not remove the barrier, rewrite registration or
 strip events to enable downgrade. Recovery follows that ADR's restore/RPO rules. This event barrier
 does not itself require Alembic; any independent relational evolution has its own compatibility gate.
+X1 expects no Alembic migration, but embedded identities, event contracts, projection requirements
+and runtime formats can still make an older binary unsafe. X1 must deliberately reject unsupported
+embedded profiles. Registration v3, expanded taxon-link v2 and Amphibians remain X4 work.
 
 ## Qualification and consequences
 
-`AT-CAPREG-01` verifies retained four-profile meaning, read-only historical eligibility, one group
-default, distinct version choices, and known-contract/unknown-identity startup rejection.
+`AT-CAPREG-01` verifies retained four-profile meaning, existing-Animal edit/actions/reminders/
+analytics/replay after registration ineligibility, one group default, distinct version choices,
+completed retries across default changes, changed-request conflicts and known-contract/unknown-
+identity rejection before mutable startup. `AT-PRODCOMP-01` additionally reconstructs real Animals
+and runs the applicable actual rollback binary; a scanner-only fixture is insufficient.
 `AT-AMPH-01` and `AT-PRODCOMP-01` qualify current pre-Amphibian release → upgrade → create
 `amphibian.v1` → start the actual older binary: intentional restricted recovery, no normal traffic,
 replay or writes. Test every declared downgrade target, not a mocked replacement scanner.

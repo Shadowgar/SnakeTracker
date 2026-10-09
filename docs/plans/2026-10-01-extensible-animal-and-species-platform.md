@@ -1,6 +1,6 @@
 # Extensible Animal and Species Platform — controlling implementation plan
 
-Status: M6.6-B corrections accepted October 5, 2026; Pre-X1 reconciliation and X1–X5 implementation/acceptance remain pending. The original extension direction was approved October 1, 2026.
+Status: M6.6-B Accepted / Complete / Merged; Pre-X1 Architecture Reconciliation Approved / Complete October 5, 2026. X1–X5 implementation and acceptance remain unstarted. The original extension direction was approved October 1, 2026.
 Scope: documentation only. This plan inserts bounded work after M6.6-B corrections and before
 M6.6-C. No production migration, dataset import, deployment, or event rewrite is authorized here.
 
@@ -11,11 +11,11 @@ This plan adds the implementation sequence to the existing [roadmap](../roadmap/
 [ADR-0039](../adr/0039-multispecies-animal-capabilities.md),
 [ADR-0041](../adr/0041-four-group-capability-expansion-and-neutral-molt-contracts.md), and
 [ADR-0043](../adr/0043-universal-species-directory.md), plus accepted
-[ADR-0044](../adr/0044-versioned-sourced-care-guides.md). New decisions are in
+[ADR-0044](../adr/0044-versioned-sourced-care-guides.md). Proposed extension decisions are in
 [ADR-0045](../adr/0045-extensible-animal-capability-evolution.md),
 [ADR-0046](../adr/0046-local-taxonomy-snapshot-and-provider-overlay.md),
-[ADR-0047](../adr/0047-natural-history-reference-boundary.md), and
-[ADR-0048](../adr/0048-precise-animal-length-measurements.md). Event evolution, backup,
+[ADR-0047](../adr/0047-natural-history-reference-boundary.md). Accepted
+[ADR-0048](../adr/0048-precise-animal-length-measurements.md) governs delivered length v2. Event evolution, backup,
 migration, compatibility, accessibility, and release governance remain under
 [ADR-0005](../adr/0005-event-contracts-and-evolution.md),
 [ADR-0018](../adr/0018-backup-and-restoration.md),
@@ -98,7 +98,7 @@ incompatible workflow behavior requires a successor version. `amphibian.v1` may 
 workflows under Amphibia, including Anura/Caudata; distinct future Frog/Salamander behavior may
 justify separate versioned profiles. Do not create a profile for every taxonomic order/common name.
 The trusted versioned registry should expose identity, version, label, capability set,
-care actions, reminder kinds, analytics kinds, visual fallback category, and biological grouping
+care actions, reminder kinds, analytics kinds, visual fallback category, and stable workflow-group
 metadata. Commands and events remain typed and domain-validated. A new broad group should normally
 register one profile and its focused adapters. **If adding a broad Animal group requires widespread
 unrelated `if animal_type == ...` edits, the extensibility design has failed.** Future candidates
@@ -109,14 +109,14 @@ register speculative profiles now.
 |---|---|---|---|---|
 | `domains/animals/capabilities.py`, `presentation/web.py` `_animal_type_options` and v1 label lookup | Four enum members; all readable identities become form options; assumed v1 labels | Separate read support, eligibility and one group default; render persisted version | Duplicate choices / semantic drift | X1 |
 | `platform/events/registry.py`, `bootstrap/compatibility.py` | Four taxon-link groups; startup checks only event type/schema version | Embedded-identity scan and release manifest; retain old validators; X4 registration v3 downgrade barrier | Partial startup / replay crash | X1/X4 |
-| `application/species_directory.py`, `infrastructure/taxonomy/repository.py` | Four Animal groups plus plant; validation | Taxonomy group mapping distinct from capability registry | Wrong taxon link | X1/X2 |
+| `application/species_directory.py`, `infrastructure/taxonomy/repository.py` | Four Animal groups plus plant; validation | Qualified taxon-to-workflow mapping consumes X1 group interface; taxonomy implementation belongs to X2 | Wrong taxon link | X2 |
 | `migrations/versions/0019_universal_species_directory.py` and taxa FKs in 0020/0023 | Non-null five-value `supported_group` CHECK and limited status CHECK; Plant/guide/Animal references share `taxa` | Permanent identity FK target plus generation content; optional mapping for ancestors/unenabled/future groups and qualified status/mapping states, independently validated registration eligibility | Lost references / rejected broad tree | X2 |
 | `application/care_guides.py` `GuideGroup`, `glance_claims`, `profile_reference_claims` | Separate five-group enum and literal selectors; existing biological claims in immutable guides | Qualify guide group/selector extension independently; ADR-0047 coexistence presentation | Rejected guide / duplicate authority | X1 audit; X3/X5 delivery |
 | `infrastructure/taxonomy/inaturalist.py` `ANCESTOR_BY_GROUP` | Five literal provider ancestor IDs; provider mapping | Configured/qualified ancestry for each group, including Amphibia | False match or omission | X2/X4 |
 | `presentation/web.py` `type_order` and list filters | Four literal group order; presentation ordering | Registry display order with stable old ordering | Invisible new group | X1 |
 | `presentation/templates/admin.html` | Unknown Animal falls back to Snake image; fallback visual mapping | Registry fallback key and honest neutral unknown fallback | Misleading identity | X1/X4 |
-| `presentation/animal_visuals.py`, `application/species_directory.py` `reference_image`, fallback assets | Unknown group falls back to Snake; profile resolver can refresh provider detail/find/download images | Local-only resolver and image serving; explicit bounded fetch outside read path; validated Amphibian fallback | Provider delay / misleading image | B correction/X3/X4 |
-| `application/animals.py` length and capability checks | Capability-specific validation plus integer length; legitimate behavior | Retain capability checks; version length separately | Wrong action/precision | B correction/X1 |
+| `presentation/animal_visuals.py`, `application/species_directory.py` `reference_image`, fallback assets | Unknown group falls back to Snake; profile resolver now uses local cached imagery; explicit acquisition remains separate | Preserve local-only resolver and image serving; explicit bounded fetch outside read path; validated Amphibian fallback | Provider delay / misleading image | B correction/X3/X4 |
+| `application/animals.py` length and capability checks | Capability-specific validation and accepted exact length v2; legitimate behavior | Retain capability checks; version length separately | Wrong action/precision | B correction/X1 |
 | `tests/unit/domains/test_animal_capabilities.py`, `tests/architecture/test_phase_scope.py`, browser fixtures | Exact four-profile assertions; test fixtures | Historical four-profile compatibility plus additive-profile tests | False failure or missing coverage | X1/X4 |
 
 Audit other selectors in reminders, analytics, search, form choices, Admin, CSS and fixtures during
@@ -124,27 +124,81 @@ X1. Preserve legitimate specialized behavior (snake shed, spider v1 molt); gener
 enumeration and presentation selection. Registry metadata must be trusted code, not user JSON or a
 plugin. Profile version is persisted at registration; taxon edits never alter it.
 
-### Profile lifecycle and startup qualification
+### X1 scope and lifecycle qualification
 
-[ADR-0045](../adr/0045-extensible-animal-capability-evolution.md) owns lifecycle/default selection,
-provider-group mapping interface, supported-profile manifest, startup scan and downgrade policy.
-`AT-CAPREG-01` must show a readable but registration-ineligible historical profile, exactly one
-new-registration default per group, unchanged existing Animal identities, and safe rejection of an
-unknown profile inside otherwise-known registration v2 (including voided/historical events).
-Scan required extensible identities before normal traffic/replay, not only contract pairs. X1 adds
-this capability to the current release; X4 introduces registration v3 with Amphibian as the barrier
-that the actual pre-Amphibian binary's existing contract scanner can reject. It must not be made
-readable early in X1–X3. Expand taxon-link validation through v2 while retaining the four-group v1
-decoder; do not emit Amphibian into a historically invalid v1 payload. Every declared downgrade
-target must reject cleanly after the new write.
+X1 is a workflow/capability foundation. Preserve the exact `snake.v1`, `spider.v1`, `lizard.v1`
+and `scorpion.v1` semantics. Separate exact readable profiles, registration eligibility, one
+eligible default per enabled workflow group, stable group metadata, exact profile-to-group membership
+and trusted presentation. Existing Animals retain their original profile for editing, actions,
+reminders, analytics and replay after that profile becomes registration-ineligible. For example,
+future `snake.v2` may become the default while existing `snake.v1` Animals remain usable. Never
+silently upgrade or validate historical records against today's registration policy.
+
+Completed identical registration retries return the original Animal/result using the stored
+operation's resolved profile/default, even after a default change. Resolve that operation before
+computing today's default; do not rewrite command hashes or make an original success conflict.
+Changed requests under the same key still conflict. `AT-CAPREG-01` covers these cases and retained
+profile semantics; `AT-PRODCOMP-01` reconstructs real Animals, not just contract scanner results.
+
+X1 implements no provider IDs/ancestry, archive/generations, broad taxonomy changes, Natural History,
+Amphibians or new Care Guides. Auditing current taxonomy constraints/guide selectors does not bring
+their implementation into X1.
+
+### Interface contracts between tranches
+
+| Boundary | Owned data / local interface | Consumer constraint |
+|---|---|---|
+| X1 capability foundation | Exact persisted profile, stable workflow group, read support, eligibility/default policy, trusted presentation | X2 cannot assume every readable profile is eligible or every group enabled |
+| X2 taxonomy foundation | Permanent UUID; selected scientific/common names, hierarchy/classification, provider mappings/status evidence, provenance/freshness; qualified taxon-to-workflow mapping | Biological classification cannot grant capabilities; a taxon may have no registerable group |
+| X2 → X3 local ports | Resolve permanent UUID, selected taxonomy summary/provenance, qualified workflow-group mappings, and taxonomy provider/source references with their qualification/conflict state | X3 displays X2-selected identity/names/classification and uses references to resolve and validate candidate content sources; X3 owns durable Natural History source associations after its separate migration |
+| X3 Natural History | UUID → source association → retained content version → publication/withdrawal selection | Generation is acquisition context only, never identity, required FK, selection or cleanup dependency |
+
+**Taxonomy owns identity/classification/names. Natural History owns descriptive biological content.**
+Care Guide coverage is independent of both taxonomy existence and Animal registration eligibility.
+
+X2 does not create or own Natural History source associations. An iNaturalist provider mapping,
+taxonomy archive source, Wikipedia URL candidate or provider provenance alone does not create
+such an association. X3 validates candidate content sources under its own identity, scope,
+provenance, rights and publication rules before creating or retaining the durable UUID-attached
+association. X2 does not own or require X3 content versions, publication selection or rights/publication state.
+
+### Compatibility preflight before mutable startup
+
+[ADR-0045](../adr/0045-extensible-animal-capability-evolution.md) owns the supported-profile manifest
+and identity extractors. Inspect all events, including voided/corrected history, and fail closed on
+unknown contracts, unsupported required embedded identities or failed/malformed inspection.
+For existing storage the required order is:
+
+1. Open storage for read-only compatibility inspection.
+2. Check schema/Alembic compatibility, event contracts, required embedded profile identities and
+   projection catalog, in that order.
+3. Check active X2 reference structures when implemented, then X3 selected-content/publication
+   structures when implemented. X1 provides extension points, not future validators.
+4. Only after all checks pass initialize the mutable engine, replay/catch up projections, change
+   generation state, start schedulers/workers, claim jobs or serve ordinary traffic.
+
+Verified at baseline `4be4deb`: `bootstrap/application.py` calls `create_sqlite_engine` before
+`inspect_startup_compatibility`; `infrastructure/database/engine.py` applies WAL/profile setup and
+initial vacuum initialization. The future order above is not delivered behavior. Initial database
+creation and explicit migrations are separate authorized workflows. Qualification must prove
+unsupported identity rejection occurs before mutable initialization, not merely before HTTP readiness.
+
+X1 expects no Alembic migration; that does not prove older-binary compatibility. Embedded profiles,
+event versions, projections and runtime formats all matter. X1 introduces deliberate embedded-
+identity rejection. Registration v3, expanded taxon-link v2 and `amphibian.v1` remain X4: retain
+historical v1/v2 decoders, do not make X4 contracts readable early and test actual declared rollback
+binaries after the first unreadable write. A mocked scanner is insufficient.
 
 ## Taxonomy and reference architecture
 
 The current cache contains encountered taxa, not a complete tree.
 [ADR-0046](../adr/0046-local-taxonomy-snapshot-and-provider-overlay.md) owns durable identity,
 generation/overlay semantics, concurrency, promotion and rollback. X2 implements a permanent Taxon
-Identity Catalog for all Animal/Plant/guide FKs, replaceable indexed archive content, and basic live
-identity/overlay coexistence **before** X3 enriches metadata. Broad reference ancestors and Amphibia
+Identity Catalog for Animal/Plant/guide/media and X3 references, replaceable indexed archive
+content, and basic live identity/overlay coexistence **before** X3 adds descriptive content. Useful retained labels,
+provenance, mappings and fallback search survive absence, rename, refresh, promotion, rollback and
+cleanup; opaque-UUID-only retention is insufficient. Never merge identities by name alone.
+Broad reference ancestors and Amphibia
 can exist in X2 without becoming eligible Animal registrations until X4.
 
 The [refresh runbook](../operations/taxonomy-snapshot-refresh.md) owns download/staging/promotion
@@ -154,8 +208,17 @@ identities. Include Plant/guide references, namespaced homonyms, split/lump conf
 mapping races, missing entries and older snapshot versus fresher overlay. Failed bounded final
 reconciliation leaves A active. Do not delete/recreate UUIDs or automatically relink Animals.
 
+Replaceable generations contain snapshot names/hierarchy/classification/search; the durable catalog
+and overlay retain UUIDs, mappings, useful labels, live discoveries, conflicts and fallback search.
+Use one SQLite transaction for bounded final reconciliation and the active-generation/search pointer;
+no distributed lock is needed. Rollback preserves discoveries made after the older generation,
+including X3 content attached to those UUIDs.
+
 Search indexed local names/ancestry plus overlay/catalog fallback first, then bounded explicit live
-lookup where useful. Manual entry is always available. Use SQLite indexes/FTS rather than archive
+lookup where useful. Include qualified aliases/synonyms only where supported. Household-private
+FTS, global taxonomy search and Natural History prose stay distinct; initially exclude prose from
+taxonomy indexes and all global reference content from household-private FTS. Manual entry is
+always available. Use SQLite indexes/FTS rather than archive
 scans per keystroke. Measure cold/warm autocomplete, exact detail, import time, storage, RAM, CPU
 and promotion on the Pi before setting budgets; no guessed threshold becomes acceptance evidence.
 
@@ -193,10 +256,17 @@ No new taxonomy image may displace the keeper's photo.
 ## Species Overview / Natural History
 
 [ADR-0047](../adr/0047-natural-history-reference-boundary.md) owns biological-reference authority,
-source responsibility and immutable Care Guide coexistence. X3 implements sourced optional facts
-and presentation precedence, without copying/rewriting legacy versions or showing equivalent facts
+source responsibility and immutable Care Guide coexistence. X3 implements permanent-UUID source
+associations, retained versions and explicit publication/withdrawal selection with provenance and
+presentation precedence, without copying/rewriting legacy versions or showing equivalent facts
 as competing authorities. `AT-NATHIST-01` covers available/missing/conflicting Natural History,
-legacy biological claims, captive-context claims, source/licence attribution and no household writes.
+legacy biological claims, captive-context claims, actual-origin deduplication, generation
+independence, source/licence attribution and no household/reference read mutations. A small trusted
+semantic/context adapter compares taxon, fact kind, life stage, wild/captive context, geography, sex,
+value/unit, qualifiers and originating source. Equivalent qualified biological facts display once
+with combined provenance; distinct contexts/disagreements stay separate, and unknown legacy
+classification stays in original guide context. One source through two intermediaries counts once.
+No second Care Guide system or mutable legacy payload is introduced.
 Captive guidance follows the [reviewed guide policy](../operations/care-guide-sources.md).
 
 ### Required X3 qualification: Central American Boa
@@ -205,26 +275,30 @@ Captive guidance follows the [reviewed guide policy](../operations/care-guide-so
 with iNaturalist taxon mapping **`539399`**, and **no reviewed captive-care guide**. X3 must prove
 that its Guides & Species Reference page displays locally stored/cached Species Overview / Natural
 History independently of guide availability: taxonomy/classification, preferred/common names,
-a short sourced species description, a Wikipedia-backed summary with actual Wikipedia attribution
-and applicable licence, conservation information, natural range/distribution, and other properly
-licensed Natural History facts where supported by approved sources. Unavailable facts remain
+a useful sourced species description, preferably revision-specific Wikipedia acquisition with
+actual Wikipedia origin/revision and applicable attribution/license/modification evidence. Qualified
+conservation, range/distribution and other Natural History claims may appear where approved sources
+support them; prose alone is not converted into structured habitat, lifespan, diet, adult size or
+range. Structured facts require a specifically qualified source/workflow. Unavailable facts remain
 unknown; the missing-guide message specifically states “No reviewed captive-care guide is available
 yet.” Biological reference is not classified as captive husbandry or duplicated as a competing
 authority over legacy guide claims; ADR-0047's presentation precedence applies.
 
 X2 supplies the ADR-0046 local taxonomy/reference baseline from the iNaturalist Taxonomy DarwinCore
-Archive, Care Keeper-owned taxon UUIDs and namespaced provider mappings; X3 adds approved reference
-detail through the bounded iNaturalist API overlay. Qualification must show zero outbound calls
+Archive, Care Keeper-owned taxon UUIDs and namespaced provider mappings; X3 adds separately qualified
+descriptive content. Bounded iNaturalist discovery can supply
+source associations, with revision-specific origin acquisition where required. Content versions and
+publication selection do not depend on the active taxonomy generation. Qualification must show
+zero outbound calls
 during ordinary Overview and Guides & Species Reference reads, including with providers unavailable;
 enrichment runs outside rendering and sends no household/private data externally. This is a required
 future X3 acceptance case, not X2/X3 implementation within the M6.6-B presentation correction.
 
 ### Ordinary Animal profile reads: zero outbound calls
 
-Current `AnimalVisualResolver.resolve` calls `SpeciesDirectoryService.reference_image`, which can
-refresh detail, query image providers or download on a cold/missing path. PR 1 removes that work
-from ordinary rendering; X3 preserves the requirement while adding reference content. Rendering
-and its image-serving paths use already-local keeper photos, cached eligible reference assets,
+Accepted B rendering uses `SpeciesDirectoryService.cached_reference_image`; the explicit
+`reference_image` acquisition workflow remains separate. X3 preserves local-only rendering while
+adding content. Rendering and its image-serving paths use already-local keeper photos, cached eligible reference assets,
 local taxonomy/guide facts or fallback artwork only. Enrichment/retrieval runs in an explicit
 bounded fetch/refresh workflow outside the ordinary read request. Stale/missing optional data
 renders an honest local fallback; no synchronous refresh is triggered by viewing the profile.
@@ -232,7 +306,20 @@ renders an honest local fallback; no synchronous refresh is triggered by viewing
 `AT-PROFILE-REF-01` instruments all outbound provider/download transports and asserts zero calls
 for warm cached, missing reference image, and cold/missing optional reference state, including
 locally served image requests. With providers unavailable, profiles remain responsive and usable;
-absence/outage cannot block Your Records or trigger a retry delay. Test linked/unlinked Animals,
+absence/outage cannot block Your Records or trigger a retry delay.
+
+Ordinary Animal/reference/local-image reads trigger no provider acquisition or household/domain,
+projection, schedule, reminder, notification-intent, Inventory, expense, catalog/mapping/generation/
+overlay/search, Natural History/publication, acquisition-job, reference-image-cache or keeper-media
+mutation. Existing auth/session/security bookkeeping (last-seen, CSRF, rotation, security audit)
+remains permitted under current policy. This is not a zero-SQL-write rule. Instrument forbidden
+state changes separately from legitimate authentication writes; do not change authentication here.
+
+Keeper-owned attachments remain mandatory recovery content; reference-image metadata/provenance
+are durable. Optional cached reference bytes may be reacquirable only under an accepted recovery
+contract. When absent, use a keeper photo, else eligible bundled/group fallback; taxonomy/text still
+render. No hotlink, broken remote image or page-read recovery acquisition is permitted.
+Test linked/unlinked Animals,
 photo priority, source labels, mobile/desktop and accessibility.
 
 ## `amphibian.v1` qualification
@@ -270,11 +357,62 @@ never publish generic all-Frog advice. Owner reviews mobile and desktop referenc
 | PR / tranche | Bounded implementation and acceptance focus |
 |---|---|
 | PR 1 / M6.6-B correction | Spider manual/no-result flow, retained Add/Edit link, local-only profile/visual reads, owner-accepted compact Overview and dedicated reference tab, Boa guide, complete length consumer matrix/report-export and `AT-SPDIR-MANUAL-01`, `AT-MEASURE-01`, `AT-PROFILE-REF-01` |
-| PR 2 / X1 | Read-support/registration lifecycle, frozen four identities, embedded-identity startup scan/manifest, schema/guide/selector audit, compatibility rehearsal and `AT-CAPREG-01` |
-| PR 3 / X2 | Permanent catalog and FK protection, staged reference generations, basic live-overlay reconciliation, rollback/cleanup/search qualification and `AT-TAXBAS-01` |
-| PR 4 / X3 | Live metadata overlay, provenance, sourced Natural History, profile integration and `AT-TAXOVER-01`, `AT-NATHIST-01` |
+| PR 2 / X1 | Exact readable profiles, eligibility/defaults, completed-retry invariants, stable workflow/presentation metadata and pre-mutable startup; no taxonomy implementation or expected Alembic; `AT-CAPREG-01` and normal-worker backup qualification |
+| PR 3 / X2 | Separate migration preserving catalog/reference FKs and guide triggers, staged generations, durable overlay, transactional promotion/rollback/search and `AT-TAXBAS-01`; synthetic development before production import qualification |
+| PR 4 / X3 | Separate additive migration after accepted X2: UUID source association/version/publication, rights/provenance, immutable-guide coexistence and local-only reference integration; `AT-TAXOVER-01`, `AT-NATHIST-01` |
 | PR 5 / X4 | `amphibian.v1` frozen matrix, registration v3 and actual-old-binary rejection, Amphibia mapping, unique fallback, end-to-end care and `AT-AMPH-01` |
 | PR 6 / X5 | Representative reviewed Amphibian guides, browser/owner review and `AT-AMPHREF-01` |
+
+### Production import, jobs/provider and complexity gates
+
+X1 introduces no external-content rights dependency or new job types. X2 development uses synthetic
+fixtures; production import qualifies the actual archive, intended use, provenance and attribution/
+rights policy. Do not assert archive CC0 without evidence. X3 can develop against synthetic/qualified
+fixtures, but production publication requires material-specific rights, attribution and modification
+handling: applicable Wikipedia text and Wikidata structured-data terms; iNaturalist per material/
+source; direct IUCN content remains unqualified. Owner approval cannot replace missing rights.
+Acquisition success does not imply approved publication.
+
+Initial X2 import may remain a bounded operator workflow. Before the second queued workload,
+likely X3 enrichment, extend one existing SQLite durable queue with type-filtered claiming and lease
+recovery, typed payload validation, handlers and retries. Keep taxonomy/Natural History/media adapters
+separate; when required their transport shares User-Agent, host/endpoint allowlists, timeout/response
+bounds, aggregate rate/concurrency, Retry-After, bounded retry, deduplication and private-data-safe
+telemetry. Independent adapters cannot each consume the full provider allowance. These are future
+prerequisites, not X1 work; no Redis, broker or second queue without demonstrated need.
+
+X2's own migration replaces restrictive parent constraints while preserving every Animal/Plant link,
+UUID, taxon name, provider mapping, image metadata, guide version/source/claim and immutability trigger.
+X3's separate additive migration follows accepted X2. Do not build a universal source/version framework
+in X2 to save a migration. Essential X1 metadata/preflight, X2 catalog/generation/overlay/transactional
+pointer/local indexes and X3 association/version/selection/provenance fit the Pi/small-user context.
+Defer general job expansion until needed, Natural History FTS, extra providers, mass enrichment,
+speculative profiles and streaming backup redesign. No distributed locks or new household event stream.
+
+### Backup and operational release gates
+
+The [qualified private recovery point](../evidence/m6.6-species-aware-husbandry/b-corrections/backup-completeness/README.md)
+proves finalized-attachment completeness. It does not qualify normal worker reliability under the
+known 16 MiB temporary-space constraint. **Before X1 release acceptance**, qualify the ordinary
+production-equivalent backup/verification path under intended runtime constraints; if scratch space
+prevents completion, make and qualify the smallest operational correction. Do not automatically
+redesign streaming backup. Before production-sized X2 import, measure database/generation/index size,
+WAL, backup scratch high water, backup/restore memory and duration, restore compatibility/replay and
+impact on normal duties. Streaming remains measurement-driven. See the
+[backup runbook](../operations/backup-and-restoration.md#extension-release-gates).
+
+Production PCRE2/Perl package findings remain a separate security/operations follow-up in the
+[runtime runbook](../operations/runtime-operations.md#separate-production-security-follow-up).
+No package/base-image upgrade, host restart or deployment is part of this documentation task or X1
+architecture. Fresh CI image success is not evidence that the running production image was patched.
+
+### Three different rollback operations
+
+| Operation | Compatibility / data boundary |
+|---|---|
+| Application rollback | Actual older binary must support schema, events, embedded identities, projections and runtime formats; no Alembic does not establish safety |
+| Taxonomy generation rollback | Change the reference/search pointer transactionally; preserve household state, permanent catalog/mappings/overlay/labels/links, X3 content and guides |
+| Disaster recovery restore | Explicitly authorized verified historical backup restore into new storage, with stated RPO and accepted loss of post-backup writes; never equivalent to pointer rollback |
 
 ### Production compatibility manifest: `AT-PRODCOMP-01`
 
@@ -313,9 +451,19 @@ known contracts, unknown event versions, fail-closed startup and actual older-bi
 after unreadable writes.
 Taxonomy pointer rollback must preserve new durable identities; it is not household-data rollback.
 
-Each tranche additionally needs the frozen quality gate, browser/accessibility qualification,
+One compatibility framework uses the common manifest above with tranche-specific extensions:
+
+| Tranche | Additional `AT-PRODCOMP-01` evidence |
+|---|---|
+| X1 | Frozen four-profile semantics; read support vs eligibility/defaults; completed retries; pre-mutable identity rejection; actual Animal reconstruction; applicable actual rollback binary |
+| X2 | FK-preserving migration; catalog/mapping uniqueness; reference-only taxa; concurrent archive/API identity allocation; overlay/search; promotion, rollback and cleanup; production-scale backup/restore |
+| X3 | Source/version integrity; publication/withdrawal; immutable guides; origin deduplication; generation independence; read purity; missing content; rights/provenance |
+
+Do not create three unrelated compatibility systems or treat a scanner fixture as complete replay
+qualification. Each tranche additionally needs the frozen quality gate, browser/accessibility qualification,
 applicable Pi measurements, production-safe deployment and explicit owner acceptance. Tests and
-deployment do not equal acceptance. Accepted M6.6-B → Pre-X1 Architecture Reconciliation → X1 → X2 → X3 → X4 → X5 → M6.6-C is the
+deployment do not equal acceptance. Accepted M6.6-B → Pre-X1 Architecture Reconciliation → X1 → X2 → X2 production import/
+qualification → small job/provider prerequisite if required → X3 → X4 → X5 → M6.6-C is the
 sequence; C stays unstarted until the required pre-C acceptance gates pass.
 
 | Risk | Impact | Mitigation | Required acceptance evidence |
@@ -345,6 +493,14 @@ and inspects HEAD, the Git index and working-tree/untracked documentation indepe
 content and frozen package changes require evidence bound to the exact reviewed content. The
 [baseline tooling authorization](../evidence/m0-architecture/2026-10-01-generic-governance-baseline.md)
 documents the inherited checkpoint, approval record fields, and this task's limited authority.
-It does not accept ADRs 0044–0048, M6.6-A or M6.6-B, or authorize PR 1 implementation.
+That October 1 authorization did not accept ADRs 0044–0048, M6.6-A or M6.6-B, or authorize
+PR 1 implementation. The separate October 5 B record accepts only delivered B/ADR-0044/0048.
+The [Pre-X1 documentation direction](../evidence/m6.6-species-aware-husbandry/README.md#pre-x1-documentation-direction)
+binds this bounded documentation amendment under ADR-0028; it does not accept ADR-0045/0046/0047
+or future implementation. The supplied owner reconciliation instruction is retained as authority;
+no missing audit transcript or review evidence is reconstructed.
 
-The extension remains proposed and unimplemented. October 5 B acceptance promotes only ADR-0044/0048 and records delivered B scope; it does not perform Pre-X1 architecture reconciliation.
+The extension remains Proposed and unimplemented. This Pre-X1 reconciliation completed owner
+review of the implementation contracts October 5, 2026; X1 has not started. Future implementation qualification
+and explicit owner acceptance govern ADR promotion under repository policy, not architecture-review
+conclusions alone. Accepted ADR-0044/0048 and the historical M6.6-A acceptance caveat are unchanged.

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta, tzinfo
 from pathlib import Path
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
+import pytest
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
@@ -269,9 +271,25 @@ def test_care_keeper_shell_uses_distinct_mobile_and_desktop_navigation(
         assert "@media (min-width: 64rem)" in stylesheet
 
 
+@pytest.mark.parametrize("clock", ["real", "before_midnight", "after_midnight"])
 def test_selected_calendar_care_rows_are_large_navigable_household_scoped_links(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, clock: str
 ) -> None:
+    household_zone = ZoneInfo("America/New_York")  # Configured by complete_setup.
+    if clock != "real":
+        midnight = datetime.combine(
+            datetime.now(household_zone).date(), time.min, tzinfo=household_zone
+        )
+        instant = midnight + timedelta(seconds=-1 if clock == "before_midnight" else 1)
+
+        class FixedDateTime(datetime):
+            @classmethod
+            def now(cls, tz: tzinfo | None = None) -> datetime:
+                value = instant.astimezone(tz)
+                return value if tz is not None else value.replace(tzinfo=None)
+
+        monkeypatch.setattr(f"{__name__}.datetime", FixedDateTime)
+        monkeypatch.setattr("snaketracker.presentation.web.datetime", FixedDateTime)
     with client_for(tmp_path) as client:
         complete_setup(client)
         form = client.get("/animals/new")
@@ -290,7 +308,7 @@ def test_selected_calendar_care_rows_are_large_navigable_household_scoped_links(
         animal_url = created.headers["location"]
         create_food_inventory(client, idempotency_prefix="calendar-food")
         profile = client.get(animal_url)
-        selected_day = (date.today() - timedelta(days=1)).isoformat()
+        selected_day = (datetime.now(household_zone).date() - timedelta(days=1)).isoformat()
         completed = client.post(
             f"{animal_url}/feedings",
             data={

@@ -43,3 +43,39 @@ If the worker crashes, a new worker may take an expired lease only after checkin
 ## Testing and evidence
 
 Automatically restore monthly into isolation and conduct an operator-led drill quarterly. Evidence records backup ID, high-water position, manifest version, key version (not key), durations, bytes, checks, failures, restored smoke-test results, and responsible operator.
+
+## Extension release gates
+
+These are future release gates under the
+[controlling plan](../plans/2026-10-01-extensible-animal-and-species-platform.md), not backup changes
+made by the Pre-X1 documentation task. The
+[private recovery qualification](../evidence/m6.6-species-aware-husbandry/b-corrections/backup-completeness/README.md)
+proves finalized keeper-attachment completeness for that recovery point. It does not establish
+ordinary worker reliability under the documented 16 MiB temporary-space constraint.
+
+Before X1 release acceptance, qualify the ordinary production-equivalent backup/verification path
+with intended runtime constraints. If scratch space blocks completion, make the smallest appropriate
+operational correction and qualify that path. Private larger scratch alone does not close this gate.
+Do not automatically redesign streaming backup.
+
+Before production-sized X2 taxonomy import, measure database/generation/index size, WAL and temporary-
+space high water; backup/restore memory, duration, compatibility/replay and effect on normal duties.
+Use these measurements to decide whether streaming redesign is necessary. Required backup coverage
+includes permanent catalog/mappings, durable overlay and retained labels, existing guide versions/
+sources/claims, reference-media metadata/provenance and, after X3, source associations, content
+versions and publication/withdrawal selections.
+
+Keeper-owned attachments remain mandatory recovery content. Optional cached species-reference bytes
+may be reacquirable only under an accepted recovery contract; durable media metadata/provenance remain
+required. Missing cached bytes use an existing keeper photo or eligible bundled/group fallback while
+local taxonomy/text remain available. Ordinary page/image reads never reacquire or hotlink media.
+This documentation does not change the currently accepted backup format or exclusions.
+
+Application rollback requires an actual older binary compatible with schema, event versions,
+embedded identities, projection requirements and runtime formats, even without Alembic. Taxonomy
+rollback changes the active reference/search pointer while preserving household/catalog/overlay/X3/
+guide state. Disaster recovery restores a verified historical backup under explicit authorization
+with a stated RPO and accepted post-backup loss. These are separate operations; pointer rollback is
+not a restore of household data. Existing-storage startup must complete the future read-only
+compatibility preflight before mutable initialization or replay; see
+[ADR-0045](../adr/0045-extensible-animal-capability-evolution.md#supported-profile-release-manifest-and-startup).

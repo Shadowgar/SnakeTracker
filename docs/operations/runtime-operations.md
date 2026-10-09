@@ -62,8 +62,45 @@ Warn below 20% free space. Below 10%, block nonessential uploads and pause proje
 9. Retain rollback assets until the acceptance window closes.
 10. Contract obsolete structures only in a later release.
 
-If new event contracts have been written, binary rollback is allowed only when the old version reads them. Otherwise restore the pre-upgrade backup and accept the documented RPO.
+Application rollback requires actual older-binary support for schema, events, embedded identities,
+projection requirements and runtime formats. No Alembic migration does not establish safety. If
+incompatible facts have been written, use compatible code or an explicitly authorized verified
+historical restore with stated RPO/loss. A taxonomy-generation pointer rollback is separate and
+preserves household data, permanent identities/mappings/overlay, guides and X3 content.
 
 ## Restricted recovery mode
 
 Unknown newer schemas/contracts, missing plugin handlers, or incompatible projection requirements prevent ordinary startup. Only local or strongly authenticated diagnostic endpoints may operate. No business writes occur. The operator installs compatible code/handlers or performs a validated restore; bypassing contract checks is prohibited.
+
+## Planned compatibility preflight
+
+The reconciled X1 contract for existing storage is read-only inspection → schema/Alembic → event
+contracts → required embedded profile identities → projection catalog → X2 active reference
+structures when implemented → X3 selected-content/publication structures when implemented. Only
+then may mutable engine initialization, replay/catch-up, generation changes, scheduling, workers,
+job claiming or ordinary traffic start. Initial database creation and explicit migration remain
+separate workflows. X1 supplies extension points, not future X2/X3 validators.
+
+At baseline `4be4deb`, application composition calls the SQLite engine factory before compatibility
+inspection; the factory applies mutable setup. This planned order is a release requirement, not a
+claim about current startup. See [ADR-0045](../adr/0045-extensible-animal-capability-evolution.md).
+
+X1 adds no job types. Initial X2 import may be a bounded operator workflow. Before a second queued
+workload, likely X3 enrichment, qualify typed claiming/lease recovery, payload validation, handlers
+and retry semantics in the existing SQLite queue. Separate taxonomy/content/media adapters should
+share bounded aggregate provider transport when needed; acquisition does not authorize publication.
+No new broker/queue or provider coordinator is implemented by this reconciliation.
+
+## Separate production security follow-up
+
+Open follow-up from October 5 finalization: the running accepted image
+`snaketracker:m66b-reference-density-04364cc` still contains the separately identified PCRE2/Perl
+packages (`libpcre2-8-0` 10.42-1+deb12u1 and `perl-base` 5.36.0-7+deb12u3). The
+[PR #17 container qualification](https://github.com/Shadowgar/SnakeTracker/actions/runs/37320148868)
+reported package findings before a fresh CI rebuild passed. Successful CI for a freshly built image
+does not patch an already-running production image. This records package findings and an operations
+follow-up, without asserting application exploitability or a current exhaustive scan.
+
+Remediation belongs to separately authorized security/operations work with current advisory,
+package/image and recovery qualification. Do not fold OS/base-image/runtime-package upgrades or
+host-service restarts into X1 architecture or this documentation task. Production is untouched.
