@@ -28,7 +28,10 @@ PROTECTED_PREFIXES = (
 PROTECTED_FILES = {
     "docs/README.md",
     "docs/operations/backup-and-restoration.md",
+    "docs/operations/care-guide-sources.md",
     "docs/operations/runtime-operations.md",
+    "docs/operations/taxonomy-snapshot-refresh.md",
+    "docs/plans/2026-10-01-extensible-animal-and-species-platform.md",
 }
 ADR_FILENAME = re.compile(r"([0-9]{4})-[a-z0-9]+(?:-[a-z0-9]+)*\.md")
 INDEX_ENTRY = re.compile(r"\|\s*\[([0-9]{4})\]\(([^)]+)\)\s*\|")

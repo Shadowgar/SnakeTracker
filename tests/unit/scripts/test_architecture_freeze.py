@@ -291,7 +291,101 @@ def test_accepted_index_description_is_still_frozen(repository: tuple[Path, str]
     assert any("approval evidence" in error for error in failures(repository))
 
 
-def test_protected_architecture_changes_exclude_phase_evidence_and_plans() -> None:
+def test_protected_architecture_changes_exclude_unrelated_plans_runbooks_and_evidence() -> None:
     assert freeze.protected_architecture_changes(
-        {"docs/architecture/model.md", "docs/plans/phase1.md", "docs/evidence/m1/README.md"}
+        {
+            "docs/architecture/model.md",
+            "docs/plans/phase1.md",
+            "docs/operations/unrelated.md",
+            "docs/evidence/m1/README.md",
+        }
     ) == {"docs/architecture/model.md"}
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "docs/README.md",
+        "docs/operations/backup-and-restoration.md",
+        "docs/operations/runtime-operations.md",
+        "docs/plans/2026-10-01-extensible-animal-and-species-platform.md",
+        "docs/operations/care-guide-sources.md",
+        "docs/operations/taxonomy-snapshot-refresh.md",
+    ],
+)
+def test_controlling_documents_are_protected(path: str) -> None:
+    assert freeze.protected_architecture_changes({path}) == {path}
+    assert freeze.relevant(path)
+
+
+@pytest.mark.parametrize("view", ["HEAD", "index", "working tree"])
+def test_existing_twelve_content_bound_approvals_are_loaded_and_validated(view: str) -> None:
+    documents = {
+        "HEAD": lambda: freeze.committed(ROOT, "HEAD"),
+        "index": lambda: freeze.staged(ROOT),
+        "working tree": lambda: freeze.working(ROOT),
+    }[view]()
+    evidence = documents["docs/evidence/m6.6-species-aware-husbandry/README.md"].decode()
+    entries = freeze.APPROVED_FILE.findall(evidence)
+    assert len(entries) == len(dict(entries)) == 12
+    decisions = freeze.catalog(documents, [])
+    authorized = freeze.approvals(documents, decisions)
+    for path, digest in entries:
+        assert path in freeze.protected_architecture_changes({path})
+        assert path in documents
+        assert hashlib.sha256(documents[path]).hexdigest() == digest
+        assert "0028" in authorized.get(path, set())
+    baseline = freeze.committed(ROOT, freeze.GOVERNANCE_CHECKPOINT)
+    assert freeze.validate_snapshot(documents, baseline) == []
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "docs/plans/2026-10-01-extensible-animal-and-species-platform.md",
+        "docs/operations/care-guide-sources.md",
+        "docs/operations/taxonomy-snapshot-refresh.md",
+    ],
+)
+@pytest.mark.parametrize(
+    ("state", "label"), [("working", "working tree"), ("staged", "index"), ("committed", "HEAD")]
+)
+def test_controlling_document_edits_require_exact_content_approval_in_each_git_view(
+    repository: tuple[Path, str], path: str, state: str, label: str
+) -> None:
+    root, _ = repository
+    approved = "# Owner-reviewed controlling contract\n\nUse the reviewed policy.\n"
+    edited = "# Changed controlling contract\n\nUse an unreviewed policy.\n"
+    write(root, path, approved)
+    approval(root, path, "0001")
+    git(root, "add", "docs")
+    git(root, "commit", "--quiet", "-m", "Exact-content owner approval")
+    assert failures(repository) == []
+
+    write(root, path, edited)
+    if state != "working":
+        git(root, "add", path)
+        if state == "committed":
+            git(root, "commit", "--quiet", "-m", "Unapproved controlling-document edit")
+        # Repair later views so only the intended HEAD or index snapshot is invalid.
+        write(root, path, approved)
+        if state == "committed":
+            git(root, "add", path)
+    errors = failures(repository)
+    assert len(errors) == 1
+    assert errors[0].startswith(f"{label}:")
+    assert "content-bound owner approval evidence" in errors[0] and path in errors[0]
+
+    write(root, path, edited)
+    approval(root, path, "0001")
+    if state != "working":
+        git(root, "add", "docs")
+    if state == "committed":
+        git(root, "commit", "--quiet", "-m", "Owner-approved future exact content")
+    assert failures(repository) == []
+
+    write(root, path, edited + "\nAnother unreviewed change.\n")
+    assert any(
+        error.startswith("working tree:") and "approval evidence" in error and path in error
+        for error in failures(repository)
+    )
