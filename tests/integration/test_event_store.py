@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import importlib.util
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
+from threading import Event, get_ident
 from uuid import uuid4
 
 import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import text
+from sqlalchemy import event, text
 
 from snaketracker.application.animals import AnimalService, RegisterAnimalCommand
 from snaketracker.application.household_bootstrap import (
@@ -150,6 +152,104 @@ def test_load_fails_if_stream_head_claims_an_event_that_is_missing(tmp_path: Pat
 
         with pytest.raises(EventStreamIntegrityError, match="head"):
             store.load_stream(key)
+    finally:
+        engine.dispose()
+
+
+def test_load_fails_if_stored_events_extend_beyond_the_stream_head(tmp_path: Path) -> None:
+    store, engine, key, _result = migrated_store(tmp_path)
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text("UPDATE event_streams SET current_version=1 WHERE household_id=:household"),
+                {"household": str(key.household_id)},
+            )
+        with pytest.raises(EventStreamIntegrityError, match="authoritative stream head"):
+            store.load_stream(key)
+    finally:
+        engine.dispose()
+
+
+def test_load_fails_if_a_stored_event_checksum_is_corrupt(tmp_path: Path) -> None:
+    store, engine, key, _result = migrated_store(tmp_path)
+    try:
+        original = store.load_stream(key)
+        with engine.begin() as connection:
+            connection.execute(
+                text("UPDATE domain_events SET checksum=:checksum WHERE event_id=:event_id"),
+                {"checksum": "0" * 64, "event_id": str(original[0].event_id)},
+            )
+        with pytest.raises(ValueError, match="Stored event checksum is invalid"):
+            store.load_stream(key)
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize(
+    ("after_version", "message"),
+    [(1, "boundary does not match"), (3, "newer than the authoritative stream head")],
+)
+def test_load_stream_rejects_an_invalid_snapshot_boundary(
+    tmp_path: Path, after_version: int, message: str
+) -> None:
+    store, engine, key, _result = migrated_store(tmp_path)
+    try:
+        with pytest.raises(EventStreamIntegrityError, match=message):
+            store.load_stream(key, after_version=after_version, expected_boundary_event_id=uuid4())
+        # A failed read must release its transaction and leave history intact.
+        assert [value.stream_version for value in store.load_stream(key)] == [1, 2]
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize(
+    ("after_version", "pause_query"),
+    [
+        (0, "SELECT * FROM domain_events"),
+        (1, "SELECT event_id FROM domain_events"),
+        (1, "SELECT * FROM domain_events"),
+        (2, "SELECT * FROM domain_events"),
+    ],
+)
+def test_load_stream_retains_one_snapshot_when_append_commits_between_reads(
+    tmp_path: Path, after_version: int, pause_query: str
+) -> None:
+    store, engine, key, result = migrated_store(tmp_path)
+    reached_query = Event()
+    reader_thread = get_ident()
+    try:
+        original = store.load_stream(key)
+        appended = household_created_event(key, result.user_id, 3)
+        boundary = original[after_version - 1].event_id if after_version else None
+
+        def append_between_reads() -> None:
+            assert reached_query.wait(timeout=10), "Reader did not reach the interleaving point."
+            store.append(key, expected_version=2, events=(appended,))
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            writer = executor.submit(append_between_reads)
+
+            def pause_reader(_connection, _cursor, statement, _parameters, _context, _many):  # type: ignore[no-untyped-def]
+                if get_ident() == reader_thread and statement.startswith(pause_query):
+                    reached_query.set()
+                    # A real WAL writer must commit before this read proceeds.
+                    writer.result(timeout=10)
+
+            event.listen(engine, "before_cursor_execute", pause_reader)
+            try:
+                loaded = store.load_stream(
+                    key,
+                    after_version=after_version,
+                    expected_boundary_event_id=boundary,
+                )
+                assert reached_query.is_set()
+                writer.result(timeout=10)
+            finally:
+                event.remove(engine, "before_cursor_execute", pause_reader)
+
+        assert loaded == original[after_version:]
+        # Closing the read also releases its snapshot: the next load sees the commit.
+        assert store.load_stream(key) == (*original, appended)
     finally:
         engine.dispose()
 
