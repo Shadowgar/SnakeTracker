@@ -101,6 +101,9 @@ class SQLAlchemyEventStore:
         if (after_version == 0) != (expected_boundary_event_id is None):
             raise ValueError("A nonzero replay boundary requires its event identity.")
         with self._engine.connect() as connection:
+            # Pysqlite's legacy mode does not BEGIN for SELECTs. Keep all replay
+            # reads in one SQLite snapshot while allowing concurrent WAL writers.
+            connection.exec_driver_sql("BEGIN")
             stored_head = connection.execute(
                 text(
                     "SELECT current_version FROM event_streams "
