@@ -16,6 +16,15 @@ freeze = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = freeze
 SPEC.loader.exec_module(freeze)
 
+MANDATORY_DOCUMENTS = (
+    "docs/README.md",
+    "docs/operations/backup-and-restoration.md",
+    "docs/operations/care-guide-sources.md",
+    "docs/operations/runtime-operations.md",
+    "docs/operations/taxonomy-snapshot-refresh.md",
+    "docs/plans/2026-10-01-extensible-animal-and-species-platform.md",
+)
+
 
 def git(root: Path, *args: str) -> str:
     return subprocess.check_output(["git", *args], cwd=root, text=True).strip()
@@ -54,7 +63,14 @@ def repository(tmp_path: Path) -> tuple[Path, str]:
     index(tmp_path, "0001")
     git(tmp_path, "add", "docs")
     git(tmp_path, "commit", "--quiet", "-m", "Inherited accepted checkpoint")
-    return tmp_path, git(tmp_path, "rev-parse", "HEAD")
+    checkpoint = git(tmp_path, "rev-parse", "HEAD")
+    # Model mandatory runbooks and the plan introduced after the historical checkpoint.
+    for number, path in enumerate(MANDATORY_DOCUMENTS[1:]):
+        write(tmp_path, path, "# Owner-approved mandatory document\n\nKeep this contract.\n")
+        approval(tmp_path, path, "0001", evidence_name=f"initial-mandatory-{number}.md")
+    git(tmp_path, "add", "docs")
+    git(tmp_path, "commit", "--quiet", "-m", "Approved mandatory documents after checkpoint")
+    return tmp_path, checkpoint
 
 
 def add_proposed(root: Path, number: str = "0002") -> None:
@@ -62,11 +78,11 @@ def add_proposed(root: Path, number: str = "0002") -> None:
     index(root, "0001", number)
 
 
-def approval(root: Path, target: str, number: str) -> None:
+def approval(root: Path, target: str, number: str, *, evidence_name: str = "approval.md") -> None:
     digest = hashlib.sha256((root / target).read_bytes()).hexdigest()
     write(
         root,
-        "docs/evidence/m0-architecture/approval.md",
+        f"docs/evidence/m0-architecture/{evidence_name}",
         "# Architecture amendment evidence\n\n"
         f"- Decision: ADR-{number}\n"
         "- Acceptance date: 2026-08-04\n"
@@ -339,14 +355,7 @@ def test_existing_twelve_content_bound_approvals_are_loaded_and_validated(view: 
     assert freeze.validate_snapshot(documents, baseline) == []
 
 
-@pytest.mark.parametrize(
-    "path",
-    [
-        "docs/plans/2026-10-01-extensible-animal-and-species-platform.md",
-        "docs/operations/care-guide-sources.md",
-        "docs/operations/taxonomy-snapshot-refresh.md",
-    ],
-)
+@pytest.mark.parametrize("path", MANDATORY_DOCUMENTS)
 @pytest.mark.parametrize(
     ("state", "label"), [("working", "working tree"), ("staged", "index"), ("committed", "HEAD")]
 )
@@ -356,6 +365,9 @@ def test_controlling_document_edits_require_exact_content_approval_in_each_git_v
     root, _ = repository
     approved = "# Owner-reviewed controlling contract\n\nUse the reviewed policy.\n"
     edited = "# Changed controlling contract\n\nUse an unreviewed policy.\n"
+    if path == "docs/README.md":
+        approved += "\nStatus: Approved\nDecision freeze active.\n"
+        edited += "\nStatus: Approved\nDecision freeze active.\n"
     write(root, path, approved)
     approval(root, path, "0001")
     git(root, "add", "docs")
@@ -389,3 +401,48 @@ def test_controlling_document_edits_require_exact_content_approval_in_each_git_v
         error.startswith("working tree:") and "approval evidence" in error and path in error
         for error in failures(repository)
     )
+
+
+@pytest.mark.parametrize("path", MANDATORY_DOCUMENTS)
+@pytest.mark.parametrize("operation", ["delete", "rename", "rename and copy"])
+@pytest.mark.parametrize(
+    ("state", "label"), [("working", "working tree"), ("staged", "index"), ("committed", "HEAD")]
+)
+def test_mandatory_document_removal_is_rejected_in_each_git_view(
+    repository: tuple[Path, str], path: str, operation: str, state: str, label: str
+) -> None:
+    root, checkpoint = repository
+    assert (path in freeze.committed(root, checkpoint)) == (path == "docs/README.md")
+    assert failures(repository) == []
+    target = root / path
+    approved = target.read_bytes()
+    if operation == "delete":
+        target.unlink()
+    else:
+        renamed = root / "docs/plans/renamed-contract.md"
+        renamed.parent.mkdir(parents=True, exist_ok=True)
+        target.rename(renamed)
+        assert renamed.read_bytes() == approved
+        if operation == "rename and copy":
+            copy = root / "docs/operations/copied-contract.md"
+            copy.write_bytes(approved)
+            assert copy.read_bytes() == approved
+    if state != "working":
+        git(root, "add", "docs")
+        if state == "committed":
+            git(root, "commit", "--quiet", "-m", "Remove mandatory original path")
+        # Repair later views: neither a valid worktree nor index can hide earlier removal.
+        target.write_bytes(approved)
+        if state == "committed":
+            git(root, "add", path)
+    errors = failures(repository)
+    assert f"{label}: mandatory protected document missing: {path}" in errors
+    assert all(error.startswith(f"{label}:") for error in errors)
+
+    # Restore the original path in the affected view; identical copies are harmless then.
+    target.write_bytes(approved)
+    if state != "working":
+        git(root, "add", "docs")
+    if state == "committed":
+        git(root, "commit", "--quiet", "-m", "Restore mandatory original path")
+    assert failures(repository) == []

@@ -25,6 +25,7 @@ PROTECTED_PREFIXES = (
     "docs/security/",
     "docs/ux/",
 )
+# These explicitly protected documents must exist in every current Git view.
 PROTECTED_FILES = {
     "docs/README.md",
     "docs/operations/backup-and-restoration.md",
@@ -264,7 +265,10 @@ def index_maintenance(current: bytes, baseline: bytes, previous: dict[str, Decis
 
 
 def validate_snapshot(documents: dict[str, bytes], baseline: dict[str, bytes]) -> list[str]:
-    failures: list[str] = []
+    failures = [
+        f"mandatory protected document missing: {path}"
+        for path in sorted(PROTECTED_FILES - documents.keys())
+    ]
     decisions = catalog(documents, failures)
     failures.extend(validate_index(documents, decisions))
     previous = catalog(baseline, [])
