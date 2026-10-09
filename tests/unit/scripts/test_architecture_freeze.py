@@ -24,6 +24,18 @@ MANDATORY_DOCUMENTS = (
     "docs/operations/taxonomy-snapshot-refresh.md",
     "docs/plans/2026-10-01-extensible-animal-and-species-platform.md",
 )
+MANDATORY_PROPOSED_ADRS = {
+    "0045": "docs/adr/0045-extensible-animal-capability-evolution.md",
+    "0046": "docs/adr/0046-local-taxonomy-snapshot-and-provider-overlay.md",
+    "0047": "docs/adr/0047-natural-history-reference-boundary.md",
+}
+APPROVED_DOCUMENTS = (
+    *MANDATORY_DOCUMENTS,
+    *MANDATORY_PROPOSED_ADRS.values(),
+    "docs/adr/README.md",
+    "docs/requirements/traceability-matrix.md",
+    "docs/roadmap/milestones.md",
+)
 
 
 def git(root: Path, *args: str) -> str:
@@ -42,11 +54,20 @@ def adr(number: str, status: str = "Proposed", decision: str = "Use exact contra
 
 
 def index(root: Path, *numbers: str) -> None:
+    additional = tuple(
+        number
+        for number, path in MANDATORY_PROPOSED_ADRS.items()
+        if (root / path).is_file() and number not in numbers
+    )
+    targets = {number: Path(path).name for number, path in MANDATORY_PROPOSED_ADRS.items()}
     write(
         root,
         "docs/adr/README.md",
         "# ADR index\n\nThe decision freeze is active.\n\n| ADR | Decision |\n|---|---|\n"
-        + "".join(f"| [{n}]({n}-test.md) | Test decision |\n" for n in numbers),
+        + "".join(
+            f"| [{n}]({targets.get(n, n + '-test.md')}) | Test decision |\n"
+            for n in (*numbers, *additional)
+        ),
     )
 
 
@@ -68,6 +89,10 @@ def repository(tmp_path: Path) -> tuple[Path, str]:
     for number, path in enumerate(MANDATORY_DOCUMENTS[1:]):
         write(tmp_path, path, "# Owner-approved mandatory document\n\nKeep this contract.\n")
         approval(tmp_path, path, "0001", evidence_name=f"initial-mandatory-{number}.md")
+    for number, path in MANDATORY_PROPOSED_ADRS.items():
+        write(tmp_path, path, adr(number))
+        approval(tmp_path, path, "0001", evidence_name=f"initial-proposed-{number}.md")
+    index(tmp_path, "0001")
     git(tmp_path, "add", "docs")
     git(tmp_path, "commit", "--quiet", "-m", "Approved mandatory documents after checkpoint")
     return tmp_path, checkpoint
@@ -78,17 +103,23 @@ def add_proposed(root: Path, number: str = "0002") -> None:
     index(root, "0001", number)
 
 
-def approval(root: Path, target: str, number: str, *, evidence_name: str = "approval.md") -> None:
-    digest = hashlib.sha256((root / target).read_bytes()).hexdigest()
-    write(
-        root,
-        f"docs/evidence/m0-architecture/{evidence_name}",
+def approval_text(target: str, content: bytes, number: str) -> str:
+    digest = hashlib.sha256(content).hexdigest()
+    return (
         "# Architecture amendment evidence\n\n"
         f"- Decision: ADR-{number}\n"
         "- Acceptance date: 2026-08-04\n"
         "- Authority: owner instruction recorded in review\n"
         "- Review status: Accepted\n"
-        f"- Approved file: `{target}` SHA-256: `{digest}`\n",
+        f"- Approved file: `{target}` SHA-256: `{digest}`\n"
+    )
+
+
+def approval(root: Path, target: str, number: str, *, evidence_name: str = "approval.md") -> None:
+    write(
+        root,
+        f"docs/evidence/m0-architecture/{evidence_name}",
+        approval_text(target, (root / target).read_bytes(), number),
     )
 
 
@@ -344,6 +375,7 @@ def test_existing_twelve_content_bound_approvals_are_loaded_and_validated(view: 
     evidence = documents["docs/evidence/m6.6-species-aware-husbandry/README.md"].decode()
     entries = freeze.APPROVED_FILE.findall(evidence)
     assert len(entries) == len(dict(entries)) == 12
+    assert set(dict(entries)) == set(APPROVED_DOCUMENTS)
     decisions = freeze.catalog(documents, [])
     authorized = freeze.approvals(documents, decisions)
     for path, digest in entries:
@@ -355,7 +387,7 @@ def test_existing_twelve_content_bound_approvals_are_loaded_and_validated(view: 
     assert freeze.validate_snapshot(documents, baseline) == []
 
 
-@pytest.mark.parametrize("path", MANDATORY_DOCUMENTS)
+@pytest.mark.parametrize("path", (*MANDATORY_DOCUMENTS, *MANDATORY_PROPOSED_ADRS.values()))
 @pytest.mark.parametrize(
     ("state", "label"), [("working", "working tree"), ("staged", "index"), ("committed", "HEAD")]
 )
@@ -368,6 +400,10 @@ def test_controlling_document_edits_require_exact_content_approval_in_each_git_v
     if path == "docs/README.md":
         approved += "\nStatus: Approved\nDecision freeze active.\n"
         edited += "\nStatus: Approved\nDecision freeze active.\n"
+    elif path in MANDATORY_PROPOSED_ADRS.values():
+        number = Path(path).name[:4]
+        approved = adr(number, decision="Use the reviewed policy.")
+        edited = adr(number, decision="Use an unreviewed policy.")
     write(root, path, approved)
     approval(root, path, "0001")
     git(root, "add", "docs")
@@ -395,6 +431,9 @@ def test_controlling_document_edits_require_exact_content_approval_in_each_git_v
     if state == "committed":
         git(root, "commit", "--quiet", "-m", "Owner-approved future exact content")
     assert failures(repository) == []
+
+    if path in MANDATORY_PROPOSED_ADRS.values():
+        assert freeze.catalog(freeze.working(root), [])[Path(path).name[:4]].status == "Proposed"
 
     write(root, path, edited + "\nAnother unreviewed change.\n")
     assert any(
@@ -446,3 +485,150 @@ def test_mandatory_document_removal_is_rejected_in_each_git_view(
     if state == "committed":
         git(root, "commit", "--quiet", "-m", "Restore mandatory original path")
     assert failures(repository) == []
+
+
+def test_only_the_nine_explicit_paths_are_mandatory() -> None:
+    expected = set(MANDATORY_DOCUMENTS) | set(MANDATORY_PROPOSED_ADRS.values())
+    assert expected == freeze.PROTECTED_FILES
+
+
+@pytest.mark.parametrize(("number", "path"), MANDATORY_PROPOSED_ADRS.items())
+@pytest.mark.parametrize(
+    "operation", ["delete", "delete with index row", "rename", "rename and copy"]
+)
+@pytest.mark.parametrize(
+    ("state", "label"), [("working", "working tree"), ("staged", "index"), ("committed", "HEAD")]
+)
+def test_reviewed_proposed_adr_removal_cannot_be_hidden_by_index_maintenance(
+    repository: tuple[Path, str], number: str, path: str, operation: str, state: str, label: str
+) -> None:
+    root, checkpoint = repository
+    assert path not in freeze.committed(root, checkpoint)
+    assert failures(repository) == []
+    target = root / path
+    approved = target.read_bytes()
+    index_path = root / "docs/adr/README.md"
+    approved_index = index_path.read_bytes()
+    renamed = root / f"docs/adr/{number}-relocated-contract.md"
+    if operation.startswith("delete"):
+        target.unlink()
+        if operation == "delete with index row":
+            index(root, "0001")
+    else:
+        target.rename(renamed)
+        assert renamed.read_bytes() == approved
+        index_path.write_bytes(approved_index.replace(target.name.encode(), renamed.name.encode()))
+        if operation == "rename and copy":
+            copy = root / f"docs/plans/copied-adr-{number}.md"
+            copy.write_bytes(approved)
+            assert copy.read_bytes() == approved
+    if operation != "delete":
+        snapshot = freeze.working(root)
+        baseline = freeze.committed(root, checkpoint)
+        assert freeze.validate_index(snapshot, freeze.catalog(snapshot, [])) == []
+        assert freeze.index_maintenance(
+            snapshot["docs/adr/README.md"],
+            baseline["docs/adr/README.md"],
+            freeze.catalog(baseline, []),
+        )
+    if state != "working":
+        git(root, "add", "docs")
+        if state == "committed":
+            git(root, "commit", "--quiet", "-m", "Remove reviewed Proposed ADR")
+        # A repaired later view must not mask the invalid original Git view.
+        target.write_bytes(approved)
+        index_path.write_bytes(approved_index)
+        renamed.unlink(missing_ok=True)
+        if state == "committed":
+            git(root, "add", "docs")
+    errors = failures(repository)
+    assert f"{label}: mandatory protected document missing: {path}" in errors
+    assert all(error.startswith(f"{label}:") for error in errors)
+
+    target.write_bytes(approved)
+    index_path.write_bytes(approved_index)
+    renamed.unlink(missing_ok=True)
+    if state != "working":
+        git(root, "add", "docs")
+    if state == "committed":
+        git(root, "commit", "--quiet", "-m", "Restore reviewed Proposed ADR")
+    assert failures(repository) == []
+    assert freeze.catalog(freeze.working(root), [])[number].status == "Proposed"
+
+
+@pytest.mark.parametrize("state", ["working", "staged", "committed"])
+def test_unrelated_proposed_adrs_still_allow_edits_and_indexed_removal(
+    repository: tuple[Path, str], state: str
+) -> None:
+    root, _ = repository
+    add_proposed(root)
+    write(root, "docs/adr/0002-test.md", adr("0002", decision="An unaccepted revised proposal."))
+    if state != "working":
+        git(root, "add", "docs")
+    if state == "committed":
+        git(root, "commit", "--quiet", "-m", "Revise unrelated proposal without acceptance")
+    assert failures(repository) == []
+    (root / "docs/adr/0002-test.md").unlink()
+    index(root, "0001")
+    if state != "working":
+        git(root, "add", "docs")
+    if state == "committed":
+        git(root, "commit", "--quiet", "-m", "Remove unrelated proposal and its index row")
+    assert failures(repository) == []
+
+
+def test_mandatory_adr_acceptance_still_requires_its_own_decision_approval(
+    repository: tuple[Path, str],
+) -> None:
+    root, _ = repository
+    path = MANDATORY_PROPOSED_ADRS["0045"]
+    write(root, path, adr("0045", "Accepted"))
+    approval(root, path, "0001")
+    assert any(path in error and "approval evidence" in error for error in failures(repository))
+    approval(root, path, "0045")
+    assert failures(repository) == []
+
+
+@pytest.mark.parametrize("path", APPROVED_DOCUMENTS)
+@pytest.mark.parametrize("view", ["HEAD", "index", "working tree"])
+def test_all_twelve_approved_documents_enforce_contents_paths_and_future_approvals(
+    path: str, view: str
+) -> None:
+    # All mutations are confined to in-memory copies of the selected real Git snapshot.
+    documents = {
+        "HEAD": lambda: freeze.committed(ROOT, "HEAD"),
+        "index": lambda: freeze.staged(ROOT),
+        "working tree": lambda: freeze.working(ROOT),
+    }[view]()
+    evidence = documents["docs/evidence/m6.6-species-aware-husbandry/README.md"].decode()
+    entries = dict(freeze.APPROVED_FILE.findall(evidence))
+    assert set(entries) == set(APPROVED_DOCUMENTS)
+    assert path in freeze.protected_architecture_changes({path})
+    assert hashlib.sha256(documents[path]).hexdigest() == entries[path]
+    baseline = freeze.committed(ROOT, freeze.GOVERNANCE_CHECKPOINT)
+    assert freeze.validate_snapshot(documents, baseline) == []
+
+    edited = dict(documents)
+    edited[path] += b"\nUnreviewed contract: permit mutable identifiers.\n"
+    assert any(
+        path in error and "content-bound owner approval evidence" in error
+        for error in freeze.validate_snapshot(edited, baseline)
+    )
+    approved_future = dict(edited)
+    approved_future["docs/evidence/synthetic-future-approval.md"] = approval_text(
+        path, edited[path], "0028"
+    ).encode()
+    assert freeze.validate_snapshot(approved_future, baseline) == []
+    approved_future[path] += b"\nAn additional unreviewed revision.\n"
+    assert any(
+        path in error and "approval evidence" in error
+        for error in freeze.validate_snapshot(approved_future, baseline)
+    )
+
+    deleted = dict(documents)
+    content = deleted.pop(path)
+    assert any(path in error for error in freeze.validate_snapshot(deleted, baseline))
+    relocated = dict(deleted)
+    relocated["docs/architecture/relocated-reviewed-contract.md"] = content
+    assert relocated["docs/architecture/relocated-reviewed-contract.md"] == documents[path]
+    assert any(path in error for error in freeze.validate_snapshot(relocated, baseline))

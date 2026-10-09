@@ -483,7 +483,10 @@ def test_inventory_expected_version_and_idempotent_retry_are_explicit(tmp_path: 
         engine.dispose()
 
 
-def test_inventory_concurrent_writers_commit_one_expected_version_winner(tmp_path: Path) -> None:
+@pytest.mark.parametrize("iteration", range(20))
+def test_inventory_concurrent_writers_commit_one_expected_version_winner(
+    tmp_path: Path, iteration: int
+) -> None:
     engine, bootstrap, _store, service, projection = _setup(tmp_path)
     try:
         item = service.register(
@@ -491,7 +494,7 @@ def test_inventory_concurrent_writers_commit_one_expected_version_winner(tmp_pat
                 bootstrap.household_id,
                 bootstrap.user_id,
                 uuid4(),
-                "inventory-register-concurrent",
+                f"inventory-register-concurrent-{iteration}",
                 "Small rats",
                 "item",
                 None,

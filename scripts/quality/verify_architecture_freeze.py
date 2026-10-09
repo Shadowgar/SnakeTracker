@@ -28,6 +28,9 @@ PROTECTED_PREFIXES = (
 # These explicitly protected documents must exist in every current Git view.
 PROTECTED_FILES = {
     "docs/README.md",
+    "docs/adr/0045-extensible-animal-capability-evolution.md",
+    "docs/adr/0046-local-taxonomy-snapshot-and-provider-overlay.md",
+    "docs/adr/0047-natural-history-reference-boundary.md",
     "docs/operations/backup-and-restoration.md",
     "docs/operations/care-guide-sources.md",
     "docs/operations/runtime-operations.md",
@@ -284,10 +287,14 @@ def validate_snapshot(documents: dict[str, bytes], baseline: dict[str, bytes]) -
         protected = decision.status in {"Accepted", "Superseded"} or (
             old is not None and old.status in {"Accepted", "Superseded"}
         )
+        # Decision acceptance needs its own approval; reviewed proposal contents may
+        # be bound under an Accepted governance decision without promoting the proposal.
+        approving_decisions = authorized.get(decision.path, set())
+        content_approved = number in approving_decisions if protected else bool(approving_decisions)
         if (
-            protected
+            (protected or decision.path in PROTECTED_FILES)
             and documents[decision.path] != baseline.get(decision.path)
-            and number not in authorized.get(decision.path, set())
+            and not content_approved
         ):
             failures.append(f"ADR needs content-bound owner approval evidence: {decision.path}")
         if decision.status == "Superseded":
