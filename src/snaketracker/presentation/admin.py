@@ -25,7 +25,10 @@ from snaketracker.presentation.admin_display import (
     admin_user_agent,
 )
 from snaketracker.presentation.animal_care_views import present_effective_care_events
+from snaketracker.presentation.animal_visuals import profile_fallback_asset
 from snaketracker.presentation.web import SESSION_COOKIE, templates
+
+templates.env.globals["profile_fallback_asset"] = profile_fallback_asset
 
 PLATFORM_READ_CAPABILITIES = frozenset(
     {"platform.admin.read", "platform.support.read", "platform.system.read"}

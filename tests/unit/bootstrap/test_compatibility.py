@@ -176,7 +176,7 @@ def test_startup_compatibility_accepts_supported_runtime_and_schema(tmp_path) ->
                 text(
                     "CREATE TABLE domain_events ("
                     "stream_type VARCHAR(64) NOT NULL, event_type VARCHAR(128) NOT NULL, "
-                    "schema_version INTEGER NOT NULL)"
+                    "schema_version INTEGER NOT NULL, payload_json TEXT NOT NULL)"
                 )
             )
             connection.execute(
@@ -238,5 +238,63 @@ def test_unknown_persisted_projection_requires_recovery(tmp_path) -> None:
         report = inspect_projection_compatibility(engine)
         assert report.mode is CompatibilityMode.RECOVERY_REQUIRED
         assert report.reason_code == "projection_definition_unknown"
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize(
+    ("event_type", "version", "reason", "diagnostic"),
+    [
+        ("future.contract", 99, "event_contract_unknown", "future.contract v99"),
+        ("animal.registered", 0, "event_contract_invalid", "animal.registered"),
+        (
+            "animal.registered",
+            "private-invalid-version",
+            "event_contract_invalid",
+            "invalid version",
+        ),
+        ("private\nforged-log-entry", 1, "event_contract_invalid", "invalid event type"),
+    ],
+)
+def test_contract_diagnostics_identify_safe_contract_metadata_only(
+    tmp_path, event_type, version, reason, diagnostic
+):
+    from snaketracker.bootstrap.compatibility import inspect_event_contracts
+
+    engine = create_engine(f"sqlite+pysqlite:///{tmp_path / 'contracts.sqlite3'}")
+    try:
+        with engine.begin() as connection:
+            connection.exec_driver_sql(
+                "CREATE TABLE domain_events(event_type TEXT,schema_version,payload_json TEXT)"
+            )
+            connection.exec_driver_sql(
+                "INSERT INTO domain_events VALUES(?,?,?)",
+                (event_type, version, '{"notes":"private-payload-secret"}'),
+            )
+        report = inspect_event_contracts(engine)
+        assert not report.normal_readiness
+        assert report.reason_code == reason
+        assert report.operator_detail is not None
+        assert diagnostic in report.operator_detail
+        for secret in ("private-payload-secret", "private-invalid-version", "forged-log-entry"):
+            assert secret not in report.operator_detail
+        assert "\n" not in report.operator_detail
+        assert event_type not in report.public_detail
+        assert "private" not in report.public_detail
+    finally:
+        engine.dispose()
+
+
+def test_contract_storage_error_has_safe_distinct_operator_diagnostic(tmp_path):
+    from snaketracker.bootstrap.compatibility import inspect_event_contracts
+
+    engine = create_engine(f"sqlite+pysqlite:///{tmp_path / 'private-database-secret.sqlite3'}")
+    try:
+        report = inspect_event_contracts(engine)
+        assert report.reason_code == "event_contract_storage_error"
+        assert report.operator_detail is not None
+        assert "storage" in report.operator_detail.lower()
+        assert "private-database-secret" not in report.operator_detail
+        assert str(tmp_path) not in report.operator_detail
     finally:
         engine.dispose()

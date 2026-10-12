@@ -16,12 +16,15 @@ from uuid import uuid4
 
 from snaketracker.application.readiness import PlatformReadiness
 from snaketracker.application.reminders import ReminderFactService
+from snaketracker.bootstrap import startup
 from snaketracker.bootstrap.compatibility import inspect_startup_compatibility
 from snaketracker.bootstrap.configuration import Environment, Settings, load_settings
 from snaketracker.infrastructure.attachments.storage import LocalAttachmentStorage
 from snaketracker.infrastructure.backups.pipeline import LocalBackupPipeline
 from snaketracker.infrastructure.backups.repository import SQLAlchemyBackupRepository
-from snaketracker.infrastructure.database.engine import create_sqlite_engine
+from snaketracker.infrastructure.database.engine import (
+    create_sqlite_engine,
+)
 from snaketracker.infrastructure.database.health import SQLAlchemyDatabaseHealth
 from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
 from snaketracker.infrastructure.jobs.repository import SQLAlchemyJobRepository
@@ -69,14 +72,35 @@ def main() -> int:
 
 def run_worker(settings: Settings, stop: threading.Event, poll_interval: float = 1.0) -> int:
     """Run the lifecycle shell and the M4 worker-authoritative local backup path."""
+    try:
+        engine = startup.inspection_engine(settings.database_path, "worker")
+        compatibility = inspect_startup_compatibility(engine, product_projection_registry)
+        if compatibility.normal_readiness:
+            engine.dispose()
+            startup.admit_mutable(settings.database_path, "worker")
+    except Exception as error:
+        if "engine" in locals():
+            engine.dispose()
+        engine, compatibility = startup.protection_failure(error)
+    engine.dispose()
+    if not compatibility.normal_readiness:
+        LOGGER.error(
+            "Storage preflight requires recovery.",
+            extra={
+                "context": {
+                    "reason": compatibility.reason_code,
+                    "operator_detail": compatibility.operator_detail,
+                }
+            },
+        )
+        return EXIT_RECOVERY_REQUIRED
     engine = create_sqlite_engine(
-        settings.database_path,
-        require_local_storage=settings.environment is Environment.PRODUCTION,
+        settings.database_path, require_local_storage=settings.environment is Environment.PRODUCTION
     )
     try:
         readiness = PlatformReadiness(
             database=SQLAlchemyDatabaseHealth(engine),
-            compatibility=inspect_startup_compatibility(engine, product_projection_registry),
+            compatibility=compatibility,
         )
         if not readiness.check().is_ready:
             return EXIT_RECOVERY_REQUIRED
@@ -103,6 +127,7 @@ def run_worker(settings: Settings, stop: threading.Event, poll_interval: float =
             jitter_seconds=lambda _attempt: secrets.randbelow(31),
         )
         next_reminder_sweep_at: datetime | None = None
+        startup.notify_worker_started()
         while not stop.wait(poll_interval):
             now = datetime.now(UTC)
             _run_duty("Product projection advancement", projection_worker.run_once)
