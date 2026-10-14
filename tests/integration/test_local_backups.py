@@ -4,6 +4,7 @@ import base64
 import errno
 import json
 import os
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -358,6 +359,15 @@ import coverage,pytest
 assert os.environ['X1_BACKUP_FIXTURE_CHILD']==os.environ['X1_BACKUP_FIXTURE_TOKEN']
 capacity=os.statvfs('/private')
 assert capacity.f_blocks*capacity.f_frsize==8388608
+executables={sys.executable,sys._base_executable,str(Path(sys.executable).resolve())}
+readonly={path:bool(os.statvfs(path).f_flag & os.ST_RDONLY)
+          for path in executables | set(json.loads(os.environ['X1_BACKUP_INTERPRETER_ROOTS']))}
+write_errors={}
+for executable in executables | {os.__file__,str(Path(sys.prefix)/'pyvenv.cfg')}:
+ try:
+  descriptor=os.open(executable,os.O_WRONLY);os.close(descriptor)
+  write_errors[executable]=None
+ except OSError as error:write_errors[executable]=error.errno
 trace=coverage.Coverage(branch=True,source=['snaketracker'],data_file=None)
 trace.start()
 try:
@@ -368,7 +378,16 @@ finally:
  data.loads(trace.get_data().dumps());data.write()
  shutil.copytree('/private/pytest','/receipts/preserved-test-data')
  capacity=os.statvfs('/private')
+ temporary=os.statvfs('/tmp')
+ status=Path('/proc/self/status').read_text().splitlines()
  Path('/receipts/resource.json').write_text(json.dumps({
+  'uid':os.getuid(),'gid':os.getgid(),'executable':sys.executable,
+  'base_executable':sys._base_executable,'prefix':sys.prefix,
+  'executable_write_errors':write_errors,
+  'readonly_paths':readonly,'stdlib_path':os.__file__,
+  'tmp_capacity_bytes':temporary.f_blocks*temporary.f_frsize,
+  'pids_max':Path('/sys/fs/cgroup/pids.max').read_text(),
+  'no_new_privileges':next(line for line in status if line.startswith('NoNewPrivs:')),
   'capacity_bytes':capacity.f_blocks*capacity.f_frsize,
   'final_allocated_bytes':(capacity.f_blocks-capacity.f_bfree)*capacity.f_frsize,
   'memory_max':Path('/sys/fs/cgroup/memory.max').read_text(),
@@ -382,11 +401,35 @@ raise SystemExit(result)
 """
 
 
+def _retain_backup_receipts(receipts: Path, token: str) -> None:
+    """Export bounded diagnostic receipts without copying backup/recovery data."""
+    target = os.environ.get("SNAKETRACKER_X1_TEST_EVIDENCE_DIR")
+    if target is None:
+        return
+    destination = Path(target) / token
+    destination.mkdir(mode=0o700, parents=True)
+    manifest = {"retained": [], "omitted": []}
+    for name in ("command.json", "test.log", "resource.json", "coverage.child"):
+        path = receipts / name
+        if not path.exists():
+            continue
+        if path.is_symlink() or path.stat().st_size > 2 * 1024 * 1024:
+            manifest["omitted"].append(name)
+            continue
+        shutil.copyfile(path, destination / name)
+        manifest["retained"].append(name)
+    (destination / "manifest.json").write_text(json.dumps(manifest, indent=2))
+
+
 def _run_bounded_backup_test(tmp_path: Path, node: str) -> None:
     """Same real test in a fresh bounded Docker namespace, without host mounts."""
     source = Path(__file__).resolve().parents[2]
     virtualenv = Path(sys.executable).parent.parent
-    interpreter = Path(sys.executable).resolve().parent.parent
+    # The virtualenv and pyvenv.cfg can refer to uv's logical alias, while
+    # resolving that executable selects the versioned interpreter tree.
+    interpreters = sorted(
+        {Path(sys.executable).resolve().parent.parent, Path(sys._base_executable).parent.parent}
+    )
     receipts = tmp_path / "private-fixture-receipts"
     receipts.mkdir(mode=0o700)
     token = "x1-backup-fixture-" + uuid4().hex
@@ -423,11 +466,13 @@ def _run_bounded_backup_test(tmp_path: Path, node: str) -> None:
         "X1_BACKUP_FIXTURE_CHILD=" + token,
         "--env",
         "X1_BACKUP_FIXTURE_TOKEN=" + token,
+        "--env",
+        "X1_BACKUP_INTERPRETER_ROOTS=" + json.dumps([str(path) for path in interpreters]),
     ]
     for origin, target, readonly in [
         (source, str(source), True),
         (virtualenv, str(virtualenv), True),
-        (interpreter, str(interpreter), True),
+        *((path, str(path), True) for path in interpreters),
         (receipts, "/receipts", False),
     ]:
         command += [
@@ -466,7 +511,10 @@ def _run_bounded_backup_test(tmp_path: Path, node: str) -> None:
     finally:
         # Docker owns only this fresh private namespace. Stop its exact UUID name;
         # no host filesystem is mounted/remounted and no unrelated data is removed.
-        subprocess.run(["docker", "kill", token], capture_output=True, timeout=10)
+        try:
+            subprocess.run(["docker", "kill", token], capture_output=True, timeout=10)
+        finally:
+            _retain_backup_receipts(receipts, token)
 
 
 def _inside_bounded_backup_test(tmp_path: Path) -> bool:
@@ -663,3 +711,51 @@ def test_due_backup_schedule_fixture_capacity_fails_without_touching_existing_da
     assert preserved.read_bytes() == b"preserve this test recovery point"
     capacity = os.statvfs(bounded_backup_path)
     assert capacity.f_blocks * capacity.f_frsize == 8 * 1024 * 1024
+
+
+@pytest.mark.parametrize("layout", ["normal", "uv-alias"])
+@pytest.mark.parametrize(
+    "node",
+    [
+        "test_due_backup_schedule_runs_only_after_worker_acquires_global_lease",
+        "test_due_backup_schedule_fixture_capacity_fails_without_touching_existing_data",
+    ],
+    ids=["lease", "enospc"],
+)
+def test_bounded_backup_interpreter_layout(tmp_path: Path, monkeypatch, layout, node):
+    """Missing logical interpreter roots must not prevent real bounded backup tests."""
+    original_environment = Path(sys.executable).parent.parent
+    base = Path(sys.executable).resolve()
+    if layout == "uv-alias":
+        alias = tmp_path / "interpreter-alias"
+        alias.symlink_to(base.parent.parent, target_is_directory=True)
+        base = alias / "bin" / base.name
+    environment = tmp_path / "python-environment"
+    (environment / "bin").mkdir(parents=True)
+    executable = environment / "bin" / "python"
+    executable.symlink_to(base)
+    version = f"python{sys.version_info.major}.{sys.version_info.minor}"
+    library = environment / "lib" / version
+    library.mkdir(parents=True)
+    # Reuse the original locked dependencies through the existing readonly source bind.
+    (library / "site-packages").symlink_to(
+        original_environment / "lib" / version / "site-packages", target_is_directory=True
+    )
+    (environment / "pyvenv.cfg").write_text(
+        f"home = {base.parent}\ninclude-system-site-packages = false\n"
+    )
+    monkeypatch.setattr(sys, "executable", str(executable))
+    monkeypatch.setattr(sys, "_base_executable", str(base))
+    _run_bounded_backup_test(tmp_path, node)
+    resource = json.loads((tmp_path / "private-fixture-receipts" / "resource.json").read_text())
+    assert resource["uid"] == os.getuid() != 0
+    assert resource["gid"] == os.getgid()
+    assert resource["tmp_capacity_bytes"] == 16 * 1024 * 1024
+    assert resource["capacity_bytes"] == 8 * 1024 * 1024
+    assert resource["pids_max"].strip() == "64"
+    assert resource["no_new_privileges"].split()[1] == "1"
+    assert all(resource["readonly_paths"].values())
+    assert all(error is not None for error in resource["executable_write_errors"].values())
+    assert resource["executable_write_errors"][resource["stdlib_path"]] == errno.EROFS
+    assert resource["executable_write_errors"][str(environment / "pyvenv.cfg")] == errno.EROFS
+    assert (tmp_path / "private-fixture-receipts" / "coverage.child").is_file()

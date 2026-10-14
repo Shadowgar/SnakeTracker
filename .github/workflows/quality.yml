@@ -30,6 +30,8 @@ jobs:
       - name: Synchronize locked environment
         run: uv sync --frozen
       - name: Run authoritative quality gate
+        env:
+          SNAKETRACKER_X1_TEST_EVIDENCE_DIR: ${{ runner.temp }}/x1-runtime-evidence
         run: ./scripts/quality/check.sh
       - name: Retain test evidence
         if: always()
@@ -40,5 +42,6 @@ jobs:
             coverage.json
             coverage.xml
             junit.xml
+            ${{ runner.temp }}/x1-runtime-evidence
           if-no-files-found: error
           retention-days: 14
