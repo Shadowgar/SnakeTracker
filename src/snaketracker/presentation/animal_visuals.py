@@ -12,10 +12,23 @@ from uuid import UUID
 
 from snaketracker.application.animals import AnimalProfile
 from snaketracker.application.species_directory import SpeciesDirectoryService
+from snaketracker.domains.animals.capabilities import (
+    UnknownCapabilityProfileError,
+    animal_capability_registry,
+)
 
 FALLBACK_ASSET_VERSION = "m66-a-phase2-visual-rebuild"
 SEEDED_DEMO_SOURCE = "Fictional M6 demo collection"
 STATIC_REFERENCE_VERSION = "m66-a-phase2-visual-rebuild"
+
+
+def profile_fallback_asset(animal_type: str, version: int = 1) -> str:
+    try:
+        profile = animal_capability_registry.require_parts(animal_type, version)
+        group = animal_capability_registry.group(profile.workflow_group)
+        return f"{group.visual_fallback}.webp"
+    except (UnknownCapabilityProfileError, KeyError):
+        return "unknown.svg"
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,20 +126,16 @@ class AnimalVisualResolver:
                 source_page_url=bundled.source_page_url,
                 provider=bundled.provider,
             )
-        group = (
-            animal.animal_type
-            if animal.animal_type
-            in {
-                "snake",
-                "lizard",
-                "spider",
-                "scorpion",
-            }
-            else "snake"
+        asset = profile_fallback_asset(
+            animal.animal_type, getattr(animal, "capability_profile_version", 1)
         )
         return AnimalVisual(
-            url=f"/static/animal-fallbacks/{group}.webp?v={FALLBACK_ASSET_VERSION}",
-            alt=f"{animal.type_label} group illustration for {animal.name}",
+            url=f"/static/animal-fallbacks/{asset}?v={FALLBACK_ASSET_VERSION}",
+            alt=(
+                f"Animal illustration for {animal.name}"
+                if asset == "unknown.svg"
+                else f"{animal.type_label} group illustration for {animal.name}"
+            ),
             kind="group_fallback",
         )
 

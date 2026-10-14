@@ -133,7 +133,8 @@ def test_visual_resolver_uses_species_illustration_then_safe_group_fallback(
         uuid4(), _animal(animal_type="unknown")
     )
     assert unknown.kind == "group_fallback"
-    assert unknown.url == ("/static/animal-fallbacks/snake.webp?v=m66-a-phase2-visual-rebuild")
+    assert unknown.url == ("/static/animal-fallbacks/unknown.svg?v=m66-a-phase2-visual-rebuild")
+    assert "Snake" not in unknown.alt
 
 
 def test_species_illustration_manifest_rejects_non_mapping(monkeypatch) -> None:

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timedelta
+import sqlite3
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import cast
 from uuid import UUID, uuid4
 
 from sqlalchemy import text
@@ -263,19 +265,31 @@ class SQLAlchemyBackupRepository:
 
     def renew_global_lease(self, holder_id: str, now: datetime, expires_at: datetime) -> bool:
         with self._engine.begin() as connection:
-            updated = connection.execute(
-                text(
-                    "UPDATE backup_leases SET expires_at=:expires_at "
-                    "WHERE lease_name=:lease_name AND holder_id=:holder_id "
-                    "AND expires_at>:now"
-                ),
-                {
-                    "lease_name": _LEASE_NAME,
-                    "holder_id": holder_id,
-                    "now": now.isoformat(timespec="microseconds"),
-                    "expires_at": expires_at.isoformat(timespec="microseconds"),
-                },
+            native = cast(sqlite3.Connection, connection.connection.driver_connection)
+            # Sample UTC in the UPDATE, after SQLite obtains its writer lock. A
+            # caller timestamp captured before blocked I/O cannot fence expiry.
+            native.create_function(
+                "snaketracker_backup_lease_now",
+                0,
+                lambda: datetime.now(UTC).isoformat(timespec="microseconds"),
             )
+            try:
+                updated = connection.execute(
+                    text(
+                        "UPDATE backup_leases SET expires_at=:expires_at "
+                        "WHERE lease_name=:lease_name AND holder_id=:holder_id "
+                        "AND expires_at>:now "
+                        "AND min(expires_at,:expires_at)>snaketracker_backup_lease_now()"
+                    ),
+                    {
+                        "lease_name": _LEASE_NAME,
+                        "holder_id": holder_id,
+                        "now": now.isoformat(timespec="microseconds"),
+                        "expires_at": expires_at.isoformat(timespec="microseconds"),
+                    },
+                )
+            finally:
+                native.create_function("snaketracker_backup_lease_now", 0, None)
         return updated.rowcount == 1
 
     def start_next_run(self, now: datetime) -> BackupRun | None:

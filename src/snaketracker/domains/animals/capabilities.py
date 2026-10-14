@@ -48,6 +48,23 @@ class UnknownCapabilityProfileError(LookupError):
 
 
 @dataclass(frozen=True, slots=True)
+class WorkflowGroup:
+    identity: str
+    label: str
+    presentation_order: int
+    visual_fallback: str
+    enabled: bool = True
+
+
+WORKFLOW_GROUPS = (
+    WorkflowGroup("snake", "Snake", 0, "snake"),
+    WorkflowGroup("spider", "Spider", 1, "spider"),
+    WorkflowGroup("lizard", "Lizard", 2, "lizard"),
+    WorkflowGroup("scorpion", "Scorpion", 3, "scorpion"),
+)
+
+
+@dataclass(frozen=True, slots=True)
 class CapabilityProfile:
     animal_type: AnimalType
     version: int
@@ -56,6 +73,18 @@ class CapabilityProfile:
     care_actions: tuple[str, ...]
     reminder_kinds: tuple[str, ...]
     analytics_kinds: frozenset[AnimalAnalyticsKind]
+    read_supported: bool = True
+    registration_eligible: bool = True
+    registration_default: bool = True
+    registration_contract_version: int = 2
+    required_event_contracts: tuple[tuple[str, int], ...] = (
+        ("animal.registered", 1),
+        ("animal.registered", 2),
+    )
+
+    @property
+    def workflow_group(self) -> str:
+        return self.animal_type.value
 
     @property
     def identity(self) -> str:
@@ -71,21 +100,110 @@ class CapabilityProfile:
 class AnimalCapabilityRegistry:
     """Closed registry assembled from trusted application-owned definitions."""
 
-    def __init__(self, profiles: tuple[CapabilityProfile, ...]) -> None:
+    def __init__(
+        self,
+        profiles: tuple[CapabilityProfile, ...],
+        *,
+        groups: tuple[WorkflowGroup, ...] | None = None,
+    ) -> None:
         by_identity: dict[str, CapabilityProfile] = {}
         for profile in profiles:
-            if profile.version < 1 or profile.identity in by_identity:
+            if (
+                type(profile.version) is not int
+                or profile.version < 1
+                or profile.identity in by_identity
+            ):
                 raise ValueError("Animal capability profile registration is invalid.")
             by_identity[profile.identity] = profile
         self._profiles: Mapping[str, CapabilityProfile] = MappingProxyType(by_identity)
+        selected = (
+            groups
+            if groups is not None
+            else tuple(
+                group
+                for group in WORKFLOW_GROUPS
+                if any(profile.workflow_group == group.identity for profile in profiles)
+            )
+        )
+        by_group = {group.identity: group for group in selected}
+        if len(by_group) != len(selected) or any(
+            profile.workflow_group not in by_group for profile in profiles
+        ):
+            raise ValueError("Animal workflow group registration is invalid.")
+        defaults: dict[str, CapabilityProfile] = {}
+        for group in selected:
+            candidates = tuple(
+                p for p in profiles if p.workflow_group == group.identity and p.registration_default
+            )
+            if group.enabled and (
+                len(candidates) != 1
+                or not candidates[0].registration_eligible
+                or not candidates[0].read_supported
+            ):
+                raise ValueError(
+                    "Each enabled workflow group requires one eligible readable default."
+                )
+            if not group.enabled and any(
+                p.registration_eligible for p in profiles if p.workflow_group == group.identity
+            ):
+                raise ValueError(
+                    "Disabled workflow groups cannot have registration defaults or eligibility."
+                )
+            if group.enabled:
+                defaults[group.identity] = candidates[0]
+        if any(p.registration_eligible and not p.read_supported for p in profiles):
+            raise ValueError("Registration defaults and eligible profiles require read support.")
+        self._groups: Mapping[str, WorkflowGroup] = MappingProxyType(by_group)
+        self._defaults: Mapping[str, CapabilityProfile] = MappingProxyType(defaults)
+
+    @property
+    def groups(self) -> tuple[WorkflowGroup, ...]:
+        return tuple(sorted(self._groups.values(), key=lambda group: group.presentation_order))
+
+    @property
+    def registration_groups(self) -> tuple[WorkflowGroup, ...]:
+        return tuple(group for group in self.groups if group.enabled)
+
+    def group(self, identity: str) -> WorkflowGroup:
+        return self._groups[identity]
+
+    def registration_profile(self, workflow_group: str) -> CapabilityProfile:
+        try:
+            profile = self._defaults[workflow_group]
+        except KeyError as error:
+            raise ValueError("Animal workflow group is not eligible for registration.") from error
+        return self.require_registration(profile.identity)
+
+    def require_registration(self, identity: str) -> CapabilityProfile:
+        profile = self.require(identity)
+        if not profile.registration_eligible or not self.group(profile.workflow_group).enabled:
+            raise ValueError("Animal profile is not eligible for registration.")
+        # New registrations use AnimalRegisteredV2; v1 remains a historical reader only.
+        if (
+            type(profile.registration_contract_version) is not int
+            or profile.registration_contract_version != 2
+        ):
+            raise ValueError(
+                "Animal registration metadata does not match the writable v2 contract."
+            )
+        return profile
 
     @property
     def identities(self) -> tuple[str, ...]:
         return tuple(self._profiles)
 
+    @property
+    def readable_identities(self) -> tuple[str, ...]:
+        return tuple(
+            identity for identity, profile in self._profiles.items() if profile.read_supported
+        )
+
     def require(self, identity: str) -> CapabilityProfile:
         try:
-            return self._profiles[identity]
+            profile = self._profiles[identity]
+            if not profile.read_supported:
+                raise KeyError(identity)
+            return profile
         except KeyError as error:
             raise UnknownCapabilityProfileError(
                 f"Animal capability profile {identity!r} is not supported."
@@ -113,6 +231,16 @@ animal_capability_registry = AnimalCapabilityRegistry(
     (
         CapabilityProfile(
             animal_type=AnimalType.SNAKE,
+            required_event_contracts=(
+                ("animal.registered", 1),
+                ("animal.registered", 2),
+                ("animal.shed_recorded", 1),
+                ("animal.shed_corrected", 1),
+                ("animal.length_recorded", 1),
+                ("animal.length_recorded", 2),
+                ("animal.length_corrected", 1),
+                ("animal.length_corrected", 2),
+            ),
             version=1,
             label="Snake",
             capabilities=_SHARED
@@ -136,6 +264,15 @@ animal_capability_registry = AnimalCapabilityRegistry(
         ),
         CapabilityProfile(
             animal_type=AnimalType.SPIDER,
+            required_event_contracts=(
+                ("animal.registered", 2),
+                ("animal.molt_recorded", 1),
+                ("animal.molt_recorded", 2),
+                ("animal.molt_corrected", 1),
+                ("animal.molt_corrected", 2),
+                ("animal.premolt_observed", 1),
+                ("animal.premolt_observed", 2),
+            ),
             version=1,
             label="Spider",
             capabilities=_SHARED
@@ -165,6 +302,13 @@ animal_capability_registry = AnimalCapabilityRegistry(
         ),
         CapabilityProfile(
             animal_type=AnimalType.LIZARD,
+            required_event_contracts=(
+                ("animal.registered", 2),
+                ("animal.length_recorded", 1),
+                ("animal.length_recorded", 2),
+                ("animal.length_corrected", 1),
+                ("animal.length_corrected", 2),
+            ),
             version=1,
             label="Lizard",
             capabilities=_SHARED
@@ -195,6 +339,12 @@ animal_capability_registry = AnimalCapabilityRegistry(
         ),
         CapabilityProfile(
             animal_type=AnimalType.SCORPION,
+            required_event_contracts=(
+                ("animal.registered", 2),
+                ("animal.molt_recorded", 2),
+                ("animal.molt_corrected", 2),
+                ("animal.premolt_observed", 2),
+            ),
             version=1,
             label="Scorpion",
             capabilities=_SHARED

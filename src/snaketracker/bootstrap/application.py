@@ -34,6 +34,7 @@ from snaketracker.application.reminders import ReminderFactService, ReminderRule
 from snaketracker.application.reports import ReportService
 from snaketracker.application.search import SearchService
 from snaketracker.application.species_directory import SpeciesDirectoryService
+from snaketracker.bootstrap import startup
 from snaketracker.bootstrap.compatibility import inspect_startup_compatibility
 from snaketracker.bootstrap.configuration import (
     Environment,
@@ -46,7 +47,9 @@ from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurr
 from snaketracker.infrastructure.attachments.repository import SQLAlchemyAttachmentRepository
 from snaketracker.infrastructure.attachments.storage import LocalAttachmentStorage
 from snaketracker.infrastructure.backups.repository import SQLAlchemyBackupRepository
-from snaketracker.infrastructure.database.engine import create_sqlite_engine
+from snaketracker.infrastructure.database.engine import (
+    create_sqlite_engine,
+)
 from snaketracker.infrastructure.database.health import SQLAlchemyDatabaseHealth
 from snaketracker.infrastructure.enclosures.projections import SQLAlchemyEnclosureCurrentProjection
 from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
@@ -170,11 +173,32 @@ def create_application(
 def build_application(settings: Settings) -> FastAPI:
     """Build the production composition from validated settings."""
     configure_logging(settings.log_level)
-    engine = create_sqlite_engine(
-        settings.database_path,
-        require_local_storage=settings.environment is Environment.PRODUCTION,
-    )
-    compatibility = inspect_startup_compatibility(engine, product_projection_registry)
+    try:
+        engine = startup.inspection_engine(settings.database_path, "web")
+        compatibility = inspect_startup_compatibility(engine, product_projection_registry)
+        if compatibility.normal_readiness:
+            engine.dispose()
+            startup.admit_mutable(settings.database_path, "web")
+    except Exception as error:
+        if "engine" in locals():
+            engine.dispose()
+        engine, compatibility = startup.protection_failure(error)
+    if not compatibility.normal_readiness:
+        logger.error(
+            "Storage preflight requires operator recovery.",
+            extra={
+                "context": {
+                    "compatibility_reason": compatibility.reason_code,
+                    "operator_detail": compatibility.operator_detail,
+                }
+            },
+        )
+    if compatibility.normal_readiness:
+        engine.dispose()
+        engine = create_sqlite_engine(
+            settings.database_path,
+            require_local_storage=settings.environment is Environment.PRODUCTION,
+        )
     readiness = PlatformReadiness(
         database=SQLAlchemyDatabaseHealth(engine),
         compatibility=compatibility,

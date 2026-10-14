@@ -15,6 +15,18 @@ from snaketracker.infrastructure.database.sqlite_profile import (
 )
 
 
+def create_readonly_sqlite_engine(database: Path) -> Engine:
+    """Inspect existing storage without creating it or applying mutable pragmas."""
+    uri = database.resolve(strict=False).as_uri() + "?mode=ro"
+
+    def connect() -> sqlite3.Connection:
+        connection = sqlite3.connect(uri, uri=True, check_same_thread=False)
+        connection.execute("PRAGMA query_only=ON")
+        return connection
+
+    return create_engine("sqlite+pysqlite://", creator=connect)
+
+
 def _apply_profile(dbapi_connection: Any, profile: SQLiteProfile) -> None:
     cursor = dbapi_connection.cursor()
     try:

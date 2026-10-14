@@ -2062,10 +2062,7 @@ def create_web_router(
         enclosures = enclosure_service.list_profiles(principal.household_id)
         now = datetime.now(UTC)
         animal_types = {
-            "snakes": "snake",
-            "spiders": "spider",
-            "lizards": "lizard",
-            "scorpions": "scorpion",
+            f"{group.identity}s": group.identity for group in animal_capability_registry.groups
         }
         selected_kind = kind if kind in {"all", *animal_types} else "all"
         visible_animals = (
@@ -2381,7 +2378,7 @@ def create_web_router(
             return RedirectResponse("/login", status_code=303)
         animals = animal_service.list_profiles(principal.household_id)
         animal_visuals = animal_visual_resolver.resolve_all(principal.household_id, animals)
-        type_order = ("snake", "spider", "lizard", "scorpion")
+        type_order = tuple(group.identity for group in animal_capability_registry.groups)
         quick_log_animals = tuple(
             {
                 "animal": animal,
@@ -2409,7 +2406,7 @@ def create_web_router(
                 "quick_log_recent": quick_log_recent,
                 "quick_log_groups": tuple(
                     (
-                        animal_capability_registry.require(f"{animal_type}.v1").label,
+                        animal_capability_registry.group(animal_type).label,
                         tuple(
                             {
                                 "animal": animal,
@@ -7062,12 +7059,12 @@ def _care_schedule_rows(
 def _animal_type_options() -> tuple[dict[str, str], ...]:
     return tuple(
         {
-            "value": profile.animal_type.value,
-            "label": profile.label,
+            "value": group.identity,
+            "label": group.label,
             "identity": profile.identity,
         }
-        for identity in animal_capability_registry.identities
-        for profile in (animal_capability_registry.require(identity),)
+        for group in animal_capability_registry.registration_groups
+        for profile in (animal_capability_registry.registration_profile(group.identity),)
     )
 
 
