@@ -162,6 +162,7 @@ class EventContractRegistration:
     subject_requirements: tuple[SubjectRequirement, ...]
     correction: CorrectionCapabilities = CorrectionCapabilities()
     upcasters: Mapping[int, Callable[[Mapping[str, object]], Mapping[str, object]]] | None = None
+    required_identity_extractor: Callable[[Mapping[str, object]], tuple[str, ...]] | None = None
 
     @property
     def identity(self) -> tuple[str, int]:
@@ -203,6 +204,14 @@ class EventRegistry:
             raise UnknownEventContractError(
                 "Stored history requires a newer compatible release."
             ) from error
+
+    @property
+    def required_identity_contracts(self) -> tuple[tuple[str, int], ...]:
+        return tuple(
+            key
+            for key, registration in self._contracts.items()
+            if registration.required_identity_extractor is not None
+        )
 
     def payload_type(self, event_type: str, schema_version: int) -> type[EventPayload]:
         return self.registration(event_type, schema_version).payload_type
@@ -473,6 +482,23 @@ def _deserialize_animal_reference_image_preference(
     return AnimalReferenceImagePreferenceChangedV1(enabled)
 
 
+def _registration_v1_identities(data: Mapping[str, object]) -> tuple[str, ...]:
+    _deserialize_animal_registered(data)
+    animal_capability_registry.require("snake.v1")
+    return ("snake.v1",)
+
+
+def _registration_v2_identities(data: Mapping[str, object]) -> tuple[str, ...]:
+    payload = cast(AnimalRegisteredV2, _deserialize_animal_registered_v2(data))
+    return (f"{payload.animal_type}.v{payload.capability_profile_version}",)
+
+
+def _taxon_link_v1_identities(data: Mapping[str, object]) -> tuple[str, ...]:
+    payload = cast(AnimalTaxonLinkedV1, _deserialize_animal_taxon_linked(data))
+    animal_capability_registry.group(payload.group)
+    return (f"workflow:{payload.group}",)
+
+
 ANIMAL_PROFILE_CONTRACTS = (
     EventContractRegistration(
         event_type="animal.registered",
@@ -480,6 +506,7 @@ ANIMAL_PROFILE_CONTRACTS = (
         owner="animals",
         payload_type=AnimalRegisteredV1,
         deserialize_payload=_deserialize_animal_registered,
+        required_identity_extractor=_registration_v1_identities,
         subject_requirements=(SubjectRequirement("animal", "primary"),),
     ),
     EventContractRegistration(
@@ -488,6 +515,7 @@ ANIMAL_PROFILE_CONTRACTS = (
         owner="animals",
         payload_type=AnimalRegisteredV2,
         deserialize_payload=_deserialize_animal_registered_v2,
+        required_identity_extractor=_registration_v2_identities,
         subject_requirements=(SubjectRequirement("animal", "primary"),),
     ),
     EventContractRegistration(
@@ -528,6 +556,7 @@ ANIMAL_PROFILE_CONTRACTS = (
         owner="animals",
         payload_type=AnimalTaxonLinkedV1,
         deserialize_payload=_deserialize_animal_taxon_linked,
+        required_identity_extractor=_taxon_link_v1_identities,
         subject_requirements=(SubjectRequirement("animal", "primary"),),
     ),
 )

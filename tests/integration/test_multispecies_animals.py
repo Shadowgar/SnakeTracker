@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
@@ -129,6 +130,128 @@ def _register(
             animal_type=animal_type,
         )
     )
+
+
+def test_completed_registration_retry_survives_default_change(tmp_path, monkeypatch):
+    from snaketracker.application import animals
+    from snaketracker.domains.animals import capabilities
+    from snaketracker.platform.events import registry as contracts
+    from snaketracker.platform.events.store import IdempotencyConflictError
+
+    service, store, bootstrap, engine = _services(tmp_path)
+    try:
+        original = _register(service, bootstrap, "snake", "Retry")
+        snake = capabilities.animal_capability_registry.require("snake.v1")
+        isolated = capabilities.AnimalCapabilityRegistry(
+            (
+                replace(snake, registration_eligible=False, registration_default=False),
+                replace(snake, version=2),
+            )
+        )
+        for module in (capabilities, animals, contracts):
+            monkeypatch.setattr(module, "animal_capability_registry", isolated)
+        command = RegisterAnimalCommand(
+            household_id=bootstrap.household_id,
+            actor_user_id=bootstrap.user_id,
+            correlation_id=uuid4(),
+            idempotency_key="m55-register-retry",
+            name="Retry",
+            species="Python regius",
+            morph=None,
+            genetics=None,
+            sex=None,
+            birth_hatch_date=None,
+            acquisition_date=None,
+            breeder_source=None,
+            notes=None,
+        )
+        result = service.register(command)
+        assert result.animal_id == original.animal_id
+        assert result.profile.capability_profile_identity == "snake.v1"
+        assert len(store.load_stream(result.stream_key)) == 1
+        assert result.profile.permits(capabilities.AnimalCapability.SHED)
+        assert result.profile.reminder_kinds == (
+            "feeding",
+            "weight",
+            "length",
+            "bath",
+            "cleaning",
+            "water_change",
+        )
+        for changed in (replace(command, name="Changed"), replace(command, animal_type="spider")):
+            with pytest.raises(IdempotencyConflictError):
+                service.register(changed)
+        new = service.register(replace(command, idempotency_key="new-after-default", name="New"))
+        assert new.profile.capability_profile_identity == "snake.v2"
+        assert store.load_stream(new.stream_key)[0].payload.capability_profile_version == 2
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize("contract_version", [1, 3])
+def test_registration_rejects_mismatched_writer_metadata_before_append(
+    tmp_path, monkeypatch, contract_version
+):
+    from snaketracker.application import animals
+    from snaketracker.domains.animals import capabilities
+
+    service, _store, bootstrap, engine = _services(tmp_path)
+    try:
+        lizard = capabilities.animal_capability_registry.require("lizard.v1")
+        registry = capabilities.AnimalCapabilityRegistry(
+            (replace(lizard, registration_contract_version=contract_version),)
+        )
+        monkeypatch.setattr(animals, "animal_capability_registry", registry)
+        with engine.connect() as connection:
+            before = {
+                table: connection.exec_driver_sql(f"SELECT * FROM {table}").all()
+                for table in (
+                    "domain_events",
+                    "event_streams",
+                    "idempotency_operations",
+                    "animal_current",
+                )
+            }
+        with pytest.raises(AnimalValidationError, match="registration"):
+            _register(service, bootstrap, "lizard", "Rejected")
+        with engine.connect() as connection:
+            for table, rows in before.items():
+                assert connection.exec_driver_sql(f"SELECT * FROM {table}").all() == rows
+        assert service.list_profiles(bootstrap.household_id) == ()
+    finally:
+        engine.dispose()
+
+
+def test_completed_registration_retry_survives_disabled_registration(tmp_path, monkeypatch):
+    from snaketracker.application import animals
+    from snaketracker.domains.animals import capabilities
+
+    service, store, bootstrap, engine = _services(tmp_path)
+    try:
+        original = _register(service, bootstrap, "snake", "Retry")
+        snake = capabilities.animal_capability_registry.require("snake.v1")
+        group = capabilities.animal_capability_registry.group("snake")
+        registry = capabilities.AnimalCapabilityRegistry(
+            (
+                replace(
+                    snake,
+                    registration_eligible=False,
+                    registration_default=False,
+                    registration_contract_version=1,
+                ),
+            ),
+            groups=(replace(group, enabled=False),),
+        )
+        monkeypatch.setattr(animals, "animal_capability_registry", registry)
+        result = _register(service, bootstrap, "snake", "Retry")
+        assert result.animal_id == original.animal_id
+        assert result.profile == original.profile
+        assert len(store.load_stream(original.stream_key)) == 1
+        with pytest.raises(AnimalValidationError, match="registration"):
+            _register(service, bootstrap, "snake", "New")
+        assert service.list_profiles(bootstrap.household_id) == (original.profile,)
+    finally:
+        engine.dispose()
 
 
 def test_spider_rejects_snake_only_commands_without_appending(tmp_path: Path) -> None:

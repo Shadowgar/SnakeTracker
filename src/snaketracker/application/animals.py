@@ -66,6 +66,7 @@ from snaketracker.platform.events.registry import production_event_registry
 from snaketracker.platform.events.store import (
     AtomicAppendRequest,
     EventStore,
+    IdempotencyConflictError,
     IdempotencyContext,
     StreamAppend,
     StreamKey,
@@ -520,11 +521,36 @@ class AnimalService:
 
     def register(self, command: RegisterAnimalCommand) -> RegisterAnimalResult:
         fields = _validated_registration_fields(command)
-        capability_profile = _validated_capability_profile(command.animal_type, 1)
+        completed = self._event_store.completed_operation(
+            command.household_id, command.actor_user_id, "animals.register", command.idempotency_key
+        )
+        if completed is not None:
+            original_hash, response = completed
+            original_id = UUID(str(response["animal_id"]))
+            original = self._projection.profile_for(command.household_id, original_id)
+            if original is None:
+                raise RuntimeError("Completed registration has no persisted Animal profile.")
+            if original_hash != _registration_hash(
+                command, fields, original.capability_profile_version
+            ):
+                raise IdempotencyConflictError(
+                    "Idempotency key conflicts with a different canonical command."
+                )
+            return RegisterAnimalResult(
+                original_id, StreamKey(command.household_id, "animal", original_id), original
+            )
+        try:
+            capability_profile = animal_capability_registry.registration_profile(
+                command.animal_type
+            )
+        except (ValueError, UnknownCapabilityProfileError) as error:
+            raise AnimalValidationError("Animal type is not eligible for registration.") from error
         animal_id = uuid4()
         stream_key = StreamKey(command.household_id, "animal", animal_id)
         recorded_at = datetime.now(UTC)
-        event = _registered_event(command, stream_key, animal_id, fields, recorded_at)
+        event = _registered_event(
+            command, stream_key, animal_id, fields, recorded_at, capability_profile
+        )
         append = self._event_store.append_many(
             AtomicAppendRequest(
                 streams=(StreamAppend(stream_key, expected_version=0, events=(event,)),),
@@ -534,21 +560,7 @@ class AnimalService:
                     actor_user_id=command.actor_user_id,
                     operation_scope="animals.register",
                     idempotency_key=command.idempotency_key,
-                    command_hash=canonical_command_hash(
-                        {
-                            "name": fields["name"],
-                            "species": fields["species"],
-                            "morph": fields["morph"],
-                            "genetics": fields["genetics"],
-                            "sex": fields["sex"],
-                            "birth_hatch_date": fields["birth_hatch_date"],
-                            "acquisition_date": fields["acquisition_date"],
-                            "breeder_source": fields["breeder_source"],
-                            "notes": fields["notes"],
-                            "animal_type": capability_profile.animal_type.value,
-                            "capability_profile_version": capability_profile.version,
-                        }
-                    ),
+                    command_hash=_registration_hash(command, fields, capability_profile.version),
                     correlation_id=command.correlation_id,
                     stored_response={"animal_id": str(animal_id)},
                     stored_response_schema_version=1,
@@ -2017,6 +2029,14 @@ def _validated_registration_fields(command: RegisterAnimalCommand) -> dict[str, 
     )
 
 
+def _registration_hash(
+    command: RegisterAnimalCommand, fields: dict[str, str | None], version: int
+) -> str:
+    return canonical_command_hash(
+        {**fields, "animal_type": command.animal_type, "capability_profile_version": version}
+    )
+
+
 def _validated_capability_profile(animal_type: str, version: int) -> CapabilityProfile:
     try:
         return animal_capability_registry.require_parts(animal_type, version)
@@ -2130,6 +2150,7 @@ def _registered_event(
     animal_id: UUID,
     fields: dict[str, str | None],
     recorded_at: datetime,
+    capability_profile: CapabilityProfile,
 ) -> DomainEvent:
     candidate = DomainEvent(
         event_id=uuid4(),
@@ -2138,7 +2159,7 @@ def _registered_event(
         stream_id=stream_key.stream_id,
         stream_version=1,
         event_type="animal.registered",
-        schema_version=2,
+        schema_version=capability_profile.registration_contract_version,
         occurred_at=recorded_at,
         recorded_at=recorded_at,
         actor_user_id=command.actor_user_id,
@@ -2150,8 +2171,8 @@ def _registered_event(
         description=None,
         payload=AnimalRegisteredV2(
             animal_id=animal_id,
-            animal_type=command.animal_type,
-            capability_profile_version=1,
+            animal_type=capability_profile.workflow_group,
+            capability_profile_version=capability_profile.version,
             name=cast(str, fields["name"]),
             species=cast(str, fields["species"]),
             morph=fields["morph"],

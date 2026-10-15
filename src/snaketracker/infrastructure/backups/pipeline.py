@@ -8,8 +8,8 @@ import json
 import os
 import shutil
 import sqlite3
-import tempfile
-from contextlib import closing
+from collections.abc import Callable, Iterator
+from contextlib import closing, contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -20,6 +20,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from snaketracker.application.backups import BackupRun
 from snaketracker.infrastructure.attachments.storage import LocalAttachmentStorage
+from snaketracker.infrastructure.backups.staging import VerificationStaging
 
 _ARCHIVE_FORMAT_VERSION = 1
 _ARTIFACT_MAGIC = b"STBK1"
@@ -95,6 +96,7 @@ class LocalBackupPipeline:
         self._backup_root = backup_root
         self._encryption_key_id = encryption_key_id
         self._cipher = AESGCM(encryption_key)
+        self._verification_staging = VerificationStaging(backup_root / ".private-verification")
 
     def create(self, run: BackupRun) -> BackupArchive:
         final_archive = self._backup_root / run.run_id.hex
@@ -142,6 +144,20 @@ class LocalBackupPipeline:
         except Exception:
             shutil.rmtree(temporary_archive, ignore_errors=True)
             raise
+
+    def cleanup_verification_staging(self, *, lease_valid: Callable[[], bool]) -> int:
+        """Called only by the lease-owning worker, never by web request handling."""
+        root = self._backup_root / ".private-verification"
+        if not root.exists():
+            return 0
+        return self._verification_staging.cleanup(lease_valid=lease_valid)
+
+    @contextmanager
+    def _verification_database(self, content: bytes) -> Iterator[Path]:
+        root = self._backup_root / ".private-verification"
+        root.mkdir(mode=0o700, exist_ok=True)
+        with self._verification_staging.database(content) as database:
+            yield database
 
     def verify(self, run: BackupRun) -> BackupVerification:
         if run.archive_path is None or run.manifest_checksum is None:
@@ -368,11 +384,7 @@ class LocalBackupPipeline:
                 raise BackupVerificationError("Backup manifest contains an unsupported artifact.")
         if database_content is None:
             raise BackupVerificationError("Backup manifest has no database artifact.")
-        with tempfile.TemporaryDirectory(
-            prefix="snaketracker-backup-verify-"
-        ) as temporary_directory:
-            database_path = Path(temporary_directory) / "database.sqlite3"
-            _write_private_file(database_path, database_content)
+        with self._verification_database(database_content) as database_path:
             self._verify_restored_database(database_path)
             if self._capture_database(database_path) != capture:
                 raise BackupVerificationError(
@@ -427,7 +439,11 @@ class LocalBackupPipeline:
 
 
 def _readonly_database(database_path: Path) -> sqlite3.Connection:
-    connection = sqlite3.connect(database_path.resolve().as_uri() + "?mode=ro", uri=True)
+    # Every caller inspects a closed, complete online-backup copy or a decrypted
+    # standalone artifact. No source database or live WAL bundle reaches here.
+    connection = sqlite3.connect(
+        database_path.resolve().as_uri() + "?mode=ro&immutable=1", uri=True
+    )
     connection.execute("PRAGMA query_only=ON")
     return connection
 

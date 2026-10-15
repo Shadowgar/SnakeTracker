@@ -1,0 +1,208 @@
+--- a/docs/README.md
++++ b/docs/README.md
+@@ -38,7 +38,8 @@
+ [ADR-0047](adr/0047-natural-history-reference-boundary.md) remain Proposed for the owner-approved
+ pre-M6.6-C extension. [ADR-0048](adr/0048-precise-animal-length-measurements.md) is Accepted on
+ October 5 for exact length v2. M6.6-B is accepted/complete; Pre-X1 Architecture Reconciliation was
+-owner-approved and completed October 5, 2026. X1–X5 remain unstarted. M6.6 was
++owner-approved and completed October 5, 2026. Replacement X1 development is authorized by
++the October 15 owner course correction; acceptance remains pending and X2–X5 remain unstarted. M6.6 was
+ inserted after M6.5 and before M7.
+
+ ## Document map
+@@ -74,3 +75,11 @@
+ - **DDQ — Deferred deployment qualification:** not an intermediate feature-phase gate, but mandatory before the named deployment target is used.
+
+ When multiple classes apply, the stricter applicable gate controls.
++
++## Proposed replacement X1 product boundary
++
++The replacement capability foundation targets future individual, group/colony and shared-
++environment animal-care modules while preserving today's four individual-Animal profiles.
++Practical SQLite compatibility and conventional web/worker startup replace the withdrawn
++privileged supervisor, kernel/raw-device and host-wide writer-exclusion experiments. Exact-content
++owner approval, qualification and release acceptance remain required under ADR-0028.
+--- a/docs/adr/0045-extensible-animal-capability-evolution.md
++++ b/docs/adr/0045-extensible-animal-capability-evolution.md
+@@ -132,3 +132,32 @@
+ `amphibian.v1` → start the actual older binary: intentional restricted recovery, no normal traffic,
+ replay or writes. Test every declared downgrade target, not a mocked replacement scanner.
+ See the [controlling plan](../plans/2026-10-01-extensible-animal-and-species-platform.md).
++
++### X1 product direction and practical storage boundary — proposed amendment
++
++The October 15, 2026 owner directive authorizes a replacement X1 development candidate.
++Its objective is an animal-care platform extensible to any animal maintained under human care,
++without changing the historical semantics of the four existing profiles. Biological taxonomy,
++workflow/profile identity, care subject, care environment and selectable capabilities are distinct
++concepts. Current product storage and commands support individual Animals. Trusted test-only
++Dog, Fish and colony examples demonstrate extension interfaces; they do not enable registration
++or implement medication, aquarium or colony workflows. Future modules may own typed events,
++tables, validation and services; X1 does not require speculative generic production tables.
++
++Compatibility inspection uses one ordinary SQLite/SQLAlchemy read transaction before mutable
++engine initialization, business services, projection advancement, scheduling and normal traffic.
++Unsupported schema/event contracts, malformed required identities and unsupported persisted
++profiles fail closed with private operator diagnostics. Version-specific decoding and the PR #20
++consistent stream snapshot remain required. Normal documented SQLite WAL/SHM bookkeeping is
++permitted through the configured inspection connection; read-only here means no application
++business-data writes, not a promise of zero SQLite sidecar activity.
++
++The experimental privileged supervisor, protected web/worker cohort, host-PID and mount-namespace
++confinement, custom seccomp, raw-device/BPF filtering and host-wide writable-alias guarantees are
++withdrawn from X1. Conventional independent web and worker services, least-privilege container
++controls, current authentication/authorization, filesystem permissions, SQLite durability and
++backup/recovery remain mandatory. No guarantee against unrelated privileged host administration
++or detection of commits whose SQLite recovery evidence has disappeared is claimed.
++
++This proposed amendment does not change ADR status, approve its own exact content, authorize
++production deployment or begin X2. ADR-0028 content-bound owner approval remains a merge gate.
+--- a/docs/adr/README.md
++++ b/docs/adr/README.md
+@@ -26,7 +26,10 @@
+ reference generations and Natural History/legacy-guide coexistence.
+ [ADR-0048](0048-precise-animal-length-measurements.md) was **Accepted on 2026-10-05** for exact
+ length v2 and mixed-history consumers. No historical meaning is rewritten. Pre-X1 Architecture
+-Reconciliation was owner-approved and completed October 5, 2026. X1–X5 implementation remains unstarted.
++Reconciliation was owner-approved and completed October 5, 2026. Replacement X1 development
++is authorized October 15, 2026, with acceptance pending; X2–X5 remain unstarted. ADR-0045 remains
++Proposed. The replacement direction uses practical SQLite compatibility and universal animal
++extension interfaces, excluding the withdrawn privileged supervisor/raw-device experiments.
+
+ | ADR | Decision |
+ |---|---|
+--- a/docs/operations/backup-and-restoration.md
++++ b/docs/operations/backup-and-restoration.md
+@@ -79,3 +79,16 @@
+ not a restore of household data. Existing-storage startup must complete the future read-only
+ compatibility preflight before mutable initialization or replay; see
+ [ADR-0045](../adr/0045-extensible-animal-capability-evolution.md#supported-profile-release-manifest-and-startup).
++
++## Proposed X1 backup reliability clarification
++
++The replacement X1 candidate retains acquisition-aware heartbeat scheduling, expiry validation
++after obtaining SQLite's writer lock, worker-owned private verification staging under archive
++storage, bounded lease-safe orphan cleanup and durable failed-run diagnostics. It preserves the
++accepted encrypted backup format, recovery points and every finalized attachment version.
++Requalify the ordinary worker workflow under 256 MiB memory, 0.5 CPU and 16 MiB `/tmp`; staging
++outside `/tmp` is not permission to enlarge those limits or redesign backup infrastructure.
++Existing-storage compatibility uses ordinary SQLite read transactions and permits documented
++WAL/SHM bookkeeping while rejecting incompatible data before application writes. Experimental
++supervisor or raw-device guarantees are not backup prerequisites. Production changes and exact-
++content governance approval remain separately gated.
+--- a/docs/operations/runtime-operations.md
++++ b/docs/operations/runtime-operations.md
+@@ -104,3 +104,17 @@
+ Remediation belongs to separately authorized security/operations work with current advisory,
+ package/image and recovery qualification. Do not fold OS/base-image/runtime-package upgrades or
+ host-service restarts into X1 architecture or this documentation task. Production is untouched.
++
++## Proposed X1 conventional-startup clarification
++
++The October 15, 2026 replacement X1 direction uses independent conventional web and worker
++services. Compatibility inspection runs in one supported SQLite/SQLAlchemy read transaction
++before mutable application initialization or worker duties. Unsupported schema/event/profile
++identities fail closed; public readiness remains generic and private logs identify the offending
++contract. SQLite's documented WAL/SHM bookkeeping is allowed; business-data writes on rejection
++are prohibited. No privileged startup supervisor, host-PID/mount-namespace attestation, BPF/raw-
++device exclusion or guarantee against unrelated privileged host actors is required. Existing
++least-privilege container, authentication, authorization and durability protections remain.
++
++Production launcher/configuration and Raspberry Pi/storage release qualification remain separately
++authorized operations. This proposal authorizes no production changes and does not accept X1.
+--- a/docs/plans/2026-10-01-extensible-animal-and-species-platform.md
++++ b/docs/plans/2026-10-01-extensible-animal-and-species-platform.md
+@@ -1,8 +1,7 @@
+ # Extensible Animal and Species Platform — controlling implementation plan
+
+-Status: M6.6-B Accepted / Complete / Merged; Pre-X1 Architecture Reconciliation Approved / Complete October 5, 2026. X1–X5 implementation and acceptance remain unstarted. The original extension direction was approved October 1, 2026.
+-Scope: documentation only. This plan inserts bounded work after M6.6-B corrections and before
+-M6.6-C. No production migration, dataset import, deployment, or event rewrite is authorized here.
++Status: M6.6-B Accepted / Complete / Merged; Pre-X1 Architecture Reconciliation Approved / Complete October 5, 2026. Replacement X1 development is owner-authorized October 15, 2026 and awaits qualification and acceptance; X2–X5 remain unstarted. The original extension direction was approved October 1, 2026.
++Scope: replacement X1 capability implementation and isolated qualification are owner-authorized; X2–X5 remain separately gated. No production migration, dataset import, deployment, or event rewrite is authorized here.
+
+ ## Authority and intent
+
+@@ -504,3 +503,25 @@
+ review of the implementation contracts October 5, 2026; X1 has not started. Future implementation qualification
+ and explicit owner acceptance govern ADR promotion under repository policy, not architecture-review
+ conclusions alone. Accepted ADR-0044/0048 and the historical M6.6-A acceptance caveat are unchanged.
++
++## October 15 X1 course correction — proposed alignment
++
++The platform objective is extensibility across individual animals, groups/colonies and shared
++care environments without rebuilding unrelated core workflows. Current Animal persistence
++remains individual-only. X1 supplies trusted workflow/profile lifecycle metadata, capability
++targets and test-only Dog/Fish/colony examples, not production registration or specialized storage
++for those future modules. Biological identity remains separate from workflow and subject identity.
++
++The read-only compatibility sequence above means a normal SQLite read transaction with no
++business-data writes. SQLite-managed WAL/SHM bookkeeping is acceptable. The withdrawn kernel
++supervisor, namespace/cohort, custom-seccomp and raw-device exclusion experiments are outside X1.
++Conventional web/worker startup and existing container security remain supported. Retain useful
++backup lease, bounded private verification staging, guarded orphan cleanup and durable failure
++diagnostics, and requalify the ordinary worker path under existing resource limits.
++
++All four existing profiles, immutable histories, attachment versions, household ownership,
++registration retries and versioned length contracts remain release requirements. The replacement
++candidate requires full unchanged quality, desktop/mobile accessibility, actual reconstruction,
++previous-binary comparison and isolated backup/restore evidence. Development qualification does
++not authorize merge, production deployment, PR #21 retirement or X2. Exact-content architecture
++approval and release qualification remain explicit owner decisions.
+--- a/docs/requirements/traceability-matrix.md
++++ b/docs/requirements/traceability-matrix.md
+@@ -100,7 +100,7 @@
+ | R-094 | M6.6 completes only after deterministic compatibility/provider/migration/replay/security/browser/accessibility/performance/backup/live-data qualification and explicit owner acceptance | RB | 0018, 0024, 0026, 0033, 0035, 0036, 0043 Accepted | TM-04, TM-09, TM-12, TM-13, TM-18, TM-20, TM-21, TM-22 | 6.6-E | AT-M66-QUAL-01 consolidated frozen quality, isolated operations, Pi deployment, and owner-review suite | m6.6-species-aware-husbandry/e-final-qualification | M6.6 future acceptance |
+ | R-095 | Manual Animal creation remains available through no-result/provider failure; explicit Add/Edit taxon selection links in the same workflow, with no fuzzy linking or profile upgrade | RB | 0034, 0039, 0043 Accepted; 0045 Proposed for future registry | TM-04, TM-05, TM-18, TM-21 | 6.6-B correction / PR 1 | AT-SPDIR-MANUAL-01 Spider/no-result/outage/manual/unlinked/Add/Edit and legacy inline-link browser suite | m6.6-species-aware-husbandry/b-corrections/README.md | B accepted October 5, 2026; future registry unstarted |
+ | R-096 | Exact additive length v2 follows ADR-0048 unit/precision/consistency/bounds rules, retains entered values and supports every mixed v1/v2 effective-history consumer including precise report/export without rewriting history | RB | 0005, 0006, 0033, 0034 Accepted; 0048 Accepted | TM-04, TM-05, TM-09, TM-20 | 6.6-B correction / PR 1 | AT-MEASURE-01 exact input/payload, number/unit/both correction, void/reinstate, facts/history, analytics/charts, report/CSV, search applicability, reminder source/due/override, replay and browser consumer matrix | m6.6-species-aware-husbandry/b-corrections/README.md#exact-length-consumer-matrix--at-measure-01 | B accepted October 5, 2026 |
+-| R-097 | Exact profile lifecycle separates historical read/edit/actions/reminders/analytics/replay from registration eligibility and one enabled workflow-group default; completed retries preserve original profile/result across default changes; pre-mutable startup validates embedded identities without taxonomy implementation | RB | 0005, 0012, 0026, 0033, 0039, 0041 Accepted; 0045 Proposed | TM-04, TM-05, TM-09, TM-20 | 6.6-X1; X4 barrier / PR 2, 5 | AT-CAPREG-01 frozen four profiles, eligibility/defaults, original-profile usability, identical retry after default change and changed-request conflict, trusted presentation, read-only preflight before mutable startup and actual reconstruction; AT-AMPH-01 X4 actual older-binary barrier | m6.6-species-aware-husbandry/x1-capability-foundation; m6.6-species-aware-husbandry/x4-amphibian/compatibility | X1/X4 unstarted |
++| R-097 | Exact profile lifecycle separates historical read/edit/actions/reminders/analytics/replay from registration eligibility and one enabled workflow-group default; completed retries preserve original profile/result across default changes; pre-mutable startup validates embedded identities without taxonomy implementation | RB | 0005, 0012, 0026, 0033, 0039, 0041 Accepted; 0045 Proposed | TM-04, TM-05, TM-09, TM-20 | 6.6-X1; X4 barrier / PR 2, 5 | AT-CAPREG-01 frozen four profiles, eligibility/defaults, original-profile usability, identical retry after default change and changed-request conflict, trusted presentation, read-only preflight before mutable startup and actual reconstruction; AT-AMPH-01 X4 actual older-binary barrier | m6.6-species-aware-husbandry/x1-capability-foundation; m6.6-species-aware-husbandry/x4-amphibian/compatibility | Replacement X1 development authorized; X1 acceptance and X4 pending |
+ | R-098 | X2 owns permanent UUIDs, selected names/classification, mappings/status and provenance; its separate migration preserves Animal/Plant/guide/media links and guide triggers; replaceable generations plus durable overlay retain useful labels/search and post-generation identities/content through rollback/cleanup; biology does not enable registration | RB/RD | 0019, 0026, 0043 Accepted; 0046 Proposed | TM-04, TM-05, TM-09, TM-18, TM-20, TM-21, TM-22 | 6.6-X2 and production import qualification / PR 3 | AT-TAXBAS-01 FK-preserving migration, namespaced uniqueness/concurrent archive-API allocation, reference-only taxa, local indexed search/Pi, B introduces taxon then link/content then rollback A, promotion-boundary discovery, cleanup/fallback, homonyms/split-lump/freshness; actual archive intended-use/rights and production-size backup gates | m6.6-species-aware-husbandry/x2-local-taxonomy | X2 unstarted |
+ | R-099 | Durable bounded taxonomy overlay retains identity/provenance/freshness/conflicts independently of snapshot; separate taxonomy/content/media adapters share bounded aggregate provider coordination when needed, without private-query disclosure; acquisition is separate from publication | RB/RD | 0013, 0043 Accepted; 0046, 0047 Proposed | TM-04, TM-17, TM-18, TM-21, TM-22 | 6.6-X2 foundation; conditional prerequisite/X3 / PR 3–4 | AT-TAXBAS-01 overlay reconciliation; AT-TAXOVER-01 outage/429/Retry-After, stale/inactive/synonym, freshness/conflicts, aggregate transport bounds/dedup/privacy and rights; before second queued workload typed SQLite claiming/lease recovery/payload/handlers/retries | m6.6-species-aware-husbandry/x2-local-taxonomy; m6.6-species-aware-husbandry/x3-natural-history/provider-overlay | X2/X3 unstarted |
+ | R-100 | X3 owns descriptive prose/qualified biological claims and permanent-UUID source-association/version/publication-withdrawal state, independently of taxonomy generations; displays X2-selected names/classification; immutable guide coexistence uses contextual/origin-aware presentation without a second guide system or husbandry inference | RB | 0038, 0043, 0044 Accepted; 0046, 0047 Proposed | TM-05, TM-09, TM-20, TM-21 | 6.6-X3 / PR 4 | AT-NATHIST-01 source/revision/version/publication/withdrawal and rights, generation rollback independence, actual-origin dedup, taxon/fact/life-stage/wild-captive/geography/sex/value-unit/qualifiers, missing/conflicting/unknown legacy claims, immutable guides; Boa imperator / iNaturalist 539399 with no reviewed guide; structured claims need qualified source/workflow | m6.6-species-aware-husbandry/x3-natural-history/overview | X3 unstarted |
+@@ -124,7 +124,7 @@
+ case. M6.6-B provides saved identity/classification/names and reviewed captive care only; it does
+ not deliver X2 bulk taxonomy or X3 enrichment. Next: Pre-X1 Architecture Reconciliation → X1 →
+ X2 → X2 production import/qualification → small job/provider prerequisite if required → X3 →
+-X4 → X5 → M6.6-C. Pre-X1 Architecture Reconciliation was owner-approved and completed October 5, 2026; X1–X5 remain unstarted.
++X4 → X5 → M6.6-C. Pre-X1 Architecture Reconciliation was owner-approved and completed October 5, 2026; Replacement X1 development is owner-authorized October 15, 2026; acceptance is pending and X2–X5 remain unstarted.
+ The [scoped documentation direction](../evidence/m6.6-species-aware-husbandry/README.md#pre-x1-documentation-direction)
+ does not accept future implementation or promote ADRs 0045–0047.
+
+@@ -165,3 +165,14 @@
+   sharing remains disabled and architecture/security review precedes implementation. M9 must reuse
+   or deliberately extend the privacy-safe media-processing boundary established by M6.1 `R-082`.
+ - `Raspberry Pi deployment qualified` remains pending under Phase 7/pre-deployment controls.
++
++### Proposed X1 practical-boundary qualification
++
++AT-CAPREG-01 additionally demonstrates test-only Dog capabilities, Fish/environment ownership and
++group/colony subject association without enabling production registration or claiming specialized
++workflows. R-097/R-102 read-only compatibility means a consistent ordinary SQLite transaction
++with no application business writes; documented WAL/SHM bookkeeping is acceptable. Kernel-level
++host-writer/raw-device exclusion, privileged supervisors and mandatory cohorts are withdrawn from
++X1. Exact four-profile history, idempotency, ordinary startup, backup/restore, actual older-binary
++comparison and full quality/accessibility evidence remain required. This proposed alignment does
++not constitute content-bound approval or milestone acceptance.
+--- a/docs/roadmap/milestones.md
++++ b/docs/roadmap/milestones.md
+@@ -432,7 +432,7 @@
+ X3 → X4 → X5 → M6.6-C**.
+ Pre-X1 Architecture Reconciliation was owner-approved and completed October 5, 2026 under the
+ [bounded owner direction](../evidence/m6.6-species-aware-husbandry/README.md#pre-x1-documentation-direction).
+-X1–X5 remain unstarted; documentation reconciliation does not accept their implementation.
++Replacement X1 development is authorized by the October 15, 2026 owner course correction; acceptance remains pending. X2–X5 remain unstarted.
+
+ ### Pre-M6.6-C extension — X1 through X5
+
+@@ -444,7 +444,9 @@
+
+ - [ ] **X1 — Extensible Animal Capability Foundation:** exact frozen four v1 profiles, stable
+   workflow-group/presentation metadata, separate read support and registration eligibility/defaults,
+-  completed retries across default changes and compatibility preflight before mutable startup.
++  completed retries across default changes, practical SQLite compatibility before application writes,
++  and test-only Dog/Fish/colony subject/environment extension proofs. Current production support
++  remains individual Animals; no privileged kernel supervisor or raw-device exclusion is required.
+   Existing Animals remain editable/actionable at their original version; no provider ancestry,
+   taxonomy implementation, new guides or Amphibians. No Alembic expected; qualify actual reconstruction
+   and applicable rollback binary. Ordinary production-equivalent backup/verification must pass before
