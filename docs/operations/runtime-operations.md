@@ -104,3 +104,17 @@ follow-up, without asserting application exploitability or a current exhaustive 
 Remediation belongs to separately authorized security/operations work with current advisory,
 package/image and recovery qualification. Do not fold OS/base-image/runtime-package upgrades or
 host-service restarts into X1 architecture or this documentation task. Production is untouched.
+
+## Proposed X1 conventional-startup clarification
+
+The October 15, 2026 replacement X1 direction uses independent conventional web and worker
+services. Compatibility inspection runs in one supported SQLite/SQLAlchemy read transaction
+before mutable application initialization or worker duties. Unsupported schema/event/profile
+identities fail closed; public readiness remains generic and private logs identify the offending
+contract. SQLite's documented WAL/SHM bookkeeping is allowed; business-data writes on rejection
+are prohibited. No privileged startup supervisor, host-PID/mount-namespace attestation, BPF/raw-
+device exclusion or guarantee against unrelated privileged host actors is required. Existing
+least-privilege container, authentication, authorization and durability protections remain.
+
+Production launcher/configuration and Raspberry Pi/storage release qualification remain separately
+authorized operations. This proposal authorizes no production changes and does not accept X1.

@@ -132,3 +132,32 @@ and runs the applicable actual rollback binary; a scanner-only fixture is insuff
 `amphibian.v1` → start the actual older binary: intentional restricted recovery, no normal traffic,
 replay or writes. Test every declared downgrade target, not a mocked replacement scanner.
 See the [controlling plan](../plans/2026-10-01-extensible-animal-and-species-platform.md).
+
+### X1 product direction and practical storage boundary — proposed amendment
+
+The October 15, 2026 owner directive authorizes a replacement X1 development candidate.
+Its objective is an animal-care platform extensible to any animal maintained under human care,
+without changing the historical semantics of the four existing profiles. Biological taxonomy,
+workflow/profile identity, care subject, care environment and selectable capabilities are distinct
+concepts. Current product storage and commands support individual Animals. Trusted test-only
+Dog, Fish and colony examples demonstrate extension interfaces; they do not enable registration
+or implement medication, aquarium or colony workflows. Future modules may own typed events,
+tables, validation and services; X1 does not require speculative generic production tables.
+
+Compatibility inspection uses one ordinary SQLite/SQLAlchemy read transaction before mutable
+engine initialization, business services, projection advancement, scheduling and normal traffic.
+Unsupported schema/event contracts, malformed required identities and unsupported persisted
+profiles fail closed with private operator diagnostics. Version-specific decoding and the PR #20
+consistent stream snapshot remain required. Normal documented SQLite WAL/SHM bookkeeping is
+permitted through the configured inspection connection; read-only here means no application
+business-data writes, not a promise of zero SQLite sidecar activity.
+
+The experimental privileged supervisor, protected web/worker cohort, host-PID and mount-namespace
+confinement, custom seccomp, raw-device/BPF filtering and host-wide writable-alias guarantees are
+withdrawn from X1. Conventional independent web and worker services, least-privilege container
+controls, current authentication/authorization, filesystem permissions, SQLite durability and
+backup/recovery remain mandatory. No guarantee against unrelated privileged host administration
+or detection of commits whose SQLite recovery evidence has disappeared is claimed.
+
+This proposed amendment does not change ADR status, approve its own exact content, authorize
+production deployment or begin X2. ADR-0028 content-bound owner approval remains a merge gate.

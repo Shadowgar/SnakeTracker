@@ -38,7 +38,8 @@ see [owner acceptance](evidence/m6.6-species-aware-husbandry/b-sourced-care-guid
 [ADR-0047](adr/0047-natural-history-reference-boundary.md) remain Proposed for the owner-approved
 pre-M6.6-C extension. [ADR-0048](adr/0048-precise-animal-length-measurements.md) is Accepted on
 October 5 for exact length v2. M6.6-B is accepted/complete; Pre-X1 Architecture Reconciliation was
-owner-approved and completed October 5, 2026. X1–X5 remain unstarted. M6.6 was
+owner-approved and completed October 5, 2026. Replacement X1 development is authorized by
+the October 15 owner course correction; acceptance remains pending and X2–X5 remain unstarted. M6.6 was
 inserted after M6.5 and before M7.
 
 ## Document map
@@ -74,3 +75,11 @@ inserted after M6.5 and before M7.
 - **DDQ — Deferred deployment qualification:** not an intermediate feature-phase gate, but mandatory before the named deployment target is used.
 
 When multiple classes apply, the stricter applicable gate controls.
+
+## Proposed replacement X1 product boundary
+
+The replacement capability foundation targets future individual, group/colony and shared-
+environment animal-care modules while preserving today's four individual-Animal profiles.
+Practical SQLite compatibility and conventional web/worker startup replace the withdrawn
+privileged supervisor, kernel/raw-device and host-wide writer-exclusion experiments. Exact-content
+owner approval, qualification and release acceptance remain required under ADR-0028.

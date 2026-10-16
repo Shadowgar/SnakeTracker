@@ -26,7 +26,10 @@ extension. They propose profile lifecycle/startup compatibility, permanent ident
 reference generations and Natural History/legacy-guide coexistence.
 [ADR-0048](0048-precise-animal-length-measurements.md) was **Accepted on 2026-10-05** for exact
 length v2 and mixed-history consumers. No historical meaning is rewritten. Pre-X1 Architecture
-Reconciliation was owner-approved and completed October 5, 2026. X1–X5 implementation remains unstarted.
+Reconciliation was owner-approved and completed October 5, 2026. Replacement X1 development
+is authorized October 15, 2026, with acceptance pending; X2–X5 remain unstarted. ADR-0045 remains
+Proposed. The replacement direction uses practical SQLite compatibility and universal animal
+extension interfaces, excluding the withdrawn privileged supervisor/raw-device experiments.
 
 | ADR | Decision |
 |---|---|

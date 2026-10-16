@@ -432,7 +432,7 @@ X2 → X2 production taxonomy import/qualification → small job/provider prereq
 X3 → X4 → X5 → M6.6-C**.
 Pre-X1 Architecture Reconciliation was owner-approved and completed October 5, 2026 under the
 [bounded owner direction](../evidence/m6.6-species-aware-husbandry/README.md#pre-x1-documentation-direction).
-X1–X5 remain unstarted; documentation reconciliation does not accept their implementation.
+Replacement X1 development is authorized by the October 15, 2026 owner course correction; acceptance remains pending. X2–X5 remain unstarted.
 
 ### Pre-M6.6-C extension — X1 through X5
 
@@ -444,7 +444,9 @@ checklist item below is accepted yet. This inserts work without renumbering M6.6
 
 - [ ] **X1 — Extensible Animal Capability Foundation:** exact frozen four v1 profiles, stable
   workflow-group/presentation metadata, separate read support and registration eligibility/defaults,
-  completed retries across default changes and compatibility preflight before mutable startup.
+  completed retries across default changes, practical SQLite compatibility before application writes,
+  and test-only Dog/Fish/colony subject/environment extension proofs. Current production support
+  remains individual Animals; no privileged kernel supervisor or raw-device exclusion is required.
   Existing Animals remain editable/actionable at their original version; no provider ancestry,
   taxonomy implementation, new guides or Amphibians. No Alembic expected; qualify actual reconstruction
   and applicable rollback binary. Ordinary production-equivalent backup/verification must pass before
