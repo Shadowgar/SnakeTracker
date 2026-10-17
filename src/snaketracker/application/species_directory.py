@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
@@ -300,7 +301,11 @@ class SpeciesDirectoryService:
 
     def refresh_detail(self, taxon_id: UUID) -> TaxonRecord | None:
         record = self.get(taxon_id)
-        if record is None or record.provider != self._provider.provider_name:
+        if (
+            record is None
+            or record.provider != self._provider.provider_name
+            or record.supported_group not in SUPPORTED_GROUPS
+        ):
             return record
         try:
             candidate = self._provider.detail(record.provider_id, record.supported_group)
@@ -509,6 +514,8 @@ def _validated_search(query_value: str, group_value: str, limit: int) -> tuple[s
         raise DirectoryValidationError("Enter at least 2 characters.")
     if len(query) > 100 or limit < 1 or limit > 20:
         raise DirectoryValidationError("Species search is too large.")
+    if re.search(r"[^\W_]", query, flags=re.UNICODE) is None:
+        raise DirectoryValidationError("Enter a scientific or common name with letters or numbers.")
     return query, group
 
 

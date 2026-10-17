@@ -170,3 +170,13 @@ fail before reserving a permanent identity.
 
 The final combined [taxonomy/historical-compatibility/archive suite](provider-final-regressions.log)
 passed **106 tests** in 113.82 seconds, with the expected duplicate-member warning only.
+
+Final boundary review regressions passed [35 archive/consumer cases](final-boundaries.log),
+[22 decision-context/order cases](decision-context.log), and the complete
+[nine-test directory integration suite](directory-boundaries.log). Ordering decisions bind both
+compared fact payloads, both source-effective clocks and generation scope; retrieval time is excluded.
+Repeated identical comparisons retain their decision, while a different opposing fact or source
+clock requires a fresh decision. Archive limits cover field/default bounds and cumulative materialized
+JSON bytes, preventing metadata defaults from amplifying a small archive beyond the qualified bound.
+Tokenless directory input returns HTTP 422 without a provider call. Reference-only/future groups
+retain their selected facts and skip refresh through the current workflow provider adapter.

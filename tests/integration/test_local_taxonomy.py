@@ -1090,3 +1090,36 @@ def test_direct_live_relationship_cycles_are_rejected_before_reservation(catalog
     assert catalog.search("Rana") == ()
     with catalog.engine.connect() as connection:
         assert connection.execute(text("SELECT COUNT(*) FROM taxa")).scalar_one() == 0
+
+
+def test_new_comparison_reopens_previously_resolved_payload_conflict(catalog):
+    catalog.publish(taxon(name="Selected A"), retrieved_at=NOW, source_effective_at=NOW)
+    disputed = taxon(name="Disputed X")
+    identifier = catalog.publish(disputed, retrieved_at=NOW, source_effective_at=NOW)
+    first = catalog.conflicts()[0]
+    catalog.resolve_conflict(first.conflict_id, decided_by="Owner", reason="Retain A")
+    catalog.publish(
+        taxon(name="Selected B"), retrieved_at=NOW, source_effective_at=NOW + timedelta(days=1)
+    )
+    catalog.publish(
+        disputed, retrieved_at=NOW + timedelta(days=2), source_effective_at=NOW + timedelta(days=1)
+    )
+    current = catalog.conflicts()
+    assert len(current) == 1
+    assert current[0].conflict_id != first.conflict_id
+    assert catalog.resolve(identifier).scientific_name == "Selected B"
+    assert catalog.resolve(identifier).selection_state == "unknown_order"
+
+
+def test_repeated_identical_comparison_preserves_content_bound_conflict_decision(catalog):
+    identifier = catalog.publish(
+        taxon(name="Selected A"), retrieved_at=NOW, source_effective_at=NOW
+    )
+    disputed = taxon(name="Disputed X")
+    catalog.publish(disputed, retrieved_at=NOW, source_effective_at=NOW)
+    for conflict in catalog.conflicts():
+        catalog.resolve_conflict(conflict.conflict_id, decided_by="Owner", reason="Retain A")
+    catalog.publish(disputed, retrieved_at=NOW + timedelta(days=1), source_effective_at=NOW)
+    assert catalog.conflicts() == ()
+    assert catalog.resolve(identifier).scientific_name == "Selected A"
+    assert catalog.resolve(identifier).selection_state == "selected"

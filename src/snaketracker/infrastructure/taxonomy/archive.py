@@ -49,6 +49,8 @@ def _rows(archive: ZipFile, element: ET.Element) -> Iterator[dict[str, str]]:
     ):
         raise ValueError("Unsupported Darwin Core file schema or encoding.")
     fields = element.findall("d:field", NS)
+    if len(fields) > 128 or any(len(field.get("default", "")) > 4096 for field in fields):
+        raise ValueError("Archive field count or default exceeds column bounds.")
     mapping = {field.attrib["term"].rsplit("/", 1)[-1]: field for field in fields}
     identity = (
         element.find("d:id", NS) if element.tag.endswith("core") else element.find("d:coreid", NS)
@@ -130,6 +132,15 @@ def read_archive(
     if not path.is_file() or path.stat().st_size > limits.max_bytes:
         raise ValueError("Archive exceeds the compressed byte bound or is missing.")
     rows = 0
+    materialized_bytes = 0
+
+    def materialize(record: dict[str, str]) -> str:
+        nonlocal materialized_bytes
+        payload = json.dumps(record)
+        materialized_bytes += len(payload.encode("utf-8"))
+        if materialized_bytes > limits.max_expanded_bytes:
+            raise ValueError("Archive materialized records exceed the expanded byte bound.")
+        return payload
 
     def check_bound() -> None:
         nonlocal rows
@@ -201,7 +212,7 @@ def read_archive(
                         (
                             record["_id"],
                             record.get("parentNameUsageID") or None,
-                            json.dumps(record),
+                            materialize(record),
                         ),
                     )
                 if not database.execute("SELECT 1 FROM records LIMIT 1").fetchone():
@@ -209,6 +220,7 @@ def read_archive(
                 for extension in extensions:
                     for record in _rows(archive, extension):
                         check_bound()
+                        materialize(record)
                         if not database.execute(
                             "SELECT 1 FROM records WHERE id=?", (record["_id"],)
                         ).fetchone():

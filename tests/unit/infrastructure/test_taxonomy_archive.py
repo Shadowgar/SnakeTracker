@@ -324,3 +324,33 @@ def test_archive_validates_accepted_name_relationships_before_dry_run_success(tm
     )
     with pytest.raises(ValueError, match=r"absent|cycle|self"):
         tuple(read_archive(path, provider="fixture"))
+
+
+def test_archive_default_values_and_field_count_are_bounded(tmp_path):
+    for extra in (
+        '<field default="' + "x" * 4097 + '" term="https://example.test/extra"/>',
+        "".join(f'<field default="x" term="https://example.test/extra{i}"/>' for i in range(129)),
+    ):
+        descriptor = META.replace("</core>", extra + "</core>")
+        with pytest.raises(ValueError, match=r"field|default|column"):
+            tuple(read_archive(archive(tmp_path, meta=descriptor), provider="fixture"))
+
+
+def test_materialized_defaults_cannot_exceed_archive_expanded_byte_budget(tmp_path):
+    descriptor = META.replace(
+        "</core>", '<field default="' + "x" * 256 + '" term="https://example.test/extra"/></core>'
+    )
+    rows = "id\tname\tparent\tclass\n" + "".join(
+        f"{i}\tRana species {i}\t\tAmphibia\n" for i in range(10)
+    )
+    path = archive(tmp_path, meta=descriptor, taxa=rows)
+    with ZipFile(path) as handle:
+        expanded = sum(member.file_size for member in handle.infolist())
+    with pytest.raises(ValueError, match="materialized"):
+        tuple(
+            read_archive(
+                path,
+                provider="fixture",
+                limits=replace(ArchiveLimits(), max_expanded_bytes=expanded),
+            )
+        )

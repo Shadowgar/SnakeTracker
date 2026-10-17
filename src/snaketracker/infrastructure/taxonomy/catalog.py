@@ -211,6 +211,63 @@ class LocalTaxonomyCatalog:
             generation=generation,
         )
 
+    @staticmethod
+    def _ordering_conflict(
+        connection: Connection,
+        identifier: str,
+        kind: str,
+        payload: str,
+        incoming_effective: str | None,
+        opposing: dict[str, Any],
+        opposing_effective: str | None,
+        generation: str | None = None,
+    ) -> None:
+        # Decisions bind to both facts and their source clocks, not retrieval time.
+        # An unchanged repeat retains the decision; a new comparison needs its own.
+        details = json.dumps(
+            {
+                "incoming": json.loads(payload),
+                "incoming_effective_at": incoming_effective,
+                "opposing": {field: opposing.get(field) for field in FACT_FIELDS},
+                "opposing_effective_at": opposing_effective,
+            },
+            sort_keys=True,
+        )
+        LocalTaxonomyCatalog._conflict(connection, identifier, kind, details, generation)
+
+    def _retain_observation(
+        self,
+        connection: Connection,
+        identifier: str,
+        payload: str,
+        effective: str | None,
+        prior: dict[str, Any],
+        prior_effective: str | None,
+    ) -> bool:
+        differs = _facts_differ(prior, json.loads(payload))
+        if prior_effective and effective:
+            if prior_effective > effective:
+                return True
+            if prior_effective == effective and differs:
+                self._ordering_conflict(
+                    connection,
+                    identifier,
+                    "equal_freshness",
+                    payload,
+                    effective,
+                    prior,
+                    prior_effective,
+                )
+                return True
+        elif differs:
+            self._ordering_conflict(
+                connection, identifier, "unknown_order", payload, effective, prior, prior_effective
+            )
+            return True
+        elif prior_effective and not effective:
+            return True
+        return False
+
     def _reserve(
         self,
         connection: Connection,
@@ -476,33 +533,26 @@ class LocalTaxonomyCatalog:
             )
             keep_old = False
             if old:
-                differs = _facts_differ(json.loads(old["payload"]), json.loads(payload))
-                if old["source_effective_at"] and effective_text:
-                    keep_old = str(old["source_effective_at"]) > effective_text
-                    if str(old["source_effective_at"]) == effective_text and differs:
-                        keep_old = True
-                        self._conflict(connection, identifier, "equal_freshness", payload)
-                elif differs and (old["source_effective_at"] or effective_text):
-                    keep_old = True
-                    self._conflict(connection, identifier, "unknown_order", payload)
-                elif old["source_effective_at"] and not effective_text:
-                    keep_old = True
-                elif differs:
-                    keep_old = True
-                    self._conflict(connection, identifier, "unknown_order", payload)
+                keep_old = self._retain_observation(
+                    connection,
+                    identifier,
+                    payload,
+                    effective_text,
+                    json.loads(old["payload"]),
+                    old["source_effective_at"],
+                )
             if previous is not None and previous[0]["provider"] == candidate.provider:
-                prior = previous[0]
-                differs = _facts_differ(prior, json.loads(payload))
-                if prior["source_effective_at"] and effective_text:
-                    keep_old = keep_old or str(prior["source_effective_at"]) > effective_text
-                    if prior["source_effective_at"] == effective_text and differs:
-                        keep_old = True
-                        self._conflict(connection, identifier, "equal_freshness", payload)
-                elif differs:
-                    keep_old = True
-                    self._conflict(connection, identifier, "unknown_order", payload)
-                elif prior["source_effective_at"] and not effective_text:
-                    keep_old = True
+                keep_old = (
+                    self._retain_observation(
+                        connection,
+                        identifier,
+                        payload,
+                        effective_text,
+                        previous[0],
+                        previous[0]["source_effective_at"],
+                    )
+                    or keep_old
+                )
             if not keep_old:
                 execute(
                     connection,
@@ -526,25 +576,24 @@ class LocalTaxonomyCatalog:
                 "JOIN taxonomy_generations g USING(generation_id) WHERE f.taxon_id=:id",
                 id=identifier,
             ):
-                if _facts_differ(json.loads(snapshot.payload), json.loads(payload)):
+                opposing = json.loads(snapshot.payload)
+                if _facts_differ(opposing, json.loads(payload)):
+                    kind = None
                     if snapshot.provider != candidate.provider:
-                        self._conflict(
-                            connection,
-                            identifier,
-                            "cross_provider_order",
-                            payload,
-                            snapshot.generation_id,
-                        )
+                        kind = "cross_provider_order"
                     elif not snapshot.snapshot_at or not effective_text:
-                        self._conflict(
-                            connection, identifier, "unknown_order", payload, snapshot.generation_id
-                        )
+                        kind = "unknown_order"
                     elif snapshot.snapshot_at == effective_text:
-                        self._conflict(
+                        kind = "equal_freshness"
+                    if kind:
+                        self._ordering_conflict(
                             connection,
                             identifier,
-                            "equal_freshness",
+                            kind,
                             payload,
+                            effective_text,
+                            opposing,
+                            snapshot.snapshot_at,
                             snapshot.generation_id,
                         )
             if (
@@ -552,15 +601,32 @@ class LocalTaxonomyCatalog:
                 and previous[0]["provider"] != candidate.provider
                 and _facts_differ(previous[0], json.loads(payload))
             ):
-                self._conflict(connection, identifier, "cross_provider_order", payload)
+                self._ordering_conflict(
+                    connection,
+                    identifier,
+                    "cross_provider_order",
+                    payload,
+                    effective_text,
+                    previous[0],
+                    previous[0]["source_effective_at"],
+                )
             for other in execute(
                 connection,
-                "SELECT payload FROM taxonomy_overlay WHERE taxon_id=:id AND provider!=:provider",
+                "SELECT payload,source_effective_at FROM taxonomy_overlay "
+                "WHERE taxon_id=:id AND provider!=:provider",
                 id=identifier,
                 provider=candidate.provider,
-            ).scalars():
-                if _facts_differ(json.loads(other), json.loads(payload)):
-                    self._conflict(connection, identifier, "cross_provider_order", payload)
+            ):
+                if _facts_differ(json.loads(other.payload), json.loads(payload)):
+                    self._ordering_conflict(
+                        connection,
+                        identifier,
+                        "cross_provider_order",
+                        payload,
+                        effective_text,
+                        json.loads(other.payload),
+                        other.source_effective_at,
+                    )
             label_source = candidate
             if keep_old and old is not None:
                 label_source = ProviderTaxon(**json.loads(old["payload"]))
@@ -704,8 +770,15 @@ class LocalTaxonomyCatalog:
                     and previous[0]["provider"] != candidate.provider
                     and _facts_differ(previous[0], json.loads(payload))
                 ):
-                    self._conflict(
-                        connection, identifier, "cross_provider_order", payload, str(generation)
+                    self._ordering_conflict(
+                        connection,
+                        identifier,
+                        "cross_provider_order",
+                        payload,
+                        source["snapshot_at"],
+                        previous[0],
+                        previous[0]["source_effective_at"],
+                        str(generation),
                     )
                 overlay = execute(
                     connection,
@@ -716,12 +789,26 @@ class LocalTaxonomyCatalog:
                 ).first()
                 if overlay and _facts_differ(json.loads(overlay.payload), json.loads(payload)):
                     if not source["snapshot_at"] or not overlay.source_effective_at:
-                        self._conflict(
-                            connection, identifier, "unknown_order", payload, str(generation)
+                        self._ordering_conflict(
+                            connection,
+                            identifier,
+                            "unknown_order",
+                            payload,
+                            source["snapshot_at"],
+                            json.loads(overlay.payload),
+                            overlay.source_effective_at,
+                            str(generation),
                         )
                     elif source["snapshot_at"] == overlay.source_effective_at:
-                        self._conflict(
-                            connection, identifier, "equal_freshness", payload, str(generation)
+                        self._ordering_conflict(
+                            connection,
+                            identifier,
+                            "equal_freshness",
+                            payload,
+                            source["snapshot_at"],
+                            json.loads(overlay.payload),
+                            overlay.source_effective_at,
+                            str(generation),
                         )
                 self._change(
                     connection,

@@ -760,3 +760,34 @@ def test_live_search_keeps_selected_group_filter_when_discovery_conflicts(tmp_pa
         assert service.get(original.taxon_id).supported_group == "lizard"
     finally:
         engine.dispose()
+
+
+@pytest.mark.parametrize("group", ["", "amphibian"])
+def test_reference_only_selected_taxon_skips_unsupported_provider_refresh(
+    tmp_path, monkeypatch, group
+):
+    engine = _database(tmp_path)
+    repository = SQLAlchemyTaxonRepository(engine)
+    record = repository.upsert(
+        ProviderTaxon("fixture", "1", "https://example.test/1", group, "Rana temporaria"),
+        observed_at=datetime.now(UTC),
+    )
+    provider = FixtureProvider({})
+
+    def unsupported(*args):
+        raise KeyError("Provider has no workflow ancestor for this group")
+
+    monkeypatch.setattr(provider, "detail", unsupported)
+    service = SpeciesDirectoryService(
+        repository,
+        provider,
+        event_store=SQLAlchemyEventStore(engine),
+        animal_projection=SQLAlchemyAnimalCurrentProjection(engine),
+    )
+    try:
+        retained = service.refresh_detail(record.taxon_id)
+        assert retained.taxon_id == record.taxon_id
+        assert retained.supported_group == group
+        assert retained.accepted_scientific_name == "Rana temporaria"
+    finally:
+        engine.dispose()
