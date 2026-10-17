@@ -176,3 +176,48 @@ def test_archive_rejects_direct_parent_self_cycle(tmp_path):
                 provider="fixture",
             )
         )
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("--label", " "),
+        ("--rights", " "),
+        ("--source-url", "http://example.test/archive"),
+        ("--retrieved-at", "2026-10-17T00:00:00"),
+        ("--snapshot-at", "2026-10-16T00:00:00"),
+    ],
+)
+def test_dry_run_and_apply_share_source_metadata_validation(tmp_path, monkeypatch, field, value):
+    import hashlib
+    import sys
+
+    from snaketracker.operations.taxonomy import main
+
+    path = archive(tmp_path)
+    args = [
+        "stage",
+        str(path),
+        "--provider",
+        "fixture",
+        "--label",
+        "A",
+        "--source-url",
+        "https://example.test/archive",
+        "--retrieved-at",
+        "2026-10-17T00:00:00Z",
+        "--snapshot-at",
+        "2026-10-16T00:00:00Z",
+        "--rights",
+        "Synthetic",
+        "--sha256",
+        hashlib.sha256(path.read_bytes()).hexdigest(),
+    ]
+    args[args.index(field) + 1] = value
+    before = path.read_bytes()
+    for prefix in ([], ["--apply"]):
+        monkeypatch.setattr(sys, "argv", ["taxonomy", *prefix, *args])
+        with pytest.raises(ValueError):
+            main()
+    assert path.read_bytes() == before
+    assert not (tmp_path / "app.db").exists()

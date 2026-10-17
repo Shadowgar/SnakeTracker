@@ -8,6 +8,10 @@ from typing import Protocol
 from uuid import UUID
 
 
+class TaxonomySearchLimitError(ValueError):
+    """A broad local query must be refined before more work is performed."""
+
+
 class TaxonomyConflictError(ValueError):
     """A durable identity or selection decision requires explicit resolution."""
 

@@ -937,3 +937,59 @@ def test_nonfinite_reconciliation_budget_cannot_disable_the_guard(catalog, secon
 
     with pytest.raises(ValueError, match="Invalid reconciliation bound"):
         catalog.promote(uuid4(), max_seconds=seconds)
+
+
+def test_group_search_bounds_candidate_resolution_and_reports_refinement(catalog, monkeypatch):
+    generation = stage(
+        catalog,
+        "Broad",
+        [taxon(str(i), f"Broad species {i}") for i in range(4)]
+        + [taxon("z", "Broad target", group="snake")],
+    )
+    catalog.promote(generation)
+    bounded = LocalTaxonomyCatalog(catalog.engine, search_max_candidates=2)
+    calls = 0
+    original = bounded._selected
+
+    def counted(connection, identifier):
+        nonlocal calls
+        calls += 1
+        return original(connection, identifier)
+
+    monkeypatch.setattr(bounded, "_selected", counted)
+    with pytest.raises(ValueError, match=r"[Rr]efine"):
+        bounded.search("Broad", group="snake")
+    assert calls <= 2
+    assert bounded.search("Broad target", group="snake")[0].provider_id == "z"
+
+
+def test_search_sql_deadline_interrupts_work_and_resets_connection(catalog, monkeypatch):
+    from types import SimpleNamespace
+
+    from snaketracker.application.local_taxonomy import TaxonomySearchLimitError
+    from snaketracker.infrastructure.taxonomy import catalog as module
+
+    identifier = catalog.publish(taxon(), retrieved_at=NOW)
+    original = module.execute
+    ticks = 0
+
+    def clock():
+        nonlocal ticks
+        ticks += 2
+        return ticks
+
+    def expensive(connection, sql, **parameters):
+        if sql.startswith("WITH matches"):
+            return original(
+                connection,
+                "WITH RECURSIVE work(x) AS (VALUES(1) UNION ALL "
+                "SELECT x+1 FROM work WHERE x<100000) SELECT x FROM work",
+            )
+        return original(connection, sql, **parameters)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(module, "time", SimpleNamespace(monotonic=clock))
+        patch.setattr(module, "execute", expensive)
+        with pytest.raises(TaxonomySearchLimitError, match="Refine"):
+            catalog.search("Rana")
+    assert catalog.search("Rana")[0].taxon_id == identifier

@@ -8,6 +8,7 @@ from typing import Protocol
 from uuid import UUID, uuid4
 
 from snaketracker.application.animals import AnimalCurrentProjection
+from snaketracker.application.local_taxonomy import TaxonomySearchLimitError
 from snaketracker.domains.animals.contracts import AnimalTaxonLinkedV1
 from snaketracker.platform.events.envelope import DomainEvent, EventSubject, event_checksum
 from snaketracker.platform.events.store import (
@@ -267,7 +268,10 @@ class SpeciesDirectoryService:
         query, group = _validated_search(query_value, group_value, limit)
         now = datetime.now(UTC)
         stale_after = now - self._cache_ttl
-        cached = self._repository.search(query, group, limit=limit, stale_after=stale_after)
+        try:
+            cached = self._repository.search(query, group, limit=limit, stale_after=stale_after)
+        except TaxonomySearchLimitError as error:
+            raise DirectoryValidationError(str(error)) from error
         if cached and not any(record.stale for record in cached):
             return DirectorySearchResult(cached, "cached")
         try:
@@ -284,7 +288,11 @@ class SpeciesDirectoryService:
                 "unavailable",
                 "Species search is temporarily unavailable. You can enter the species manually.",
             )
-        records = tuple(self._repository.upsert(item, observed_at=now) for item in candidates)
+        records = tuple(
+            record
+            for item in candidates
+            if (record := self._repository.upsert(item, observed_at=now)).supported_group == group
+        )
         return DirectorySearchResult(records, "live" if records else "empty")
 
     def get(self, taxon_id: UUID) -> TaxonRecord | None:

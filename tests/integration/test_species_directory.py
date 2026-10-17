@@ -709,3 +709,54 @@ def test_reference_image_provider_cascade_persists_provenance(tmp_path: Path) ->
         assert retained.image_creator == "Fixture photographer"
     finally:
         engine.dispose()
+
+
+def test_broad_local_search_requests_refinement_without_provider_lookup(tmp_path, monkeypatch):
+    from snaketracker.application.local_taxonomy import TaxonomySearchLimitError
+
+    engine = _database(tmp_path)
+    repository = SQLAlchemyTaxonRepository(engine)
+    provider = FixtureProvider({})
+
+    def broad(*args, **kwargs):
+        raise TaxonomySearchLimitError("Refine the species name")
+
+    monkeypatch.setattr(repository, "search", broad)
+    service = SpeciesDirectoryService(
+        repository,
+        provider,
+        event_store=SQLAlchemyEventStore(engine),
+        animal_projection=SQLAlchemyAnimalCurrentProjection(engine),
+    )
+    try:
+        with pytest.raises(DirectoryValidationError, match="Refine"):
+            service.search("ra", "snake")
+        assert provider.calls == []
+    finally:
+        engine.dispose()
+
+
+def test_live_search_keeps_selected_group_filter_when_discovery_conflicts(tmp_path):
+    engine = _database(tmp_path)
+    repository = SQLAlchemyTaxonRepository(engine)
+    original = repository.upsert(
+        replace(
+            _taxon("1", "lizard", "Original lizard", "Original lizard"),
+            source_effective_at=datetime.now(UTC),
+        ),
+        observed_at=datetime.now(UTC),
+    )
+    provider = FixtureProvider(
+        {"snake:python": (_taxon("1", "snake", "Python regius", "Ball python"),)}
+    )
+    service = SpeciesDirectoryService(
+        repository,
+        provider,
+        event_store=SQLAlchemyEventStore(engine),
+        animal_projection=SQLAlchemyAnimalCurrentProjection(engine),
+    )
+    try:
+        assert service.search("python", "snake").records == ()
+        assert service.get(original.taxon_id).supported_group == "lizard"
+    finally:
+        engine.dispose()

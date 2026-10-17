@@ -27,6 +27,7 @@ from snaketracker.application.local_taxonomy import (
     TaxonAncestor,
     TaxonomyConflictError,
     TaxonomyProviderReference,
+    TaxonomySearchLimitError,
     TaxonomySummary,
 )
 from snaketracker.application.species_directory import ProviderTaxon
@@ -104,11 +105,32 @@ def _facts_differ(left: dict[str, Any], right: dict[str, Any]) -> bool:
     return any(left.get(field) != right.get(field) for field in fields)
 
 
+def validate_generation_source(source: GenerationSource) -> None:
+    if (
+        not source.label.strip()
+        or len(source.label) > 256
+        or not source.rights.strip()
+        or len(source.rights) > 4096
+        or not re.fullmatch(r"[a-f0-9]{64}", source.checksum)
+    ):
+        raise ValueError("Generation requires source, checksum and explicit rights provenance.")
+    validate(ProviderTaxon(source.provider, "source", source.source_url, "", "Source validation"))
+    timestamp(source.retrieved_at)
+    if source.snapshot_at is not None:
+        timestamp(source.snapshot_at)
+
+
 class LocalTaxonomyCatalog:
     """Local taxonomy port plus explicit operator-only generation management."""
 
-    def __init__(self, engine: Engine) -> None:
+    def __init__(
+        self, engine: Engine, *, search_max_candidates: int = 256, search_max_seconds: float = 1.0
+    ) -> None:
+        if search_max_candidates < 1 or not isfinite(search_max_seconds) or search_max_seconds <= 0:
+            raise ValueError("Search requires positive finite work bounds.")
         self.engine = engine
+        self._search_max_candidates = search_max_candidates
+        self._search_max_seconds = search_max_seconds
 
     @contextmanager
     def _write(self, *, max_seconds: float | None = None) -> Iterator[Connection]:
@@ -603,17 +625,7 @@ class LocalTaxonomyCatalog:
             )
 
     def begin_generation(self, source: GenerationSource, *, imported_at: datetime) -> UUID:
-        if (
-            not source.label.strip()
-            or len(source.label) > 256
-            or not source.rights.strip()
-            or len(source.rights) > 4096
-            or not re.fullmatch(r"[a-f0-9]{64}", source.checksum)
-        ):
-            raise ValueError("Generation requires source, checksum and explicit rights provenance.")
-        validate(
-            ProviderTaxon(source.provider, "source", source.source_url, "", "Source validation")
-        )
+        validate_generation_source(source)
         generation = uuid4()
         with self._write() as connection:
             execute(
@@ -1230,22 +1242,44 @@ class LocalTaxonomyCatalog:
                 + " AND (scope='catalog' OR scope IN "
                 "(SELECT generation_id FROM taxonomy_generation_publications))"
             )
-        identifiers = execute(
-            connection,
-            "WITH matches AS (" + " INTERSECT ".join(matches) + ") "
-            "SELECT m.taxon_id FROM matches m JOIN taxa t USING(taxon_id) "
-            "JOIN taxonomy_publications p USING(taxon_id) "
-            "ORDER BY t.accepted_scientific_name COLLATE NOCASE,m.taxon_id",
-            **parameters,
-        ).scalars()
-        result: list[UUID] = []
-        for identifier in identifiers:
-            selected = self._selected(connection, identifier) if group is not None else None
-            if group is None or (selected and selected[0]["supported_group"] == group):
-                result.append(UUID(identifier))
-                if len(result) >= limit:
-                    break
-        return tuple(result)
+        deadline = time.monotonic() + self._search_max_seconds
+        native = connection.connection.driver_connection
+        assert native is not None
+        message = "Search is too broad. Refine it with more of the scientific or common name."
+        native.set_progress_handler(lambda: int(time.monotonic() > deadline), 1000)
+        try:
+            identifiers = (
+                execute(
+                    connection,
+                    "WITH matches AS (" + " INTERSECT ".join(matches) + ") "
+                    "SELECT m.taxon_id FROM matches m JOIN taxa t USING(taxon_id) "
+                    "JOIN taxonomy_publications p USING(taxon_id) "
+                    "ORDER BY t.accepted_scientific_name COLLATE NOCASE,m.taxon_id "
+                    "LIMIT :candidate_limit",
+                    candidate_limit=self._search_max_candidates + 1,
+                    **parameters,
+                )
+                .scalars()
+                .all()
+            )
+            result: list[UUID] = []
+            for index, identifier in enumerate(identifiers):
+                if index >= self._search_max_candidates or time.monotonic() > deadline:
+                    raise TaxonomySearchLimitError(message)
+                selected = self._selected(connection, identifier) if group is not None else None
+                if group is None or (selected and selected[0]["supported_group"] == group):
+                    result.append(UUID(identifier))
+                    if len(result) >= limit:
+                        break
+            if time.monotonic() > deadline:
+                raise TaxonomySearchLimitError(message)
+            return tuple(result)
+        except OperationalError as error:
+            if "interrupted" in str(error.orig):
+                raise TaxonomySearchLimitError(message) from error
+            raise
+        finally:
+            native.set_progress_handler(None, 0)
 
     def search(
         self, query: str, *, group: str | None = None, limit: int = 10

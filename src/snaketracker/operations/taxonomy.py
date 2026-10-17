@@ -17,7 +17,10 @@ from snaketracker.infrastructure.database.engine import (
     create_sqlite_engine,
 )
 from snaketracker.infrastructure.taxonomy.archive import ArchiveLimits, read_archive
-from snaketracker.infrastructure.taxonomy.catalog import LocalTaxonomyCatalog
+from snaketracker.infrastructure.taxonomy.catalog import (
+    LocalTaxonomyCatalog,
+    validate_generation_source,
+)
 
 
 def main() -> None:
@@ -94,6 +97,7 @@ def main() -> None:
             checksum,
             arguments.rights,
         )
+        validate_generation_source(source)
         if not arguments.apply:
             count = sum(
                 1

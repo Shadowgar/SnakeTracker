@@ -19,7 +19,10 @@ Conflict resolution records who decided to retain the identities/current selecti
 Local FTS5 search covers qualified names, aliases/common names and classification, with an indexed
 catalog fallback after rollback. Indexed token matches intersect by permanent identity across
 published scopes; the selected current group is checked before applying the result limit. Search
-is independent of household-private FTS and never calls a provider. Existing directory
+is independent of household-private FTS and never calls a provider. Candidate discovery/filtering
+has a 256-identity bound and one-second SQL-work budget; an overly broad query returns an explicit
+refinement message before provider discovery. This is not a total summary/ancestry response-time
+guarantee. Provider discovery results are filtered using the retained selected group. Existing directory
 search/detail/live discovery use the catalog. The application-owned `LocalTaxonomy` port exposes
 selected summaries (including authorship), ancestry, provenance and qualified provider references; it does not create
 Natural History sources or content. Existing manual entry and bounded explicit lookup remain.
@@ -64,6 +67,7 @@ not claimed production capacity. Only iNaturalist's qualified known ancestry IDs
 workflow groups; other namespaces do not borrow those IDs. Other production namespaces require an
 explicit HTTPS `--taxon-base-url` for their qualified identity URLs.
 
+Dry-run and applied staging share the same source metadata, timestamp and rights validation.
 Validate a synthetic/qualified local archive without database writes:
 
 ```sh
@@ -136,3 +140,10 @@ Additional final receipts: [11 reconciliation/decision/lifecycle tests](reconcil
 [four operator/nonfinite-budget cases](operator-budgets.log). Unknown/equal/cross-provider ordering
 is backed by durable conflicts and clears after resolution; private staging conflicts block the
 candidate generation without changing live selection status. Both event orders use the same rules.
+
+Final search/operator corrections are covered by [six focused regressions](search-source-validation.log)
+and [19 additional search/archive cases](bounded-search.log), including SQLite interruption and
+progress-handler cleanup. No timeout or assertion was changed.
+
+The final combined [taxonomy/directory/archive regression run](final-focused.log) passed **83 tests**
+in 102.19 seconds, with only the expected duplicate-ZIP-member rejection warning.
