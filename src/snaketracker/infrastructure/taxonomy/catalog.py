@@ -88,6 +88,8 @@ def validate(candidate: ProviderTaxon) -> None:
         if len(names) > 64 or any(not name.strip() or len(name) > 256 for name in names):
             raise ValueError("Invalid taxonomy aliases.")
     for identifier in (candidate.parent_provider_id, candidate.accepted_provider_id):
+        if identifier == candidate.provider_id:
+            raise ValueError("Taxonomy relationship has a direct self-reference cycle.")
         if identifier is not None and (not identifier.strip() or len(identifier) > 128):
             raise ValueError("Invalid parent or accepted identity.")
 
@@ -520,14 +522,20 @@ class LocalTaxonomyCatalog:
                 )
             for snapshot in execute(
                 connection,
-                "SELECT f.generation_id,f.payload,g.snapshot_at FROM taxonomy_facts f "
-                "JOIN taxonomy_generations g USING(generation_id) WHERE f.taxon_id=:id "
-                "AND g.provider=:provider",
+                "SELECT f.generation_id,f.payload,g.snapshot_at,g.provider FROM taxonomy_facts f "
+                "JOIN taxonomy_generations g USING(generation_id) WHERE f.taxon_id=:id",
                 id=identifier,
-                provider=candidate.provider,
             ):
                 if _facts_differ(json.loads(snapshot.payload), json.loads(payload)):
-                    if not snapshot.snapshot_at or not effective_text:
+                    if snapshot.provider != candidate.provider:
+                        self._conflict(
+                            connection,
+                            identifier,
+                            "cross_provider_order",
+                            payload,
+                            snapshot.generation_id,
+                        )
+                    elif not snapshot.snapshot_at or not effective_text:
                         self._conflict(
                             connection, identifier, "unknown_order", payload, snapshot.generation_id
                         )
@@ -690,6 +698,15 @@ class LocalTaxonomyCatalog:
                     id=identifier,
                     payload=payload,
                 )
+                previous = self._selected(connection, identifier)
+                if (
+                    previous is not None
+                    and previous[0]["provider"] != candidate.provider
+                    and _facts_differ(previous[0], json.loads(payload))
+                ):
+                    self._conflict(
+                        connection, identifier, "cross_provider_order", payload, str(generation)
+                    )
                 overlay = execute(
                     connection,
                     "SELECT payload,source_effective_at FROM taxonomy_overlay "
@@ -929,6 +946,51 @@ class LocalTaxonomyCatalog:
                 g=str(generation),
                 effective=source["snapshot_at"],
             )
+            active_provider = execute(
+                connection,
+                "SELECT g.provider FROM taxonomy_selection s JOIN taxonomy_generations g "
+                "USING(generation_id) WHERE s.singleton=1",
+            ).scalar_one_or_none()
+            if active_provider is not None and active_provider != source["provider"]:
+                # A foreign reference pointer must not discard the selected preferred-provider
+                # snapshot of explicitly shared identities. Retain those facts in the durable
+                # information overlay, preserving original source dates and per-identity audit.
+                execute(
+                    connection,
+                    "INSERT INTO taxonomy_changes(taxon_id,kind,recorded_at,details) "
+                    "SELECT f.taxon_id,'reference_selection_retained',:now,"
+                    "json_object('from_generation',f.generation_id,'to_generation',:g,"
+                    "'payload',json(f.payload)) FROM taxonomy_facts f "
+                    "JOIN taxonomy_selection s ON s.generation_id=f.generation_id "
+                    "JOIN taxonomy_generations old USING(generation_id) "
+                    "JOIN taxonomy_facts incoming ON incoming.taxon_id=f.taxon_id "
+                    "AND incoming.generation_id=:g JOIN taxa t ON t.taxon_id=f.taxon_id "
+                    "LEFT JOIN taxonomy_overlay o ON o.taxon_id=f.taxon_id "
+                    "AND o.provider=t.taxonomy_provider WHERE t.taxonomy_provider!=:provider "
+                    "AND json_extract(f.payload,'$.provider')=t.taxonomy_provider "
+                    "AND (o.taxon_id IS NULL OR (old.snapshot_at IS NOT NULL "
+                    "AND o.source_effective_at IS NOT NULL "
+                    "AND old.snapshot_at>o.source_effective_at))",
+                    g=str(generation),
+                    provider=source["provider"],
+                    now=timestamp(datetime.now(UTC)),
+                )
+                execute(
+                    connection,
+                    "INSERT INTO taxonomy_overlay "
+                    "(taxon_id,provider,payload,retrieved_at,source_effective_at,revision) "
+                    "SELECT f.taxon_id,json_extract(f.payload,'$.provider'),f.payload,"
+                    "old.retrieved_at,old.snapshot_at,c.revision FROM taxonomy_changes c "
+                    "JOIN taxonomy_facts f ON f.taxon_id=c.taxon_id "
+                    "AND f.generation_id=json_extract(c.details,'$.from_generation') "
+                    "JOIN taxonomy_generations old ON old.generation_id=f.generation_id "
+                    "WHERE c.revision>:cutoff AND c.kind='reference_selection_retained' "
+                    "ON CONFLICT(taxon_id,provider) DO UPDATE SET payload=excluded.payload,"
+                    "retrieved_at=excluded.retrieved_at,source_effective_at=excluded.source_effective_at,"
+                    "revision=excluded.revision",
+                    cutoff=cutoff,
+                )
+                cutoff = self._revision(connection)
             execute(
                 connection,
                 "INSERT OR IGNORE INTO taxonomy_generation_publications VALUES(:g,:provenance)",
@@ -1091,7 +1153,7 @@ class LocalTaxonomyCatalog:
             .mappings()
             .one_or_none()
         )
-        if active:
+        if active and json.loads(active["payload"])["provider"] == selected["provider"]:
             selected = json.loads(active["payload"])
             selected.update(
                 retrieved_at=active["retrieved_at"],

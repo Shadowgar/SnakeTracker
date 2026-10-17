@@ -533,8 +533,9 @@ def test_staging_reservations_cannot_publish_directory_facts(catalog):
 @pytest.mark.parametrize("relationship", ["parent_provider_id", "accepted_provider_id"])
 def test_direct_self_reference_cannot_validate_or_promote(catalog, relationship):
     generation = catalog.begin_generation(source("Self cycle"), imported_at=NOW)
-    catalog.stage(generation, [taxon(**{relationship: "1"})])
     with pytest.raises(ValueError, match="cycle"):
+        catalog.stage(generation, [taxon(**{relationship: "1"})])
+    with pytest.raises(ValueError, match="Empty"):
         catalog.validate_generation(generation)
     with pytest.raises(ValueError, match="validated"):
         catalog.promote(generation)
@@ -1023,3 +1024,69 @@ def test_live_observation_compares_selected_snapshot_even_with_older_overlay(cat
         assert selected.scientific_name == "Selected snapshot"
         assert selected.workflow_group == "snake"
         assert selected.selection_state == "unknown_order"
+
+
+@pytest.mark.parametrize("origin", ["overlay", "snapshot", "snapshot_with_old_overlay"])
+def test_foreign_generation_retains_selected_origin_after_conflict_decision(catalog, origin):
+    if origin == "overlay":
+        identifier = catalog.publish(
+            taxon(name="Preferred current", group="snake"), retrieved_at=NOW
+        )
+    else:
+        a = stage(catalog, "Original snapshot", [taxon(name="Preferred old", group="lizard")])
+        catalog.promote(a)
+        identifier = catalog.search("Preferred")[0].taxon_id
+        if origin == "snapshot_with_old_overlay":
+            catalog.publish(
+                taxon(name="Preferred old", group="lizard"),
+                retrieved_at=NOW,
+                source_effective_at=NOW - timedelta(days=10),
+            )
+        b = catalog.begin_generation(
+            replace(source("New preferred"), snapshot_at=NOW), imported_at=NOW
+        )
+        catalog.stage(b, [taxon(name="Preferred current", group="snake")])
+        catalog.validate_generation(b)
+        catalog.promote(b)
+    catalog.map_identity(
+        identifier,
+        "foreign",
+        "other",
+        source_url="https://example.test/other",
+        decided_by="Owner",
+        reason="Qualified identity",
+    )
+    foreign = catalog.begin_generation(
+        replace(source("Foreign"), provider="foreign"), imported_at=NOW
+    )
+    catalog.stage(
+        foreign,
+        [replace(taxon("other", "Foreign replacement", group="lizard"), provider="foreign")],
+    )
+    catalog.validate_generation(foreign)
+    conflicts = [c for c in catalog.conflicts() if c.kind == "cross_provider_order"]
+    assert conflicts
+    with pytest.raises(TaxonomyConflictError):
+        catalog.promote(foreign)
+    for conflict in conflicts:
+        catalog.resolve_conflict(
+            conflict.conflict_id, decided_by="Owner", reason="Retain preferred origin"
+        )
+    catalog.promote(foreign)
+    selected = catalog.resolve(identifier)
+    assert selected.scientific_name == "Preferred current"
+    assert selected.workflow_group == "snake"
+    assert selected.provider == "fixture"
+    assert selected.selection_state == "selected"
+    if origin != "overlay":
+        catalog.cleanup(b, retained_generations={foreign})
+        assert catalog.resolve(identifier).scientific_name == "Preferred current"
+
+
+@pytest.mark.parametrize("relationship", ["parent_provider_id", "accepted_provider_id"])
+def test_direct_live_relationship_cycles_are_rejected_before_reservation(catalog, relationship):
+    with pytest.raises(ValueError, match=r"self|cycle"):
+        catalog.publish(taxon(**{relationship: "1"}), retrieved_at=NOW)
+    assert catalog.search("Rana") == ()
+    with catalog.engine.connect() as connection:
+        assert connection.execute(text("SELECT COUNT(*) FROM taxa")).scalar_one() == 0

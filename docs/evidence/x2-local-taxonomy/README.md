@@ -156,3 +156,17 @@ replace the selection because an older overlay exists. Empty Taxon cores fail bo
 applied validation. Column indexes must be nonnegative bounded integers, field indexes must be
 unique, and every declared column must exist in each row. The ID and taxonID mapping may share
 their standard column.
+
+Foreign snapshot facts never replace the selected provider merely through pointer promotion.
+Differing cross-provider staged facts require a durable decision; late live changes record the same
+conflict. When switching namespaces, the atomic promotion retains selected outgoing preferred
+snapshot facts for shared identities in the existing durable overlay, with original source dates
+and per-identity audit revisions. A later cleanup cannot expose a stale initial fallback or overlay.
+Same-provider promotion skips this retention work. [34 focused cases](provider-relationships.log)
+cover overlay and snapshot origins, an older overlay beneath a newer snapshot, explicit resolution,
+foreign promotion, cleanup, accepted-name absence/cycles and live self-reference rejection.
+Archive dry runs validate both parent and accepted-name relationships. Direct live self-references
+fail before reserving a permanent identity.
+
+The final combined [taxonomy/historical-compatibility/archive suite](provider-final-regressions.log)
+passed **106 tests** in 113.82 seconds, with the expected duplicate-member warning only.

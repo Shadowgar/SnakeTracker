@@ -221,25 +221,34 @@ def read_archive(
                         )
                 database.commit()
                 # Validate ancestry before producing rows. No name-based identity inference.
-                for identifier, parent, payload in database.execute(
+                for identifier, _parent, payload in database.execute(
                     "SELECT * FROM records ORDER BY id"
                 ):
                     if time.monotonic() - started > limits.max_seconds:
                         raise ValueError("Archive exceeds execution time bound.")
-                    ancestors = {identifier}
-                    while parent and parent != identifier:
-                        if parent in ancestors or len(ancestors) >= 128:
-                            raise ValueError("Taxonomy ancestry cycle or depth bound.")
-                        ancestors.add(parent)
-                        row = database.execute(
-                            "SELECT parent FROM records WHERE id=?", (parent,)
-                        ).fetchone()
-                        if row is None:
-                            raise ValueError("Taxonomy has an absent parent.")
-                        parent = row[0]
-                    if parent == identifier:
-                        raise ValueError("Taxonomy ancestry cycle.")
                     record = json.loads(payload)
+                    ancestors = {identifier}
+                    for relationship in ("parentNameUsageID", "acceptedNameUsageID"):
+                        seen = {identifier}
+                        related = record.get(relationship)
+                        while related:
+                            if related in seen or len(seen) >= 128:
+                                raise ValueError(
+                                    "Taxonomy ancestry/accepted identity cycle or depth bound."
+                                )
+                            if time.monotonic() - started > limits.max_seconds:
+                                raise ValueError("Archive exceeds execution time bound.")
+                            seen.add(related)
+                            row = database.execute(
+                                "SELECT payload FROM records WHERE id=?", (related,)
+                            ).fetchone()
+                            if row is None:
+                                raise ValueError(
+                                    "Taxonomy has an absent parent or accepted identity."
+                                )
+                            related = json.loads(row[0]).get(relationship)
+                        if relationship == "parentNameUsageID":
+                            ancestors = seen
                     common = tuple(
                         row[0]
                         for row in database.execute(

@@ -304,3 +304,23 @@ def test_empty_archive_is_rejected_by_reader_and_dry_run(tmp_path, monkeypatch):
     with pytest.raises(ValueError, match="Empty"):
         main()
     assert not (tmp_path / "app.db").exists()
+
+
+@pytest.mark.parametrize("accepted", ["absent", "cycle", "self"])
+def test_archive_validates_accepted_name_relationships_before_dry_run_success(tmp_path, accepted):
+    descriptor = META.replace(
+        "</core>",
+        '<field index="4" term="http://rs.tdwg.org/dwc/terms/acceptedNameUsageID"/></core>',
+    )
+    links = {"absent": ("missing", ""), "cycle": ("2", "1"), "self": ("1", "")}[accepted]
+    path = archive(
+        tmp_path,
+        meta=descriptor,
+        taxa=(
+            "id\tname\tparent\tclass\taccepted\n"
+            f"1\tAnimalia\t\tAnimalia\t{links[0]}\n"
+            f"2\tRana temporaria\t1\tAmphibia\t{links[1]}\n"
+        ),
+    )
+    with pytest.raises(ValueError, match=r"absent|cycle|self"):
+        tuple(read_archive(path, provider="fixture"))
