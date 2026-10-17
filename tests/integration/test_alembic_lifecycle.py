@@ -36,8 +36,21 @@ from snaketracker.infrastructure.inventory.projections import SQLAlchemyInventor
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 
 ROOT = Path(__file__).parents[2]
-REVISION = "0023_sourced_care_guides"
+REVISION = "0024_local_taxonomy"
 PHASE_FIVE_TABLES = {
+    "taxonomy_changes",
+    "taxonomy_generations",
+    "taxonomy_facts",
+    "taxonomy_overlay",
+    "taxonomy_selection",
+    "taxonomy_conflicts",
+    "taxonomy_search",
+    "taxonomy_search_keys",
+    "taxonomy_search_data",
+    "taxonomy_search_idx",
+    "taxonomy_search_content",
+    "taxonomy_search_docsize",
+    "taxonomy_search_config",
     "aggregate_snapshots",
     "alembic_version",
     "animal_current",
@@ -157,7 +170,7 @@ def test_multispecies_migration_blocks_downgrade_when_v2_events_exist(tmp_path: 
 
     with pytest.raises(RuntimeError, match=r"M5\.5 downgrade blocked"):
         command.downgrade(config, "0009_operational_workflows")
-    assert current_revision(database) == "0010_multispecies_foundation"
+    assert current_revision(database) == REVISION  # Blocked chains are now atomic.
 
 
 def test_baseline_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -> None:
@@ -331,7 +344,7 @@ def test_0018_downgrade_blocks_role_aware_inventory_history(tmp_path: Path) -> N
 
     with pytest.raises(RuntimeError, match="stock-role downgrade blocked"):
         command.downgrade(config, "0017_inventory_intelligence")
-    assert current_revision(database) == "0018_inventory_stock_roles"
+    assert current_revision(database) == REVISION  # Blocked chains are now atomic.
 
 
 def test_inventory_lifecycle_migration_blocks_lossy_downgrade(tmp_path: Path) -> None:
@@ -385,7 +398,7 @@ def test_inventory_lifecycle_migration_blocks_lossy_downgrade(tmp_path: Path) ->
 
     with pytest.raises(RuntimeError, match="lifecycle downgrade blocked"):
         command.downgrade(config, "0011_product_experience")
-    assert current_revision(database) == "0012_account_reminder_inventory"
+    assert current_revision(database) == REVISION  # Blocked chains are now atomic.
 
 
 def test_structured_inventory_upgrade_preserves_0013_history_and_scaled_state(
@@ -667,7 +680,7 @@ def test_product_experience_migration_blocks_downgrade_with_active_m6_definition
 
     with pytest.raises(RuntimeError, match="M6 downgrade blocked"):
         command.downgrade(config, "0010_multispecies_foundation")
-    assert current_revision(database) == "0011_product_experience"
+    assert current_revision(database) == REVISION  # Blocked chains are now atomic.
 
 
 def test_identity_schema_has_required_uniqueness_and_foreign_keys(tmp_path: Path) -> None:

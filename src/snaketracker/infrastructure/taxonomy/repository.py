@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import re
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import cast
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine, RowMapping
@@ -20,6 +20,7 @@ from snaketracker.application.species_directory import (
     TaxonRecord,
 )
 from snaketracker.domains.animals.contracts import AnimalTaxonLinkedV1
+from snaketracker.infrastructure.taxonomy.catalog import LocalTaxonomyCatalog
 from snaketracker.platform.events.envelope import DomainEvent
 
 IMAGE_LICENSES = REFERENCE_IMAGE_LICENSES
@@ -34,145 +35,36 @@ class SQLAlchemyTaxonRepository:
     def search(
         self, query: str, group: str, *, limit: int, stale_after: datetime
     ) -> tuple[TaxonRecord, ...]:
-        normalized = _normalize(query)
         with self._engine.connect() as connection:
-            identifiers = (
-                connection.execute(
-                    text(
-                        "SELECT DISTINCT t.taxon_id FROM taxa t JOIN taxon_names n "
-                        "ON n.taxon_id=t.taxon_id WHERE t.supported_group=:group "
-                        "AND n.normalized_name LIKE :contains ORDER BY "
-                        "CASE WHEN n.normalized_name LIKE :prefix THEN 0 ELSE 1 END, "
-                        "t.preferred_common_name COLLATE NOCASE, "
-                        "t.accepted_scientific_name COLLATE NOCASE LIMIT :limit"
-                    ),
-                    {
-                        "group": group,
-                        "contains": f"%{normalized}%",
-                        "prefix": f"{normalized}%",
-                        "limit": limit,
-                    },
-                )
-                .scalars()
-                .all()
+            connection.exec_driver_sql("BEGIN")
+            identifiers = LocalTaxonomyCatalog(self._engine).search_ids(
+                connection, query, group=group, limit=limit
             )
             return tuple(
                 record
                 for identifier in identifiers
-                if (record := self._get(connection, UUID(str(identifier)), stale_after)) is not None
+                if (record := self._get(connection, identifier, stale_after)) is not None
             )
 
     def upsert(self, candidate: ProviderTaxon, *, observed_at: datetime) -> TaxonRecord:
-        _validate_candidate(candidate)
-        timestamp = observed_at.astimezone(UTC).isoformat(timespec="microseconds")
+        identifier = LocalTaxonomyCatalog(self._engine).publish(candidate, retrieved_at=observed_at)
         with self._engine.begin() as connection:
-            mapping = connection.execute(
-                text(
-                    "SELECT taxon_id FROM taxon_provider_mappings "
-                    "WHERE provider=:provider AND provider_id=:provider_id"
-                ),
-                {"provider": candidate.provider, "provider_id": candidate.provider_id},
-            ).scalar_one_or_none()
-            taxon_id = UUID(str(mapping)) if mapping is not None else uuid4()
-            existing_name = connection.execute(
-                text("SELECT accepted_scientific_name FROM taxa WHERE taxon_id=:taxon_id"),
-                {"taxon_id": str(taxon_id)},
-            ).scalar_one_or_none()
-            connection.execute(
-                text(
-                    "INSERT INTO taxa (taxon_id,supported_group,accepted_scientific_name,"
-                    "authorship,preferred_common_name,taxonomic_status,rank,kingdom,"
-                    "phylum_division,class_name,order_name,family,genus,species,infra_rank,"
-                    "future_guide_available,created_at,refreshed_at) VALUES "
-                    "(:taxon_id,:supported_group,:scientific,:authorship,:common,:status,:rank,"
-                    ":kingdom,:phylum,:class_name,:order_name,:family,:genus,:species,:infra_rank,"
-                    "0,:created_at,:refreshed_at) ON CONFLICT(taxon_id) DO UPDATE SET "
-                    "supported_group=excluded.supported_group,"
-                    "accepted_scientific_name=excluded.accepted_scientific_name,"
-                    "authorship=excluded.authorship,preferred_common_name=excluded.preferred_common_name,"
-                    "taxonomic_status=excluded.taxonomic_status,rank=excluded.rank,kingdom=excluded.kingdom,"
-                    "phylum_division=excluded.phylum_division,class_name=excluded.class_name,"
-                    "order_name=excluded.order_name,family=excluded.family,genus=excluded.genus,"
-                    "species=excluded.species,infra_rank=excluded.infra_rank,"
-                    "refreshed_at=excluded.refreshed_at"
-                ),
-                {
-                    "taxon_id": str(taxon_id),
-                    "supported_group": candidate.supported_group,
-                    "scientific": candidate.accepted_scientific_name,
-                    "authorship": candidate.authorship,
-                    "common": candidate.preferred_common_name,
-                    "status": candidate.taxonomic_status,
-                    "rank": candidate.rank,
-                    "kingdom": candidate.kingdom,
-                    "phylum": candidate.phylum_division,
-                    "class_name": candidate.class_name,
-                    "order_name": candidate.order_name,
-                    "family": candidate.family,
-                    "genus": candidate.genus,
-                    "species": candidate.species,
-                    "infra_rank": candidate.infra_rank,
-                    "created_at": timestamp,
-                    "refreshed_at": timestamp,
-                },
-            )
-            connection.execute(
-                text(
-                    "INSERT INTO taxon_provider_mappings "
-                    "(taxon_id,provider,provider_id,source_url,retrieved_at,refreshed_at) "
-                    "VALUES (:taxon_id,:provider,:provider_id,:source_url,:observed,:observed) "
-                    "ON CONFLICT(provider,provider_id) DO UPDATE SET "
-                    "source_url=excluded.source_url,"
-                    "refreshed_at=excluded.refreshed_at"
-                ),
-                {
-                    "taxon_id": str(taxon_id),
-                    "provider": candidate.provider,
-                    "provider_id": candidate.provider_id,
-                    "source_url": candidate.source_url,
-                    "observed": timestamp,
-                },
-            )
-            names = [
-                (candidate.accepted_scientific_name, "scientific"),
-                *((name, "alternative_common") for name in candidate.alternative_common_names),
-                *((name, "synonym") for name in candidate.synonyms),
-            ]
-            if candidate.preferred_common_name:
-                names.append((candidate.preferred_common_name, "preferred_common"))
-            if (
-                isinstance(existing_name, str)
-                and existing_name != candidate.accepted_scientific_name
-            ):
-                names.append((existing_name, "synonym"))
-            for name, kind in names:
-                connection.execute(
-                    text(
-                        "INSERT OR IGNORE INTO taxon_names "
-                        "(taxon_id,name,normalized_name,name_kind) "
-                        "VALUES (:taxon_id,:name,:normalized,:kind)"
-                    ),
-                    {
-                        "taxon_id": str(taxon_id),
-                        "name": name,
-                        "normalized": _normalize(name),
-                        "kind": kind,
-                    },
-                )
-            self._store_image(connection, taxon_id, candidate)
-            record = self._get(connection, taxon_id, observed_at - timedelta(0))
+            self._store_image(connection, identifier, candidate)
+            record = self._get(connection, identifier, observed_at)
         if record is None:
             raise RuntimeError("Taxon cache upsert did not persist its record.")
         return record
 
     def get(self, taxon_id: UUID, *, stale_after: datetime) -> TaxonRecord | None:
         with self._engine.connect() as connection:
+            connection.exec_driver_sql("BEGIN")
             return self._get(connection, taxon_id, stale_after)
 
     def linked_for(
         self, household_id: UUID, animal_id: UUID, *, stale_after: datetime
     ) -> LinkedTaxon | None:
         with self._engine.connect() as connection:
+            connection.exec_driver_sql("BEGIN")
             row = (
                 connection.execute(
                     text(
@@ -413,7 +305,34 @@ class SQLAlchemyTaxonRepository:
         alternatives = tuple(str(name) for name, kind in name_rows if kind == "alternative_common")
         synonyms = tuple(str(name) for name, kind in name_rows if kind == "synonym")
         refreshed_at = _datetime(row["refreshed_at"])
-        return _record(row, alternatives, synonyms, refreshed_at < stale_after)
+        record = _record(row, alternatives, synonyms, refreshed_at < stale_after)
+        selected = LocalTaxonomyCatalog(self._engine).resolve_on(connection, taxon_id)
+        if selected is None:
+            return record
+        return replace(
+            record,
+            accepted_scientific_name=selected.scientific_name,
+            preferred_common_name=selected.common_name,
+            supported_group=selected.workflow_group or "",
+            taxonomic_status=selected.taxonomic_status,
+            provider=selected.provider,
+            provider_id=selected.provider_id,
+            source_url=selected.source_url,
+            taxonomy_selection_state=selected.selection_state,
+            taxonomy_reference_state=selected.reference_state,
+            retrieved_at=selected.retrieved_at,
+            refreshed_at=selected.retrieved_at,
+            stale=selected.retrieved_at < stale_after,
+            rank=dict(selected.classification).get("rank"),
+            kingdom=dict(selected.classification).get("kingdom"),
+            phylum_division=dict(selected.classification).get("phylum_division"),
+            class_name=dict(selected.classification).get("class_name"),
+            order_name=dict(selected.classification).get("order_name"),
+            family=dict(selected.classification).get("family"),
+            genus=dict(selected.classification).get("genus"),
+            species=dict(selected.classification).get("species"),
+            infra_rank=dict(selected.classification).get("infra_rank"),
+        )
 
     def _store_image(
         self, connection: Connection, taxon_id: UUID, candidate: ProviderTaxon
@@ -541,22 +460,6 @@ def _record(
             _datetime(row["image_checked_at"]) if row["image_checked_at"] is not None else None
         ),
     )
-
-
-def _validate_candidate(candidate: ProviderTaxon) -> None:
-    if (
-        candidate.supported_group not in {"snake", "lizard", "spider", "scorpion", "plant"}
-        or not candidate.provider_id
-        or len(candidate.provider_id) > 128
-        or not candidate.accepted_scientific_name.strip()
-        or len(candidate.accepted_scientific_name) > 256
-        or not candidate.source_url.startswith("https://")
-    ):
-        raise ValueError("Provider taxon is invalid.")
-
-
-def _normalize(value: str) -> str:
-    return re.sub(r"[^a-z0-9]+", " ", value.casefold()).strip()
 
 
 def _optional(value: object) -> str | None:

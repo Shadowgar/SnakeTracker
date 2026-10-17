@@ -256,6 +256,32 @@ def test_worker_creates_encrypted_verified_backup_and_rehearses_restore(tmp_path
                 },
             )
 
+        from snaketracker.application.local_taxonomy import GenerationSource
+        from snaketracker.application.species_directory import ProviderTaxon
+        from snaketracker.infrastructure.taxonomy.catalog import LocalTaxonomyCatalog
+
+        taxonomy = LocalTaxonomyCatalog(engine)
+        taxonomy_now = datetime.now(UTC)
+        taxonomy_candidate = ProviderTaxon(
+            "fixture", "backup-taxon", "https://example.test/taxon", "", "Synthetic reference taxon"
+        )
+        taxonomy_id = taxonomy.publish(taxonomy_candidate, retrieved_at=taxonomy_now)
+        taxonomy_generation = taxonomy.begin_generation(
+            GenerationSource(
+                "Backup generation",
+                "fixture",
+                "https://example.test/archive",
+                taxonomy_now,
+                taxonomy_now,
+                "a" * 64,
+                "Synthetic fixture",
+            ),
+            imported_at=taxonomy_now,
+        )
+        taxonomy.stage(taxonomy_generation, [taxonomy_candidate])
+        taxonomy.validate_generation(taxonomy_generation)
+        taxonomy.promote(taxonomy_generation)
+
         repository = SQLAlchemyBackupRepository(engine)
         service = BackupService(repository)
         service.request_backup(
@@ -292,12 +318,22 @@ def test_worker_creates_encrypted_verified_backup_and_rehearses_restore(tmp_path
 
         verification = pipeline.verify(run)
         assert verification.attachment_count == 1
-        assert verification.database_schema_revision == "0023_sourced_care_guides"
+        assert verification.database_schema_revision == "0024_local_taxonomy"
         assert verification.event_global_position >= 4
         assert verification.encryption_key_id == "m4-local-test-key"
         assert ("animal.photo_selected", 1) in verification.event_contracts
         restored = pipeline.rehearse_restore(run, tmp_path / "restore-rehearsal")
         assert restored.attachment_count == 1
+        from snaketracker.infrastructure.database.engine import create_readonly_sqlite_engine
+
+        restored_engine = create_readonly_sqlite_engine(restored.database_path)
+        try:
+            restored_taxonomy = LocalTaxonomyCatalog(restored_engine)
+            assert restored_taxonomy.active_generation() == taxonomy_generation
+            assert restored_taxonomy.search("Synthetic reference")[0].taxon_id == taxonomy_id
+            assert restored_taxonomy.resolve(taxonomy_id).reference_state == "overlay"
+        finally:
+            restored_engine.dispose()
         with closing(sqlite3.connect(restored.database_path)) as restored_database:
             assert restored_database.execute("PRAGMA integrity_check").fetchone() == ("ok",)
             assert restored_database.execute("SELECT count(*) FROM sessions").fetchone() == (0,)

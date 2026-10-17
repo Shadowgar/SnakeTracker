@@ -41,9 +41,24 @@ def run_migrations_online() -> None:
     )
     try:
         with connectable.connect() as connection:
-            context.configure(connection=connection, target_metadata=target_metadata)
-            with context.begin_transaction():
-                context.run_migrations()
+            # SQLite parent-table rebuilds require FK enforcement off, outside a transaction.
+            # This applies only to explicit Alembic operations, never application connections.
+            connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
+            connection.commit()
+            try:
+                with connection.begin():
+                    connection.exec_driver_sql("BEGIN IMMEDIATE")
+                    context.configure(
+                        connection=connection,
+                        target_metadata=target_metadata,
+                        transactional_ddl=True,
+                    )
+                    with context.begin_transaction():
+                        context.run_migrations()
+                    if connection.exec_driver_sql("PRAGMA foreign_key_check").first():
+                        raise RuntimeError("Migration would leave unresolved foreign keys.")
+            finally:
+                connection.exec_driver_sql("PRAGMA foreign_keys=ON")
     finally:
         connectable.dispose()
 

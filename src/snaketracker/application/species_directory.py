@@ -61,6 +61,9 @@ class ProviderTaxon:
     image_license_url: str | None = None
     image_provider_record_id: str | None = None
     image_source_page_url: str | None = None
+    parent_provider_id: str | None = None
+    accepted_provider_id: str | None = None
+    source_effective_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -121,6 +124,8 @@ class TaxonRecord:
     image_kind: str = "photograph"
     image_resolution_state: str | None = None
     image_checked_at: datetime | None = None
+    taxonomy_selection_state: str = "selected"
+    taxonomy_reference_state: str = "catalog_fallback"
 
     @property
     def display_name(self) -> str:

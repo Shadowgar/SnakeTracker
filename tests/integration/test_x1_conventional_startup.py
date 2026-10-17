@@ -65,7 +65,7 @@ def test_incompatible_identity_is_rejected_before_sqlite_profile_mutation(
     with sqlite3.connect(database) as db:
         db.executescript(
             "CREATE TABLE alembic_version(version_num TEXT);"
-            "INSERT INTO alembic_version VALUES('0023_sourced_care_guides');"
+            "INSERT INTO alembic_version VALUES('0024_local_taxonomy');"
             "CREATE TABLE domain_events(event_type TEXT,schema_version INTEGER,payload_json TEXT);"
             "CREATE TABLE projection_definitions(projection_name TEXT,"
             "projection_schema_version INTEGER,handler_version INTEGER);"
@@ -130,7 +130,7 @@ def test_readonly_connection_rejects_writes_and_failed_extension_closes_startup(
     with sqlite3.connect(database) as db:
         db.executescript(
             "CREATE TABLE alembic_version(version_num TEXT);"
-            "INSERT INTO alembic_version VALUES('0023_sourced_care_guides');"
+            "INSERT INTO alembic_version VALUES('0024_local_taxonomy');"
             "CREATE TABLE domain_events(event_type TEXT,schema_version INTEGER,payload_json TEXT);"
             "CREATE TABLE projection_definitions(projection_name TEXT,"
             "projection_schema_version INTEGER,handler_version INTEGER);"
@@ -168,7 +168,7 @@ def test_unknown_contract_diagnostic_is_private_at_actual_startup(
     with sqlite3.connect(database) as db:
         db.executescript(
             "CREATE TABLE alembic_version(version_num TEXT);"
-            "INSERT INTO alembic_version VALUES('0023_sourced_care_guides');"
+            "INSERT INTO alembic_version VALUES('0024_local_taxonomy');"
             "CREATE TABLE domain_events(event_type TEXT,schema_version INTEGER,payload_json TEXT);"
         )
         db.execute(

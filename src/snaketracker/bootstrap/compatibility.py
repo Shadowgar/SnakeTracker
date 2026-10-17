@@ -28,7 +28,7 @@ from snaketracker.platform.projections.definitions import (
 )
 
 CURRENT_MANIFEST_VERSION = 1
-CURRENT_RELATIONAL_SCHEMA_VERSION = 23
+CURRENT_RELATIONAL_SCHEMA_VERSION = 24
 MINIMUM_RELATIONAL_SCHEMA_VERSION = 0
 MINIMUM_SQLITE_VERSION = (3, 35, 0)
 
@@ -189,6 +189,11 @@ def inspect_database_compatibility(engine: Engine | Connection) -> Compatibility
             CompatibilityMode.RECOVERY_REQUIRED,
             "compatibility_inspection_failed",
             "Stored data could not be inspected safely.",
+        )
+    if revision == "0024_local_taxonomy":
+        return evaluate_compatibility(
+            {"manifest_version": 1, "relational_schema_version": 24},
+            database_is_empty=False,
         )
     if revision == "0023_sourced_care_guides":
         return evaluate_compatibility(
@@ -498,6 +503,50 @@ def inspect_projection_compatibility(
     return _report(CompatibilityMode.NORMAL, "compatible", "The application is ready.")
 
 
+def inspect_local_taxonomy(connection: Connection) -> CompatibilityReport:
+    """Fail closed before mutable startup if X2 selection or references are inconsistent."""
+    try:
+        tables = set(
+            connection.exec_driver_sql(
+                "SELECT name FROM sqlite_master WHERE type IN ('table','view')"
+            ).scalars()
+        )
+        required = {
+            "taxonomy_selection",
+            "taxonomy_generations",
+            "taxonomy_changes",
+            "taxonomy_overlay",
+            "taxonomy_facts",
+            "taxonomy_search",
+            "taxonomy_search_keys",
+            "taxonomy_conflicts",
+        }
+        if not required <= tables:
+            raise ValueError("Missing X2 reference structures.")
+        connection.exec_driver_sql("SELECT taxon_id,search_rowid FROM taxonomy_search_keys LIMIT 1")
+        rows = connection.exec_driver_sql(
+            "SELECT s.generation_id,s.reconciled_revision,g.state "
+            "FROM taxonomy_selection s LEFT JOIN taxonomy_generations g "
+            "ON s.generation_id=g.generation_id WHERE s.singleton=1"
+        ).all()
+        if len(rows) != 1 or (rows[0][0] is not None and rows[0][2] != "ready"):
+            raise ValueError("Invalid active reference generation.")
+        revision = connection.exec_driver_sql(
+            "SELECT coalesce(max(revision),0) FROM taxonomy_changes"
+        ).scalar_one()
+        if not 0 <= rows[0][1] <= revision:
+            raise ValueError("Invalid reference reconciliation watermark.")
+        if connection.exec_driver_sql("PRAGMA foreign_key_check").first():
+            raise ValueError("Unresolved durable references.")
+        return _report(CompatibilityMode.NORMAL, "compatible", "The application is ready.")
+    except (SQLAlchemyError, TypeError, ValueError):
+        return _report(
+            CompatibilityMode.RECOVERY_REQUIRED,
+            "taxonomy_reference_incompatible",
+            "Local taxonomy requires compatible storage or operator recovery.",
+        )
+
+
 def inspect_startup_compatibility(
     engine: Engine,
     registry: ProjectionRegistry = production_projection_registry,
@@ -516,6 +565,7 @@ def inspect_startup_compatibility(
                 inspect_required_profile_identities,
                 lambda connection: inspect_projection_compatibility(connection, registry),
                 *reference_inspections,
+                inspect_local_taxonomy,
             ):
                 result = inspect(connection)
                 if not result.normal_readiness:

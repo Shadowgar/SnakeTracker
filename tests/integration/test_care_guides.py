@@ -156,11 +156,11 @@ def test_unknown_taxon_and_changed_version_roll_back_entire_bundle(tmp_path: Pat
     repo = SQLAlchemyCareGuideRepository(engine)
     bundle = _bundle()
     try:
-        with engine.begin() as connection:
-            connection.execute(
-                text("DELETE FROM taxa WHERE taxon_id=:id"),
-                {"id": str(ids["Pandinus imperator"])},
-            )
+        # Permanent identities cannot be deleted; unknown names must still reject atomically.
+        unknown = bundle.guides[-1].model_copy(
+            update={"scientific_name": "Unknown fixture species"}
+        )
+        bundle = bundle.model_copy(update={"guides": (*bundle.guides[:-1], unknown)})
         with pytest.raises(CareGuideImportError, match="exactly one cached"):
             repo.import_bundle(bundle)
         with engine.connect() as connection:
