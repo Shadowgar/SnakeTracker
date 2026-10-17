@@ -257,7 +257,12 @@ def test_b_introduced_animal_plant_guide_and_media_survive_rollback_and_cleanup(
     catalog.promote(a)
     catalog.cleanup(b, retained_generations={a})
     with engine.connect() as connection:
-        assert snapshot(connection) == before
+        after = snapshot(connection)
+        # Cleanup materializes approved labels into the durable search catalog.
+        assert set(after.pop("taxon_names")) == set(before.pop("taxon_names")) | {
+            (str(identifier), "Python regius", "python regius", "scientific")
+        }
+        assert after == before
     assert catalog.search("Python")[0].taxon_id == identifier
     assert catalog.resolve(identifier).reference_state == "catalog_fallback"
     with pytest.raises(RuntimeError, match="durable X2 data"):
@@ -282,6 +287,8 @@ def test_corrupt_active_reference_fails_before_mutable_startup(tmp_path):
     [
         "DROP TABLE taxonomy_search_keys",
         "DROP TABLE taxonomy_publications",
+        "DROP TABLE taxonomy_generation_publications",
+        "ALTER TABLE taxonomy_facts RENAME COLUMN search_rowid TO unsupported_column",
         "ALTER TABLE taxonomy_search_keys RENAME COLUMN search_rowid TO unsupported_column",
     ],
 )

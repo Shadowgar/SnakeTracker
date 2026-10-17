@@ -520,20 +520,28 @@ def inspect_local_taxonomy(connection: Connection) -> CompatibilityReport:
             "taxonomy_search",
             "taxonomy_search_keys",
             "taxonomy_publications",
+            "taxonomy_generation_publications",
             "taxonomy_conflicts",
         }
         if not required <= tables:
             raise ValueError("Missing X2 reference structures.")
         connection.exec_driver_sql("SELECT taxon_id,search_rowid FROM taxonomy_search_keys LIMIT 1")
         connection.exec_driver_sql(
-            "SELECT taxon_id,source_effective_at FROM taxonomy_publications LIMIT 1"
+            "SELECT taxon_id,source_effective_at,payload FROM taxonomy_publications LIMIT 1"
         )
+        connection.exec_driver_sql(
+            "SELECT generation_id FROM taxonomy_generation_publications LIMIT 1"
+        )
+        connection.exec_driver_sql("SELECT search_rowid FROM taxonomy_facts LIMIT 1")
         rows = connection.exec_driver_sql(
-            "SELECT s.generation_id,s.reconciled_revision,g.state "
+            "SELECT s.generation_id,s.reconciled_revision,g.state,p.generation_id "
             "FROM taxonomy_selection s LEFT JOIN taxonomy_generations g "
-            "ON s.generation_id=g.generation_id WHERE s.singleton=1"
+            "ON s.generation_id=g.generation_id LEFT JOIN taxonomy_generation_publications p "
+            "ON p.generation_id=s.generation_id WHERE s.singleton=1"
         ).all()
-        if len(rows) != 1 or (rows[0][0] is not None and rows[0][2] != "ready"):
+        if len(rows) != 1 or (
+            rows[0][0] is not None and (rows[0][2] != "ready" or rows[0][3] is None)
+        ):
             raise ValueError("Invalid active reference generation.")
         revision = connection.exec_driver_sql(
             "SELECT coalesce(max(revision),0) FROM taxonomy_changes"

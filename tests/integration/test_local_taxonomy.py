@@ -606,3 +606,118 @@ def test_rollback_keeps_newer_qualified_fallback_over_older_overlay(catalog):
     catalog.cleanup(b, retained_generations={a})
     assert catalog.resolve(identifier).scientific_name == "Fresh name"
     assert catalog.resolve(identifier).source_effective_at == NOW
+
+
+def test_undated_disagreement_retains_selected_overlay_until_decision(catalog):
+    identifier = catalog.publish(taxon(name="Selected name", group="snake"), retrieved_at=NOW)
+    catalog.publish(
+        taxon(name="Unordered name", group="lizard"), retrieved_at=NOW + timedelta(days=1)
+    )
+    summary = catalog.resolve(identifier)
+    assert summary.scientific_name == "Selected name"
+    assert summary.workflow_group == "snake"
+    assert summary.selection_state == "unknown_order"
+    assert catalog.search("Unordered") == ()
+    assert catalog.conflicts()
+
+
+def test_existing_identity_staging_labels_remain_private_even_after_failed_cleanup(catalog):
+    from snaketracker.infrastructure.taxonomy.repository import SQLAlchemyTaxonRepository
+
+    identifier = catalog.publish(
+        taxon(name="Selected name", alternative_common_names=("Known common",)), retrieved_at=NOW
+    )
+    with catalog.engine.connect() as connection:
+        before = connection.execute(text("SELECT * FROM taxon_names ORDER BY name,name_kind")).all()
+    generation = catalog.begin_generation(source("Bad labels"), imported_at=NOW)
+    catalog.stage(
+        generation,
+        [
+            taxon(
+                name="Unpublished scientific",
+                alternative_common_names=("Unpublished common",),
+                class_name="Unpublishedclass",
+                parent_provider_id="absent",
+            )
+        ],
+    )
+    with catalog.engine.connect() as connection:
+        assert (
+            connection.execute(text("SELECT * FROM taxon_names ORDER BY name,name_kind")).all()
+            == before
+        )
+    assert catalog.search("Unpublished") == ()
+    assert SQLAlchemyTaxonRepository(catalog.engine).get(
+        identifier, stale_after=NOW
+    ).alternative_common_names == ("Known common",)
+    with pytest.raises(ValueError, match="missing"):
+        catalog.validate_generation(generation)
+    catalog.cleanup(generation, retained_generations=set())
+    assert catalog.search("Unpublished") == ()
+
+
+def test_interrupted_cleanup_retires_generation_and_resumes_bounded_compaction(
+    catalog, monkeypatch
+):
+    a = stage(catalog, "A", [taxon("root", "Animalia")])
+    catalog.promote(a)
+    b = catalog.begin_generation(source("B"), imported_at=NOW)
+    records = [
+        taxon(
+            str(index), f"Cleanup reference {index:04d}", synonyms=(f"Previous alias {index:04d}",)
+        )
+        for index in range(501)
+    ]
+    catalog.stage(b, records[:500])
+    catalog.stage(b, records[500:])
+    catalog.validate_generation(b)
+    catalog.promote(b)
+    catalog.promote(a)
+    original = catalog._labels
+    count = 0
+
+    def interrupt(connection, identifier, candidate):
+        nonlocal count
+        count += 1
+        if count == 501:
+            raise RuntimeError("Synthetic interruption after committed first batch")
+        original(connection, identifier, candidate)
+
+    monkeypatch.setattr(catalog, "_labels", interrupt)
+    with pytest.raises(RuntimeError, match="Synthetic interruption"):
+        catalog.cleanup(b, retained_generations={a})
+    with catalog.engine.connect() as connection:
+        assert (
+            connection.execute(
+                text("SELECT count(*) FROM taxonomy_facts WHERE generation_id=:g"), {"g": str(b)}
+            ).scalar_one()
+            == 1
+        )
+        assert (
+            connection.execute(
+                text("SELECT state FROM taxonomy_generations WHERE generation_id=:g"), {"g": str(b)}
+            ).scalar_one()
+            == "retiring"
+        )
+    with pytest.raises(ValueError, match="validated"):
+        catalog.promote(b)
+    assert len(catalog.search("Cleanup reference", limit=20)) == 20
+    monkeypatch.setattr(catalog, "_labels", original)
+    catalog.cleanup(b, retained_generations={a})
+    summary = catalog.search("Previous alias 0500")[0]
+    assert summary.scientific_name == "Cleanup reference 0500"
+    assert summary.synonyms == ("Previous alias 0500",)
+    assert catalog.active_generation() == a
+
+
+def test_active_generation_requires_its_atomic_publication_receipt(catalog):
+    from snaketracker.bootstrap.compatibility import inspect_startup_compatibility
+
+    generation = stage(catalog, "A", [taxon()])
+    catalog.promote(generation)
+    with catalog.engine.begin() as connection:
+        connection.exec_driver_sql("DELETE FROM taxonomy_generation_publications")
+    assert (
+        inspect_startup_compatibility(catalog.engine).reason_code
+        == "taxonomy_reference_incompatible"
+    )

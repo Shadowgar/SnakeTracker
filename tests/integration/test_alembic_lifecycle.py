@@ -47,6 +47,7 @@ PHASE_FIVE_TABLES = {
     "taxonomy_search",
     "taxonomy_search_keys",
     "taxonomy_publications",
+    "taxonomy_generation_publications",
     "taxonomy_search_data",
     "taxonomy_search_idx",
     "taxonomy_search_content",

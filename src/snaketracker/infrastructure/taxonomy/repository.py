@@ -313,6 +313,8 @@ class SQLAlchemyTaxonRepository:
         return replace(
             record,
             accepted_scientific_name=selected.scientific_name,
+            synonyms=tuple(dict.fromkeys((*synonyms, *selected.synonyms))),
+            alternative_common_names=tuple(dict.fromkeys((*alternatives, *selected.common_names))),
             preferred_common_name=selected.common_name,
             supported_group=selected.workflow_group or "",
             taxonomic_status=selected.taxonomic_status,

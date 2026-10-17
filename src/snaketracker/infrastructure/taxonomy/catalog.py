@@ -228,6 +228,19 @@ class LocalTaxonomyCatalog:
             url=candidate.source_url,
             now=observed,
         )
+        # A reservation carries no searchable or workflow-enabling facts.
+        rowid = execute(
+            connection,
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "VALUES(:id,'catalog','','')",
+            id=identifier,
+        ).lastrowid
+        execute(
+            connection,
+            "INSERT INTO taxonomy_search_keys VALUES(:id,:rowid)",
+            id=identifier,
+            rowid=rowid,
+        )
         self._change(connection, identifier, "identity_reserved", candidate.source_url)
         return identifier
 
@@ -342,6 +355,7 @@ class LocalTaxonomyCatalog:
         candidate: ProviderTaxon,
         observed: str,
         effective: str | None,
+        payload: str,
     ) -> None:
         # A failed staging reservation must not supply fallback facts on first publication.
         columns = (
@@ -375,9 +389,10 @@ class LocalTaxonomyCatalog:
         )
         execute(
             connection,
-            "INSERT OR IGNORE INTO taxonomy_publications VALUES(:id,:effective)",
+            "INSERT OR IGNORE INTO taxonomy_publications VALUES(:id,:effective,:payload)",
             id=identifier,
             effective=effective,
+            payload=payload,
         )
 
     def publish(
@@ -396,7 +411,9 @@ class LocalTaxonomyCatalog:
         )
         with self._write() as connection:
             identifier = self._reserve(connection, candidate, observed)
-            self._publish_identity(connection, identifier, candidate, observed, effective_text)
+            self._publish_identity(
+                connection, identifier, candidate, observed, effective_text, payload
+            )
             revision = self._change(
                 connection,
                 identifier,
@@ -433,6 +450,7 @@ class LocalTaxonomyCatalog:
                 elif old["source_effective_at"] and not effective_text:
                     keep_old = True
                 elif differs:
+                    keep_old = True
                     self._conflict(connection, identifier, "unknown_order", payload)
             if not keep_old:
                 execute(
@@ -477,7 +495,12 @@ class LocalTaxonomyCatalog:
             ).scalars():
                 if _facts_differ(json.loads(other), json.loads(payload)):
                     self._conflict(connection, identifier, "cross_provider_order", payload)
-            self._labels(connection, identifier, candidate)
+            label_source = (
+                ProviderTaxon(**json.loads(old["payload"]))
+                if keep_old and old is not None
+                else candidate
+            )
+            self._labels(connection, identifier, label_source)
             if (
                 candidate.accepted_provider_id
                 and candidate.accepted_provider_id != candidate.provider_id
@@ -608,7 +631,8 @@ class LocalTaxonomyCatalog:
                 )
                 execute(
                     connection,
-                    "INSERT INTO taxonomy_facts VALUES(:g,:id,:payload)",
+                    "INSERT INTO taxonomy_facts(generation_id,taxon_id,payload) "
+                    "VALUES(:g,:id,:payload)",
                     g=str(generation),
                     id=identifier,
                     payload=payload,
@@ -627,14 +651,13 @@ class LocalTaxonomyCatalog:
                         self._conflict(
                             connection, identifier, "equal_freshness", payload, str(generation)
                         )
-                self._labels(connection, identifier, candidate)
                 self._change(
                     connection,
                     identifier,
                     "snapshot_labels",
                     json.dumps({"generation": str(generation), "payload": json.loads(payload)}),
                 )
-                execute(
+                search_row = execute(
                     connection,
                     "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
                     "VALUES(:id,:g,:names,:groups)",
@@ -648,6 +671,14 @@ class LocalTaxonomyCatalog:
                             *candidate.alternative_common_names,
                         ]
                     ),
+                )
+                execute(
+                    connection,
+                    "UPDATE taxonomy_facts SET search_rowid=:rowid "
+                    "WHERE generation_id=:g AND taxon_id=:id",
+                    rowid=search_row.lastrowid,
+                    g=str(generation),
+                    id=identifier,
                 )
                 if (
                     candidate.accepted_provider_id
@@ -837,9 +868,14 @@ class LocalTaxonomyCatalog:
             execute(
                 connection,
                 "INSERT OR IGNORE INTO taxonomy_publications "
-                "SELECT taxon_id,:effective FROM taxonomy_facts WHERE generation_id=:g",
+                "SELECT taxon_id,:effective,payload FROM taxonomy_facts WHERE generation_id=:g",
                 g=str(generation),
                 effective=source["snapshot_at"],
+            )
+            execute(
+                connection,
+                "INSERT OR IGNORE INTO taxonomy_generation_publications VALUES(:g)",
+                g=str(generation),
             )
             execute(
                 connection,
@@ -850,18 +886,55 @@ class LocalTaxonomyCatalog:
             )
 
     def cleanup(self, generation: UUID, *, retained_generations: set[UUID]) -> None:
-        with self._write() as connection:
+        def guard(connection: Connection) -> None:
             active = execute(
                 connection, "SELECT generation_id FROM taxonomy_selection"
             ).scalar_one()
             if generation in retained_generations or active == str(generation):
                 raise ValueError("Active or retained generation cannot be cleaned up.")
-            execute(connection, "DELETE FROM taxonomy_search WHERE scope=:g", g=str(generation))
+
+        # Claim retirement before deleting any facts: interrupted cleanup cannot be promoted.
+        with self._write() as connection:
+            guard(connection)
             execute(
                 connection,
-                "DELETE FROM taxonomy_generations WHERE generation_id=:g",
+                "UPDATE taxonomy_generations SET state='retiring' WHERE generation_id=:g",
                 g=str(generation),
             )
+        while True:
+            with self._write() as connection:
+                guard(connection)
+                published = execute(
+                    connection,
+                    "SELECT 1 FROM taxonomy_generation_publications WHERE generation_id=:g",
+                    g=str(generation),
+                ).first()
+                rows = execute(
+                    connection,
+                    "SELECT taxon_id,payload,search_rowid FROM taxonomy_facts "
+                    "WHERE generation_id=:g ORDER BY taxon_id LIMIT 500",
+                    g=str(generation),
+                ).all()
+                if not rows:
+                    execute(
+                        connection,
+                        "DELETE FROM taxonomy_generations WHERE generation_id=:g",
+                        g=str(generation),
+                    )
+                    return
+                for identifier, payload, rowid in rows:
+                    if published:
+                        # Merge only previously promoted facts under the shared publication lock.
+                        self._labels(connection, identifier, ProviderTaxon(**json.loads(payload)))
+                    execute(
+                        connection, "DELETE FROM taxonomy_search WHERE rowid=:rowid", rowid=rowid
+                    )
+                    execute(
+                        connection,
+                        "DELETE FROM taxonomy_facts WHERE generation_id=:g AND taxon_id=:id",
+                        g=str(generation),
+                        id=identifier,
+                    )
 
     def conflicts(self) -> tuple[IdentityConflict, ...]:
         with self._read() as connection:
@@ -922,7 +995,8 @@ class LocalTaxonomyCatalog:
         base = (
             execute(
                 connection,
-                "SELECT t.*,p.source_effective_at,m.provider,m.provider_id,"
+                "SELECT t.*,p.source_effective_at,p.payload AS catalog_payload,"
+                "m.provider,m.provider_id,"
                 "m.source_url,m.retrieved_at "
                 "FROM taxa t JOIN taxonomy_publications p USING(taxon_id) "
                 "JOIN taxon_provider_mappings m USING(taxon_id) WHERE t.taxon_id=:id "
@@ -936,10 +1010,12 @@ class LocalTaxonomyCatalog:
         if base is None:
             return None
         selected: dict[str, Any] = dict(base)
+        if base["catalog_payload"]:
+            selected.update(json.loads(base["catalog_payload"]))
         selected.update(
-            synonyms=[],
-            alternative_common_names=[],
-            parent_provider_id=None,
+            synonyms=selected.get("synonyms", []),
+            alternative_common_names=selected.get("alternative_common_names", []),
+            parent_provider_id=selected.get("parent_provider_id"),
             source_effective_at=base["source_effective_at"],
             revision=0,
         )
@@ -1103,20 +1179,28 @@ class LocalTaxonomyCatalog:
         tokens = re.findall(r"[^\W_]+", query, flags=re.UNICODE)
         if not 2 <= len(query.strip()) <= 100 or not 1 <= limit <= 20 or not tokens:
             raise ValueError("Search requires 2-100 characters and 1-20 results.")
-        match = "names : (" + " AND ".join('"' + token + '"*' for token in tokens[:12]) + ")"
-        if group is not None:
-            if not re.fullmatch(r"[a-z][a-z0-9_]{0,31}", group):
-                raise ValueError("Invalid taxonomy workflow group.")
-            match += ' AND workflow_groups : "' + group + '"'
+        if group is not None and not re.fullmatch(r"[a-z][a-z0-9_]{0,31}", group):
+            raise ValueError("Invalid taxonomy workflow group.")
+        # Intersect indexed identity matches across qualified rows. An old name and newer
+        # classification may live in different published generations, including after rollback.
+        matches = []
+        parameters = {}
+        for index, token in enumerate(tokens[:12]):
+            key = f"term{index}"
+            parameters[key] = 'names : "' + token + '"*'
+            matches.append(
+                "SELECT taxon_id FROM taxonomy_search WHERE taxonomy_search MATCH :"
+                + key
+                + " AND (scope='catalog' OR scope IN "
+                "(SELECT generation_id FROM taxonomy_generation_publications))"
+            )
         identifiers = execute(
             connection,
-            "SELECT DISTINCT s.taxon_id FROM taxonomy_search s "
-            "JOIN taxa t ON t.taxon_id=s.taxon_id "
-            "JOIN taxonomy_publications p ON p.taxon_id=s.taxon_id "
-            "WHERE taxonomy_search MATCH :match AND (s.scope='catalog' OR s.scope=(SELECT "
-            "generation_id FROM taxonomy_selection)) "
-            "ORDER BY t.accepted_scientific_name COLLATE NOCASE,s.taxon_id",
-            match=match,
+            "WITH matches AS (" + " INTERSECT ".join(matches) + ") "
+            "SELECT m.taxon_id FROM matches m JOIN taxa t USING(taxon_id) "
+            "JOIN taxonomy_publications p USING(taxon_id) "
+            "ORDER BY t.accepted_scientific_name COLLATE NOCASE,m.taxon_id",
+            **parameters,
         ).scalars()
         result: list[UUID] = []
         for identifier in identifiers:

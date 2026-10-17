@@ -24,7 +24,9 @@ production-sized capacity/backup qualification and deployment acceptance. No liv
 production migration/import, container restart, merge or X3 implementation is authorized.
 
 Implementation decisions: a permanent search projection participates in the identity publication
-transaction. Snapshot classification entries are scoped to the selected generation. Final
+transaction. Staged search entries remain private until an atomic publication receipt. Search can combine
+retained qualified labels across previously published generations; cleanup compacts them in bounded
+batches after claiming a non-promotable retiring state. Final
 promotion validates changed identities through a cutoff and switches the reference pointer and
 watermark atomically. Unknown source ordering remains visible; import time never ranks freshness.
 Explicit conflict decisions retain distinct permanent identities rather than rewriting links.

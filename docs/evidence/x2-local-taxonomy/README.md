@@ -16,21 +16,29 @@ and cross-provider differences retain evidence and an explicit selection state; 
 ranks source freshness. Original provider preference is retained when another namespace is added.
 Conflict resolution records who decided to retain the identities/current selection and why.
 
-Local FTS5 search covers retained names, aliases/common names and classification, with an indexed
-catalog fallback after rollback. Historical classification/group tokens are retained without duplicate
-expansion; the selected current group is checked before applying the result limit. It is independent of household-private FTS and never calls a
-provider. Existing directory search/detail/live discovery use the catalog. The application-owned
-`LocalTaxonomy` port exposes selected summaries, ancestry, provenance and qualified provider
-references; it does not create Natural History sources or content. Existing manual entry and
-bounded explicit provider lookup remain available.
+Local FTS5 search covers qualified names, aliases/common names and classification, with an indexed
+catalog fallback after rollback. Indexed token matches intersect by permanent identity across
+published scopes; the selected current group is checked before applying the result limit. Search
+is independent of household-private FTS and never calls a provider. Existing directory
+search/detail/live discovery use the catalog. The application-owned `LocalTaxonomy` port exposes
+selected summaries, ancestry, provenance and qualified provider references; it does not create
+Natural History sources or content. Existing manual entry and bounded explicit lookup remain.
 
-Staging reserves UUIDs without publishing them to application reads and writes batches of at most 500 records. An ancestry validation reads a
-consistent snapshot without a catalog-sized Python graph, then seals only the same content revision.
-Promotion and rollback use bounded SQLite writer transactions, a final revision cutoff and shared
-durable search; subsequent discovery cannot publish only to an abandoned generation. Failed
-validation/reconciliation/conflict resolution leaves the previous generation active. Cleanup accepts
-an explicit rollback/backup retention set, always protects the active generation, and removes only
-generation content/search rows. Catalog identities, mappings, conflict decisions and assets remain.
+Staging reserves UUIDs and private generation search rows in batches of at most 500. It publishes
+no candidate facts or aliases for either new or existing identities. An ancestry validation reads
+a consistent snapshot without a catalog-sized Python graph, then seals the same content revision.
+Promotion and rollback atomically publish a generation receipt, first-qualified fallback payload,
+reference pointer and final reconciliation watermark. There is no catalog-index rebuild at promotion.
+Durable live discovery remains independent of that pointer. Differing undated observations retain
+the selected payload and record a conflict for an explicit decision.
+
+Cleanup requires an explicit rollback/backup retention set and protects the active generation.
+It first claims a non-promotable `retiring` state, then compacts only previously published facts
+into the durable catalog and deletes their search/fact rows in transactions of at most 500.
+Interrupted cleanup can resume; private rejected labels are discarded. Concurrent live publication
+shares the writer lock, and each batch checks protection again. Historical catalog tokens are
+deduplicated during compaction. Final deletion has no remaining fact cascade. Permanent UUIDs,
+mappings, qualified fallback payloads, conflict decisions, links and assets remain.
 
 Migration `0024_local_taxonomy` rebuilds the existing parent in an explicit transactional Alembic
 operation with FK checks before commit. Runtime FK enforcement remains enabled. A blocked migration
@@ -71,19 +79,19 @@ requires `--apply`. No queue or privileged process is involved.
 ## Qualification
 
 The initial targeted taxonomy/compatibility/archive suite passed **43 tests** (one expected
-duplicate-ZIP-member fixture warning); see [the receipt](targeted-tests.log). Formatting, lint,
-mypy, architecture/freeze checks and documentation links passed. The first hosted head passed 1,238 tests, with 94.50% line and 85.29% branch coverage.
-Hosted review then identified staging visibility and self-cycle defects. Publication markers now
-keep reservations hidden from directory and guide reads until live qualification or promotion;
-first-qualified facts and provenance survive rollback, with fallback source-clock reconciliation.
-Direct self-cycles fail validation. Additional regressions cover these corrections; the
-[latest focused receipt](publication-regressions.log) includes historical upgrade preservation,
-fallback provenance and rollback ordering. One historical fixture needed direct legacy guide
-seeding because the current importer intentionally requires X2 visibility; that correction passed.
-The initial local full gate
-was deliberately canceled after review found defects and is not a passing result. Fresh hosted
-Quality, Container and security checks qualify the published PR head; their final URLs/results
-are recorded in the PR. No gate, timeout, assertion or coverage threshold was weakened.
+duplicate-ZIP-member warning); see [the receipt](targeted-tests.log). Follow-up review corrections
+have focused receipts for [14 cleanup/compatibility/migration tests](cleanup-compatibility.log),
+[interrupted 501-row cleanup](cleanup-resume.log), [five private-index preflight cases](private-index-preflight.log),
+[undated observation selection](undated-observation.log), and
+[fallback provenance/rollback/historical upgrade](publication-regressions.log). Historical fixture
+seeding reflects schema 23, while current fixtures explicitly qualify their synthetic taxa.
+Formatting, lint, mypy, architecture/freeze, documentation links and diff integrity passed.
+
+The first hosted head passed 1,238 tests (94.50% lines / 85.29% branches). Subsequent review findings
+were reproduced and corrected; fresh hosted Quality, Container and security checks qualify the
+final published head, with URLs/results recorded in the PR. The initial local full gate was
+intentionally canceled after defects were found and is not a passing result. No gate, timeout,
+assertion or coverage threshold was weakened.
 
 Tests cover concurrent duplicate allocation, homonyms/namespaces, source ordering, replacement
 conflicts, live discovery during staging/promotion, concurrent staging during validation, bounded

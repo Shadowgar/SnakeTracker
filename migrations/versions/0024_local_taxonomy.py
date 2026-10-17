@@ -32,9 +32,9 @@ def upgrade() -> None:
     )
     op.execute(
         "CREATE TABLE taxonomy_publications (taxon_id TEXT PRIMARY KEY REFERENCES taxa(taxon_id), "
-        "source_effective_at TEXT)"
+        "source_effective_at TEXT, payload TEXT)"
     )
-    op.execute("INSERT INTO taxonomy_publications SELECT taxon_id,NULL FROM taxa")
+    op.execute("INSERT INTO taxonomy_publications SELECT taxon_id,NULL,NULL FROM taxa")
     op.execute(
         "CREATE TABLE taxonomy_changes (revision INTEGER PRIMARY KEY AUTOINCREMENT, "
         "taxon_id TEXT REFERENCES taxa(taxon_id), kind TEXT NOT NULL, "
@@ -45,14 +45,18 @@ def upgrade() -> None:
         "label TEXT NOT NULL, provider TEXT NOT NULL, source_url TEXT NOT NULL, "
         "retrieved_at TEXT NOT NULL, snapshot_at TEXT, imported_at TEXT NOT NULL, "
         "checksum TEXT NOT NULL, rights TEXT NOT NULL, starting_revision INTEGER NOT NULL, "
-        "state TEXT NOT NULL CHECK(state IN ('staging','ready')), "
+        "state TEXT NOT NULL CHECK(state IN ('staging','ready','retiring')), "
         "content_revision INTEGER NOT NULL DEFAULT 0)"
     )
     op.execute(
         "CREATE TABLE taxonomy_facts (generation_id TEXT NOT NULL REFERENCES "
         "taxonomy_generations(generation_id) ON DELETE CASCADE, taxon_id TEXT NOT NULL "
-        "REFERENCES taxa(taxon_id), payload TEXT NOT NULL, "
+        "REFERENCES taxa(taxon_id), payload TEXT NOT NULL, search_rowid INTEGER, "
         "PRIMARY KEY(generation_id,taxon_id))"
+    )
+    op.execute(
+        "CREATE TABLE taxonomy_generation_publications (generation_id TEXT PRIMARY KEY "
+        "REFERENCES taxonomy_generations(generation_id) ON DELETE CASCADE)"
     )
     op.execute(
         "CREATE INDEX ix_taxonomy_fact_provider ON taxonomy_facts "
@@ -138,6 +142,7 @@ def downgrade() -> None:
     ):
         op.execute(f"DROP TRIGGER {trigger}")
     for table in (
+        "taxonomy_generation_publications",
         "taxonomy_search_keys",
         "taxonomy_search",
         "taxonomy_conflicts",
