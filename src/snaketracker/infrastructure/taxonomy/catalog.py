@@ -683,6 +683,14 @@ class LocalTaxonomyCatalog:
             elif not existing:
                 execute(
                     connection,
+                    "UPDATE taxa SET taxonomy_provider=:provider WHERE taxon_id=:id "
+                    "AND taxonomy_provider IS NULL AND NOT EXISTS "
+                    "(SELECT 1 FROM taxon_provider_mappings WHERE taxon_id=:id)",
+                    id=str(taxon_id),
+                    provider=provider,
+                )
+                execute(
+                    connection,
                     "INSERT INTO taxon_provider_mappings "
                     "(taxon_id,provider,provider_id,source_url,retrieved_at,refreshed_at) "
                     "VALUES(:id,:provider,:pid,:url,:now,:now)",
@@ -1105,11 +1113,13 @@ class LocalTaxonomyCatalog:
         # Claim retirement before deleting any facts: interrupted cleanup cannot be promoted.
         with self._write() as connection:
             guard(connection)
-            execute(
+            claimed = execute(
                 connection,
                 "UPDATE taxonomy_generations SET state='retiring' WHERE generation_id=:g",
                 g=str(generation),
-            )
+            ).rowcount
+            if claimed != 1:
+                raise ValueError("Unknown taxonomy generation.")
         while True:
             with self._write() as connection:
                 guard(connection)

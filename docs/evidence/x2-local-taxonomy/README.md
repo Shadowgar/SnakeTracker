@@ -180,3 +180,8 @@ clock requires a fresh decision. Archive limits cover field/default bounds and c
 JSON bytes, preventing metadata defaults from amplifying a small archive beyond the qualified bound.
 Tokenless directory input returns HTTP 422 without a provider call. Reference-only/future groups
 retain their selected facts and skip refresh through the current workflow provider adapter.
+
+[Ten mapping/cleanup regressions](legacy-mapping-cleanup.log) passed, including an actual schema-23
+providerless taxon upgraded to X2. Its first explicit mapping establishes provider preference in the
+same transaction, and an alphabetically earlier second namespace cannot change it. An unknown cleanup
+UUID fails explicitly before the mutation loop; interrupted cleanup of an existing generation resumes.

@@ -1123,3 +1123,14 @@ def test_repeated_identical_comparison_preserves_content_bound_conflict_decision
     assert catalog.conflicts() == ()
     assert catalog.resolve(identifier).scientific_name == "Selected A"
     assert catalog.resolve(identifier).selection_state == "selected"
+
+
+def test_cleanup_rejects_unknown_generation_without_changing_current_data(catalog):
+    from uuid import uuid4
+
+    current = stage(catalog, "Current", [taxon()])
+    catalog.promote(current)
+    with pytest.raises(ValueError, match="Unknown"):
+        catalog.cleanup(uuid4(), retained_generations={current})
+    assert catalog.active_generation() == current
+    assert catalog.search("Rana")[0].scientific_name == "Rana temporaria"

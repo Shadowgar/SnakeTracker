@@ -317,3 +317,41 @@ def test_missing_or_unreadable_search_metadata_rejects_mutable_startup(
     )
     assert not app.state.compatibility.normal_readiness
     app.state.database_engine.dispose()
+
+
+def test_first_mapping_of_migrated_providerless_taxon_establishes_preference(tmp_path):
+    database = tmp_path / "legacy-without-mapping.db"
+    config = config_for(database)
+    command.upgrade(config, "0023_sourced_care_guides")
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    identifier = uuid4()
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO taxa(taxon_id,supported_group,accepted_scientific_name,"
+                    "taxonomic_status,created_at,refreshed_at) "
+                    "VALUES(:id,'snake','Python regius','accepted',:now,:now)"
+                ),
+                {"id": str(identifier), "now": NOW.isoformat()},
+            )
+        command.upgrade(config, "head")
+        catalog = LocalTaxonomyCatalog(engine)
+        for provider, provider_id in (("z_origin", "original"), ("a_foreign", "secondary")):
+            catalog.map_identity(
+                identifier,
+                provider,
+                provider_id,
+                source_url=f"https://example.test/{provider}/{provider_id}",
+                decided_by="Owner",
+                reason="Qualified legacy identity",
+            )
+        selected = catalog.resolve(identifier)
+        assert selected.taxon_id == identifier
+        assert selected.scientific_name == "Python regius"
+        assert selected.provider == "z_origin"
+        assert selected.provider_id == "original"
+        assert selected.source_url == "https://example.test/z_origin/original"
+        assert len(selected.provider_references) == 2
+    finally:
+        engine.dispose()
