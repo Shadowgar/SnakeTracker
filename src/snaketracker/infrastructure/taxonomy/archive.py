@@ -55,6 +55,23 @@ def _rows(archive: ZipFile, element: ET.Element) -> Iterator[dict[str, str]]:
     )
     if identity is None or len(mapping) != len(fields):
         raise ValueError("Invalid Darwin Core identity/field mapping.")
+    try:
+        identity_index = int(identity.attrib["index"])
+        indexes = {
+            term: int(field.attrib["index"])
+            for term, field in mapping.items()
+            if "index" in field.attrib
+        }
+    except (KeyError, ValueError) as error:
+        raise ValueError("Invalid Darwin Core column index.") from error
+    # The core ID and taxonID field legitimately share one column. Field-to-field
+    # mappings must be unique; defaults do not consume a column.
+    if (
+        not 0 <= identity_index < 128
+        or any(not 0 <= index < 128 for index in indexes.values())
+        or len(set(indexes.values())) != len(indexes)
+    ):
+        raise ValueError("Invalid or duplicate Darwin Core column index.")
     with (
         archive.open(location) as raw,
         io.TextIOWrapper(raw, encoding="utf-8-sig", newline="") as source,
@@ -74,16 +91,13 @@ def _rows(archive: ZipFile, element: ET.Element) -> Iterator[dict[str, str]]:
                 continue
             if len(row) > 128 or any(len(value) > 4096 for value in row):
                 raise ValueError("Archive row exceeds field bounds.")
-            try:
-                record = {
-                    term: row[int(field.attrib["index"])]
-                    if "index" in field.attrib
-                    else field.get("default", "")
-                    for term, field in mapping.items()
-                }
-                record["_id"] = row[int(identity.attrib["index"])]
-            except (IndexError, KeyError) as error:
-                raise ValueError("Archive row does not match its declared schema.") from error
+            if identity_index >= len(row) or any(index >= len(row) for index in indexes.values()):
+                raise ValueError("Archive row does not match its declared schema.")
+            record = {
+                term: row[indexes[term]] if term in indexes else field.get("default", "")
+                for term, field in mapping.items()
+            }
+            record["_id"] = row[identity_index]
             if not record["_id"].strip() or len(record["_id"]) > 128:
                 raise ValueError("Archive identity is invalid.")
             yield record
@@ -190,6 +204,8 @@ def read_archive(
                             json.dumps(record),
                         ),
                     )
+                if not database.execute("SELECT 1 FROM records LIMIT 1").fetchone():
+                    raise ValueError("Empty taxonomy generation.")
                 for extension in extensions:
                     for record in _rows(archive, extension):
                         check_bound()

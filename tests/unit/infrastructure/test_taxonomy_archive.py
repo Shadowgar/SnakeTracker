@@ -221,3 +221,86 @@ def test_dry_run_and_apply_share_source_metadata_validation(tmp_path, monkeypatc
             main()
     assert path.read_bytes() == before
     assert not (tmp_path / "app.db").exists()
+
+
+@pytest.mark.parametrize("index", ["-1", "0", "2", "4", "128", "invalid"])
+def test_archive_rejects_invalid_or_duplicate_field_column_indexes(tmp_path, index):
+    descriptor = META.replace('<field index="1"', f'<field index="{index}"', 1)
+    with pytest.raises(ValueError):
+        tuple(
+            read_archive(
+                archive(
+                    tmp_path,
+                    meta=descriptor,
+                    taxa=(
+                        "id\tname\tparent\tclass\n1\tAnimalia\t\tAnimalia\n"
+                        "2\tRana temporaria\t1\tAmphibia\n"
+                    ),
+                ),
+                provider="fixture",
+            )
+        )
+
+
+@pytest.mark.parametrize("index", ["-1", "4", "128", "invalid"])
+def test_archive_rejects_invalid_identity_column_indexes(tmp_path, index):
+    descriptor = META.replace('<id index="0"', f'<id index="{index}"', 1)
+    with pytest.raises(ValueError):
+        tuple(
+            read_archive(
+                archive(
+                    tmp_path,
+                    meta=descriptor,
+                    taxa=(
+                        "id\tname\tparent\tclass\n1\tAnimalia\t\tAnimalia\n"
+                        "2\tRana temporaria\t1\tAmphibia\n"
+                    ),
+                ),
+                provider="fixture",
+            )
+        )
+
+
+def test_empty_archive_is_rejected_by_reader_and_dry_run(tmp_path, monkeypatch):
+    import hashlib
+    import sys
+
+    from snaketracker.operations.taxonomy import main
+
+    path = archive(
+        tmp_path,
+        meta=META.split("<extension")[0] + "</archive>",
+        taxa="id\tname\tparent\tclass\n",
+    )
+    # Empty extension is absent from the schema and archive.
+    with ZipFile(path, "r") as original:
+        members = {name: original.read(name) for name in ("meta.xml", "taxa.tsv")}
+    with ZipFile(path, "w") as rewritten:
+        for name, content in members.items():
+            rewritten.writestr(name, content)
+    with pytest.raises(ValueError, match="Empty"):
+        tuple(read_archive(path, provider="fixture"))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "taxonomy",
+            "stage",
+            str(path),
+            "--provider",
+            "fixture",
+            "--label",
+            "Empty",
+            "--source-url",
+            "https://example.test/archive",
+            "--retrieved-at",
+            "2026-10-17T00:00:00Z",
+            "--rights",
+            "Synthetic",
+            "--sha256",
+            hashlib.sha256(path.read_bytes()).hexdigest(),
+        ],
+    )
+    with pytest.raises(ValueError, match="Empty"):
+        main()
+    assert not (tmp_path / "app.db").exists()

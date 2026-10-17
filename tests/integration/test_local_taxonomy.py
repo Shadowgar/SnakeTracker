@@ -993,3 +993,33 @@ def test_search_sql_deadline_interrupts_work_and_resets_connection(catalog, monk
         with pytest.raises(TaxonomySearchLimitError, match="Refine"):
             catalog.search("Rana")
     assert catalog.search("Rana")[0].taxon_id == identifier
+
+
+@pytest.mark.parametrize("effective", [None, NOW, NOW + timedelta(days=1)])
+def test_live_observation_compares_selected_snapshot_even_with_older_overlay(catalog, effective):
+    identifier = catalog.publish(
+        taxon(name="Older overlay", group="lizard"),
+        retrieved_at=NOW,
+        source_effective_at=NOW - timedelta(days=10),
+    )
+    generation = catalog.begin_generation(
+        replace(source("Selected snapshot"), snapshot_at=NOW), imported_at=NOW
+    )
+    catalog.stage(generation, [taxon(name="Selected snapshot", group="snake")])
+    catalog.validate_generation(generation)
+    catalog.promote(generation)
+    assert catalog.resolve(identifier).scientific_name == "Selected snapshot"
+    catalog.publish(
+        taxon(name="Incoming observation", group="lizard"),
+        retrieved_at=NOW + timedelta(days=2),
+        source_effective_at=effective,
+    )
+    selected = catalog.resolve(identifier)
+    if effective and effective > NOW:
+        assert selected.scientific_name == "Incoming observation"
+        assert selected.workflow_group == "lizard"
+        assert selected.selection_state == "selected"
+    else:
+        assert selected.scientific_name == "Selected snapshot"
+        assert selected.workflow_group == "snake"
+        assert selected.selection_state == "unknown_order"

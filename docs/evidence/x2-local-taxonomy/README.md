@@ -147,3 +147,12 @@ progress-handler cleanup. No timeout or assertion was changed.
 
 The final combined [taxonomy/directory/archive regression run](final-focused.log) passed **83 tests**
 in 102.19 seconds, with only the expected duplicate-ZIP-member rejection warning.
+
+The last hosted review's selected-snapshot and archive-schema findings were reproduced, corrected,
+and independently reviewed. [29 snapshot/archive cases](snapshot-archive-review.log) and
+[13 adjacent ordering cases](snapshot-ordering.log) passed. Incoming live facts are compared against
+both the stored overlay and currently selected snapshot; a differing equal-date observation cannot
+replace the selection because an older overlay exists. Empty Taxon cores fail both dry-run and
+applied validation. Column indexes must be nonnegative bounded integers, field indexes must be
+unique, and every declared column must exist in each row. The ID and taxonID mapping may share
+their standard column.

@@ -488,11 +488,11 @@ class LocalTaxonomyCatalog:
                 elif differs:
                     keep_old = True
                     self._conflict(connection, identifier, "unknown_order", payload)
-            elif previous is not None and previous[0]["provider"] == candidate.provider:
+            if previous is not None and previous[0]["provider"] == candidate.provider:
                 prior = previous[0]
                 differs = _facts_differ(prior, json.loads(payload))
                 if prior["source_effective_at"] and effective_text:
-                    keep_old = str(prior["source_effective_at"]) > effective_text
+                    keep_old = keep_old or str(prior["source_effective_at"]) > effective_text
                     if prior["source_effective_at"] == effective_text and differs:
                         keep_old = True
                         self._conflict(connection, identifier, "equal_freshness", payload)
