@@ -178,9 +178,11 @@ def test_23_to_24_preserves_every_reference_and_immutable_guide_trigger(tmp_path
         (ROOT / "reference/care-guides/reviewed-v1.json").read_bytes()
     )
     guide = next(guide for guide in bundle.guides if guide.scientific_name == "Python regius")
-    SQLAlchemyCareGuideRepository(engine).import_bundle(
-        GuideBundle(format_version=1, guides=(guide,))
-    )
+    # Seed historical immutable rows directly: the current importer requires X2 visibility.
+    from snaketracker.infrastructure.taxonomy.care_guides import _payload
+
+    with engine.begin() as connection:
+        SQLAlchemyCareGuideRepository._insert_guide(connection, identifier, guide, *_payload(guide))
     with engine.connect() as connection:
         before = snapshot(connection)
         triggers = connection.exec_driver_sql(
@@ -279,6 +281,7 @@ def test_corrupt_active_reference_fails_before_mutable_startup(tmp_path):
     "damage",
     [
         "DROP TABLE taxonomy_search_keys",
+        "DROP TABLE taxonomy_publications",
         "ALTER TABLE taxonomy_search_keys RENAME COLUMN search_rowid TO unsupported_column",
     ],
 )

@@ -1863,6 +1863,9 @@ def test_enclosure_type_and_plant_roster_browser_workflow(tmp_path: Path) -> Non
                 {"id": taxon_id, "now": now},
             )
             connection.execute(
+                text("INSERT INTO taxonomy_publications(taxon_id) VALUES(:id)"), {"id": taxon_id}
+            )
+            connection.execute(
                 text(
                     "INSERT INTO taxon_provider_mappings "
                     "(taxon_id,provider,provider_id,source_url,retrieved_at,refreshed_at) "

@@ -289,7 +289,8 @@ class SQLAlchemyTaxonRepository:
                     "i.retrieved_at AS image_retrieved_at,i.image_kind AS image_kind "
                     "FROM taxa t JOIN taxon_provider_mappings m ON m.taxon_id=t.taxon_id "
                     "LEFT JOIN taxon_images i ON i.taxon_id=t.taxon_id "
-                    "WHERE t.taxon_id=:taxon_id ORDER BY m.provider LIMIT 1"
+                    "WHERE t.taxon_id=:taxon_id AND EXISTS (SELECT 1 FROM taxonomy_publications p "
+                    "WHERE p.taxon_id=t.taxon_id) ORDER BY m.provider LIMIT 1"
                 ),
                 {"taxon_id": str(taxon_id)},
             )

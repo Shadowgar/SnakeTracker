@@ -24,7 +24,7 @@ provider. Existing directory search/detail/live discovery use the catalog. The a
 references; it does not create Natural History sources or content. Existing manual entry and
 bounded explicit provider lookup remain available.
 
-Staging reserves UUIDs and writes batches of at most 500 records. An ancestry validation reads a
+Staging reserves UUIDs without publishing them to application reads and writes batches of at most 500 records. An ancestry validation reads a
 consistent snapshot without a catalog-sized Python graph, then seals only the same content revision.
 Promotion and rollback use bounded SQLite writer transactions, a final revision cutoff and shared
 durable search; subsequent discovery cannot publish only to an abandoned generation. Failed
@@ -70,9 +70,17 @@ requires `--apply`. No queue or privileged process is involved.
 
 ## Qualification
 
-The final targeted taxonomy/compatibility/archive suite passed **43 tests** (one expected
+The initial targeted taxonomy/compatibility/archive suite passed **43 tests** (one expected
 duplicate-ZIP-member fixture warning); see [the receipt](targeted-tests.log). Formatting, lint,
-mypy, architecture/freeze checks and documentation links passed. The initial local full gate
+mypy, architecture/freeze checks and documentation links passed. The first hosted head passed 1,238 tests, with 94.50% line and 85.29% branch coverage.
+Hosted review then identified staging visibility and self-cycle defects. Publication markers now
+keep reservations hidden from directory and guide reads until live qualification or promotion;
+first-qualified facts and provenance survive rollback, with fallback source-clock reconciliation.
+Direct self-cycles fail validation. Additional regressions cover these corrections; the
+[latest focused receipt](publication-regressions.log) includes historical upgrade preservation,
+fallback provenance and rollback ordering. One historical fixture needed direct legacy guide
+seeding because the current importer intentionally requires X2 visibility; that correction passed.
+The initial local full gate
 was deliberately canceled after review found defects and is not a passing result. Fresh hosted
 Quality, Container and security checks qualify the published PR head; their final URLs/results
 are recorded in the PR. No gate, timeout, assertion or coverage threshold was weakened.

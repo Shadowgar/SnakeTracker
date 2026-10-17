@@ -519,11 +519,15 @@ def inspect_local_taxonomy(connection: Connection) -> CompatibilityReport:
             "taxonomy_facts",
             "taxonomy_search",
             "taxonomy_search_keys",
+            "taxonomy_publications",
             "taxonomy_conflicts",
         }
         if not required <= tables:
             raise ValueError("Missing X2 reference structures.")
         connection.exec_driver_sql("SELECT taxon_id,search_rowid FROM taxonomy_search_keys LIMIT 1")
+        connection.exec_driver_sql(
+            "SELECT taxon_id,source_effective_at FROM taxonomy_publications LIMIT 1"
+        )
         rows = connection.exec_driver_sql(
             "SELECT s.generation_id,s.reconciled_revision,g.state "
             "FROM taxonomy_selection s LEFT JOIN taxonomy_generations g "

@@ -31,6 +31,11 @@ def upgrade() -> None:
         "WHERE m.taxon_id=taxa.taxon_id ORDER BY m.provider LIMIT 1)"
     )
     op.execute(
+        "CREATE TABLE taxonomy_publications (taxon_id TEXT PRIMARY KEY REFERENCES taxa(taxon_id), "
+        "source_effective_at TEXT)"
+    )
+    op.execute("INSERT INTO taxonomy_publications SELECT taxon_id,NULL FROM taxa")
+    op.execute(
         "CREATE TABLE taxonomy_changes (revision INTEGER PRIMARY KEY AUTOINCREMENT, "
         "taxon_id TEXT REFERENCES taxa(taxon_id), kind TEXT NOT NULL, "
         "recorded_at TEXT NOT NULL, details TEXT NOT NULL)"
@@ -141,6 +146,7 @@ def downgrade() -> None:
         "taxonomy_facts",
         "taxonomy_generations",
         "taxonomy_changes",
+        "taxonomy_publications",
     ):
         op.drop_table(table)
     with op.batch_alter_table("taxa", recreate="always") as batch:

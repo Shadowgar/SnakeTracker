@@ -335,6 +335,51 @@ class LocalTaxonomyCatalog:
             rowid=inserted,
         )
 
+    @staticmethod
+    def _publish_identity(
+        connection: Connection,
+        identifier: str,
+        candidate: ProviderTaxon,
+        observed: str,
+        effective: str | None,
+    ) -> None:
+        # A failed staging reservation must not supply fallback facts on first publication.
+        columns = (
+            "supported_group",
+            "accepted_scientific_name",
+            "preferred_common_name",
+            "authorship",
+            "taxonomic_status",
+            *CLASSIFICATION,
+        )
+        execute(
+            connection,
+            "UPDATE taxa SET "
+            + ",".join(name + "=:" + name for name in columns)
+            + ",taxonomy_provider=:provider WHERE taxon_id=:id AND NOT EXISTS "
+            "(SELECT 1 FROM taxonomy_publications WHERE taxon_id=:id)",
+            id=identifier,
+            provider=candidate.provider,
+            **{name: getattr(candidate, name) for name in columns},
+        )
+        execute(
+            connection,
+            "UPDATE taxon_provider_mappings SET source_url=:url,"
+            "retrieved_at=:observed,refreshed_at=:observed WHERE taxon_id=:id "
+            "AND provider=:provider AND NOT EXISTS (SELECT 1 FROM taxonomy_publications "
+            "WHERE taxon_id=:id)",
+            id=identifier,
+            provider=candidate.provider,
+            url=candidate.source_url,
+            observed=observed,
+        )
+        execute(
+            connection,
+            "INSERT OR IGNORE INTO taxonomy_publications VALUES(:id,:effective)",
+            id=identifier,
+            effective=effective,
+        )
+
     def publish(
         self,
         candidate: ProviderTaxon,
@@ -351,6 +396,7 @@ class LocalTaxonomyCatalog:
         )
         with self._write() as connection:
             identifier = self._reserve(connection, candidate, observed)
+            self._publish_identity(connection, identifier, candidate, observed, effective_text)
             revision = self._change(
                 connection,
                 identifier,
@@ -660,7 +706,7 @@ class LocalTaxonomyCatalog:
                                 "Generation has a missing parent or accepted identity."
                             )
                         parent = json.loads(ancestor)[relationship]
-                    if parent == identifier and len(seen) > 1:
+                    if parent == identifier:
                         raise ValueError("Taxonomy ancestry/accepted identity cycle.")
                 if time.monotonic() - started > max_seconds:
                     raise ValueError("Taxonomy validation exceeds its execution time bound.")
@@ -751,6 +797,50 @@ class LocalTaxonomyCatalog:
                 raise ValueError("Final reconciliation found unresolved durable references.")
             if time.monotonic() - started > max_seconds:
                 raise ValueError("Final reconciliation exceeds the configured time bound.")
+            # Publish first-qualified fallback facts and visibility in the pointer transaction.
+            # Indexed SQL avoids constructing a catalog-sized graph in the promotion writer.
+            columns = (
+                "supported_group",
+                "accepted_scientific_name",
+                "preferred_common_name",
+                "authorship",
+                "taxonomic_status",
+                *CLASSIFICATION,
+            )
+            assignments = ",".join(
+                name + "=(SELECT json_extract(f.payload,'$." + name + "') FROM taxonomy_facts f "
+                "WHERE f.generation_id=:g AND f.taxon_id=taxa.taxon_id)"
+                for name in columns
+            )
+            execute(
+                connection,
+                "UPDATE taxa SET " + assignments + ",taxonomy_provider=:provider "
+                "WHERE taxon_id IN (SELECT taxon_id FROM taxonomy_facts WHERE generation_id=:g) "
+                "AND NOT EXISTS (SELECT 1 FROM taxonomy_publications p "
+                "WHERE p.taxon_id=taxa.taxon_id)",
+                g=str(generation),
+                provider=source["provider"],
+            )
+            execute(
+                connection,
+                "UPDATE taxon_provider_mappings SET source_url=(SELECT "
+                "json_extract(f.payload,'$.source_url') FROM taxonomy_facts f "
+                "WHERE f.generation_id=:g AND f.taxon_id=taxon_provider_mappings.taxon_id),"
+                "retrieved_at=:retrieved,refreshed_at=:retrieved WHERE provider=:provider "
+                "AND taxon_id IN (SELECT taxon_id FROM taxonomy_facts WHERE generation_id=:g) "
+                "AND NOT EXISTS (SELECT 1 FROM taxonomy_publications p "
+                "WHERE p.taxon_id=taxon_provider_mappings.taxon_id)",
+                g=str(generation),
+                provider=source["provider"],
+                retrieved=source["retrieved_at"],
+            )
+            execute(
+                connection,
+                "INSERT OR IGNORE INTO taxonomy_publications "
+                "SELECT taxon_id,:effective FROM taxonomy_facts WHERE generation_id=:g",
+                g=str(generation),
+                effective=source["snapshot_at"],
+            )
             execute(
                 connection,
                 "UPDATE taxonomy_selection SET generation_id=:g,reconciled_revision=:cutoff "
@@ -832,8 +922,10 @@ class LocalTaxonomyCatalog:
         base = (
             execute(
                 connection,
-                "SELECT t.*,m.provider,m.provider_id,m.source_url,m.retrieved_at "
-                "FROM taxa t JOIN taxon_provider_mappings m USING(taxon_id) WHERE t.taxon_id=:id "
+                "SELECT t.*,p.source_effective_at,m.provider,m.provider_id,"
+                "m.source_url,m.retrieved_at "
+                "FROM taxa t JOIN taxonomy_publications p USING(taxon_id) "
+                "JOIN taxon_provider_mappings m USING(taxon_id) WHERE t.taxon_id=:id "
                 "ORDER BY CASE WHEN m.provider=t.taxonomy_provider THEN 0 ELSE 1 END,"
                 "m.provider LIMIT 1",
                 id=taxon_id,
@@ -848,7 +940,7 @@ class LocalTaxonomyCatalog:
             synonyms=[],
             alternative_common_names=[],
             parent_provider_id=None,
-            source_effective_at=None,
+            source_effective_at=base["source_effective_at"],
             revision=0,
         )
         state, ordering = "catalog_fallback", "selected"
@@ -889,23 +981,21 @@ class LocalTaxonomyCatalog:
                 if any(selected.get(key) != fact.get(key) for key in LABELS):
                     ordering = "unknown_order"
                 continue
-            if active and (
+            if (
                 selected["provider"] != overlay["provider"]
                 or not selected["source_effective_at"]
                 or not overlay["source_effective_at"]
-            ):
+            ) and _facts_differ(selected, fact):
                 ordering = "unknown_order"
             if (
-                active
-                and selected["provider"] == overlay["provider"]
+                selected["provider"] == overlay["provider"]
                 and selected["source_effective_at"]
                 and overlay["source_effective_at"]
                 and str(selected["source_effective_at"]) > str(overlay["source_effective_at"])
             ):
                 continue
             if (
-                active
-                and selected["provider"] == overlay["provider"]
+                selected["provider"] == overlay["provider"]
                 and selected["source_effective_at"] is not None
                 and selected["source_effective_at"] == overlay["source_effective_at"]
                 and _facts_differ(selected, fact)
@@ -1022,6 +1112,7 @@ class LocalTaxonomyCatalog:
             connection,
             "SELECT DISTINCT s.taxon_id FROM taxonomy_search s "
             "JOIN taxa t ON t.taxon_id=s.taxon_id "
+            "JOIN taxonomy_publications p ON p.taxon_id=s.taxon_id "
             "WHERE taxonomy_search MATCH :match AND (s.scope='catalog' OR s.scope=(SELECT "
             "generation_id FROM taxonomy_selection)) "
             "ORDER BY t.accepted_scientific_name COLLATE NOCASE,s.taxon_id",

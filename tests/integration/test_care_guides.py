@@ -55,6 +55,10 @@ def _database(tmp_path: Path) -> tuple[Path, dict[str, UUID]]:
                 },
             )
             connection.execute(
+                text("INSERT INTO taxonomy_publications(taxon_id) VALUES(:id)"),
+                {"id": str(taxon_id)},
+            )
+            connection.execute(
                 text(
                     "INSERT INTO taxon_provider_mappings "
                     "(taxon_id,provider,provider_id,source_url,retrieved_at,refreshed_at) "
@@ -267,6 +271,10 @@ def test_animal_reference_reads_only_its_explicitly_linked_current_guide(
                 "VALUES (:id,'snake','Boa constrictor','accepted',:at,:at)"
             ),
             {"id": str(no_guide_id), "at": datetime.now(UTC).isoformat()},
+        )
+        connection.execute(
+            text("INSERT INTO taxonomy_publications(taxon_id) VALUES(:id)"),
+            {"id": str(no_guide_id)},
         )
         connection.execute(
             text(

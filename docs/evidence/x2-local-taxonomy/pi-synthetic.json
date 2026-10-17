@@ -2,24 +2,24 @@
   "scope": "synthetic development; no production archive or production acceptance",
   "hardware": "Raspberry Pi 5 Model B Rev 1.1",
   "load_average": [
-    6.19189453125,
-    4.85498046875,
-    4.75537109375
+    6.3525390625,
+    5.11328125,
+    4.78857421875
   ],
   "rows": 1000,
   "sqlite_version": "3.53.1",
-  "import_seconds": 13.737590727992938,
-  "import_cpu_seconds": 3.1065527059999996,
-  "promotion_seconds": 0.07973117999790702,
-  "first_new_connection_search_seconds": 0.04477358500298578,
-  "warm_search_median_seconds": 0.016826224491524044,
-  "warm_search_p95_seconds": 0.06643375800922513,
-  "exact_detail_seconds": 0.003603432996897027,
-  "max_rss_kib": 68712,
+  "import_seconds": 5.696054101994378,
+  "import_cpu_seconds": 2.9882013910000005,
+  "promotion_seconds": 0.08135005300573539,
+  "first_new_connection_search_seconds": 0.017494321989943273,
+  "warm_search_median_seconds": 0.013564876004238613,
+  "warm_search_p95_seconds": 0.015988730010576546,
+  "exact_detail_seconds": 0.0009920860029524192,
+  "max_rss_kib": 69208,
   "storage_bytes": {
     "synthetic.db-wal": 0,
     "synthetic.db-shm": 32768,
-    "synthetic.db": 4366336
+    "synthetic.db": 4497408
   },
   "sqlite_object_bytes": {
     "aggregate_snapshots": 4096,
@@ -183,6 +183,7 @@
     "sqlite_autoindex_taxonomy_facts_1": 94208,
     "sqlite_autoindex_taxonomy_generations_1": 4096,
     "sqlite_autoindex_taxonomy_overlay_1": 4096,
+    "sqlite_autoindex_taxonomy_publications_1": 53248,
     "sqlite_autoindex_taxonomy_search_keys_1": 53248,
     "sqlite_autoindex_taxonomy_search_keys_2": 16384,
     "sqlite_autoindex_users_1": 4096,
@@ -198,6 +199,7 @@
     "taxonomy_facts": 688128,
     "taxonomy_generations": 4096,
     "taxonomy_overlay": 4096,
+    "taxonomy_publications": 81920,
     "taxonomy_search_config": 4096,
     "taxonomy_search_content": 278528,
     "taxonomy_search_data": 307200,

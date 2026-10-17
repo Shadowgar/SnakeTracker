@@ -494,3 +494,115 @@ def test_renamed_identity_retains_alias_class_and_group_search_during_later_stag
     assert catalog.search("Oldrana", group="snake")[0].taxon_id == identifier
     assert catalog.search("Oldrana Freshclass", group="snake")[0].taxon_id == identifier
     assert catalog.search("Oldrana", group="lizard") == ()
+
+
+def test_staging_reservations_cannot_publish_directory_facts(catalog):
+    from snaketracker.infrastructure.taxonomy.repository import SQLAlchemyTaxonRepository
+
+    a = stage(catalog, "A", [taxon("root", "Animalia")])
+    catalog.promote(a)
+    failed = catalog.begin_generation(source("Failed"), imported_at=NOW)
+    catalog.stage(failed, [taxon(group="snake", parent_provider_id="absent")])
+    with catalog.engine.connect() as connection:
+        identifier = connection.execute(
+            text("SELECT taxon_id FROM taxon_provider_mappings WHERE provider_id='1'")
+        ).scalar_one()
+    from uuid import UUID
+
+    identifier = UUID(identifier)
+    repository = SQLAlchemyTaxonRepository(catalog.engine)
+    assert catalog.resolve(identifier) is None
+    assert catalog.search("Rana") == ()
+    assert repository.get(identifier, stale_after=NOW) is None
+    assert repository.search("Rana", "snake", limit=10, stale_after=NOW) == ()
+    with pytest.raises(ValueError, match="missing"):
+        catalog.validate_generation(failed)
+    catalog.cleanup(failed, retained_generations={a})
+    assert repository.get(identifier, stale_after=NOW) is None
+    good = stage(catalog, "Good", [taxon(name="Qualified rana", group="lizard")])
+    assert catalog.resolve(identifier) is None
+    catalog.promote(good)
+    assert catalog.resolve(identifier).workflow_group == "lizard"
+    catalog.promote(a)
+    assert catalog.resolve(identifier).scientific_name == "Qualified rana"
+    assert catalog.resolve(identifier).workflow_group == "lizard"
+
+
+@pytest.mark.parametrize("relationship", ["parent_provider_id", "accepted_provider_id"])
+def test_direct_self_reference_cannot_validate_or_promote(catalog, relationship):
+    generation = catalog.begin_generation(source("Self cycle"), imported_at=NOW)
+    catalog.stage(generation, [taxon(**{relationship: "1"})])
+    with pytest.raises(ValueError, match="cycle"):
+        catalog.validate_generation(generation)
+    with pytest.raises(ValueError, match="validated"):
+        catalog.promote(generation)
+
+
+def test_live_discovery_can_qualify_a_staging_reservation_without_promoting_it(catalog):
+    generation = catalog.begin_generation(source("Staging"), imported_at=NOW)
+    catalog.stage(generation, [taxon(group="snake", parent_provider_id="absent")])
+    identifier = catalog.publish(taxon(name="Live qualified", group="lizard"), retrieved_at=NOW)
+    assert catalog.active_generation() is None
+    assert catalog.resolve(identifier).scientific_name == "Live qualified"
+    assert catalog.search("Live", group="lizard")[0].taxon_id == identifier
+    assert catalog.search("Live", group="snake") == ()
+    catalog.cleanup(generation, retained_generations=set())
+    assert catalog.resolve(identifier).workflow_group == "lizard"
+
+
+def test_first_promotion_preserves_qualified_fallback_provenance(catalog):
+    a = stage(catalog, "A", [taxon("root", "Animalia")])
+    catalog.promote(a)
+    failed = catalog.begin_generation(
+        replace(source("Failed"), retrieved_at=NOW - timedelta(days=20)), imported_at=NOW
+    )
+    catalog.stage(failed, [replace(taxon(), source_url="https://example.test/FAILED")])
+    good = stage(
+        catalog, "Good", [replace(taxon(name="Qualified"), source_url="https://example.test/GOOD")]
+    )
+    catalog.promote(good)
+    identifier = catalog.search("Qualified")[0].taxon_id
+    catalog.promote(a)
+    catalog.cleanup(good, retained_generations={a})
+    summary = catalog.resolve(identifier)
+    assert summary.source_url == "https://example.test/GOOD"
+    assert summary.retrieved_at == NOW
+    assert summary.source_effective_at == NOW - timedelta(days=10)
+
+
+def test_reviewed_guide_import_rejects_staging_only_identity(catalog):
+    from snaketracker.application.care_guides import GuideBundle
+    from snaketracker.infrastructure.taxonomy.care_guides import (
+        CareGuideImportError,
+        SQLAlchemyCareGuideRepository,
+    )
+
+    bundle = GuideBundle.model_validate_json(
+        (ROOT / "reference/care-guides/reviewed-v1.json").read_bytes()
+    )
+    bundle = bundle.model_copy(
+        update={"guides": tuple(g for g in bundle.guides if g.scientific_name == "Python regius")}
+    )
+    generation = catalog.begin_generation(source("Unvalidated"), imported_at=NOW)
+    catalog.stage(
+        generation, [taxon(name="Python regius", group="snake", parent_provider_id="absent")]
+    )
+    with pytest.raises(CareGuideImportError, match="exactly one"):
+        SQLAlchemyCareGuideRepository(catalog.engine).import_bundle(bundle)
+
+
+def test_rollback_keeps_newer_qualified_fallback_over_older_overlay(catalog):
+    a = stage(catalog, "A", [taxon("root", "Animalia")])
+    catalog.promote(a)
+    b = catalog.begin_generation(replace(source("B"), snapshot_at=NOW), imported_at=NOW)
+    catalog.stage(b, [taxon(name="Fresh name")])
+    catalog.validate_generation(b)
+    catalog.promote(b)
+    identifier = catalog.publish(
+        taxon(name="Older overlay"), retrieved_at=NOW, source_effective_at=NOW - timedelta(days=1)
+    )
+    assert catalog.resolve(identifier).scientific_name == "Fresh name"
+    catalog.promote(a)
+    catalog.cleanup(b, retained_generations={a})
+    assert catalog.resolve(identifier).scientific_name == "Fresh name"
+    assert catalog.resolve(identifier).source_effective_at == NOW

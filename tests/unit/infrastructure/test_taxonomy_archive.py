@@ -166,3 +166,13 @@ def test_operator_validate_stage_promote_search_and_checksum_guard(tmp_path, mon
     assert invoke([*common, "--apply", "rollback", generation])["active_generation"] == generation
     with pytest.raises(ValueError, match=r"retained|Active"):
         invoke([*common, "--apply", "cleanup", generation, "--keep", generation])
+
+
+def test_archive_rejects_direct_parent_self_cycle(tmp_path):
+    with pytest.raises(ValueError, match="cycle"):
+        tuple(
+            read_archive(
+                archive(tmp_path, taxa="id\tname\tparent\tclass\n2\tRana\t2\tAmphibia\n"),
+                provider="fixture",
+            )
+        )

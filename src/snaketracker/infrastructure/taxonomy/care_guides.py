@@ -50,7 +50,8 @@ class SQLAlchemyCareGuideRepository:
                 rows = (
                     connection.execute(
                         text(
-                            "SELECT taxon_id FROM taxa WHERE supported_group=:group "
+                            "SELECT taxon_id FROM taxa JOIN taxonomy_publications USING(taxon_id) "
+                            "WHERE supported_group=:group "
                             "AND accepted_scientific_name=:name"
                         ),
                         {"group": key[0], "name": key[1]},

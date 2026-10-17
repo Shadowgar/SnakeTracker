@@ -221,7 +221,7 @@ def read_archive(
                         if row is None:
                             raise ValueError("Taxonomy has an absent parent.")
                         parent = row[0]
-                    if parent == identifier and len(ancestors) > 1:
+                    if parent == identifier:
                         raise ValueError("Taxonomy ancestry cycle.")
                     record = json.loads(payload)
                     common = tuple(

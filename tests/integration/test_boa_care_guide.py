@@ -58,6 +58,7 @@ def _cache_taxon(database: Path, name: str, group: str = "snake") -> str:
             "taxonomic_status,created_at,refreshed_at) VALUES (?,?,?,'accepted',?,?)",
             (taxon_id, group, name, "2026-10-01T07:00:00+00:00", "2026-10-01T07:00:00+00:00"),
         )
+        connection.execute("INSERT INTO taxonomy_publications(taxon_id) VALUES(?)", (taxon_id,))
     return taxon_id
 
 
