@@ -21,7 +21,10 @@ from snaketracker.bootstrap.configuration import Environment, Settings, load_set
 from snaketracker.infrastructure.attachments.storage import LocalAttachmentStorage
 from snaketracker.infrastructure.backups.pipeline import LocalBackupPipeline
 from snaketracker.infrastructure.backups.repository import SQLAlchemyBackupRepository
-from snaketracker.infrastructure.database.engine import create_sqlite_engine
+from snaketracker.infrastructure.database.engine import (
+    create_readonly_sqlite_engine,
+    create_sqlite_engine,
+)
 from snaketracker.infrastructure.database.health import SQLAlchemyDatabaseHealth
 from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
 from snaketracker.infrastructure.jobs.repository import SQLAlchemyJobRepository
@@ -69,14 +72,28 @@ def main() -> int:
 
 def run_worker(settings: Settings, stop: threading.Event, poll_interval: float = 1.0) -> int:
     """Run the lifecycle shell and the M4 worker-authoritative local backup path."""
-    engine = create_sqlite_engine(
-        settings.database_path,
-        require_local_storage=settings.environment is Environment.PRODUCTION,
-    )
+    engine = create_readonly_sqlite_engine(settings.database_path)
     try:
+        compatibility = inspect_startup_compatibility(engine, product_projection_registry)
+        if not compatibility.normal_readiness:
+            LOGGER.error(
+                "Storage compatibility requires operator recovery.",
+                extra={
+                    "context": {
+                        "compatibility_reason": compatibility.reason_code,
+                        "operator_detail": compatibility.operator_detail,
+                    }
+                },
+            )
+            return EXIT_RECOVERY_REQUIRED
+        engine.dispose()
+        engine = create_sqlite_engine(
+            settings.database_path,
+            require_local_storage=settings.environment is Environment.PRODUCTION,
+        )
         readiness = PlatformReadiness(
             database=SQLAlchemyDatabaseHealth(engine),
-            compatibility=inspect_startup_compatibility(engine, product_projection_registry),
+            compatibility=compatibility,
         )
         if not readiness.check().is_ready:
             return EXIT_RECOVERY_REQUIRED

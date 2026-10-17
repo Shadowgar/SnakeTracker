@@ -62,7 +62,7 @@ class SQLAlchemyAnimalCurrentProjection:
                         "breeder_source": registered.breeder_source,
                         "status": registered.status,
                         "notes": registered.notes,
-                        "animal_type": capability_profile.animal_type.value,
+                        "animal_type": capability_profile.workflow_group,
                         "capability_profile_version": capability_profile.version,
                         "stream_version": event.stream_version,
                         "last_event_id": str(event.event_id),

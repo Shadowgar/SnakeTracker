@@ -97,6 +97,14 @@ class EventStreamIntegrityError(RuntimeError):
 
 
 class EventStore(Protocol):
+    def completed_operation(
+        self,
+        household_id: UUID,
+        actor_user_id: UUID,
+        operation_scope: str,
+        idempotency_key: str,
+    ) -> tuple[str, dict[str, object]] | None: ...
+
     def stored_idempotency_response(
         self,
         household_id: UUID,

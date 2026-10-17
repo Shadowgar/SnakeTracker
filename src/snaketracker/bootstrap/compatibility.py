@@ -2,13 +2,22 @@
 
 from __future__ import annotations
 
-from collections.abc import Collection, Mapping
+import json
+import re
+from collections.abc import Callable, Collection, Mapping
+from contextlib import nullcontext
 from dataclasses import dataclass
 from enum import StrEnum
+from types import MappingProxyType
 
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import SQLAlchemyError
 
+from snaketracker.domains.animals.capabilities import (
+    AnimalCapabilityRegistry,
+    UnknownCapabilityProfileError,
+    animal_capability_registry,
+)
 from snaketracker.platform.events.registry import (
     UnknownEventContractError,
     production_event_registry,
@@ -22,6 +31,55 @@ CURRENT_MANIFEST_VERSION = 1
 CURRENT_RELATIONAL_SCHEMA_VERSION = 23
 MINIMUM_RELATIONAL_SCHEMA_VERSION = 0
 MINIMUM_SQLITE_VERSION = (3, 35, 0)
+
+
+def supported_profile_release_manifest(
+    profiles: AnimalCapabilityRegistry = animal_capability_registry,
+    projections: ProjectionRegistry = production_projection_registry,
+) -> Mapping[str, object]:
+    """Trusted release metadata; never stored as a second source of Animal identity."""
+    readable = profiles.readable_identities
+    eligible = tuple(
+        identity for identity in readable if profiles.require(identity).registration_eligible
+    )
+    requirements = {
+        identity: profiles.require(identity).required_event_contracts for identity in readable
+    }
+    for contracts in requirements.values():
+        for event_type, version in contracts:
+            production_event_registry.registration(event_type, version)
+    writes = {
+        identity: (
+            "animal.registered",
+            profiles.require_registration(identity).registration_contract_version,
+        )
+        for identity in eligible
+    }
+    for event_type, version in writes.values():
+        production_event_registry.registration(event_type, version)
+    return MappingProxyType(
+        {
+            "readable_profiles": readable,
+            "registration_eligible_profiles": eligible,
+            "workflow_defaults": MappingProxyType(
+                {
+                    group.identity: profiles.registration_profile(group.identity).identity
+                    for group in profiles.registration_groups
+                }
+            ),
+            "registration_writes": MappingProxyType(writes),
+            "profile_event_requirements": MappingProxyType(requirements),
+            "required_identity_contracts": production_event_registry.required_identity_contracts,
+            "readable_event_contracts": production_event_registry.identities,
+            "projection_requirements": tuple(
+                (definition.name, definition.schema_version, definition.handler_version)
+                for group in projections.group_names
+                for definition in projections.rebuild_group(group)
+            ),
+            "relational_schema_version": CURRENT_RELATIONAL_SCHEMA_VERSION,
+            "backup_manifest_version": 1,
+        }
+    )
 
 
 class CompatibilityMode(StrEnum):
@@ -40,6 +98,7 @@ class CompatibilityReport:
     mode: CompatibilityMode
     reason_code: str
     public_detail: str
+    operator_detail: str | None = None
 
     @property
     def normal_readiness(self) -> bool:
@@ -47,8 +106,15 @@ class CompatibilityReport:
         return self.mode is CompatibilityMode.NORMAL
 
 
-def _report(mode: CompatibilityMode, reason_code: str, detail: str) -> CompatibilityReport:
-    return CompatibilityReport(mode=mode, reason_code=reason_code, public_detail=detail)
+def _report(
+    mode: CompatibilityMode,
+    reason_code: str,
+    detail: str,
+    operator_detail: str | None = None,
+) -> CompatibilityReport:
+    return CompatibilityReport(
+        mode=mode, reason_code=reason_code, public_detail=detail, operator_detail=operator_detail
+    )
 
 
 def evaluate_compatibility(
@@ -103,9 +169,9 @@ def evaluate_compatibility(
     return _report(CompatibilityMode.NORMAL, "compatible", "The application is ready.")
 
 
-def inspect_database_compatibility(engine: Engine) -> CompatibilityReport:
+def inspect_database_compatibility(engine: Engine | Connection) -> CompatibilityReport:
     try:
-        with engine.connect() as connection:
+        with engine.connect() if isinstance(engine, Engine) else nullcontext(engine) as connection:
             tables = set(
                 connection.exec_driver_sql(
                     "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
@@ -273,9 +339,9 @@ def evaluate_runtime_compatibility(
     return _report(CompatibilityMode.NORMAL, "runtime_compatible", "The runtime is ready.")
 
 
-def inspect_runtime_compatibility(engine: Engine) -> CompatibilityReport:
+def inspect_runtime_compatibility(engine: Engine | Connection) -> CompatibilityReport:
     try:
-        with engine.connect() as connection:
+        with engine.connect() if isinstance(engine, Engine) else nullcontext(engine) as connection:
             sqlite_version = str(connection.exec_driver_sql("SELECT sqlite_version()").scalar_one())
             compile_options = {
                 str(option)
@@ -290,26 +356,48 @@ def inspect_runtime_compatibility(engine: Engine) -> CompatibilityReport:
     return evaluate_runtime_compatibility(sqlite_version, compile_options)
 
 
-def inspect_event_contracts(engine: Engine) -> CompatibilityReport:
+def inspect_event_contracts(engine: Engine | Connection) -> CompatibilityReport:
     """Reject normal startup when any persisted event contract is unknown."""
+    contract = "unavailable contract identity"
     try:
-        with engine.connect() as connection:
+        with engine.connect() if isinstance(engine, Engine) else nullcontext(engine) as connection:
             contracts = connection.exec_driver_sql(
                 "SELECT DISTINCT event_type, schema_version FROM domain_events "
             ).all()
         for event_type, schema_version in contracts:
-            production_event_registry.payload_type(str(event_type), int(schema_version))
+            valid_type = isinstance(event_type, str) and bool(
+                re.fullmatch(r"[a-zA-Z_][a-zA-Z0-9_.-]{0,127}", event_type)
+            )
+            valid_version = type(schema_version) is int and 0 < schema_version <= 2**63 - 1
+            contract = (
+                f"{event_type if valid_type else '<invalid event type>'} "
+                f"v{schema_version if valid_version else '<invalid version>'}"
+            )
+            if not valid_type or not valid_version:
+                raise ValueError("Malformed event contract identity.")
+            production_event_registry.payload_type(event_type, schema_version)
     except UnknownEventContractError:
         return _report(
             CompatibilityMode.RECOVERY_REQUIRED,
             "event_contract_unknown",
             "Stored event history requires a compatible application release.",
+            f"Unsupported event contract {contract}; "
+            "use a compatible release or verified recovery.",
         )
-    except (SQLAlchemyError, TypeError, ValueError):
+    except SQLAlchemyError:
         return _report(
             CompatibilityMode.RECOVERY_REQUIRED,
-            "event_contract_inspection_failed",
+            "event_contract_storage_error",
             "Stored event history could not be inspected safely.",
+            "Event-contract inspection encountered a storage error; "
+            "check storage availability and schema using the verified recovery procedure.",
+        )
+    except (TypeError, ValueError):
+        return _report(
+            CompatibilityMode.RECOVERY_REQUIRED,
+            "event_contract_invalid",
+            "Stored event history could not be inspected safely.",
+            f"Invalid event contract {contract}; inspect storage using verified recovery.",
         )
     return _report(CompatibilityMode.NORMAL, "compatible", "The application is ready.")
 
@@ -317,12 +405,68 @@ def inspect_event_contracts(engine: Engine) -> CompatibilityReport:
 inspect_household_event_contracts = inspect_event_contracts
 
 
+def inspect_required_profile_identities(engine: Engine | Connection) -> CompatibilityReport:
+    """Inspect every identity-bearing event, including corrected and voided history."""
+    contract = "unknown"
+    identity = "malformed identity"
+    try:
+        with engine.connect() if isinstance(engine, Engine) else nullcontext(engine) as connection:
+            # Only trusted registry entries determine which contracts require identities.
+            for event_type, version in production_event_registry.required_identity_contracts:
+                rows = connection.exec_driver_sql(
+                    "SELECT payload_json FROM domain_events "
+                    "WHERE event_type=? AND schema_version=?",
+                    (event_type, version),
+                )
+                registration = production_event_registry.registration(event_type, version)
+                extractor = registration.required_identity_extractor
+                assert extractor is not None
+                for row in rows:
+                    contract = f"{event_type} v{version}"
+                    identity = "malformed identity"
+                    payload = json.loads(row[0])
+                    if not isinstance(payload, dict):
+                        raise ValueError("Event payload must be an object.")
+                    group = payload.get("animal_type", payload.get("group"))
+                    profile_version = payload.get("capability_profile_version")
+                    if event_type == "animal.registered" and version == 1:
+                        identity = "snake.v1"
+                    elif isinstance(group, str) and re.fullmatch(r"[a-z][a-z0-9_]{0,31}", group):
+                        identity = (
+                            f"{group}.v{profile_version}"
+                            if type(profile_version) is int and 0 < profile_version <= 2**63 - 1
+                            else f"workflow:{group}"
+                        )
+                    extractor(payload)
+    except SQLAlchemyError:
+        return _report(
+            CompatibilityMode.RECOVERY_REQUIRED,
+            "embedded_identity_storage_error",
+            "Stored history could not be inspected safely.",
+            "Required-identity inspection encountered a storage error; "
+            "check storage availability and schema using the verified recovery procedure.",
+        )
+    except (TypeError, ValueError, LookupError) as error:
+        unsupported = isinstance(error, LookupError) or isinstance(
+            error.__cause__, UnknownCapabilityProfileError
+        )
+        failure = "unsupported identity" if unsupported else "invalid event payload or identity"
+        return CompatibilityReport(
+            CompatibilityMode.RECOVERY_REQUIRED,
+            "embedded_identity_incompatible" if unsupported else "embedded_identity_invalid",
+            "Stored history requires compatible profile support or operator recovery.",
+            f"Inspect {contract} ({identity}): {failure}; "
+            "use a compatible release or verified recovery procedure.",
+        )
+    return _report(CompatibilityMode.NORMAL, "compatible", "The application is ready.")
+
+
 def inspect_projection_compatibility(
-    engine: Engine, registry: ProjectionRegistry = production_projection_registry
+    engine: Engine | Connection, registry: ProjectionRegistry = production_projection_registry
 ) -> CompatibilityReport:
     """Reject startup when stored projection code is newer or unknown."""
     try:
-        with engine.connect() as connection:
+        with engine.connect() if isinstance(engine, Engine) else nullcontext(engine) as connection:
             definitions = connection.exec_driver_sql(
                 "SELECT projection_name,projection_schema_version,handler_version "
                 "FROM projection_definitions"
@@ -355,16 +499,41 @@ def inspect_projection_compatibility(
 
 
 def inspect_startup_compatibility(
-    engine: Engine, registry: ProjectionRegistry = production_projection_registry
+    engine: Engine,
+    registry: ProjectionRegistry = production_projection_registry,
+    *,
+    reference_inspections: tuple[Callable[[Connection], CompatibilityReport], ...] = (),
 ) -> CompatibilityReport:
-    """Require both the release runtime and stored schema to be compatible."""
-    runtime = inspect_runtime_compatibility(engine)
-    if not runtime.normal_readiness:
-        return runtime
-    database = inspect_database_compatibility(engine)
-    if not database.normal_readiness:
-        return database
-    events = inspect_event_contracts(engine)
-    if not events.normal_readiness:
-        return events
-    return inspect_projection_compatibility(engine, registry)
+    """Inspect a single snapshot before mutable initialization or ordinary work."""
+    try:
+        with engine.connect() as connection:
+            connection.exec_driver_sql("BEGIN")
+            supported_profile_release_manifest(projections=registry)
+            for inspect in (
+                inspect_database_compatibility,
+                inspect_runtime_compatibility,
+                inspect_event_contracts,
+                inspect_required_profile_identities,
+                lambda connection: inspect_projection_compatibility(connection, registry),
+                *reference_inspections,
+            ):
+                result = inspect(connection)
+                if not result.normal_readiness:
+                    return result
+            return _report(CompatibilityMode.NORMAL, "compatible", "The application is ready.")
+    except SQLAlchemyError:
+        return _report(
+            CompatibilityMode.RECOVERY_REQUIRED,
+            "compatibility_storage_error",
+            "Stored data could not be inspected safely.",
+            "Compatibility inspection encountered a storage error; "
+            "check storage availability using the verified recovery procedure.",
+        )
+    except Exception:
+        return _report(
+            CompatibilityMode.RECOVERY_REQUIRED,
+            "compatibility_inspection_failed",
+            "Stored data could not be inspected safely.",
+            "Compatibility inspection incomplete; check trusted release metadata and "
+            "required inspection support before retrying startup.",
+        )

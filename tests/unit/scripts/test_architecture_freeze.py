@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -365,6 +366,28 @@ def test_controlling_documents_are_protected(path: str) -> None:
     assert freeze.relevant(path)
 
 
+def current_reviewed_hashes(
+    documents: dict[str, bytes], historical: dict[str, str]
+) -> dict[str, str]:
+    """Keep the original twelve bindings and apply only the exact owner-approved amendment."""
+    evidence = "docs/evidence/x1-capability-foundation/2026-10-16-owner-approval.md"
+    if evidence not in documents:
+        return historical
+    manifest = json.loads(
+        (
+            ROOT / "docs/evidence/x1-capability-foundation/2026-10-15-amendment-manifest.json"
+        ).read_text()
+    )
+    entries = freeze.APPROVED_FILE.findall(documents[evidence].decode())
+    amended = dict(entries)
+    assert len(entries) == len(amended) == len(manifest["files"]) == 8
+    assert set(amended) == set(manifest["files"])
+    for path, digest in amended.items():
+        assert historical[path] == manifest["files"][path]["base_sha256"]
+        assert digest == manifest["files"][path]["proposed_sha256"]
+    return historical | amended
+
+
 @pytest.mark.parametrize("view", ["HEAD", "index", "working tree"])
 def test_existing_twelve_content_bound_approvals_are_loaded_and_validated(view: str) -> None:
     documents = {
@@ -378,7 +401,7 @@ def test_existing_twelve_content_bound_approvals_are_loaded_and_validated(view: 
     assert set(dict(entries)) == set(APPROVED_DOCUMENTS)
     decisions = freeze.catalog(documents, [])
     authorized = freeze.approvals(documents, decisions)
-    for path, digest in entries:
+    for path, digest in current_reviewed_hashes(documents, dict(entries)).items():
         assert path in freeze.protected_architecture_changes({path})
         assert path in documents
         assert hashlib.sha256(documents[path]).hexdigest() == digest
@@ -603,6 +626,7 @@ def test_all_twelve_approved_documents_enforce_contents_paths_and_future_approva
     evidence = documents["docs/evidence/m6.6-species-aware-husbandry/README.md"].decode()
     entries = dict(freeze.APPROVED_FILE.findall(evidence))
     assert set(entries) == set(APPROVED_DOCUMENTS)
+    entries = current_reviewed_hashes(documents, entries)
     assert path in freeze.protected_architecture_changes({path})
     assert hashlib.sha256(documents[path]).hexdigest() == entries[path]
     baseline = freeze.committed(ROOT, freeze.GOVERNANCE_CHECKPOINT)

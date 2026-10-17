@@ -1,8 +1,7 @@
 # Extensible Animal and Species Platform — controlling implementation plan
 
-Status: M6.6-B Accepted / Complete / Merged; Pre-X1 Architecture Reconciliation Approved / Complete October 5, 2026. X1–X5 implementation and acceptance remain unstarted. The original extension direction was approved October 1, 2026.
-Scope: documentation only. This plan inserts bounded work after M6.6-B corrections and before
-M6.6-C. No production migration, dataset import, deployment, or event rewrite is authorized here.
+Status: M6.6-B Accepted / Complete / Merged; Pre-X1 Architecture Reconciliation Approved / Complete October 5, 2026. Replacement X1 development is owner-authorized October 15, 2026 and awaits qualification and acceptance; X2–X5 remain unstarted. The original extension direction was approved October 1, 2026.
+Scope: replacement X1 capability implementation and isolated qualification are owner-authorized; X2–X5 remain separately gated. No production migration, dataset import, deployment, or event rewrite is authorized here.
 
 ## Authority and intent
 
@@ -504,3 +503,25 @@ The extension remains Proposed and unimplemented. This Pre-X1 reconciliation com
 review of the implementation contracts October 5, 2026; X1 has not started. Future implementation qualification
 and explicit owner acceptance govern ADR promotion under repository policy, not architecture-review
 conclusions alone. Accepted ADR-0044/0048 and the historical M6.6-A acceptance caveat are unchanged.
+
+## October 15 X1 course correction — proposed alignment
+
+The platform objective is extensibility across individual animals, groups/colonies and shared
+care environments without rebuilding unrelated core workflows. Current Animal persistence
+remains individual-only. X1 supplies trusted workflow/profile lifecycle metadata, capability
+targets and test-only Dog/Fish/colony examples, not production registration or specialized storage
+for those future modules. Biological identity remains separate from workflow and subject identity.
+
+The read-only compatibility sequence above means a normal SQLite read transaction with no
+business-data writes. SQLite-managed WAL/SHM bookkeeping is acceptable. The withdrawn kernel
+supervisor, namespace/cohort, custom-seccomp and raw-device exclusion experiments are outside X1.
+Conventional web/worker startup and existing container security remain supported. Retain useful
+backup lease, bounded private verification staging, guarded orphan cleanup and durable failure
+diagnostics, and requalify the ordinary worker path under existing resource limits.
+
+All four existing profiles, immutable histories, attachment versions, household ownership,
+registration retries and versioned length contracts remain release requirements. The replacement
+candidate requires full unchanged quality, desktop/mobile accessibility, actual reconstruction,
+previous-binary comparison and isolated backup/restore evidence. Development qualification does
+not authorize merge, production deployment, PR #21 retirement or X2. Exact-content architecture
+approval and release qualification remain explicit owner decisions.

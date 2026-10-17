@@ -46,7 +46,10 @@ from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurr
 from snaketracker.infrastructure.attachments.repository import SQLAlchemyAttachmentRepository
 from snaketracker.infrastructure.attachments.storage import LocalAttachmentStorage
 from snaketracker.infrastructure.backups.repository import SQLAlchemyBackupRepository
-from snaketracker.infrastructure.database.engine import create_sqlite_engine
+from snaketracker.infrastructure.database.engine import (
+    create_readonly_sqlite_engine,
+    create_sqlite_engine,
+)
 from snaketracker.infrastructure.database.health import SQLAlchemyDatabaseHealth
 from snaketracker.infrastructure.enclosures.projections import SQLAlchemyEnclosureCurrentProjection
 from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
@@ -170,11 +173,24 @@ def create_application(
 def build_application(settings: Settings) -> FastAPI:
     """Build the production composition from validated settings."""
     configure_logging(settings.log_level)
-    engine = create_sqlite_engine(
-        settings.database_path,
-        require_local_storage=settings.environment is Environment.PRODUCTION,
-    )
+    engine = create_readonly_sqlite_engine(settings.database_path)
     compatibility = inspect_startup_compatibility(engine, product_projection_registry)
+    if compatibility.normal_readiness:
+        engine.dispose()
+        engine = create_sqlite_engine(
+            settings.database_path,
+            require_local_storage=settings.environment is Environment.PRODUCTION,
+        )
+    else:
+        logger.error(
+            "Storage compatibility requires operator recovery.",
+            extra={
+                "context": {
+                    "compatibility_reason": compatibility.reason_code,
+                    "operator_detail": compatibility.operator_detail,
+                }
+            },
+        )
     readiness = PlatformReadiness(
         database=SQLAlchemyDatabaseHealth(engine),
         compatibility=compatibility,

@@ -79,3 +79,16 @@ with a stated RPO and accepted post-backup loss. These are separate operations; 
 not a restore of household data. Existing-storage startup must complete the future read-only
 compatibility preflight before mutable initialization or replay; see
 [ADR-0045](../adr/0045-extensible-animal-capability-evolution.md#supported-profile-release-manifest-and-startup).
+
+## Proposed X1 backup reliability clarification
+
+The replacement X1 candidate retains acquisition-aware heartbeat scheduling, expiry validation
+after obtaining SQLite's writer lock, worker-owned private verification staging under archive
+storage, bounded lease-safe orphan cleanup and durable failed-run diagnostics. It preserves the
+accepted encrypted backup format, recovery points and every finalized attachment version.
+Requalify the ordinary worker workflow under 256 MiB memory, 0.5 CPU and 16 MiB `/tmp`; staging
+outside `/tmp` is not permission to enlarge those limits or redesign backup infrastructure.
+Existing-storage compatibility uses ordinary SQLite read transactions and permits documented
+WAL/SHM bookkeeping while rejecting incompatible data before application writes. Experimental
+supervisor or raw-device guarantees are not backup prerequisites. Production changes and exact-
+content governance approval remain separately gated.

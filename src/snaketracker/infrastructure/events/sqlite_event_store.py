@@ -59,6 +59,26 @@ class SQLAlchemyEventStore:
         idempotency_key: str,
         command_hash: str,
     ) -> dict[str, object] | None:
+        operation = self.completed_operation(
+            household_id, actor_user_id, operation_scope, idempotency_key
+        )
+        if operation is None:
+            return None
+        original_hash, stored = operation
+        if original_hash != command_hash:
+            raise IdempotencyConflictError(
+                "Idempotency key conflicts with a different canonical command."
+            )
+        return stored
+
+    def completed_operation(
+        self,
+        household_id: UUID,
+        actor_user_id: UUID,
+        operation_scope: str,
+        idempotency_key: str,
+    ) -> tuple[str, dict[str, object]] | None:
+        """Return completed identity/result for callers that resolve historical defaults."""
         with self._engine.connect() as connection:
             row = (
                 connection.execute(
@@ -80,14 +100,10 @@ class SQLAlchemyEventStore:
             )
         if row is None:
             return None
-        if row["command_hash"] != command_hash:
-            raise IdempotencyConflictError(
-                "Idempotency key conflicts with a different canonical command."
-            )
         stored = json.loads(str(row["stored_result_json"]))
         if not isinstance(stored, dict):
             raise EventStreamIntegrityError("Stored idempotency response is invalid.")
-        return cast(dict[str, object], stored)
+        return str(row["command_hash"]), cast(dict[str, object], stored)
 
     def load_stream(
         self,
