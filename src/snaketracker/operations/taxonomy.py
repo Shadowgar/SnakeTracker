@@ -44,6 +44,19 @@ def main() -> None:
     for name in ("promote", "rollback", "cleanup"):
         action = commands.add_parser(name)
         action.add_argument("generation", type=UUID)
+        if name in {"promote", "rollback"}:
+            action.add_argument(
+                "--max-revisions",
+                type=int,
+                default=10000,
+                help="Qualified bound on concurrent published identity deltas",
+            )
+            action.add_argument(
+                "--max-reconciliation-seconds",
+                type=float,
+                default=2.0,
+                help="Qualified SQL work deadline; excludes lock/commit I/O",
+            )
         if name == "cleanup":
             action.add_argument(
                 "--keep",
@@ -132,7 +145,11 @@ def main() -> None:
                 raise
             result: object = {"generation": str(generation), "state": "ready", "rows": count}
         elif arguments.action in {"promote", "rollback"}:
-            catalog.promote(arguments.generation)
+            catalog.promote(
+                arguments.generation,
+                max_revisions=arguments.max_revisions,
+                max_seconds=arguments.max_reconciliation_seconds,
+            )
             result = {"active_generation": str(arguments.generation)}
         elif arguments.action == "cleanup":
             catalog.cleanup(arguments.generation, retained_generations=set(arguments.keep))

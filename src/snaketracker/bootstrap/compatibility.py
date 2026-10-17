@@ -530,7 +530,7 @@ def inspect_local_taxonomy(connection: Connection) -> CompatibilityReport:
             "SELECT taxon_id,source_effective_at,payload FROM taxonomy_publications LIMIT 1"
         )
         connection.exec_driver_sql(
-            "SELECT generation_id FROM taxonomy_generation_publications LIMIT 1"
+            "SELECT generation_id,provenance FROM taxonomy_generation_publications LIMIT 1"
         )
         connection.exec_driver_sql("SELECT search_rowid FROM taxonomy_facts LIMIT 1")
         rows = connection.exec_driver_sql(

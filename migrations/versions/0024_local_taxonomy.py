@@ -49,19 +49,24 @@ def upgrade() -> None:
         "content_revision INTEGER NOT NULL DEFAULT 0)"
     )
     op.execute(
+        "CREATE INDEX ix_taxonomy_public_changes ON taxonomy_changes(revision,taxon_id) "
+        "WHERE kind NOT IN ('snapshot_identity_reserved','snapshot_labels')"
+    )
+    op.execute(
         "CREATE TABLE taxonomy_facts (generation_id TEXT NOT NULL REFERENCES "
         "taxonomy_generations(generation_id) ON DELETE CASCADE, taxon_id TEXT NOT NULL "
         "REFERENCES taxa(taxon_id), payload TEXT NOT NULL, search_rowid INTEGER, "
         "PRIMARY KEY(generation_id,taxon_id))"
     )
     op.execute(
-        "CREATE TABLE taxonomy_generation_publications (generation_id TEXT PRIMARY KEY "
-        "REFERENCES taxonomy_generations(generation_id) ON DELETE CASCADE)"
+        "CREATE TABLE taxonomy_generation_publications (generation_id TEXT PRIMARY KEY, "
+        "provenance TEXT NOT NULL)"
     )
     op.execute(
         "CREATE INDEX ix_taxonomy_fact_provider ON taxonomy_facts "
         "(generation_id,json_extract(payload,'$.provider_id'))"
     )
+    op.execute("CREATE INDEX ix_taxonomy_fact_taxon ON taxonomy_facts(taxon_id,generation_id)")
     op.execute(
         "CREATE TABLE taxonomy_overlay (taxon_id TEXT NOT NULL REFERENCES taxa(taxon_id), "
         "provider TEXT NOT NULL, payload TEXT NOT NULL, retrieved_at TEXT NOT NULL, "

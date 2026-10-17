@@ -13,6 +13,7 @@ from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from itertools import islice
+from math import isfinite
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -186,7 +187,14 @@ class LocalTaxonomyCatalog:
             generation=generation,
         )
 
-    def _reserve(self, connection: Connection, candidate: ProviderTaxon, observed: str) -> str:
+    def _reserve(
+        self,
+        connection: Connection,
+        candidate: ProviderTaxon,
+        observed: str,
+        *,
+        staging: bool = False,
+    ) -> str:
         identifier = execute(
             connection,
             "SELECT taxon_id FROM taxon_provider_mappings "
@@ -241,7 +249,12 @@ class LocalTaxonomyCatalog:
             id=identifier,
             rowid=rowid,
         )
-        self._change(connection, identifier, "identity_reserved", candidate.source_url)
+        self._change(
+            connection,
+            identifier,
+            "snapshot_identity_reserved" if staging else "identity_reserved",
+            candidate.source_url,
+        )
         return identifier
 
     @staticmethod
@@ -483,17 +496,20 @@ class LocalTaxonomyCatalog:
                     effective=effective_text,
                     revision=revision,
                 )
-            if effective_text:
-                for snapshot in execute(
-                    connection,
-                    "SELECT f.generation_id,f.payload FROM taxonomy_facts f "
-                    "JOIN taxonomy_generations g USING(generation_id) WHERE f.taxon_id=:id "
-                    "AND g.provider=:provider AND g.snapshot_at=:effective",
-                    id=identifier,
-                    provider=candidate.provider,
-                    effective=effective_text,
-                ):
-                    if _facts_differ(json.loads(snapshot.payload), json.loads(payload)):
+            for snapshot in execute(
+                connection,
+                "SELECT f.generation_id,f.payload,g.snapshot_at FROM taxonomy_facts f "
+                "JOIN taxonomy_generations g USING(generation_id) WHERE f.taxon_id=:id "
+                "AND g.provider=:provider",
+                id=identifier,
+                provider=candidate.provider,
+            ):
+                if _facts_differ(json.loads(snapshot.payload), json.loads(payload)):
+                    if not snapshot.snapshot_at or not effective_text:
+                        self._conflict(
+                            connection, identifier, "unknown_order", payload, snapshot.generation_id
+                        )
+                    elif snapshot.snapshot_at == effective_text:
                         self._conflict(
                             connection,
                             identifier,
@@ -501,6 +517,12 @@ class LocalTaxonomyCatalog:
                             payload,
                             snapshot.generation_id,
                         )
+            if (
+                previous is not None
+                and previous[0]["provider"] != candidate.provider
+                and _facts_differ(previous[0], json.loads(payload))
+            ):
+                self._conflict(connection, identifier, "cross_provider_order", payload)
             for other in execute(
                 connection,
                 "SELECT payload FROM taxonomy_overlay WHERE taxon_id=:id AND provider!=:provider",
@@ -635,7 +657,9 @@ class LocalTaxonomyCatalog:
             for candidate in records:
                 if candidate.provider != source["provider"]:
                     raise ValueError("Generation provider namespace mismatch.")
-                identifier = self._reserve(connection, candidate, str(source["retrieved_at"]))
+                identifier = self._reserve(
+                    connection, candidate, str(source["retrieved_at"]), staging=True
+                )
                 if execute(
                     connection,
                     "SELECT 1 FROM taxonomy_facts WHERE generation_id=:g AND taxon_id=:id",
@@ -654,17 +678,19 @@ class LocalTaxonomyCatalog:
                     id=identifier,
                     payload=payload,
                 )
-                if source["snapshot_at"]:
-                    overlay = execute(
-                        connection,
-                        "SELECT payload FROM taxonomy_overlay "
-                        "WHERE taxon_id=:id AND provider=:provider "
-                        "AND source_effective_at=:snapshot",
-                        id=identifier,
-                        provider=candidate.provider,
-                        snapshot=source["snapshot_at"],
-                    ).scalar_one_or_none()
-                    if overlay and _facts_differ(json.loads(overlay), json.loads(payload)):
+                overlay = execute(
+                    connection,
+                    "SELECT payload,source_effective_at FROM taxonomy_overlay "
+                    "WHERE taxon_id=:id AND provider=:provider",
+                    id=identifier,
+                    provider=candidate.provider,
+                ).first()
+                if overlay and _facts_differ(json.loads(overlay.payload), json.loads(payload)):
+                    if not source["snapshot_at"] or not overlay.source_effective_at:
+                        self._conflict(
+                            connection, identifier, "unknown_order", payload, str(generation)
+                        )
+                    elif source["snapshot_at"] == overlay.source_effective_at:
                         self._conflict(
                             connection, identifier, "equal_freshness", payload, str(generation)
                         )
@@ -784,7 +810,7 @@ class LocalTaxonomyCatalog:
     def promote(
         self, generation: UUID, *, max_revisions: int = 10000, max_seconds: float = 2.0
     ) -> None:
-        if max_revisions < 0 or max_seconds <= 0:
+        if max_revisions < 0 or not isfinite(max_seconds) or max_seconds <= 0:
             raise ValueError("Invalid reconciliation bound.")
         with self._write(max_seconds=max_seconds) as connection:
             started = time.monotonic()
@@ -817,7 +843,8 @@ class LocalTaxonomyCatalog:
                 execute(
                     connection,
                     "SELECT DISTINCT taxon_id FROM taxonomy_changes "
-                    "WHERE revision>:start AND revision<=:cutoff LIMIT :limit",
+                    "WHERE revision>:start AND revision<=:cutoff "
+                    "AND kind NOT IN ('snapshot_identity_reserved','snapshot_labels') LIMIT :limit",
                     start=source["starting_revision"],
                     cutoff=cutoff,
                     limit=max_revisions + 1,
@@ -832,7 +859,8 @@ class LocalTaxonomyCatalog:
                 "SELECT 1 FROM taxonomy_changes c LEFT JOIN taxa t ON t.taxon_id=c.taxon_id "
                 "LEFT JOIN taxonomy_search_keys k ON k.taxon_id=c.taxon_id "
                 "LEFT JOIN taxonomy_search s ON s.rowid=k.search_rowid "
-                "WHERE c.revision>:start AND c.revision<=:cutoff AND "
+                "WHERE c.revision>:start AND c.revision<=:cutoff "
+                "AND c.kind NOT IN ('snapshot_identity_reserved','snapshot_labels') AND "
                 "(t.taxon_id IS NULL OR k.search_rowid IS NULL OR s.rowid IS NULL) LIMIT 1",
                 start=source["starting_revision"],
                 cutoff=cutoff,
@@ -891,8 +919,11 @@ class LocalTaxonomyCatalog:
             )
             execute(
                 connection,
-                "INSERT OR IGNORE INTO taxonomy_generation_publications VALUES(:g)",
+                "INSERT OR IGNORE INTO taxonomy_generation_publications VALUES(:g,:provenance)",
                 g=str(generation),
+                provenance=json.dumps(
+                    {**dict(source), "publication_cutoff": cutoff}, sort_keys=True
+                ),
             )
             execute(
                 connection,
@@ -1070,16 +1101,8 @@ class LocalTaxonomyCatalog:
         for overlay in overlays:
             fact = json.loads(overlay["payload"])
             if selected["provider"] != overlay["provider"]:
-                # Distinct providers have no comparable source clock or automatic precedence.
-                if _facts_differ(selected, fact):
-                    ordering = "unknown_order"
+                # Foreign identities never choose facts; durable conflicts qualify decisions.
                 continue
-            if (
-                selected["provider"] != overlay["provider"]
-                or not selected["source_effective_at"]
-                or not overlay["source_effective_at"]
-            ) and _facts_differ(selected, fact):
-                ordering = "unknown_order"
             if (
                 selected["provider"] == overlay["provider"]
                 and selected["source_effective_at"]
@@ -1097,7 +1120,9 @@ class LocalTaxonomyCatalog:
         if execute(
             connection,
             "SELECT 1 FROM taxonomy_conflicts WHERE taxon_id=:id "
-            "AND resolved_at IS NULL AND kind IN ('unknown_order','equal_freshness') LIMIT 1",
+            "AND resolved_at IS NULL AND kind IN ('unknown_order','equal_freshness',"
+            "'cross_provider_order') AND (generation_id IS NULL OR generation_id IN "
+            "(SELECT generation_id FROM taxonomy_generation_publications)) LIMIT 1",
             id=taxon_id,
         ).first():
             ordering = "unknown_order"

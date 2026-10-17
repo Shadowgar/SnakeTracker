@@ -420,7 +420,8 @@ def test_equal_dated_snapshot_and_overlay_require_an_explicit_decision(catalog):
     )
     catalog.stage(generation, [taxon(name="Snapshot equal")])
     catalog.validate_generation(generation)
-    assert catalog.resolve(identifier).selection_state == "unknown_order"
+    assert catalog.resolve(identifier).selection_state == "selected"
+    assert catalog.conflicts()  # Private staging uncertainty blocks promotion, not live reads.
     with pytest.raises(TaxonomyConflictError):
         catalog.promote(generation)
     assert catalog.active_generation() is None
@@ -470,7 +471,8 @@ def test_late_equal_clock_live_publication_blocks_already_staged_generation(cata
     identifier = catalog.publish(
         taxon(name="Live equal"), retrieved_at=NOW, source_effective_at=NOW
     )
-    assert catalog.resolve(identifier).selection_state == "unknown_order"
+    assert catalog.resolve(identifier).selection_state == "selected"
+    assert any(c.generation_id == generation for c in catalog.conflicts())
     with pytest.raises(TaxonomyConflictError):
         catalog.promote(generation)
 
@@ -819,3 +821,119 @@ def test_first_live_disagreement_cannot_replace_selected_generation_without_orde
     assert catalog.resolve(identifier).scientific_name == "Selected baseline"
     assert catalog.resolve(identifier).selection_state == "unknown_order"
     assert catalog.search("Unordered") == ()
+
+
+def test_reconciliation_bound_excludes_staged_population_but_counts_live_delta(catalog):
+    generation = stage(
+        catalog, "Private population", [taxon(str(i), f"Staged species {i}") for i in range(5)]
+    )
+    catalog.promote(generation, max_revisions=0)
+    next_generation = stage(
+        catalog, "Next", [taxon(str(i), f"Staged species {i}") for i in range(5)]
+    )
+    catalog.publish(taxon("live-delta", "Concurrent discovery"), retrieved_at=NOW)
+    with pytest.raises(ValueError, match="identity bound"):
+        catalog.promote(next_generation, max_revisions=0)
+    catalog.promote(next_generation, max_revisions=1)
+    with catalog.engine.connect() as connection:
+        plan = connection.exec_driver_sql(
+            "EXPLAIN QUERY PLAN SELECT DISTINCT taxon_id FROM taxonomy_changes "
+            "WHERE revision>0 AND revision<=30000 "
+            "AND kind NOT IN ('snapshot_identity_reserved','snapshot_labels') LIMIT 10001"
+        ).all()
+        assert any("ix_taxonomy_public_changes" in row[3] for row in plan)
+
+
+@pytest.mark.parametrize("snapshot,live", [(None, NOW), (NOW, None), (None, None)])
+def test_incomparable_staged_facts_have_resolvable_private_conflicts(catalog, snapshot, live):
+    identifier = catalog.publish(
+        taxon(name="Live chosen"), retrieved_at=NOW, source_effective_at=live
+    )
+    generation = catalog.begin_generation(
+        replace(source("Incomparable"), snapshot_at=snapshot), imported_at=NOW
+    )
+    catalog.stage(generation, [taxon(name="Staged different")])
+    catalog.validate_generation(generation)
+    conflicts = [c for c in catalog.conflicts() if c.generation_id == generation]
+    assert len(conflicts) == 1 and conflicts[0].kind == "unknown_order"
+    assert catalog.resolve(identifier).selection_state == "selected"
+    with pytest.raises(TaxonomyConflictError):
+        catalog.promote(generation)
+    catalog.resolve_conflict(
+        conflicts[0].conflict_id, decided_by="Owner", reason="Retain current live facts"
+    )
+    catalog.promote(generation)
+    assert catalog.resolve(identifier).scientific_name == "Live chosen"
+    assert catalog.resolve(identifier).selection_state == "selected"
+
+
+@pytest.mark.parametrize("rollback", [False, True])
+def test_foreign_overlay_order_has_durable_resolvable_decision(catalog, rollback):
+    a = stage(catalog, "A", [taxon("root", "Animalia")])
+    catalog.promote(a)
+    b = stage(catalog, "B", [taxon(name="Chosen origin")])
+    catalog.promote(b)
+    identifier = catalog.search("Chosen")[0].taxon_id
+    if rollback:
+        catalog.promote(a)
+    catalog.map_identity(
+        identifier,
+        "foreign",
+        "other",
+        source_url="https://example.test/other",
+        decided_by="Owner",
+        reason="Qualified identity",
+    )
+    catalog.publish(replace(taxon("other", "Foreign facts"), provider="foreign"), retrieved_at=NOW)
+    conflicts = [c for c in catalog.conflicts() if c.kind == "cross_provider_order"]
+    assert conflicts
+    assert catalog.resolve(identifier).scientific_name == "Chosen origin"
+    assert catalog.resolve(identifier).selection_state == "unknown_order"
+    for conflict in conflicts:
+        catalog.resolve_conflict(
+            conflict.conflict_id, decided_by="Owner", reason="Retain origin facts"
+        )
+    assert catalog.resolve(identifier).selection_state == "selected"
+
+
+def test_published_conflict_qualification_survives_generation_cleanup(catalog):
+    a = stage(catalog, "A", [taxon(name="Original selected")])
+    catalog.promote(a)
+    b = catalog.begin_generation(replace(source("B"), snapshot_at=NOW), imported_at=NOW)
+    catalog.stage(b, [taxon(name="Published B")])
+    catalog.validate_generation(b)
+    catalog.promote(b)
+    catalog.promote(a)
+    identifier = catalog.publish(
+        taxon(name="Live equal B"), retrieved_at=NOW, source_effective_at=NOW
+    )
+    conflicts = [c for c in catalog.conflicts() if c.generation_id == b]
+    assert conflicts and catalog.resolve(identifier).selection_state == "unknown_order"
+    catalog.cleanup(b, retained_generations={a})
+    assert catalog.resolve(identifier).selection_state == "unknown_order"
+    for conflict in conflicts:
+        catalog.resolve_conflict(
+            conflict.conflict_id, decided_by="Owner", reason="Retain selected live facts"
+        )
+    assert catalog.resolve(identifier).selection_state == "selected"
+
+
+@pytest.mark.parametrize("snapshot,live", [(None, NOW), (NOW, None), (None, None)])
+def test_live_after_staging_records_incomparable_generation_conflict(catalog, snapshot, live):
+    a = stage(catalog, "A", [taxon(name="Original selected")])
+    catalog.promote(a)
+    b = catalog.begin_generation(replace(source("B"), snapshot_at=snapshot), imported_at=NOW)
+    catalog.stage(b, [taxon(name="Staged uncertain")])
+    catalog.validate_generation(b)
+    catalog.publish(taxon(name="Later live"), retrieved_at=NOW, source_effective_at=live)
+    assert any(c.generation_id == b and c.kind == "unknown_order" for c in catalog.conflicts())
+    with pytest.raises(TaxonomyConflictError):
+        catalog.promote(b)
+
+
+@pytest.mark.parametrize("seconds", [float("nan"), float("inf"), float("-inf")])
+def test_nonfinite_reconciliation_budget_cannot_disable_the_guard(catalog, seconds):
+    from uuid import uuid4
+
+    with pytest.raises(ValueError, match="Invalid reconciliation bound"):
+        catalog.promote(uuid4(), max_seconds=seconds)

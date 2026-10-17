@@ -28,9 +28,11 @@ from snaketracker.infrastructure.taxonomy.catalog import LocalTaxonomyCatalog
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def measure(rows: int, previous_package: Path | None) -> dict[str, object]:
-    if not 10 <= rows <= 10000:
-        raise ValueError("Synthetic development measurements accept 10-10000 rows.")
+def measure(
+    rows: int, previous_package: Path | None, reconciliation_seconds: float = 2.0
+) -> dict[str, object]:
+    if not 10 <= rows <= 20000:
+        raise ValueError("Synthetic development measurements accept 10-20000 rows.")
     with tempfile.TemporaryDirectory(prefix="care-keeper-x2-measure-") as temporary:
         database = Path(temporary) / "synthetic.db"
         config = Config(ROOT / "alembic.ini")
@@ -71,7 +73,7 @@ def measure(rows: int, previous_package: Path | None) -> dict[str, object]:
         import_seconds = time.perf_counter() - start
         import_cpu = time.process_time() - cpu
         start = time.perf_counter()
-        catalog.promote(generation)
+        catalog.promote(generation, max_seconds=reconciliation_seconds)
         promotion_seconds = time.perf_counter() - start
         engine.dispose()
         start = time.perf_counter()
@@ -138,6 +140,8 @@ finally: engine.dispose()
             "hardware": model.read_text().strip("\x00") if model.exists() else platform.machine(),
             "load_average": os.getloadavg(),
             "rows": rows,
+            "reconciliation_sql_budget_seconds": reconciliation_seconds,
+            "promotion_default_delta_limit": 10000,
             "sqlite_version": sqlite_version,
             "import_seconds": import_seconds,
             "import_cpu_seconds": import_cpu,
@@ -160,9 +164,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rows", type=int, default=1000)
     parser.add_argument("--previous-package", type=Path)
+    parser.add_argument("--reconciliation-seconds", type=float, default=2.0)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    result = measure(args.rows, args.previous_package)
+    result = measure(args.rows, args.previous_package, args.reconciliation_seconds)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result, indent=2))
