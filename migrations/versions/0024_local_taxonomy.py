@@ -145,6 +145,7 @@ def downgrade() -> None:
     if (
         bind.execute(sa.text("SELECT 1 FROM taxonomy_changes LIMIT 1")).first()
         or bind.execute(sa.text("SELECT 1 FROM taxonomy_generations LIMIT 1")).first()
+        or bind.execute(sa.text("SELECT 1 FROM taxonomy_conflicts LIMIT 1")).first()
     ):
         raise RuntimeError(
             "Taxonomy downgrade blocked: durable X2 data exists; use forward recovery."

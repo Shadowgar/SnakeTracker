@@ -1134,3 +1134,30 @@ def test_cleanup_rejects_unknown_generation_without_changing_current_data(catalo
         catalog.cleanup(uuid4(), retained_generations={current})
     assert catalog.active_generation() == current
     assert catalog.search("Rana")[0].scientific_name == "Rana temporaria"
+
+
+def test_newer_live_overlay_is_retained_beneath_snapshot_for_later_rollback(catalog):
+    identifier = catalog.publish(
+        taxon(name="January first"), retrieved_at=NOW, source_effective_at=NOW - timedelta(days=10)
+    )
+    a = stage(catalog, "Rollback target", [taxon("root", "Animalia")])
+    catalog.promote(a)
+    b = catalog.begin_generation(replace(source("New snapshot"), snapshot_at=NOW), imported_at=NOW)
+    catalog.stage(b, [taxon(name="Snapshot latest")])
+    catalog.validate_generation(b)
+    catalog.promote(b)
+    catalog.publish(
+        taxon(name="Intermediate live"),
+        retrieved_at=NOW + timedelta(days=1),
+        source_effective_at=NOW - timedelta(days=5),
+    )
+    assert catalog.resolve(identifier).scientific_name == "Snapshot latest"
+    catalog.publish(
+        taxon(name="Even older live"),
+        retrieved_at=NOW + timedelta(days=2),
+        source_effective_at=NOW - timedelta(days=11),
+    )
+    catalog.promote(a)
+    catalog.cleanup(b, retained_generations={a})
+    assert catalog.resolve(identifier).scientific_name == "Intermediate live"
+    assert catalog.resolve(identifier).source_effective_at == NOW - timedelta(days=5)

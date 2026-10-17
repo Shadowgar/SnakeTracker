@@ -541,7 +541,17 @@ class LocalTaxonomyCatalog:
                     json.loads(old["payload"]),
                     old["source_effective_at"],
                 )
-            if previous is not None and previous[0]["provider"] == candidate.provider:
+            if (
+                previous is not None
+                and previous[0]["provider"] == candidate.provider
+                # A comparable older observation can improve the durable overlay;
+                # the newer selected snapshot still wins at read time.
+                and not (
+                    effective_text
+                    and previous[0]["source_effective_at"]
+                    and previous[0]["source_effective_at"] > effective_text
+                )
+            ):
                 keep_old = (
                     self._retain_observation(
                         connection,

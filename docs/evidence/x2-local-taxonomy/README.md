@@ -185,3 +185,10 @@ retain their selected facts and skip refresh through the current workflow provid
 providerless taxon upgraded to X2. Its first explicit mapping establishes provider preference in the
 same transaction, and an alphabetically earlier second namespace cannot change it. An unknown cleanup
 UUID fails explicitly before the mutation loop; interrupted cleanup of an existing generation resumes.
+
+[47 overlay/snapshot/rollback/mapping/downgrade cases](overlay-downgrade.log) passed. A comparable
+live observation newer than the stored overlay remains durable even beneath a newer active
+snapshot; rollback and cleanup expose that freshest retained live observation. Equal/unknown
+comparisons continue to require content-bound decisions. Conflict-only X2 evidence blocks schema
+downgrade even when no generation or revision exists, preserving schema version, UUIDs and the
+operator's unresolved mapping evidence.

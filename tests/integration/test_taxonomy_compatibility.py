@@ -355,3 +355,62 @@ def test_first_mapping_of_migrated_providerless_taxon_establishes_preference(tmp
         assert len(selected.provider_references) == 2
     finally:
         engine.dispose()
+
+
+def test_mapping_conflict_alone_blocks_schema_downgrade_and_preserves_evidence(tmp_path):
+    from snaketracker.application.local_taxonomy import TaxonomyConflictError
+
+    database = tmp_path / "legacy-conflict.db"
+    config = config_for(database)
+    command.upgrade(config, "0023_sourced_care_guides")
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    identifiers = (uuid4(), uuid4())
+    try:
+        with engine.begin() as connection:
+            for number, identifier in enumerate(identifiers):
+                connection.execute(
+                    text(
+                        "INSERT INTO taxa(taxon_id,supported_group,accepted_scientific_name,"
+                        "taxonomic_status,created_at,refreshed_at) "
+                        "VALUES(:id,'snake','Python regius','accepted',:now,:now)"
+                    ),
+                    {"id": str(identifier), "now": NOW.isoformat()},
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO taxon_provider_mappings VALUES(:id,'fixture',:provider_id,"
+                        "'https://example.test/taxon',:now,:now)"
+                    ),
+                    {"id": str(identifier), "provider_id": str(number), "now": NOW.isoformat()},
+                )
+        command.upgrade(config, "head")
+        catalog = LocalTaxonomyCatalog(engine)
+        with pytest.raises(TaxonomyConflictError):
+            catalog.map_identity(
+                identifiers[1],
+                "fixture",
+                "0",
+                source_url="https://example.test/0",
+                decided_by="Owner",
+                reason="Conflicting proposal",
+            )
+        conflict = catalog.conflicts()[0]
+        with engine.connect() as connection:
+            assert (
+                connection.execute(text("SELECT COUNT(*) FROM taxonomy_changes")).scalar_one() == 0
+            )
+            assert (
+                connection.execute(text("SELECT COUNT(*) FROM taxonomy_generations")).scalar_one()
+                == 0
+            )
+        with pytest.raises(RuntimeError, match="durable X2"):
+            command.downgrade(config, "0023_sourced_care_guides")
+        assert catalog.conflicts() == (conflict,)
+        with engine.connect() as connection:
+            assert (
+                connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+                == "0024_local_taxonomy"
+            )
+            assert connection.execute(text("SELECT COUNT(*) FROM taxa")).scalar_one() == 2
+    finally:
+        engine.dispose()
