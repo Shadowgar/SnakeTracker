@@ -721,3 +721,101 @@ def test_active_generation_requires_its_atomic_publication_receipt(catalog):
         inspect_startup_compatibility(catalog.engine).reason_code
         == "taxonomy_reference_incompatible"
     )
+
+
+def test_foreign_overlay_cannot_replace_generation_origin(catalog):
+    generation = stage(
+        catalog, "Origin", [taxon(name="Original selected", authorship="Original author")]
+    )
+    catalog.promote(generation)
+    identifier = catalog.search("Original")[0].taxon_id
+    catalog.map_identity(
+        identifier,
+        "foreign",
+        "foreign-1",
+        source_url="https://example.test/foreign",
+        decided_by="Operator",
+        reason="Qualified cross-provider identity",
+    )
+    catalog.publish(
+        replace(taxon("foreign-1", "Foreign selected"), provider="foreign"), retrieved_at=NOW
+    )
+    assert catalog.resolve(identifier).scientific_name == "Original selected"
+    assert catalog.resolve(identifier).selection_state == "unknown_order"
+
+
+def test_resolved_equal_clock_conflict_clears_selection_uncertainty(catalog):
+    identifier = catalog.publish(
+        taxon(name="Live selected"), retrieved_at=NOW, source_effective_at=source("B").snapshot_at
+    )
+    generation = stage(catalog, "B", [taxon(name="Snapshot equal")])
+    for conflict in catalog.conflicts():
+        catalog.resolve_conflict(
+            conflict.conflict_id, decided_by="Owner", reason="Retain current live selection"
+        )
+    catalog.promote(generation)
+    assert catalog.resolve(identifier).scientific_name == "Live selected"
+    assert catalog.resolve(identifier).selection_state == "selected"
+
+
+def test_directory_authorship_follows_selected_generation(catalog):
+    from snaketracker.infrastructure.taxonomy.repository import SQLAlchemyTaxonRepository
+
+    a = stage(catalog, "A", [taxon(name="Old species", authorship="Old author")])
+    catalog.promote(a)
+    identifier = catalog.search("Old")[0].taxon_id
+    b = stage(catalog, "B", [taxon(name="New species", authorship="New author")])
+    catalog.promote(b)
+    record = SQLAlchemyTaxonRepository(catalog.engine).get(identifier, stale_after=NOW)
+    assert record.accepted_scientific_name == "New species"
+    assert record.authorship == "New author"
+
+
+def test_guide_import_matches_selected_name_and_group_instead_of_fallback(catalog):
+    from snaketracker.application.care_guides import GuideBundle
+    from snaketracker.infrastructure.taxonomy.care_guides import (
+        CareGuideImportError,
+        SQLAlchemyCareGuideRepository,
+    )
+
+    catalog.publish(
+        taxon(name="Legacy python", group="lizard"),
+        retrieved_at=NOW,
+        source_effective_at=NOW - timedelta(days=20),
+    )
+    generation = stage(catalog, "Current", [taxon(name="Python regius", group="snake")])
+    catalog.promote(generation)
+    bundle = GuideBundle.model_validate_json(
+        (ROOT / "reference/care-guides/reviewed-v1.json").read_bytes()
+    )
+    guide = next(g for g in bundle.guides if g.scientific_name == "Python regius")
+    repository = SQLAlchemyCareGuideRepository(catalog.engine)
+    assert repository.import_bundle(GuideBundle(format_version=1, guides=(guide,))) == (1, 0)
+    stale = guide.model_copy(
+        update={
+            "scientific_name": "Legacy python",
+            "biological_group": type(guide.biological_group)("lizard"),
+        }
+    )
+    with pytest.raises(CareGuideImportError, match="exactly one"):
+        repository.import_bundle(GuideBundle(format_version=1, guides=(stale,)))
+
+
+@pytest.mark.parametrize("effective", [None, NOW])
+def test_first_live_disagreement_cannot_replace_selected_generation_without_order(
+    catalog, effective
+):
+    generation = catalog.begin_generation(
+        replace(source("Known baseline"), snapshot_at=NOW), imported_at=NOW
+    )
+    catalog.stage(generation, [taxon(name="Selected baseline")])
+    catalog.validate_generation(generation)
+    catalog.promote(generation)
+    identifier = catalog.publish(
+        taxon(name="Unordered replacement"),
+        retrieved_at=NOW + timedelta(days=1),
+        source_effective_at=effective,
+    )
+    assert catalog.resolve(identifier).scientific_name == "Selected baseline"
+    assert catalog.resolve(identifier).selection_state == "unknown_order"
+    assert catalog.search("Unordered") == ()

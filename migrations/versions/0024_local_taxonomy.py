@@ -69,6 +69,16 @@ def upgrade() -> None:
         "taxonomy_changes(revision), PRIMARY KEY(taxon_id,provider))"
     )
     op.execute(
+        "CREATE INDEX ix_taxonomy_overlay_name ON taxonomy_overlay "
+        "(json_extract(payload,'$.accepted_scientific_name'),"
+        "json_extract(payload,'$.supported_group'))"
+    )
+    op.execute(
+        "CREATE INDEX ix_taxonomy_fact_name ON taxonomy_facts "
+        "(generation_id,json_extract(payload,'$.accepted_scientific_name'),"
+        "json_extract(payload,'$.supported_group'))"
+    )
+    op.execute(
         "CREATE TABLE taxonomy_selection (singleton INTEGER PRIMARY KEY CHECK(singleton=1), "
         "generation_id TEXT REFERENCES taxonomy_generations(generation_id), "
         "reconciled_revision INTEGER NOT NULL)"

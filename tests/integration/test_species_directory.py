@@ -155,7 +155,10 @@ def test_universal_search_cache_synonyms_groups_stale_and_name_change(tmp_path: 
     engine = _database(tmp_path)
     records: dict[str, tuple[ProviderTaxon, ...]] = {
         "snake:ball p": (
-            _taxon("1", "snake", "Python regius", "Ball Python", synonyms=("Royal Python",)),
+            replace(
+                _taxon("1", "snake", "Python regius", "Ball Python", synonyms=("Royal Python",)),
+                source_effective_at=datetime(2026, 10, 1, tzinfo=UTC),
+            ),
         ),
         "lizard:leopard": (_taxon("2", "lizard", "Eublepharis macularius", "Leopard Gecko"),),
         "spider:rose": (_taxon("3", "spider", "Grammostola rosea", "Chilean Rose Tarantula"),),
@@ -193,12 +196,17 @@ def test_universal_search_cache_synonyms_groups_stale_and_name_change(tmp_path: 
 
         original = service.search("ball p", "snake").records[0]
         repository.upsert(
-            _taxon("1", "snake", "Python regius updated", "Ball Python"),
+            # Qualified source clocks authorize this rename; arrival time alone cannot.
+            replace(
+                _taxon("1", "snake", "Python regius updated", "Ball Python"),
+                source_effective_at=datetime(2026, 10, 2, tzinfo=UTC),
+            ),
             observed_at=datetime.now(UTC),
         )
         changed = service.get(original.taxon_id)
         assert changed is not None
         assert changed.taxon_id == original.taxon_id
+        assert changed.accepted_scientific_name == "Python regius updated"
         assert "Python regius" in changed.synonyms
 
         repository.upsert(

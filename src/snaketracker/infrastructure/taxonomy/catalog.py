@@ -411,6 +411,7 @@ class LocalTaxonomyCatalog:
         )
         with self._write() as connection:
             identifier = self._reserve(connection, candidate, observed)
+            previous = self._selected(connection, identifier)
             self._publish_identity(
                 connection, identifier, candidate, observed, effective_text, payload
             )
@@ -452,6 +453,19 @@ class LocalTaxonomyCatalog:
                 elif differs:
                     keep_old = True
                     self._conflict(connection, identifier, "unknown_order", payload)
+            elif previous is not None and previous[0]["provider"] == candidate.provider:
+                prior = previous[0]
+                differs = _facts_differ(prior, json.loads(payload))
+                if prior["source_effective_at"] and effective_text:
+                    keep_old = str(prior["source_effective_at"]) > effective_text
+                    if prior["source_effective_at"] == effective_text and differs:
+                        keep_old = True
+                        self._conflict(connection, identifier, "equal_freshness", payload)
+                elif differs:
+                    keep_old = True
+                    self._conflict(connection, identifier, "unknown_order", payload)
+                elif prior["source_effective_at"] and not effective_text:
+                    keep_old = True
             if not keep_old:
                 execute(
                     connection,
@@ -495,11 +509,14 @@ class LocalTaxonomyCatalog:
             ).scalars():
                 if _facts_differ(json.loads(other), json.loads(payload)):
                     self._conflict(connection, identifier, "cross_provider_order", payload)
-            label_source = (
-                ProviderTaxon(**json.loads(old["payload"]))
-                if keep_old and old is not None
-                else candidate
-            )
+            label_source = candidate
+            if keep_old and old is not None:
+                label_source = ProviderTaxon(**json.loads(old["payload"]))
+            elif keep_old and previous is not None:
+                retained_fact: dict[str, Any] = {
+                    field: previous[0].get(field) for field in FACT_FIELDS
+                }
+                label_source = ProviderTaxon(**retained_fact)
             self._labels(connection, identifier, label_source)
             if (
                 candidate.accepted_provider_id
@@ -1052,9 +1069,9 @@ class LocalTaxonomyCatalog:
         )
         for overlay in overlays:
             fact = json.loads(overlay["payload"])
-            if state == "overlay" and selected["provider"] != overlay["provider"]:
+            if selected["provider"] != overlay["provider"]:
                 # Distinct providers have no comparable source clock or automatic precedence.
-                if any(selected.get(key) != fact.get(key) for key in LABELS):
+                if _facts_differ(selected, fact):
                     ordering = "unknown_order"
                 continue
             if (
@@ -1070,13 +1087,6 @@ class LocalTaxonomyCatalog:
                 and str(selected["source_effective_at"]) > str(overlay["source_effective_at"])
             ):
                 continue
-            if (
-                selected["provider"] == overlay["provider"]
-                and selected["source_effective_at"] is not None
-                and selected["source_effective_at"] == overlay["source_effective_at"]
-                and _facts_differ(selected, fact)
-            ):
-                ordering = "unknown_order"
             selected = fact
             selected.update(
                 retrieved_at=overlay["retrieved_at"],
@@ -1167,6 +1177,7 @@ class LocalTaxonomyCatalog:
             state,
             ordering,
             references,
+            authorship=fact.get("authorship"),
         )
 
     def resolve(self, taxon_id: UUID) -> TaxonomySummary | None:

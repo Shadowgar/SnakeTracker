@@ -58,6 +58,7 @@ class TaxonomySummary:
     reference_state: str
     selection_state: str
     provider_references: tuple[TaxonomyProviderReference, ...] = ()
+    authorship: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

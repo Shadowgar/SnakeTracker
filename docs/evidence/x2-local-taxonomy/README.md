@@ -21,7 +21,7 @@ catalog fallback after rollback. Indexed token matches intersect by permanent id
 published scopes; the selected current group is checked before applying the result limit. Search
 is independent of household-private FTS and never calls a provider. Existing directory
 search/detail/live discovery use the catalog. The application-owned `LocalTaxonomy` port exposes
-selected summaries, ancestry, provenance and qualified provider references; it does not create
+selected summaries (including authorship), ancestry, provenance and qualified provider references; it does not create
 Natural History sources or content. Existing manual entry and bounded explicit lookup remain.
 
 Staging reserves UUIDs and private generation search rows in batches of at most 500. It publishes
@@ -85,7 +85,13 @@ have focused receipts for [14 cleanup/compatibility/migration tests](cleanup-com
 [undated observation selection](undated-observation.log), and
 [fallback provenance/rollback/historical upgrade](publication-regressions.log). Historical fixture
 seeding reflects schema 23, while current fixtures explicitly qualify their synthetic taxa.
-Formatting, lint, mypy, architecture/freeze, documentation links and diff integrity passed.
+The [selected-consumer suite](selected-consumers.log) passed 54 tests: guide matching follows
+selected names/groups, authorship follows selected facts, foreign overlays cannot replace the
+chosen provider, equal-clock decisions clear resolved uncertainty, and first live disagreements
+cannot replace selected generation facts without comparable ordering. The existing
+[qualified-rename regression](qualified-rename.log) now supplies source-effective dates and retains
+its synonym assertion plus an explicit selected-name assertion. Formatting, lint, mypy,
+architecture/freeze, documentation links and diff integrity passed.
 
 The first hosted head passed 1,238 tests (94.50% lines / 85.29% branches). Subsequent review findings
 were reproduced and corrected; fresh hosted Quality, Container and security checks qualify the
@@ -106,7 +112,10 @@ unchanged architecture, eight X1 approved contents and quality-gate scripts to t
 
 Production archive rights/intended use, real dataset reconciliation and production-size normal-duty,
 backup scratch/RPO, restore/replay and import capacity gates remain required before any production
-import. First connection timing is not claimed to be a cold disk-cache measurement.
+import. First connection timing is not claimed to be a cold disk-cache measurement. The configured
+reconciliation deadline bounds SQL work; writer-lock waits and synchronous commit I/O also affect
+measured promotion wall time. The final synthetic receipt measured 2.266 seconds including those
+costs, not a hard two-second wall-time guarantee or production acceptance.
 
 X1's future-profile fallback mismatch remains deferred before additional production animal groups
 are enabled. This tranche adds no Animal workflows and no Natural History prose.
