@@ -387,3 +387,18 @@ The [complete 51-test historical/directory/Care Guide run](providerless-legacy-g
 Mapped and providerless historical fixtures retain raw rows, immutable guide triggers, linked
 Animal/media references and alias search. Independent read-only review found no Important issue.
 The historical Pi receipt predates this compatibility correction; no new performance claim is made.
+
+[Publication/term-URI reproduction](publication-term-uri-red.log) confirmed that missing publication
+rows could hide previously public taxa without blocking readiness, and foreign term URIs could
+be consumed by suffix alone. Startup now validates publication coverage using durable public
+lifecycle evidence while allowing explicit private snapshot reservations through qualification
+and cleanup. Uncorrelated history sets avoid per-identity history scans.
+
+Consumed fields now bind exact [Darwin Core term identifiers](https://dwc.tdwg.org/terms/) and the
+[GBIF VernacularName descriptor](https://rs.gbif.org/extension/gbif/1.0/vernacularname.xml).
+Unsupported namespaces cannot impersonate consumed taxonomy/preference fields; unused qualified
+metadata stays outside taxonomy facts. Extension row types are exact, while legitimate Dublin
+Core metadata remains acceptable. The [complete 102-test compatibility/archive run](publication-term-uri-green.log)
+passed, including migrated, cleaned-snapshot and staged-then-live publication loss and valid
+private reservations. Independent read-only review found no Important issue. These checks also
+postdate the historical Pi receipt and add no production performance claim or infrastructure.

@@ -25,6 +25,28 @@ from snaketracker.infrastructure.taxonomy.catalog import validate
 from snaketracker.infrastructure.taxonomy.inaturalist import ANCESTOR_BY_GROUP
 
 NS = {"d": "http://rs.tdwg.org/dwc/text/"}
+TERM_NAMES = {
+    "http://rs.tdwg.org/dwc/terms/" + name: name
+    for name in (
+        "taxonID",
+        "scientificName",
+        "parentNameUsageID",
+        "acceptedNameUsageID",
+        "vernacularName",
+        "scientificNameAuthorship",
+        "taxonomicStatus",
+        "taxonRank",
+        "kingdom",
+        "phylum",
+        "class",
+        "order",
+        "family",
+        "genus",
+    )
+}
+TERM_NAMES["http://rs.gbif.org/terms/1.0/isPreferredName"] = "isPreferredName"
+CONSUMED_NAMES = frozenset(TERM_NAMES.values())
+VERNACULAR_TYPE = "http://rs.gbif.org/terms/1.0/VernacularName"
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,7 +73,11 @@ def _rows(archive: ZipFile, element: ET.Element) -> Iterator[dict[str, str]]:
     fields = element.findall("d:field", NS)
     if len(fields) > 128 or any(len(field.get("default", "")) > 4096 for field in fields):
         raise ValueError("Archive field count or default exceeds column bounds.")
-    mapping = {field.attrib["term"].rsplit("/", 1)[-1]: field for field in fields}
+    mapping = {field.attrib["term"]: field for field in fields}
+    if any(
+        term.rsplit("/", 1)[-1] in CONSUMED_NAMES and term not in TERM_NAMES for term in mapping
+    ):
+        raise ValueError("Unsupported Darwin Core term URI.")
     identity = (
         element.find("d:id", NS) if element.tag.endswith("core") else element.find("d:coreid", NS)
     )
@@ -96,7 +122,9 @@ def _rows(archive: ZipFile, element: ET.Element) -> Iterator[dict[str, str]]:
             if identity_index >= len(row) or any(index >= len(row) for index in indexes.values()):
                 raise ValueError("Archive row does not match its declared schema.")
             record = {
-                term: row[indexes[term]] if term in indexes else field.get("default", "")
+                TERM_NAMES.get(term, term): (
+                    row[indexes[term]] if term in indexes else field.get("default", "")
+                )
                 for term, field in mapping.items()
             }
             record["_id"] = row[identity_index]
@@ -183,7 +211,7 @@ def read_archive(
             if len(cores) != 1 or cores[0].get("rowType") != "http://rs.tdwg.org/dwc/terms/Taxon":
                 raise ValueError("Archive requires exactly one Darwin Core Taxon core.")
             extensions = meta.findall("d:extension", NS)
-            if any(not node.get("rowType", "").endswith("/VernacularName") for node in extensions):
+            if any(node.get("rowType") != VERNACULAR_TYPE for node in extensions):
                 raise ValueError(
                     "Unsupported archive extension; taxonomy imports exclude prose/media."
                 )

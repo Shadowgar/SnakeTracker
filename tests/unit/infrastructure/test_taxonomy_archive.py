@@ -746,3 +746,54 @@ def test_combined_core_and_extension_names_share_one_unique_alias_bound(tmp_path
         retained = {selected.preferred_common_name, *selected.alternative_common_names}
         assert common in retained
         assert len(retained) == count + int(not duplicate)
+
+
+@pytest.mark.parametrize(
+    "term", ["scientificName", "taxonID", "parentNameUsageID", "class", "vernacularName"]
+)
+def test_consumed_taxonomy_terms_require_exact_qualified_uri(tmp_path, term):
+    meta = META.replace("http://rs.tdwg.org/dwc/terms/" + term, "https://example.invalid/" + term)
+    with pytest.raises(ValueError):
+        tuple(read_archive(archive(tmp_path, meta=meta), provider="fixture"))
+
+
+def test_preference_term_requires_exact_gbif_uri(tmp_path):
+    meta = META.replace(
+        "</extension>",
+        '<field index="2" term="https://example.invalid/isPreferredName"/></extension>',
+    )
+    with pytest.raises(ValueError):
+        tuple(
+            read_archive(
+                archive(tmp_path, meta=meta, names="2\tCommon frog\ttrue\n"), provider="fixture"
+            )
+        )
+
+
+def test_vernacular_extension_requires_exact_supported_row_type(tmp_path):
+    meta = META.replace(
+        "http://rs.gbif.org/terms/1.0/VernacularName", "https://example.invalid/VernacularName"
+    )
+    with pytest.raises(ValueError):
+        tuple(read_archive(archive(tmp_path, meta=meta), provider="fixture"))
+
+
+def test_unused_qualified_metadata_is_not_reinterpreted_as_taxonomy(tmp_path):
+    meta = META.replace(
+        "</core>", '<field index="4" term="http://purl.org/dc/elements/1.1/language"/></core>'
+    )
+    records = tuple(
+        read_archive(
+            archive(
+                tmp_path,
+                meta=meta,
+                taxa=(
+                    "id\tname\tparent\tclass\tlanguage\n1\tAnimalia\t\t\ten\n"
+                    "2\tRana temporaria\t1\tAmphibia\ten\n"
+                ),
+            ),
+            provider="fixture",
+        )
+    )
+    assert records[1].accepted_scientific_name == "Rana temporaria"
+    assert records[1].class_name == "Amphibia"

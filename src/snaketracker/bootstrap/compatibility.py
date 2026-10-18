@@ -533,6 +533,18 @@ def inspect_local_taxonomy(connection: Connection) -> CompatibilityReport:
             "SELECT generation_id,provenance FROM taxonomy_generation_publications LIMIT 1"
         )
         connection.exec_driver_sql("SELECT search_rowid FROM taxonomy_facts LIMIT 1")
+        # Only explicit snapshot reservations may legitimately lack publication. Public
+        # lifecycle evidence survives generation cleanup; both history sets are uncorrelated.
+        if connection.exec_driver_sql(
+            "SELECT 1 FROM taxa t LEFT JOIN taxonomy_publications p USING(taxon_id) "
+            "WHERE p.taxon_id IS NULL AND (t.taxon_id NOT IN "
+            "(SELECT taxon_id FROM taxonomy_changes WHERE taxon_id IS NOT NULL "
+            "AND kind='snapshot_identity_reserved') OR t.taxon_id IN "
+            "(SELECT taxon_id FROM taxonomy_changes WHERE taxon_id IS NOT NULL "
+            "AND kind IN ('live_observation','reference_identity_published',"
+            "'reference_selection_retained'))) LIMIT 1"
+        ).first():
+            raise ValueError("Missing publication for a public taxonomy identity.")
         if (
             connection.exec_driver_sql(
                 "SELECT 1 FROM taxa t LEFT JOIN taxonomy_search_keys k ON k.taxon_id=t.taxon_id "

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -555,3 +556,109 @@ def test_migrated_classification_and_authorship_are_indexed_without_refresh(tmp_
             assert tuple(retained) == tuple(values.values())
     finally:
         engine.dispose()
+
+
+@pytest.mark.parametrize("origin", ["migrated", "cleaned_snapshot", "staged_then_live"])
+def test_missing_publication_for_public_identity_rejects_startup(tmp_path, origin):
+    database = tmp_path / "publication-coverage.db"
+    config = config_for(database)
+    command.upgrade(config, "0023_sourced_care_guides")
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    legacy = uuid4()
+    if origin == "migrated":
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO taxa(taxon_id,supported_group,accepted_scientific_name,"
+                    "taxonomic_status,created_at,refreshed_at) "
+                    "VALUES(:id,'snake','Local reference','accepted',:now,:now)"
+                ),
+                {"id": str(legacy), "now": NOW.isoformat()},
+            )
+    command.upgrade(config, "head")
+    catalog = LocalTaxonomyCatalog(engine)
+    candidate = ProviderTaxon("fixture", "1", "https://example.test/1", "", "Public reference")
+
+    def stage_private(label, records):
+        generation = catalog.begin_generation(
+            GenerationSource(
+                label,
+                "fixture",
+                "https://example.test/archive",
+                NOW,
+                NOW,
+                "a" * 64,
+                "Synthetic fixture",
+            ),
+            imported_at=NOW,
+        )
+        catalog.stage(generation, records)
+        catalog.validate_generation(generation)
+        return generation
+
+    if origin == "migrated":
+        target = legacy
+    else:
+        generation = stage_private("Original reference", [candidate])
+        if origin == "cleaned_snapshot":
+            catalog.promote(generation)
+            target = catalog.search("Public reference")[0].taxon_id
+            replacement = stage_private(
+                "Replacement", [replace(candidate, provider_id="replacement")]
+            )
+            catalog.promote(replacement)
+            catalog.cleanup(generation, retained_generations={replacement})
+        else:
+            target = catalog.publish(candidate, retrieved_at=NOW, source_effective_at=NOW)
+    catalog.publish(replace(candidate, provider_id="surviving"), retrieved_at=NOW)
+    assert inspect_startup_compatibility(engine).mode is CompatibilityMode.NORMAL
+    with engine.begin() as connection:
+        connection.execute(
+            text("DELETE FROM taxonomy_publications WHERE taxon_id=:id"), {"id": str(target)}
+        )
+        assert (
+            connection.exec_driver_sql("SELECT count(*) FROM taxonomy_publications").scalar_one()
+            > 0
+        )
+    assert inspect_startup_compatibility(engine).reason_code == "taxonomy_reference_incompatible"
+    engine.dispose()
+
+
+def test_private_reservations_remain_compatible_through_qualification_and_cleanup(tmp_path):
+    database = tmp_path / "private-publication-coverage.db"
+    command.upgrade(config_for(database), "head")
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    catalog = LocalTaxonomyCatalog(engine)
+    generation = catalog.begin_generation(
+        GenerationSource(
+            "Private reference",
+            "fixture",
+            "https://example.test/archive",
+            NOW,
+            NOW,
+            "a" * 64,
+            "Synthetic fixture",
+        ),
+        imported_at=NOW,
+    )
+    catalog.stage(
+        generation,
+        [ProviderTaxon("fixture", "1", "https://example.test/1", "", "Private reference")],
+    )
+    assert inspect_startup_compatibility(engine).mode is CompatibilityMode.NORMAL
+    with engine.connect() as connection:
+        identifier = UUID(connection.exec_driver_sql("SELECT taxon_id FROM taxa").scalar_one())
+    catalog.map_identity(
+        identifier,
+        "fixture",
+        "alias",
+        source_url="https://example.test/alias",
+        decided_by="Owner",
+        reason="Qualify an unpublished reservation",
+    )
+    catalog.validate_generation(generation)
+    assert inspect_startup_compatibility(engine).mode is CompatibilityMode.NORMAL
+    catalog.cleanup(generation, retained_generations=set())
+    assert inspect_startup_compatibility(engine).mode is CompatibilityMode.NORMAL
+    assert catalog.search("Private reference") == ()
+    engine.dispose()
