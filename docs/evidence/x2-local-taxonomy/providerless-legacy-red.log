@@ -1,0 +1,231 @@
+F.F                                                                      [100%]
+=================================== FAILURES ===================================
+__ test_23_to_24_preserves_every_reference_and_immutable_guide_trigger[False] __
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-161/test_23_to_24_preserves_every_0')
+mapped = False
+
+    @pytest.mark.parametrize("mapped", [False, True])
+    def test_23_to_24_preserves_every_reference_and_immutable_guide_trigger(tmp_path, mapped):
+        from snaketracker.application.animals import AnimalService, RegisterAnimalCommand
+        from snaketracker.application.household_bootstrap import (
+            BootstrapCommand,
+            HouseholdBootstrapService,
+        )
+        from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
+        from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
+        from snaketracker.infrastructure.identity.bootstrap_repository import (
+            SQLAlchemyHouseholdBootstrapRepository,
+        )
+        from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
+
+        database = tmp_path / "historical.db"
+        config = config_for(database)
+        command.upgrade(config, "0023_sourced_care_guides")
+        engine = create_sqlite_engine(database, require_local_storage=False)
+        bootstrap = HouseholdBootstrapService(
+            SQLAlchemyHouseholdBootstrapRepository(engine),
+            Argon2PasswordHasher.for_testing(),
+            command_hash_secret=b"x2-historical-fixture-32-bytes-secret",
+        ).bootstrap(
+            BootstrapCommand(
+                "Synthetic history",
+                "UTC",
+                "x2@example.test",
+                "Keeper",
+                "correct horse battery staple",
+                "x2-historical-bootstrap-key",
+                uuid4(),
+            )
+        )
+        store = SQLAlchemyEventStore(engine)
+        projection = SQLAlchemyAnimalCurrentProjection(engine)
+        animals = AnimalService(store, projection)
+        registrations = [
+            animals.register(
+                RegisterAnimalCommand(
+                    bootstrap.household_id,
+                    bootstrap.user_id,
+                    uuid4(),
+                    "x2-historical-registration-" + group,
+                    "Historical " + group,
+                    "Manual offline species",
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    animal_type=group,
+                )
+            )
+            for group in ("snake", "spider", "lizard", "scorpion")
+        ]
+        identifier = str(uuid4())
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO taxa(taxon_id,supported_group,accepted_scientific_name,"
+                    "taxonomic_status,created_at,refreshed_at) VALUES(:id,'snake','Python "
+                    "regius','accepted',:now,:now)"
+                ),
+                {"id": identifier, "now": NOW.isoformat()},
+            )
+            if mapped:
+                connection.execute(
+                    text(
+                        "INSERT INTO taxon_provider_mappings VALUES(:id,'fixture','1',"
+                        "'https://example.test/taxa/1',:now,:now)"
+                    ),
+                    {"id": identifier, "now": NOW.isoformat()},
+                )
+            connection.execute(
+                text(
+                    "INSERT INTO taxon_names VALUES(:id,'Python regius','python regius','scientific')"
+                ),
+                {"id": identifier},
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO taxon_names VALUES "
+                    "(:id,'Historical Python','historical python','synonym'),"
+                    "(:id,'Royal python alias','royal python alias','alternative_common')"
+                ),
+                {"id": identifier},
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO taxon_images(taxon_id,source_url,creator,attribution,"
+                    "license_code,license_url,local_filename,local_sha256) "
+                    "VALUES(:id,'https://example.test/image',"
+                    "'Creator','Attribution','cc-by','https://example.test/license','retained.webp',:hash)"
+                ),
+                {"id": identifier, "hash": "a" * 64},
+            )
+            durable_references(connection, identifier)
+        bundle = GuideBundle.model_validate_json(
+            (ROOT / "reference/care-guides/reviewed-v1.json").read_bytes()
+        )
+        guide = next(guide for guide in bundle.guides if guide.scientific_name == "Python regius")
+        # Seed historical immutable rows directly: the current importer requires X2 visibility.
+        from snaketracker.infrastructure.taxonomy.care_guides import _payload
+
+        with engine.begin() as connection:
+            SQLAlchemyCareGuideRepository._insert_guide(connection, identifier, guide, *_payload(guide))
+        with engine.connect() as connection:
+            before = snapshot(connection)
+            triggers = connection.exec_driver_sql(
+                "SELECT name,sql FROM sqlite_master WHERE type='trigger' "
+                "AND name LIKE 'care_guide_%' ORDER BY name"
+            ).all()
+        command.upgrade(config, "head")
+        for animal in registrations:
+            history = store.load_stream(animal.stream_key)
+            assert history[0].event_type == "animal.registered"
+            assert projection.profile_for(bootstrap.household_id, animal.animal_id) == animal.profile
+        with engine.connect() as connection:
+            assert snapshot(connection) == before
+            assert connection.exec_driver_sql("PRAGMA foreign_key_check").all() == []
+            assert (
+                connection.exec_driver_sql(
+                    "SELECT name,sql FROM sqlite_master WHERE type='trigger' "
+                    "AND name LIKE 'care_guide_%' ORDER BY name"
+                ).all()
+                == triggers
+            )
+        catalog = LocalTaxonomyCatalog(engine)
+        summary = catalog.resolve(UUID(identifier))
+>       assert summary is not None
+E       assert None is not None
+
+tests/integration/test_taxonomy_compatibility.py:220: AssertionError
+----------------------------- Captured stderr call -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+___ test_first_mapping_of_migrated_providerless_taxon_establishes_preference ___
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-161/test_first_mapping_of_migrated0')
+
+    def test_first_mapping_of_migrated_providerless_taxon_establishes_preference(tmp_path):
+        database = tmp_path / "legacy-without-mapping.db"
+        config = config_for(database)
+        command.upgrade(config, "0023_sourced_care_guides")
+        engine = create_sqlite_engine(database, require_local_storage=False)
+        identifier = uuid4()
+        try:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "INSERT INTO taxa(taxon_id,supported_group,accepted_scientific_name,"
+                        "taxonomic_status,created_at,refreshed_at) "
+                        "VALUES(:id,'snake','Python regius','accepted',:now,:now)"
+                    ),
+                    {"id": str(identifier), "now": NOW.isoformat()},
+                )
+            command.upgrade(config, "head")
+            catalog = LocalTaxonomyCatalog(engine)
+            local = catalog.resolve(identifier)
+>           assert local is not None and local.provider == "local"
+E           assert (None is not None)
+
+tests/integration/test_taxonomy_compatibility.py:422: AssertionError
+----------------------------- Captured stderr call -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+=========================== short test summary info ============================
+FAILED tests/integration/test_taxonomy_compatibility.py::test_23_to_24_preserves_every_reference_and_immutable_guide_trigger[False]
+FAILED tests/integration/test_taxonomy_compatibility.py::test_first_mapping_of_migrated_providerless_taxon_establishes_preference
+2 failed, 1 passed, 23 deselected in 4.66s

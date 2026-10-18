@@ -11,6 +11,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine
 
 from snaketracker.application.care_guides import GuideBundle, ReviewedGuide
+from snaketracker.infrastructure.taxonomy.catalog import LocalTaxonomyCatalog
 
 
 class CareGuideImportError(ValueError):
@@ -47,17 +48,40 @@ class SQLAlchemyCareGuideRepository:
                 key = (guide.biological_group.value, guide.scientific_name)
                 if key in taxon_ids:
                     continue
-                rows = (
-                    connection.execute(
+                # Indexed candidate lookup covers fallback, overlay and active generation names.
+                candidates = connection.execute(
+                    text(
+                        "WITH candidates AS (SELECT taxon_id FROM taxa "
+                        "WHERE supported_group=:group AND accepted_scientific_name=:name "
+                        "UNION SELECT taxon_id FROM taxonomy_overlay "
+                        "WHERE json_extract(payload,'$.supported_group')=:group "
+                        "AND json_extract(payload,'$.accepted_scientific_name')=:name UNION "
+                        "SELECT f.taxon_id FROM taxonomy_facts f JOIN taxonomy_selection s "
+                        "ON s.generation_id=f.generation_id WHERE "
+                        "json_extract(f.payload,'$.supported_group')=:group "
+                        "AND json_extract(f.payload,'$.accepted_scientific_name')=:name) "
+                        "SELECT taxon_id FROM candidates JOIN taxonomy_publications USING(taxon_id)"
+                    ),
+                    {"group": key[0], "name": key[1]},
+                ).scalars()
+                rows = []
+                catalog = LocalTaxonomyCatalog(self._engine)
+                for identifier in candidates:
+                    selected = catalog.resolve_on(connection, UUID(identifier))
+                    if selected is not None:
+                        if selected.workflow_group == key[0] and selected.scientific_name == key[1]:
+                            rows.append(identifier)
+                    elif connection.execute(
                         text(
-                            "SELECT taxon_id FROM taxa WHERE supported_group=:group "
-                            "AND accepted_scientific_name=:name"
+                            "SELECT 1 FROM taxa t JOIN taxonomy_publications p USING(taxon_id) "
+                            "WHERE t.taxon_id=:id AND p.payload IS NULL AND supported_group=:group "
+                            "AND accepted_scientific_name=:name AND NOT EXISTS "
+                            "(SELECT 1 FROM taxon_provider_mappings m WHERE m.taxon_id=t.taxon_id)"
                         ),
-                        {"group": key[0], "name": key[1]},
-                    )
-                    .scalars()
-                    .all()
-                )
+                        {"id": identifier, "group": key[0], "name": key[1]},
+                    ).first():
+                        # Legacy locally qualified taxa can have no external provider mapping.
+                        rows.append(identifier)
                 if len(rows) != 1:
                     raise CareGuideImportError(
                         f"Expected exactly one cached Care Keeper taxon for {key[0]} {key[1]}."

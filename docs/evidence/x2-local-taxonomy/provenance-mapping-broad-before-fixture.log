@@ -1,0 +1,71 @@
+.................................F...................................... [ 36%]
+........................................................................ [ 73%]
+.....................................................                    [100%]
+=================================== FAILURES ===================================
+_________ test_first_promotion_preserves_qualified_fallback_provenance _________
+
+catalog = <snaketracker.infrastructure.taxonomy.catalog.LocalTaxonomyCatalog object at 0xffff98546120>
+
+    def test_first_promotion_preserves_qualified_fallback_provenance(catalog):
+        a = stage(catalog, "A", [taxon("root", "Animalia")])
+        catalog.promote(a)
+>       failed = catalog.begin_generation(
+            replace(source("Failed"), retrieved_at=NOW - timedelta(days=20)), imported_at=NOW
+        )
+
+tests/integration/test_local_taxonomy.py:564:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src/snaketracker/infrastructure/taxonomy/catalog.py:946: in begin_generation
+    validate_generation_source(source)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = GenerationSource(label='Failed', provider='fixture', source_url='https://example.test/archive', retrieved_at=datetime....aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', rights='Synthetic fixture; no external archive rights asserted')
+
+    def validate_generation_source(source: GenerationSource) -> None:
+        if (
+            not source.label.strip()
+            or len(source.label) > 256
+            or not source.rights.strip()
+            or len(source.rights) > 4096
+            or not re.fullmatch(r"[a-f0-9]{64}", source.checksum)
+        ):
+            raise ValueError("Generation requires source, checksum and explicit rights provenance.")
+        validate(ProviderTaxon(source.provider, "source", source.source_url, "", "Source validation"))
+        timestamp(source.retrieved_at)
+        if source.snapshot_at is not None:
+            timestamp(source.snapshot_at)
+            if source.snapshot_at > source.retrieved_at:
+>               raise ValueError("A snapshot cannot postdate archive retrieval.")
+E               ValueError: A snapshot cannot postdate archive retrieval.
+
+src/snaketracker/infrastructure/taxonomy/catalog.py:130: ValueError
+---------------------------- Captured stderr setup -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+=========================== short test summary info ============================
+FAILED tests/integration/test_local_taxonomy.py::test_first_promotion_preserves_qualified_fallback_provenance
+1 failed, 196 passed in 257.12s (0:04:17)

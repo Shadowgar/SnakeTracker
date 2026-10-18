@@ -675,3 +675,17 @@ def test_manual_creation_survives_bounded_provider_failures(tmp_path, monkeypatc
             assert (
                 connection.execute(text("SELECT count(*) FROM animal_taxon_current")).scalar() == 0
             )
+
+
+def test_tokenless_directory_queries_are_validation_responses(tmp_path, monkeypatch):
+    from snaketracker.infrastructure.taxonomy import inaturalist
+
+    def unexpected(*args, **kwargs):
+        raise AssertionError("Tokenless queries must not call an external provider")
+
+    monkeypatch.setattr(inaturalist, "urlopen", unexpected)
+    with _client(tmp_path) as client:
+        _setup(client)
+        for query in ("--", "🐸🐸", "__"):
+            response = client.get("/api/directory/search", params={"group": "snake", "q": query})
+            assert response.status_code == 422

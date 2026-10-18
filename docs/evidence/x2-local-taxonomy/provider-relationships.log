@@ -1,0 +1,8 @@
+..................................                                       [100%]
+=============================== warnings summary ===============================
+tests/unit/infrastructure/test_taxonomy_archive.py::test_unsafe_or_duplicate_members_are_rejected_before_parsing[taxa.tsv]
+  /home/rocco/.local/share/uv/python/cpython-3.13.14-linux-aarch64-gnu/lib/python3.13/zipfile/__init__.py:1661: UserWarning: Duplicate name: 'taxa.tsv'
+    return self._open_to_write(zinfo, force_zip64=force_zip64)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+34 passed, 1 warning in 12.30s

@@ -1,0 +1,41 @@
+.FF                                                                      [100%]
+=================================== FAILURES ===================================
+_ test_synonym_group_follows_accepted_name_ancestry_for_local_search[inaturalist] _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-155/test_synonym_group_follows_acc1')
+provider = 'inaturalist'
+
+    @pytest.mark.parametrize("provider", ["fixture", "inaturalist"])
+    def test_synonym_group_follows_accepted_name_ancestry_for_local_search(tmp_path, provider):
+        from datetime import UTC, datetime
+        from pathlib import Path
+
+        from alembic import command
+        from alembic.config import Config
+
+        from snaketracker.application.local_taxonomy import GenerationSource
+        from snaketracker.infrastructure.database.engine import create_sqlite_engine
+        from snaketracker.infrastructure.taxonomy.catalog import LocalTaxonomyCatalog
+
+        records = tuple(read_archive(synonym_archive(tmp_path), provider=provider))
+        by_id = {record.provider_id: record for record in records}
+        expected = "snake" if provider == "inaturalist" else ""
+>       assert all(by_id[identifier].supported_group == expected for identifier in ("9", "10", "11"))
+E       assert False
+E        +  where False = all(<generator object test_synonym_group_follows_accepted_name_ancestry_for_local_search.<locals>.<genexpr> at 0xffff9f32aea0>)
+
+tests/unit/infrastructure/test_taxonomy_archive.py:644: AssertionError
+_ test_synonym_parent_and_accepted_name_conflicting_groups_require_reconciliation _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-155/test_synonym_parent_and_accept0')
+
+    def test_synonym_parent_and_accepted_name_conflicting_groups_require_reconciliation(tmp_path):
+>       with pytest.raises(ValueError, match="Conflicting qualified workflow ancestry"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/infrastructure/test_taxonomy_archive.py:688: Failed
+=========================== short test summary info ============================
+FAILED tests/unit/infrastructure/test_taxonomy_archive.py::test_synonym_group_follows_accepted_name_ancestry_for_local_search[inaturalist]
+FAILED tests/unit/infrastructure/test_taxonomy_archive.py::test_synonym_parent_and_accepted_name_conflicting_groups_require_reconciliation
+2 failed, 1 passed, 54 deselected in 2.33s

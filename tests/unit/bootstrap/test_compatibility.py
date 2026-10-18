@@ -17,7 +17,7 @@ from snaketracker.bootstrap.compatibility import (
     ("metadata", "database_is_empty", "expected_mode"),
     [
         (
-            {"manifest_version": 1, "relational_schema_version": 23},
+            {"manifest_version": 1, "relational_schema_version": 24},
             False,
             CompatibilityMode.NORMAL,
         ),
@@ -34,7 +34,7 @@ from snaketracker.bootstrap.compatibility import (
             CompatibilityMode.RECOVERY_REQUIRED,
         ),
         (
-            {"manifest_version": 1, "relational_schema_version": 24},
+            {"manifest_version": 1, "relational_schema_version": 25},
             False,
             CompatibilityMode.RECOVERY_REQUIRED,
         ),
@@ -74,9 +74,7 @@ def test_known_alembic_revision_is_compatible(tmp_path) -> None:
     try:
         with engine.begin() as connection:
             connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
-            connection.execute(
-                text("INSERT INTO alembic_version VALUES ('0023_sourced_care_guides')")
-            )
+            connection.execute(text("INSERT INTO alembic_version VALUES ('0024_local_taxonomy')"))
 
         assert inspect_database_compatibility(engine).mode is CompatibilityMode.NORMAL
     finally:
@@ -164,29 +162,19 @@ def test_runtime_compatibility_rejects_unsupported_sqlite(
 
 
 def test_startup_compatibility_accepts_supported_runtime_and_schema(tmp_path) -> None:
+    from pathlib import Path
+
+    from alembic import command
+    from alembic.config import Config
+
     database = tmp_path / "startup.sqlite3"
+    root = Path(__file__).parents[3]
+    config = Config(root / "alembic.ini")
+    config.set_main_option("script_location", str(root / "migrations"))
+    config.set_main_option("sqlalchemy.url", f"sqlite+pysqlite:///{database}")
+    command.upgrade(config, "head")
     engine = create_engine(f"sqlite+pysqlite:///{database}")
     try:
-        with engine.begin() as connection:
-            connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
-            connection.execute(
-                text("INSERT INTO alembic_version VALUES ('0023_sourced_care_guides')")
-            )
-            connection.execute(
-                text(
-                    "CREATE TABLE domain_events ("
-                    "stream_type VARCHAR(64) NOT NULL, event_type VARCHAR(128) NOT NULL, "
-                    "schema_version INTEGER NOT NULL, payload_json TEXT NOT NULL)"
-                )
-            )
-            connection.execute(
-                text(
-                    "CREATE TABLE projection_definitions ("
-                    "projection_name TEXT,projection_schema_version INTEGER,"
-                    "handler_version INTEGER)"
-                )
-            )
-
         assert inspect_startup_compatibility(engine).mode is CompatibilityMode.NORMAL
     finally:
         engine.dispose()
@@ -198,9 +186,7 @@ def test_unknown_non_household_contract_requires_restricted_recovery(tmp_path) -
     try:
         with engine.begin() as connection:
             connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
-            connection.execute(
-                text("INSERT INTO alembic_version VALUES ('0023_sourced_care_guides')")
-            )
+            connection.execute(text("INSERT INTO alembic_version VALUES ('0024_local_taxonomy')"))
             connection.execute(
                 text(
                     "CREATE TABLE domain_events ("

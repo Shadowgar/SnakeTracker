@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
 from uuid import UUID, uuid4
 
 from snaketracker.application.animals import AnimalCurrentProjection
+from snaketracker.application.local_taxonomy import TaxonomySearchLimitError
 from snaketracker.domains.animals.contracts import AnimalTaxonLinkedV1
 from snaketracker.platform.events.envelope import DomainEvent, EventSubject, event_checksum
 from snaketracker.platform.events.store import (
@@ -61,6 +63,9 @@ class ProviderTaxon:
     image_license_url: str | None = None
     image_provider_record_id: str | None = None
     image_source_page_url: str | None = None
+    parent_provider_id: str | None = None
+    accepted_provider_id: str | None = None
+    source_effective_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -121,6 +126,8 @@ class TaxonRecord:
     image_kind: str = "photograph"
     image_resolution_state: str | None = None
     image_checked_at: datetime | None = None
+    taxonomy_selection_state: str = "selected"
+    taxonomy_reference_state: str = "catalog_fallback"
 
     @property
     def display_name(self) -> str:
@@ -262,7 +269,10 @@ class SpeciesDirectoryService:
         query, group = _validated_search(query_value, group_value, limit)
         now = datetime.now(UTC)
         stale_after = now - self._cache_ttl
-        cached = self._repository.search(query, group, limit=limit, stale_after=stale_after)
+        try:
+            cached = self._repository.search(query, group, limit=limit, stale_after=stale_after)
+        except TaxonomySearchLimitError as error:
+            raise DirectoryValidationError(str(error)) from error
         if cached and not any(record.stale for record in cached):
             return DirectorySearchResult(cached, "cached")
         try:
@@ -279,7 +289,11 @@ class SpeciesDirectoryService:
                 "unavailable",
                 "Species search is temporarily unavailable. You can enter the species manually.",
             )
-        records = tuple(self._repository.upsert(item, observed_at=now) for item in candidates)
+        records = tuple(
+            record
+            for item in candidates
+            if (record := self._repository.upsert(item, observed_at=now)).supported_group == group
+        )
         return DirectorySearchResult(records, "live" if records else "empty")
 
     def get(self, taxon_id: UUID) -> TaxonRecord | None:
@@ -287,7 +301,11 @@ class SpeciesDirectoryService:
 
     def refresh_detail(self, taxon_id: UUID) -> TaxonRecord | None:
         record = self.get(taxon_id)
-        if record is None or record.provider != self._provider.provider_name:
+        if (
+            record is None
+            or record.provider != self._provider.provider_name
+            or record.supported_group not in SUPPORTED_GROUPS
+        ):
             return record
         try:
             candidate = self._provider.detail(record.provider_id, record.supported_group)
@@ -496,6 +514,8 @@ def _validated_search(query_value: str, group_value: str, limit: int) -> tuple[s
         raise DirectoryValidationError("Enter at least 2 characters.")
     if len(query) > 100 or limit < 1 or limit > 20:
         raise DirectoryValidationError("Species search is too large.")
+    if re.search(r"[^\W_]", query, flags=re.UNICODE) is None:
+        raise DirectoryValidationError("Enter a scientific or common name with letters or numbers.")
     return query, group
 
 

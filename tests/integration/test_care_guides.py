@@ -14,6 +14,7 @@ from pydantic import SecretStr
 from sqlalchemy import text
 
 from snaketracker.application.care_guides import GuideBundle
+from snaketracker.application.species_directory import ProviderTaxon
 from snaketracker.bootstrap.application import build_application
 from snaketracker.bootstrap.configuration import Environment, Settings
 from snaketracker.infrastructure.database.engine import create_sqlite_engine
@@ -21,6 +22,7 @@ from snaketracker.infrastructure.taxonomy.care_guides import (
     CareGuideImportError,
     SQLAlchemyCareGuideRepository,
 )
+from snaketracker.infrastructure.taxonomy.catalog import LocalTaxonomyCatalog
 from snaketracker.operations.import_care_guides import MAX_BUNDLE_BYTES, load_bundle, main
 
 ROOT = Path(__file__).parents[2]
@@ -31,7 +33,7 @@ def _database(tmp_path: Path) -> tuple[Path, dict[str, UUID]]:
     config = Config(ROOT / "alembic.ini")
     config.set_main_option("script_location", str(ROOT / "migrations"))
     config.set_main_option("sqlalchemy.url", f"sqlite+pysqlite:///{path}")
-    command.upgrade(config, "head")
+    command.upgrade(config, "0023_sourced_care_guides")
     bundle = GuideBundle.model_validate_json(
         (ROOT / "reference/care-guides/reviewed-v1.json").read_bytes()
     )
@@ -68,6 +70,7 @@ def _database(tmp_path: Path) -> tuple[Path, dict[str, UUID]]:
                 },
             )
     engine.dispose()
+    command.upgrade(config, "head")
     return path, ids
 
 
@@ -156,11 +159,11 @@ def test_unknown_taxon_and_changed_version_roll_back_entire_bundle(tmp_path: Pat
     repo = SQLAlchemyCareGuideRepository(engine)
     bundle = _bundle()
     try:
-        with engine.begin() as connection:
-            connection.execute(
-                text("DELETE FROM taxa WHERE taxon_id=:id"),
-                {"id": str(ids["Pandinus imperator"])},
-            )
+        # Permanent identities cannot be deleted; unknown names must still reject atomically.
+        unknown = bundle.guides[-1].model_copy(
+            update={"scientific_name": "Unknown fixture species"}
+        )
+        bundle = bundle.model_copy(update={"guides": (*bundle.guides[:-1], unknown)})
         with pytest.raises(CareGuideImportError, match="exactly one cached"):
             repo.import_bundle(bundle)
         with engine.connect() as connection:
@@ -258,24 +261,17 @@ def test_animal_reference_reads_only_its_explicitly_linked_current_guide(
     path, ids = _database(tmp_path)
     engine = create_sqlite_engine(path, require_local_storage=False)
     SQLAlchemyCareGuideRepository(engine).import_bundle(_bundle())
-    no_guide_id = uuid4()
+    no_guide_id = LocalTaxonomyCatalog(engine).publish(
+        ProviderTaxon(
+            provider="fixture",
+            provider_id="boa-no-guide",
+            source_url="https://example.test/boa",
+            supported_group="snake",
+            accepted_scientific_name="Boa constrictor",
+        ),
+        retrieved_at=datetime.now(UTC),
+    )
     with engine.begin() as connection:
-        connection.execute(
-            text(
-                "INSERT INTO taxa (taxon_id,supported_group,accepted_scientific_name,"
-                "taxonomic_status,created_at,refreshed_at) "
-                "VALUES (:id,'snake','Boa constrictor','accepted',:at,:at)"
-            ),
-            {"id": str(no_guide_id), "at": datetime.now(UTC).isoformat()},
-        )
-        connection.execute(
-            text(
-                "INSERT INTO taxon_provider_mappings "
-                "(taxon_id,provider,provider_id,source_url,retrieved_at,refreshed_at) "
-                "VALUES (:id,'fixture','boa-no-guide','https://example.test/boa',:at,:at)"
-            ),
-            {"id": str(no_guide_id), "at": datetime.now(UTC).isoformat()},
-        )
         connection.execute(
             text(
                 "UPDATE taxa SET rank='species',kingdom='Animalia',phylum_division='Chordata',"

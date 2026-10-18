@@ -1,0 +1,174 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+______ test_authenticated_offline_guide_escapes_source_text_and_keeps_csp ______
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-142/test_authenticated_offline_gui0')
+
+    def test_authenticated_offline_guide_escapes_source_text_and_keeps_csp(tmp_path: Path) -> None:
+        path, ids = _database(tmp_path)
+        engine = create_sqlite_engine(path, require_local_storage=False)
+        guide = _bundle().guides[0]
+        claim = guide.claims[0].model_copy(update={"label": "<script>alert(1)</script>"})
+        source = guide.sources[0].model_copy(update={"title": "<img src=x onerror=alert(1)>"})
+        guide = guide.model_copy(
+            update={"claims": (claim, *guide.claims[1:]), "sources": (source, *guide.sources[1:])}
+        )
+        SQLAlchemyCareGuideRepository(engine).import_bundle(
+            GuideBundle(format_version=1, guides=(guide,))
+        )
+        engine.dispose()
+        app = build_application(
+            Settings(
+                environment=Environment.TEST,
+                database_path=path,
+                runtime_secret=SecretStr("care-guide-runtime-secret-at-least-32-bytes"),
+                session_cookie_secure=False,
+            )
+        )
+        with TestClient(app) as client:
+            unauthenticated = client.get(
+                f"/directory/{ids['Python regius']}/care-guide", follow_redirects=False
+            )
+>           assert unauthenticated.status_code == 303
+E           assert 404 == 303
+E            +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/integration/test_care_guides.py:213: AssertionError
+----------------------------- Captured stderr call -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+_____ test_animal_reference_reads_only_its_explicitly_linked_current_guide _____
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-142/test_animal_reference_reads_on0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0xffff9fa7d480>
+
+    def test_animal_reference_reads_only_its_explicitly_linked_current_guide(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        path, ids = _database(tmp_path)
+        engine = create_sqlite_engine(path, require_local_storage=False)
+        SQLAlchemyCareGuideRepository(engine).import_bundle(_bundle())
+        no_guide_id = uuid4()
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO taxa (taxon_id,supported_group,accepted_scientific_name,"
+                    "taxonomic_status,created_at,refreshed_at) "
+                    "VALUES (:id,'snake','Boa constrictor','accepted',:at,:at)"
+                ),
+                {"id": str(no_guide_id), "at": datetime.now(UTC).isoformat()},
+            )
+            connection.execute(
+                text("INSERT INTO taxonomy_publications(taxon_id) VALUES(:id)"),
+                {"id": str(no_guide_id)},
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO taxon_provider_mappings "
+                    "(taxon_id,provider,provider_id,source_url,retrieved_at,refreshed_at) "
+                    "VALUES (:id,'fixture','boa-no-guide','https://example.test/boa',:at,:at)"
+                ),
+                {"id": str(no_guide_id), "at": datetime.now(UTC).isoformat()},
+            )
+            connection.execute(
+                text(
+                    "UPDATE taxa SET rank='species',kingdom='Animalia',phylum_division='Chordata',"
+                    "class_name='Reptilia',order_name='Squamata',family='Pythonidae',genus='Python' "
+                    "WHERE taxon_id=:id"
+                ),
+                {"id": str(ids["Python regius"])},
+            )
+            for name, kind in (
+                ("Royal Python", "alternative_common"),
+                ("A legitimate long historical synonym & author citation", "synonym"),
+            ):
+                connection.execute(
+                    text(
+                        "INSERT INTO taxon_names (taxon_id,name,normalized_name,name_kind) "
+                        "VALUES (:id,:name,:normalized,:kind)"
+                    ),
+                    {
+                        "id": str(ids["Python regius"]),
+                        "name": name,
+                        "normalized": name.lower(),
+                        "kind": kind,
+                    },
+                )
+        engine.dispose()
+
+        app = build_application(
+            Settings(
+                environment=Environment.TEST,
+                database_path=path,
+                runtime_secret=SecretStr("profile-reference-runtime-secret-32-bytes"),
+                session_cookie_secure=False,
+            )
+        )
+        with TestClient(app) as client:
+            setup = client.get("/setup")
+            token = re.search(r'name="csrf_token" value="([^"]+)"', setup.text)
+>           assert token is not None
+E           assert None is not None
+
+tests/integration/test_care_guides.py:324: AssertionError
+----------------------------- Captured stderr call -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /tmp/snaketracker-x2-taxonomy-20261017/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/integration/test_care_guides.py::test_authenticated_offline_guide_escapes_source_text_and_keeps_csp
+FAILED tests/integration/test_care_guides.py::test_animal_reference_reads_only_its_explicitly_linked_current_guide
+2 failed, 3 deselected, 1 warning in 3.84s

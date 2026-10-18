@@ -95,6 +95,7 @@ from snaketracker.infrastructure.reminders.projections import SQLAlchemyReminder
 from snaketracker.infrastructure.search.fts import SQLAlchemyFTSSearchRepository
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 from snaketracker.infrastructure.taxonomy.care_guides import SQLAlchemyCareGuideRepository
+from snaketracker.infrastructure.taxonomy.catalog import LocalTaxonomyCatalog
 from snaketracker.infrastructure.taxonomy.inaturalist import INaturalistTaxonomyProvider
 from snaketracker.infrastructure.taxonomy.reference_images import LocalReferenceImageCache
 from snaketracker.infrastructure.taxonomy.reference_providers import (
@@ -390,6 +391,8 @@ def build_application(settings: Settings) -> FastAPI:
             extra={"context": {"compatibility_reason": compatibility.reason_code}},
         )
     app.state.database_engine = engine
+    if compatibility.normal_readiness:
+        app.state.local_taxonomy = LocalTaxonomyCatalog(engine)
     app.state.compatibility = compatibility
     return app
 

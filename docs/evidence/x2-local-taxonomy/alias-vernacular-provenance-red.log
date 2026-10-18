@@ -1,0 +1,436 @@
+FFFFFFFFF                                                                [100%]
+=================================== FAILURES ===================================
+_ test_first_publication_preserves_other_qualified_alias_provenance[generation] _
+
+catalog = <snaketracker.infrastructure.taxonomy.catalog.LocalTaxonomyCatalog object at 0xffff8ca56270>
+publication = 'generation'
+
+    @pytest.mark.parametrize("publication", ["generation", "canonical", "alias"])
+    def test_first_publication_preserves_other_qualified_alias_provenance(catalog, publication):
+        candidate = taxon("1", "Qualified reference")
+        generation = stage(catalog, "Reserved reference", [candidate])
+        with catalog.engine.connect() as connection:
+            identifier = UUID(
+                connection.exec_driver_sql(
+                    "SELECT taxon_id FROM taxon_provider_mappings WHERE provider_id='1'"
+                ).scalar_one()
+            )
+        catalog.map_identity(
+            identifier,
+            "fixture",
+            "alias",
+            source_url="https://example.test/qualified-alias",
+            decided_by="Owner",
+            reason="Explicitly qualified alias before publication",
+        )
+
+        def provenance():
+            with catalog.engine.connect() as connection:
+                return {
+                    row[0]: tuple(row[1:])
+                    for row in connection.exec_driver_sql(
+                        "SELECT provider_id,source_url,retrieved_at,refreshed_at "
+                        "FROM taxon_provider_mappings WHERE provider='fixture'"
+                    )
+                }
+
+        before = provenance()
+        if publication == "generation":
+            published_id = "1"
+            published_url = candidate.source_url
+            catalog.promote(generation)
+        else:
+            published_id = "1" if publication == "canonical" else "alias"
+            published_url = "https://example.test/published/" + published_id
+            catalog.publish(
+                replace(candidate, provider_id=published_id, source_url=published_url),
+                retrieved_at=NOW + timedelta(days=10),
+                source_effective_at=NOW + timedelta(days=10),
+            )
+        untouched = "alias" if published_id == "1" else "1"
+        after = provenance()
+>       assert after[untouched] == before[untouched]
+E       AssertionError: assert ('https://exa...000000+00:00') == ('https://exa...831018+00:00')
+E
+E         At index 0 diff: 'https://example.test/taxon/1' != 'https://example.test/qualified-alias'
+E         Use -v to get more diff
+
+tests/integration/test_local_taxonomy.py:1889: AssertionError
+---------------------------- Captured stderr setup -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+_ test_first_publication_preserves_other_qualified_alias_provenance[canonical] _
+
+catalog = <snaketracker.infrastructure.taxonomy.catalog.LocalTaxonomyCatalog object at 0xffff8c723c50>
+publication = 'canonical'
+
+    @pytest.mark.parametrize("publication", ["generation", "canonical", "alias"])
+    def test_first_publication_preserves_other_qualified_alias_provenance(catalog, publication):
+        candidate = taxon("1", "Qualified reference")
+        generation = stage(catalog, "Reserved reference", [candidate])
+        with catalog.engine.connect() as connection:
+            identifier = UUID(
+                connection.exec_driver_sql(
+                    "SELECT taxon_id FROM taxon_provider_mappings WHERE provider_id='1'"
+                ).scalar_one()
+            )
+        catalog.map_identity(
+            identifier,
+            "fixture",
+            "alias",
+            source_url="https://example.test/qualified-alias",
+            decided_by="Owner",
+            reason="Explicitly qualified alias before publication",
+        )
+
+        def provenance():
+            with catalog.engine.connect() as connection:
+                return {
+                    row[0]: tuple(row[1:])
+                    for row in connection.exec_driver_sql(
+                        "SELECT provider_id,source_url,retrieved_at,refreshed_at "
+                        "FROM taxon_provider_mappings WHERE provider='fixture'"
+                    )
+                }
+
+        before = provenance()
+        if publication == "generation":
+            published_id = "1"
+            published_url = candidate.source_url
+            catalog.promote(generation)
+        else:
+            published_id = "1" if publication == "canonical" else "alias"
+            published_url = "https://example.test/published/" + published_id
+            catalog.publish(
+                replace(candidate, provider_id=published_id, source_url=published_url),
+                retrieved_at=NOW + timedelta(days=10),
+                source_effective_at=NOW + timedelta(days=10),
+            )
+        untouched = "alias" if published_id == "1" else "1"
+        after = provenance()
+>       assert after[untouched] == before[untouched]
+E       AssertionError: assert ('https://exa...000000+00:00') == ('https://exa...999566+00:00')
+E
+E         At index 0 diff: 'https://example.test/published/1' != 'https://example.test/qualified-alias'
+E         Use -v to get more diff
+
+tests/integration/test_local_taxonomy.py:1889: AssertionError
+---------------------------- Captured stderr setup -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+___ test_first_publication_preserves_other_qualified_alias_provenance[alias] ___
+
+catalog = <snaketracker.infrastructure.taxonomy.catalog.LocalTaxonomyCatalog object at 0xffff8c792ad0>
+publication = 'alias'
+
+    @pytest.mark.parametrize("publication", ["generation", "canonical", "alias"])
+    def test_first_publication_preserves_other_qualified_alias_provenance(catalog, publication):
+        candidate = taxon("1", "Qualified reference")
+        generation = stage(catalog, "Reserved reference", [candidate])
+        with catalog.engine.connect() as connection:
+            identifier = UUID(
+                connection.exec_driver_sql(
+                    "SELECT taxon_id FROM taxon_provider_mappings WHERE provider_id='1'"
+                ).scalar_one()
+            )
+        catalog.map_identity(
+            identifier,
+            "fixture",
+            "alias",
+            source_url="https://example.test/qualified-alias",
+            decided_by="Owner",
+            reason="Explicitly qualified alias before publication",
+        )
+
+        def provenance():
+            with catalog.engine.connect() as connection:
+                return {
+                    row[0]: tuple(row[1:])
+                    for row in connection.exec_driver_sql(
+                        "SELECT provider_id,source_url,retrieved_at,refreshed_at "
+                        "FROM taxon_provider_mappings WHERE provider='fixture'"
+                    )
+                }
+
+        before = provenance()
+        if publication == "generation":
+            published_id = "1"
+            published_url = candidate.source_url
+            catalog.promote(generation)
+        else:
+            published_id = "1" if publication == "canonical" else "alias"
+            published_url = "https://example.test/published/" + published_id
+            catalog.publish(
+                replace(candidate, provider_id=published_id, source_url=published_url),
+                retrieved_at=NOW + timedelta(days=10),
+                source_effective_at=NOW + timedelta(days=10),
+            )
+        untouched = "alias" if published_id == "1" else "1"
+        after = provenance()
+>       assert after[untouched] == before[untouched]
+E       AssertionError: assert ('https://exa...000000+00:00') == ('https://exa...000000+00:00')
+E
+E         At index 0 diff: 'https://example.test/published/alias' != 'https://example.test/taxon/1'
+E         Use -v to get more diff
+
+tests/integration/test_local_taxonomy.py:1889: AssertionError
+---------------------------- Captured stderr setup -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+_ test_vernacular_preferred_marker_survives_duplicate_rows_and_order[False-true] _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-148/test_vernacular_preferred_mark0')
+marker = 'true', reverse = False
+
+    @pytest.mark.parametrize("marker", ["true", " TRUE ", "1"])
+    @pytest.mark.parametrize("reverse", [False, True])
+    def test_vernacular_preferred_marker_survives_duplicate_rows_and_order(tmp_path, marker, reverse):
+        meta = META.replace(
+            "</extension>",
+            '<field index="2" term="http://rs.gbif.org/terms/1.0/isPreferredName"/></extension>',
+        )
+        names = [
+            "2\tA regional frog\tfalse\n",
+            "2\tZ preferred frog\tfalse\n",
+            f"2\tZ preferred frog\t{marker}\n",
+        ]
+        if reverse:
+            names.reverse()
+        records = tuple(
+            read_archive(archive(tmp_path, meta=meta, names="".join(names)), provider="fixture")
+        )
+>       assert records[1].preferred_common_name == "Z preferred frog"
+E       AssertionError: assert 'A regional frog' == 'Z preferred frog'
+E
+E         - Z preferred frog
+E         + A regional frog
+
+tests/unit/infrastructure/test_taxonomy_archive.py:570: AssertionError
+_ test_vernacular_preferred_marker_survives_duplicate_rows_and_order[False- TRUE ] _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-148/test_vernacular_preferred_mark1')
+marker = ' TRUE ', reverse = False
+
+    @pytest.mark.parametrize("marker", ["true", " TRUE ", "1"])
+    @pytest.mark.parametrize("reverse", [False, True])
+    def test_vernacular_preferred_marker_survives_duplicate_rows_and_order(tmp_path, marker, reverse):
+        meta = META.replace(
+            "</extension>",
+            '<field index="2" term="http://rs.gbif.org/terms/1.0/isPreferredName"/></extension>',
+        )
+        names = [
+            "2\tA regional frog\tfalse\n",
+            "2\tZ preferred frog\tfalse\n",
+            f"2\tZ preferred frog\t{marker}\n",
+        ]
+        if reverse:
+            names.reverse()
+        records = tuple(
+            read_archive(archive(tmp_path, meta=meta, names="".join(names)), provider="fixture")
+        )
+>       assert records[1].preferred_common_name == "Z preferred frog"
+E       AssertionError: assert 'A regional frog' == 'Z preferred frog'
+E
+E         - Z preferred frog
+E         + A regional frog
+
+tests/unit/infrastructure/test_taxonomy_archive.py:570: AssertionError
+_ test_vernacular_preferred_marker_survives_duplicate_rows_and_order[False-1] __
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-148/test_vernacular_preferred_mark2')
+marker = '1', reverse = False
+
+    @pytest.mark.parametrize("marker", ["true", " TRUE ", "1"])
+    @pytest.mark.parametrize("reverse", [False, True])
+    def test_vernacular_preferred_marker_survives_duplicate_rows_and_order(tmp_path, marker, reverse):
+        meta = META.replace(
+            "</extension>",
+            '<field index="2" term="http://rs.gbif.org/terms/1.0/isPreferredName"/></extension>',
+        )
+        names = [
+            "2\tA regional frog\tfalse\n",
+            "2\tZ preferred frog\tfalse\n",
+            f"2\tZ preferred frog\t{marker}\n",
+        ]
+        if reverse:
+            names.reverse()
+        records = tuple(
+            read_archive(archive(tmp_path, meta=meta, names="".join(names)), provider="fixture")
+        )
+>       assert records[1].preferred_common_name == "Z preferred frog"
+E       AssertionError: assert 'A regional frog' == 'Z preferred frog'
+E
+E         - Z preferred frog
+E         + A regional frog
+
+tests/unit/infrastructure/test_taxonomy_archive.py:570: AssertionError
+_ test_vernacular_preferred_marker_survives_duplicate_rows_and_order[True-true] _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-148/test_vernacular_preferred_mark3')
+marker = 'true', reverse = True
+
+    @pytest.mark.parametrize("marker", ["true", " TRUE ", "1"])
+    @pytest.mark.parametrize("reverse", [False, True])
+    def test_vernacular_preferred_marker_survives_duplicate_rows_and_order(tmp_path, marker, reverse):
+        meta = META.replace(
+            "</extension>",
+            '<field index="2" term="http://rs.gbif.org/terms/1.0/isPreferredName"/></extension>',
+        )
+        names = [
+            "2\tA regional frog\tfalse\n",
+            "2\tZ preferred frog\tfalse\n",
+            f"2\tZ preferred frog\t{marker}\n",
+        ]
+        if reverse:
+            names.reverse()
+        records = tuple(
+            read_archive(archive(tmp_path, meta=meta, names="".join(names)), provider="fixture")
+        )
+>       assert records[1].preferred_common_name == "Z preferred frog"
+E       AssertionError: assert 'A regional frog' == 'Z preferred frog'
+E
+E         - Z preferred frog
+E         + A regional frog
+
+tests/unit/infrastructure/test_taxonomy_archive.py:570: AssertionError
+_ test_vernacular_preferred_marker_survives_duplicate_rows_and_order[True- TRUE ] _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-148/test_vernacular_preferred_mark4')
+marker = ' TRUE ', reverse = True
+
+    @pytest.mark.parametrize("marker", ["true", " TRUE ", "1"])
+    @pytest.mark.parametrize("reverse", [False, True])
+    def test_vernacular_preferred_marker_survives_duplicate_rows_and_order(tmp_path, marker, reverse):
+        meta = META.replace(
+            "</extension>",
+            '<field index="2" term="http://rs.gbif.org/terms/1.0/isPreferredName"/></extension>',
+        )
+        names = [
+            "2\tA regional frog\tfalse\n",
+            "2\tZ preferred frog\tfalse\n",
+            f"2\tZ preferred frog\t{marker}\n",
+        ]
+        if reverse:
+            names.reverse()
+        records = tuple(
+            read_archive(archive(tmp_path, meta=meta, names="".join(names)), provider="fixture")
+        )
+>       assert records[1].preferred_common_name == "Z preferred frog"
+E       AssertionError: assert 'A regional frog' == 'Z preferred frog'
+E
+E         - Z preferred frog
+E         + A regional frog
+
+tests/unit/infrastructure/test_taxonomy_archive.py:570: AssertionError
+__ test_vernacular_preferred_marker_survives_duplicate_rows_and_order[True-1] __
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-148/test_vernacular_preferred_mark5')
+marker = '1', reverse = True
+
+    @pytest.mark.parametrize("marker", ["true", " TRUE ", "1"])
+    @pytest.mark.parametrize("reverse", [False, True])
+    def test_vernacular_preferred_marker_survives_duplicate_rows_and_order(tmp_path, marker, reverse):
+        meta = META.replace(
+            "</extension>",
+            '<field index="2" term="http://rs.gbif.org/terms/1.0/isPreferredName"/></extension>',
+        )
+        names = [
+            "2\tA regional frog\tfalse\n",
+            "2\tZ preferred frog\tfalse\n",
+            f"2\tZ preferred frog\t{marker}\n",
+        ]
+        if reverse:
+            names.reverse()
+        records = tuple(
+            read_archive(archive(tmp_path, meta=meta, names="".join(names)), provider="fixture")
+        )
+>       assert records[1].preferred_common_name == "Z preferred frog"
+E       AssertionError: assert 'A regional frog' == 'Z preferred frog'
+E
+E         - Z preferred frog
+E         + A regional frog
+
+tests/unit/infrastructure/test_taxonomy_archive.py:570: AssertionError
+=========================== short test summary info ============================
+FAILED tests/integration/test_local_taxonomy.py::test_first_publication_preserves_other_qualified_alias_provenance[generation]
+FAILED tests/integration/test_local_taxonomy.py::test_first_publication_preserves_other_qualified_alias_provenance[canonical]
+FAILED tests/integration/test_local_taxonomy.py::test_first_publication_preserves_other_qualified_alias_provenance[alias]
+FAILED tests/unit/infrastructure/test_taxonomy_archive.py::test_vernacular_preferred_marker_survives_duplicate_rows_and_order[False-true]
+FAILED tests/unit/infrastructure/test_taxonomy_archive.py::test_vernacular_preferred_marker_survives_duplicate_rows_and_order[False- TRUE ]
+FAILED tests/unit/infrastructure/test_taxonomy_archive.py::test_vernacular_preferred_marker_survives_duplicate_rows_and_order[False-1]
+FAILED tests/unit/infrastructure/test_taxonomy_archive.py::test_vernacular_preferred_marker_survives_duplicate_rows_and_order[True-true]
+FAILED tests/unit/infrastructure/test_taxonomy_archive.py::test_vernacular_preferred_marker_survives_duplicate_rows_and_order[True- TRUE ]
+FAILED tests/unit/infrastructure/test_taxonomy_archive.py::test_vernacular_preferred_marker_survives_duplicate_rows_and_order[True-1]
+9 failed, 168 deselected in 5.42s
