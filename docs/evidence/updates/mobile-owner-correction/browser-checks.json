@@ -1,0 +1,71 @@
+{
+  "checked_at_utc": "2026-10-18T17:42:32.258905+00:00",
+  "approved_baseline": "8d256ad725b48e6c89682fe089565cde72b48233",
+  "scope": "Mobile CSS and empty-state disclosure only; history data, release logic and desktop styles preserved",
+  "before_390": {
+    "first_photo_top": 666.234375,
+    "bottom_navigation_top": 772.625
+  },
+  "after": [
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "first_photo_top": 426.21875,
+      "first_photo_bottom": 618.21875,
+      "bottom_navigation_top": 772.625,
+      "image_fully_visible": true,
+      "header_animal_top": 23.390625,
+      "overflow": false
+    },
+    {
+      "viewport": [
+        320,
+        844
+      ],
+      "first_photo_top": 488.234375,
+      "first_photo_bottom": 680.234375,
+      "bottom_navigation_top": 772.625,
+      "image_fully_visible": true,
+      "header_animal_top": 23.390625,
+      "overflow": false
+    },
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "first_photo_top": 623.828125,
+      "first_photo_bottom": 831.828125,
+      "mobile_explanation_hidden": true,
+      "overflow": false
+    }
+  ],
+  "keyboard": {
+    "enter_opens": true,
+    "space_closes": true,
+    "focus_outline_px": 2,
+    "disclosure_height_px": 44,
+    "hero_link_heights_px": [
+      44,
+      44
+    ]
+  },
+  "reduced_motion_transition_seconds": 1e-05,
+  "image_failures": [],
+  "console_errors": [],
+  "strict_csp_unchanged": true,
+  "desktop_comparison": {
+    "layout_preserved": true,
+    "pixel_identical": false,
+    "difference_bounds": [
+      263,
+      788,
+      1183,
+      820
+    ],
+    "note": "Any differences are confined to existing category-badge rendering; desktop styles and wording are unchanged."
+  },
+  "local_full_gate": "Not restarted or interrupted. Prior invocation completed on earlier/mixed source:1487 tests passed, branch gate84.99% below85%; not final qualification. Fresh hosted CI will qualify this correction."
+}

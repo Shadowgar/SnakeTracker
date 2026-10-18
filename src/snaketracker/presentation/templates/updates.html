@@ -13,7 +13,7 @@
 </details>
 {% endmacro %}
 {% block title %}What’s new · Care Keeper{% endblock %}
-{% block page_styles %}<link rel="stylesheet" href="/static/updates.css?v=20261018-finish">{% endblock %}
+{% block page_styles %}<link rel="stylesheet" href="/static/updates.css?v=20261018-mobile-imagery">{% endblock %}
 {% block content %}
 <section class="updates-page" aria-labelledby="updates-title">
   <header class="updates-hero">
@@ -32,7 +32,7 @@
     </div>
   </header>
 
-  <section class="updates-on-site" aria-labelledby="on-site-heading">
+  <section class="updates-on-site{% if not production_updates %} updates-on-site-empty{% endif %}" aria-labelledby="on-site-heading">
     <div class="updates-section-heading"><div><p class="page-kicker">On this website</p><h2 id="on-site-heading">What’s new on this website</h2></div></div>
     {% if production_updates %}
       <p class="updates-live-intro">Confirmed website updates, newest first. The latest recorded version is <strong>{{ production_updates[0].version }}</strong>{% if production_updates[0].status == 'rolled_back' %}, restored after a rollback{% endif %}. Older entries show what changed at the time.</p>
@@ -51,6 +51,10 @@
         <span class="updates-empty-icon" aria-hidden="true">✦</span>
         <div><strong>A clearer home for website updates.</strong><p>Earlier website releases haven’t been fully verified. The stories below include work that may still be on the way.</p></div>
       </div>
+      <details class="updates-empty-mobile">
+        <summary>Release dates are still being verified <span aria-hidden="true">⌄</span></summary>
+        <p>Earlier website releases haven’t been fully verified. The stories below include work that may still be on the way.</p>
+      </details>
     {% endif %}
   </section>
 
