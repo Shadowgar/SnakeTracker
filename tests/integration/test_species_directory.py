@@ -956,12 +956,12 @@ def test_unselected_overlay_cannot_mutate_reference_image(tmp_path, selection):
                     "New snapshot",
                     "fixture",
                     "https://example.test/archive",
-                    now,
+                    now + timedelta(days=2),
                     now + timedelta(days=2),
                     "a" * 64,
                     "Synthetic fixture",
                 ),
-                imported_at=now,
+                imported_at=now + timedelta(days=2),
             )
             catalog.stage(generation, [replace(candidate, accepted_scientific_name="Snapshot")])
             catalog.validate_generation(generation)
@@ -1060,5 +1060,53 @@ def test_successful_check_freshens_cache_without_changing_selected_fact_provenan
         assert record.refreshed_at >= now
         assert not record.stale
         assert catalog.resolve(identifier).retrieved_at == old
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize("observe_alias", [False, True])
+def test_unselected_same_provider_alias_cannot_freshen_selected_identity(tmp_path, observe_alias):
+    from snaketracker.infrastructure.taxonomy.catalog import LocalTaxonomyCatalog
+
+    engine = _database(tmp_path)
+    catalog = LocalTaxonomyCatalog(engine)
+    repository = SQLAlchemyTaxonRepository(engine)
+    now = datetime.now(UTC)
+    old = now - timedelta(days=100)
+    selected = _taxon("selected-clock", "plant", "Retained identity", "Retained")
+    try:
+        identifier = catalog.publish(selected, retrieved_at=old, source_effective_at=old)
+        catalog.map_identity(
+            identifier,
+            "fixture",
+            "unselected-alias",
+            source_url="https://example.test/unselected-alias",
+            decided_by="Owner",
+            reason="Explicit qualified alias",
+        )
+        if observe_alias:
+            catalog.publish(
+                replace(
+                    selected,
+                    provider_id="unselected-alias",
+                    source_url="https://example.test/unselected-alias",
+                    accepted_scientific_name="Unordered alias proposal",
+                ),
+                retrieved_at=now,
+            )
+        assert catalog.resolve(identifier).provider_id == selected.provider_id
+        stale_after = now - timedelta(days=30)
+        record = repository.get(identifier, stale_after=stale_after)
+        assert record.provider_id == selected.provider_id
+        assert record.refreshed_at == old
+        assert record.stale
+        found = repository.search("Retained", "plant", limit=20, stale_after=stale_after)
+        assert len(found) == 1 and found[0].stale
+        repository.upsert(selected, observed_at=now + timedelta(seconds=1))
+        checked = repository.get(identifier, stale_after=stale_after)
+        assert checked.provider_id == selected.provider_id
+        assert checked.refreshed_at == now + timedelta(seconds=1)
+        assert not checked.stale
+        assert checked.retrieved_at == old
     finally:
         engine.dispose()

@@ -430,3 +430,15 @@ matching retrieval times before that broad run. Independent read-only review fou
 issue; static, architecture and protected-content checks passed. Final hosted Quality qualifies
 the corrected tree. These source/migration changes postdate the historical Pi measurement and
 carry no new performance claim. All databases were isolated; no production migration occurred.
+
+[Selected-alias cache regressions](selected-alias-cache-red.log) reproduced a fresh mapping or
+unselected observation for one provider alias masking staleness of another displayed alias.
+Cache checks now bind the selected permanent UUID, provider and provider ID together. Both local
+reads and search remain stale until that selected identity is actually checked; the existing
+same-identity successful-check behavior remains covered. An additional image-selection fixture's
+retrieval/import times were aligned with its later snapshot, without changing its assertions.
+
+The [complete directory integration suite](selected-alias-cache-green.log) passed all 22 cases.
+Independent read-only review found no Important issue. Static, architecture, freeze and link
+checks passed. This correction postdates the historical Pi receipt and adds no new performance
+claim, schema change or workflow. No production operation occurred.

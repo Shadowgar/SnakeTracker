@@ -325,9 +325,13 @@ class SQLAlchemyTaxonRepository:
         checks = connection.execute(
             text(
                 "SELECT refreshed_at FROM taxon_provider_mappings "
-                "WHERE taxon_id=:taxon_id AND provider=:provider"
+                "WHERE taxon_id=:taxon_id AND provider=:provider AND provider_id=:provider_id"
             ),
-            {"taxon_id": str(taxon_id), "provider": selected.provider},
+            {
+                "taxon_id": str(taxon_id),
+                "provider": selected.provider,
+                "provider_id": selected.provider_id,
+            },
         ).scalars()
         refreshed_at = max([selected.retrieved_at, *(_datetime(value) for value in checks)])
         return replace(
