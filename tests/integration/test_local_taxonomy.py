@@ -1618,3 +1618,166 @@ def test_historical_generation_conflict_does_not_taint_newer_selected_view(
         catalog.promote(a)
         assert catalog.active_generation() == a
         assert catalog.resolve(identifier).selection_state == "selected"
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("separate_batches", [False, True])
+@pytest.mark.parametrize("synonym", [False, True])
+def test_qualified_alias_records_coalesce_deterministically_and_remain_searchable(
+    catalog, reverse, separate_batches, synonym
+):
+    canonical = taxon(
+        "1",
+        "Reference target",
+        preferred_common_name="Current common",
+        source_effective_at=NOW - timedelta(days=2),
+    )
+    identifier = catalog.publish(canonical, retrieved_at=NOW)
+    catalog.map_identity(
+        identifier,
+        "fixture",
+        "alias",
+        source_url="https://example.test/alias",
+        decided_by="Owner",
+        reason="Qualified provider alias",
+    )
+    a = stage(catalog, "Rollback root", [taxon("root", "Unrelated reference")])
+    catalog.promote(a)
+    alias = taxon(
+        "alias",
+        "Historical synonym" if synonym else "Reference target",
+        preferred_common_name="Former common" if synonym else "Current common",
+        taxonomic_status="synonym" if synonym else canonical.taxonomic_status,
+        accepted_provider_id="1" if synonym else None,
+    )
+    records = [canonical, alias]
+    if reverse:
+        records.reverse()
+    b = catalog.begin_generation(
+        replace(source("Qualified aliases"), snapshot_at=NOW + timedelta(days=1)), imported_at=NOW
+    )
+    if separate_batches:
+        for record in records:
+            catalog.stage(b, [record])
+    else:
+        catalog.stage(b, records)
+    catalog.stage(b, [taxon("child", "Reference child", parent_provider_id="alias")])
+    catalog.validate_generation(b)
+    assert catalog.conflicts() == ()
+    catalog.promote(b)
+    selected = catalog.resolve(identifier)
+    assert selected.provider_id == "1"
+    assert selected.scientific_name == "Reference target"
+    assert {r.provider_id for r in selected.provider_references} == {"1", "alias"}
+    child = catalog.search("Reference child")[0]
+    assert [ancestor.taxon_id for ancestor in child.ancestry] == [identifier]
+    if synonym:
+        assert "Historical synonym" in selected.synonyms
+        assert "Former common" in selected.common_names
+        assert catalog.search("Historical synonym")[0].taxon_id == identifier
+    catalog.promote(a)
+    catalog.cleanup(b, retained_generations={a})
+    assert catalog.resolve(identifier).taxon_id == identifier
+    if synonym:
+        assert catalog.search("Historical synonym")[0].taxon_id == identifier
+
+
+def test_qualified_alias_fact_disagreement_requires_a_fresh_content_bound_decision(catalog):
+    identifier = catalog.publish(
+        taxon("1", "Chosen name"), retrieved_at=NOW, source_effective_at=NOW
+    )
+    for alias in ("2", "3"):
+        catalog.map_identity(
+            identifier,
+            "fixture",
+            alias,
+            source_url="https://example.test/" + alias,
+            decided_by="Owner",
+            reason="Explicit qualified identity",
+        )
+    g = catalog.begin_generation(
+        replace(source("Alias conflict"), snapshot_at=NOW + timedelta(days=1)), imported_at=NOW
+    )
+    catalog.stage(g, [taxon("2", "Conflicting second name"), taxon("1", "Chosen name")])
+    first = [c for c in catalog.conflicts() if c.kind == "qualified_alias_facts"]
+    assert len(first) == 1
+    catalog.resolve_conflict(
+        first[0].conflict_id, decided_by="Owner", reason="Retain deterministic canonical fact"
+    )
+    catalog.stage(g, [taxon("3", "Different third name")])
+    pending = [c for c in catalog.conflicts() if c.kind == "qualified_alias_facts"]
+    assert pending and pending[0].conflict_id != first[0].conflict_id
+    assert pending[0].details != first[0].details
+    catalog.validate_generation(g)
+    with pytest.raises(TaxonomyConflictError):
+        catalog.promote(g)
+    for conflict in pending:
+        catalog.resolve_conflict(
+            conflict.conflict_id, decided_by="Owner", reason="Retain recorded canonical facts"
+        )
+    catalog.promote(g)
+    assert catalog.resolve(identifier).scientific_name == "Chosen name"
+
+
+def test_repeated_provider_id_still_rejected_after_alias_coalescing(catalog):
+    identifier = catalog.publish(
+        taxon("z", "Same name"), retrieved_at=NOW, source_effective_at=NOW - timedelta(days=20)
+    )
+    catalog.map_identity(
+        identifier,
+        "fixture",
+        "a",
+        source_url="https://example.test/a",
+        decided_by="Owner",
+        reason="Qualified alias",
+    )
+    g = catalog.begin_generation(source("Duplicate input"), imported_at=NOW)
+    catalog.stage(g, [taxon("z", "Same name")])
+    catalog.stage(g, [taxon("a", "Same name")])
+    with pytest.raises(ValueError, match="duplicate"):
+        catalog.stage(g, [taxon("z", "Same name")])
+    catalog.validate_generation(g)
+    catalog.promote(g)
+    assert catalog.resolve(identifier).provider_id == "a"
+
+
+def test_parent_alias_of_own_uuid_is_still_a_generation_cycle(catalog):
+    identifier = catalog.publish(taxon(), retrieved_at=NOW)
+    catalog.map_identity(
+        identifier,
+        "fixture",
+        "alias",
+        source_url="https://example.test/alias",
+        decided_by="Owner",
+        reason="Qualified alias",
+    )
+    g = catalog.begin_generation(source("Self parent through alias"), imported_at=NOW)
+    catalog.stage(g, [taxon(parent_provider_id="alias")])
+    with pytest.raises(ValueError, match="cycle"):
+        catalog.validate_generation(g)
+
+
+def test_equivalent_alias_metadata_does_not_reopen_unchanged_ordering_decision(catalog):
+    identifier = catalog.publish(
+        taxon("1", "Live selection"), retrieved_at=NOW, source_effective_at=NOW
+    )
+    catalog.map_identity(
+        identifier,
+        "fixture",
+        "z",
+        source_url="https://example.test/z",
+        decided_by="Owner",
+        reason="Qualified equivalent identity",
+    )
+    g = catalog.begin_generation(replace(source("Same clock"), snapshot_at=NOW), imported_at=NOW)
+    catalog.stage(g, [taxon("1", "Snapshot comparison")])
+    pending = catalog.conflicts()
+    assert len(pending) == 1 and pending[0].kind == "equal_freshness"
+    catalog.resolve_conflict(
+        pending[0].conflict_id, decided_by="Owner", reason="Retain the reviewed comparison"
+    )
+    catalog.stage(g, [taxon("z", "Snapshot comparison")])
+    assert catalog.conflicts() == ()
+    catalog.validate_generation(g)
+    catalog.promote(g)
+    assert catalog.active_generation() == g

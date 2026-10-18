@@ -61,7 +61,8 @@ VernacularName extension described by `meta.xml`, following the
 [GBIF archive guide](https://ipt.gbif.org/manual/en/ipt/latest/dwca-guide). Unsupported extensions,
 unsafe paths, symlinks, duplicate members/identities, XML entities, absent parents and cycles fail
 closed. It uses private disk staging instead of extracting into application directories. Limits
-default to 64 MiB compressed, 512 MiB expanded, 16 members, 2 million rows and 120 seconds; actual
+default to 64 MiB compressed, 512 MiB expanded, 16 members, 2 million rows and 120 seconds of
+active parser work (consumer database-staging pauses are excluded); actual
 production archive shape/size/rights require separate qualification. These are development bounds,
 not claimed production capacity. Only iNaturalist's qualified known ancestry IDs map current
 workflow groups; other namespaces do not borrow those IDs. Other production namespaces require an
@@ -253,7 +254,7 @@ original ZIP between verification and parsing cannot change imported facts or re
 [Two additional database/provenance assertions](verified-archive-database.log) verify the recorded
 checksum and original taxon payload after that replacement. Temporary storage is cleaned on exit.
 
-The Pi receipt above predates the later legacy-alias, operator-input and active-conflict corrections. Its measured
+The Pi receipt above predates the later legacy-alias, operator-input, active-conflict and qualified-alias/startup corrections. Its measured
 source snapshot is retained exactly; no performance claim is made for paths added afterward. The
 final unchanged hosted gate qualifies the resulting committed tree.
 
@@ -264,3 +265,23 @@ conflict evidence. Global conflicts and conflicts attached to the active generat
 affect current selection. An earlier cleanup test conflated durable evidence with current
 uncertainty; its corrected expectation additionally asserts preserved evidence and rollback blocking.
 Independent read-only review found no Important issue in this scope correction.
+
+The combined [taxonomy/archive/compatibility run](alias-startup-parser-regressions.log) passed
+**175 tests** after qualified-alias reconciliation, active parser timing and FTS startup checks.
+[Thirteen initial startup/parser cases](startup-parser-bounds.log) verify missing/mismatched
+search targets reject mutable startup and consumer staging pauses do not consume parser time;
+active parsing still obeys its deadline. Additional cases cover NULL metadata and missing catalog
+keys. The final [two decision/key regressions](alias-decisions-missing-keys.log) passed after
+excluding import-only metadata from ordering comparisons and checking catalog coverage from every
+taxon. The unchanged hosted gate qualifies the final committed tree.
+
+Already qualified same-provider IDs can coalesce to one UUID fact in either row order and across
+batches. Equivalent facts choose a deterministic canonical ID; proven synonym-to-accepted links
+retain bounded alias names. Other differences require a durable decision tied to the full variant
+set; adding another incompatible variant requires a fresh decision. Repeated provider IDs remain
+invalid. Import-only input context is bounded to 64 variants and 256 KiB per UUID. Relationships
+resolve provider IDs through permanent UUIDs, so coalesced aliases work as parent targets while
+UUID cycles remain invalid. Private FTS rows and the generation content revision update together.
+Cleanup strips import-only metadata before projecting labels. Scientific ordering decisions bind
+only factual fields and source clocks, preventing equivalent import bookkeeping from reopening a
+reviewed decision. No production import capacity is claimed for this later alias path.

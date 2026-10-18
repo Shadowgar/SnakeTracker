@@ -303,6 +303,15 @@ def test_corrupt_active_reference_fails_before_mutable_startup(tmp_path):
         "DROP TABLE taxonomy_generation_publications",
         "ALTER TABLE taxonomy_facts RENAME COLUMN search_rowid TO unsupported_column",
         "ALTER TABLE taxonomy_search_keys RENAME COLUMN search_rowid TO unsupported_column",
+        "DELETE FROM taxonomy_search_keys",
+        "DELETE FROM taxonomy_search WHERE scope='catalog'",
+        "DELETE FROM taxonomy_search WHERE scope!='catalog'",
+        "UPDATE taxonomy_search SET scope='wrong' WHERE scope='catalog'",
+        "UPDATE taxonomy_search SET scope='wrong' WHERE scope!='catalog'",
+        "UPDATE taxonomy_search SET taxon_id='wrong' WHERE scope='catalog'",
+        "UPDATE taxonomy_search SET taxon_id='wrong' WHERE scope!='catalog'",
+        "UPDATE taxonomy_search SET scope=NULL WHERE scope='catalog'",
+        "UPDATE taxonomy_search SET taxon_id=NULL WHERE scope!='catalog'",
     ],
 )
 def test_missing_or_unreadable_search_metadata_rejects_mutable_startup(
@@ -314,6 +323,25 @@ def test_missing_or_unreadable_search_metadata_rejects_mutable_startup(
     database = tmp_path / "missing-index.db"
     command.upgrade(config_for(database), "head")
     engine = create_sqlite_engine(database, require_local_storage=False)
+    catalog = LocalTaxonomyCatalog(engine)
+    generation = catalog.begin_generation(
+        GenerationSource(
+            "Startup fixture",
+            "fixture",
+            "https://example.test/archive",
+            NOW,
+            NOW,
+            "a" * 64,
+            "Synthetic fixture",
+        ),
+        imported_at=NOW,
+    )
+    catalog.stage(
+        generation,
+        [ProviderTaxon("fixture", "1", "https://example.test/1", "", "Reference fixture")],
+    )
+    catalog.validate_generation(generation)
+    catalog.promote(generation)
     with engine.begin() as connection:
         connection.exec_driver_sql(damage)
     assert inspect_startup_compatibility(engine).reason_code == "taxonomy_reference_incompatible"

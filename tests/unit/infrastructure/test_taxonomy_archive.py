@@ -489,3 +489,46 @@ def test_operator_parses_the_verified_bytes_when_original_archive_is_replaced(
                 assert json.loads(payload)["accepted_scientific_name"] == "Rana temporaria"
         finally:
             engine.dispose()
+
+
+def test_archive_parse_deadline_excludes_consumer_staging_pauses(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from snaketracker.infrastructure.taxonomy import archive as module
+
+    clock = [0.0]
+    monkeypatch.setattr(module, "time", SimpleNamespace(monotonic=lambda: clock[0]))
+    rows = read_archive(
+        archive(tmp_path), provider="fixture", limits=replace(ArchiveLimits(), max_seconds=1)
+    )
+    assert next(rows).provider_id == "1"
+    clock[0] += 500  # Simulate database staging while the generator is suspended.
+    assert next(rows).provider_id == "2"
+    clock[0] += 500
+    with pytest.raises(StopIteration):
+        next(rows)
+
+
+def test_archive_active_parse_work_still_obeys_deadline(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from snaketracker.infrastructure.taxonomy import archive as module
+
+    clock = [0.0]
+    real_rows = module._rows
+
+    def slow_rows(*args):
+        for row in real_rows(*args):
+            clock[0] += 2
+            yield row
+
+    monkeypatch.setattr(module, "time", SimpleNamespace(monotonic=lambda: clock[0]))
+    monkeypatch.setattr(module, "_rows", slow_rows)
+    with pytest.raises(ValueError, match="execution time"):
+        tuple(
+            read_archive(
+                archive(tmp_path),
+                provider="fixture",
+                limits=replace(ArchiveLimits(), max_seconds=1),
+            )
+        )

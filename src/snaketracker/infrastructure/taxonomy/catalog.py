@@ -11,6 +11,7 @@ import re
 import time
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
+from dataclasses import replace
 from datetime import UTC, datetime
 from itertools import islice
 from math import isfinite
@@ -92,6 +93,11 @@ def validate(candidate: ProviderTaxon) -> None:
             raise ValueError("Taxonomy relationship has a direct self-reference cycle.")
         if identifier is not None and (not identifier.strip() or len(identifier) > 128):
             raise ValueError("Invalid parent or accepted identity.")
+
+
+def _provider_fact(payload: str) -> ProviderTaxon:
+    fact = json.loads(payload)
+    return ProviderTaxon(**{field: fact[field] for field in FACT_FIELDS})
 
 
 def _facts_differ(left: dict[str, Any], right: dict[str, Any]) -> bool:
@@ -224,9 +230,10 @@ class LocalTaxonomyCatalog:
     ) -> None:
         # Decisions bind to both facts and their source clocks, not retrieval time.
         # An unchanged repeat retains the decision; a new comparison needs its own.
+        incoming = json.loads(payload)
         details = json.dumps(
             {
-                "incoming": json.loads(payload),
+                "incoming": {field: incoming.get(field) for field in FACT_FIELDS},
                 "incoming_effective_at": incoming_effective,
                 "opposing": {field: opposing.get(field) for field in FACT_FIELDS},
                 "opposing_effective_at": opposing_effective,
@@ -828,7 +835,7 @@ class LocalTaxonomyCatalog:
                 )
         label_source = candidate
         if keep_old and old is not None:
-            label_source = ProviderTaxon(**json.loads(old["payload"]))
+            label_source = _provider_fact(old["payload"])
         elif keep_old and previous is not None:
             retained_fact: dict[str, Any] = {field: previous[0].get(field) for field in FACT_FIELDS}
             label_source = ProviderTaxon(**retained_fact)
@@ -935,6 +942,69 @@ class LocalTaxonomyCatalog:
             )
         return generation
 
+    @staticmethod
+    def _coalesce_alias_inputs(
+        previous: dict[str, Any], incoming: ProviderTaxon
+    ) -> tuple[ProviderTaxon, list[dict[str, Any]], bool]:
+        inputs = list(
+            previous.get(
+                "_qualified_alias_inputs", [{field: previous[field] for field in FACT_FIELDS}]
+            )
+        )
+        if any(raw["provider_id"] == incoming.provider_id for raw in inputs):
+            raise ValueError("Generation contains a duplicate provider identity.")
+        inputs.append(
+            json.loads(json.dumps({field: getattr(incoming, field) for field in FACT_FIELDS}))
+        )
+        inputs.sort(key=lambda raw: raw["provider_id"])
+        if len(inputs) > 64 or len(json.dumps(inputs).encode("utf-8")) > 256 * 1024:
+            raise ValueError("Qualified taxonomy aliases exceed their bounded import context.")
+        by_id = {raw["provider_id"]: raw for raw in inputs}
+        candidates = [raw for raw in inputs if raw["taxonomic_status"] != "synonym"]
+        selected = (candidates or inputs)[0]
+        equivalent = {raw["provider_id"] for raw in inputs if not _facts_differ(raw, selected)}
+        synonyms = set(selected["synonyms"])
+        common_names = set(selected["alternative_common_names"])
+        incompatible = False
+        for raw in inputs:
+            if raw["provider_id"] in equivalent:
+                continue
+            terminal = raw
+            seen: set[str] = set()
+            while (
+                terminal["taxonomic_status"] == "synonym"
+                and terminal["accepted_provider_id"] in by_id
+            ):
+                if terminal["provider_id"] in seen:
+                    raise ValueError(
+                        "Qualified synonym aliases contain an accepted identity cycle."
+                    )
+                seen.add(terminal["provider_id"])
+                terminal = by_id[terminal["accepted_provider_id"]]
+            if (
+                raw["taxonomic_status"] == "synonym"
+                and terminal["provider_id"] in equivalent
+                and (
+                    not raw["supported_group"]
+                    or raw["supported_group"] == selected["supported_group"]
+                )
+            ):
+                synonyms.update([raw["accepted_scientific_name"], *raw["synonyms"]])
+                common_names.update(raw["alternative_common_names"])
+                if raw["preferred_common_name"]:
+                    common_names.add(raw["preferred_common_name"])
+            else:
+                incompatible = True
+        canonical = replace(
+            ProviderTaxon(**selected),
+            synonyms=tuple(sorted(synonyms - {selected["accepted_scientific_name"]})),
+            alternative_common_names=tuple(
+                sorted(common_names - {selected["preferred_common_name"]})
+            ),
+        )
+        validate(canonical)
+        return canonical, inputs, incompatible
+
     def stage(self, generation: UUID, candidates: Iterable[ProviderTaxon]) -> None:
         records = tuple(islice(candidates, 501))
         if not records or len(records) > 500:
@@ -959,20 +1029,36 @@ class LocalTaxonomyCatalog:
                 identifier = self._reserve(
                     connection, candidate, str(source["retrieved_at"]), staging=True
                 )
-                if execute(
+                existing = execute(
                     connection,
-                    "SELECT 1 FROM taxonomy_facts WHERE generation_id=:g AND taxon_id=:id",
+                    "SELECT payload,search_rowid FROM taxonomy_facts "
+                    "WHERE generation_id=:g AND taxon_id=:id",
                     g=str(generation),
                     id=identifier,
-                ).first():
-                    raise ValueError("Generation contains a duplicate provider identity.")
-                payload = json.dumps(
-                    {field: getattr(candidate, field) for field in FACT_FIELDS}, sort_keys=True
-                )
+                ).first()
+                aliases = None
+                incompatible = False
+                if existing:
+                    candidate, aliases, incompatible = self._coalesce_alias_inputs(
+                        json.loads(existing.payload), candidate
+                    )
+                fact = {field: getattr(candidate, field) for field in FACT_FIELDS}
+                if incompatible:
+                    self._conflict(
+                        connection,
+                        identifier,
+                        "qualified_alias_facts",
+                        json.dumps({"variants": aliases, "retained": fact}, sort_keys=True),
+                        str(generation),
+                    )
+                if aliases is not None:
+                    fact["_qualified_alias_inputs"] = aliases
+                payload = json.dumps(fact, sort_keys=True)
                 execute(
                     connection,
                     "INSERT INTO taxonomy_facts(generation_id,taxon_id,payload) "
-                    "VALUES(:g,:id,:payload)",
+                    "VALUES(:g,:id,:payload) ON CONFLICT(generation_id,taxon_id) "
+                    "DO UPDATE SET payload=excluded.payload",
                     g=str(generation),
                     id=identifier,
                     payload=payload,
@@ -1029,10 +1115,16 @@ class LocalTaxonomyCatalog:
                     "snapshot_labels",
                     json.dumps({"generation": str(generation), "payload": json.loads(payload)}),
                 )
+                rowid = existing.search_rowid if existing else None
+                if rowid is not None:
+                    execute(
+                        connection, "DELETE FROM taxonomy_search WHERE rowid=:rowid", rowid=rowid
+                    )
                 search_row = execute(
                     connection,
-                    "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
-                    "VALUES(:id,:g,:names,:groups)",
+                    "INSERT INTO taxonomy_search(rowid,taxon_id,scope,names,workflow_groups) "
+                    "VALUES(:rowid,:id,:g,:names,:groups)",
+                    rowid=rowid,
                     groups=candidate.supported_group,
                     id=identifier,
                     g=str(generation),
@@ -1055,6 +1147,14 @@ class LocalTaxonomyCatalog:
                 if (
                     candidate.accepted_provider_id
                     and candidate.accepted_provider_id != candidate.provider_id
+                    and execute(
+                        connection,
+                        "SELECT taxon_id FROM taxon_provider_mappings WHERE provider=:provider "
+                        "AND provider_id=:pid",
+                        provider=candidate.provider,
+                        pid=candidate.accepted_provider_id,
+                    ).scalar_one_or_none()
+                    != identifier
                 ):
                     self._conflict(connection, identifier, "replacement", payload, str(generation))
             execute(
@@ -1080,16 +1180,17 @@ class LocalTaxonomyCatalog:
             )
             rows = execute(
                 connection,
-                "SELECT payload FROM taxonomy_facts WHERE generation_id=:g",
+                "SELECT taxon_id,payload FROM taxonomy_facts WHERE generation_id=:g",
                 g=str(generation),
-            ).scalars()
+            )
             count = 0
-            for payload in rows:
+            for root, payload in rows:
                 count += 1
                 fact = json.loads(payload)
                 identifier = fact["provider_id"]
                 for relationship in ("parent_provider_id", "accepted_provider_id"):
                     seen = {identifier}
+                    seen_uuids = {root}
                     parent = fact[relationship]
                     while parent and parent != identifier:
                         if parent in seen or len(seen) >= 128:
@@ -1103,25 +1204,26 @@ class LocalTaxonomyCatalog:
                         seen.add(parent)
                         ancestor = execute(
                             connection,
-                            "SELECT payload FROM taxonomy_facts WHERE generation_id=:g AND "
-                            "json_extract(payload,'$.provider_id')=:parent",
+                            "SELECT f.taxon_id,f.payload FROM taxonomy_facts f "
+                            "JOIN taxon_provider_mappings m ON m.taxon_id=f.taxon_id "
+                            "WHERE f.generation_id=:g AND m.provider=:provider "
+                            "AND m.provider_id=:parent",
                             g=str(generation),
+                            provider=fact["provider"],
                             parent=parent,
-                        ).scalar_one_or_none()
+                        ).first()
                         if ancestor is None:
                             raise ValueError(
                                 "Generation has a missing parent or accepted identity."
                             )
-                        parent = json.loads(ancestor)[relationship]
+                        if ancestor.taxon_id in seen_uuids:
+                            raise ValueError(
+                                "Taxonomy ancestry/accepted identity cycle through alias."
+                            )
+                        seen_uuids.add(ancestor.taxon_id)
+                        parent = json.loads(ancestor.payload)[relationship]
                     if parent == identifier:
                         raise ValueError("Taxonomy ancestry/accepted identity cycle.")
-                root = execute(
-                    connection,
-                    "SELECT taxon_id FROM taxon_provider_mappings WHERE provider=:provider "
-                    "AND provider_id=:pid",
-                    provider=fact["provider"],
-                    pid=fact["provider_id"],
-                ).scalar_one()
                 self._validate_prospective_views(
                     connection,
                     root,
@@ -1412,7 +1514,11 @@ class LocalTaxonomyCatalog:
                 for identifier, payload, rowid in rows:
                     if published:
                         # Merge only previously promoted facts under the shared publication lock.
-                        self._labels(connection, identifier, ProviderTaxon(**json.loads(payload)))
+                        self._labels(
+                            connection,
+                            identifier,
+                            _provider_fact(payload),
+                        )
                     execute(
                         connection, "DELETE FROM taxonomy_search WHERE rowid=:rowid", rowid=rowid
                     )

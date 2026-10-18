@@ -310,7 +310,13 @@ def read_archive(
                         accepted_provider_id=record.get("acceptedNameUsageID") or None,
                     )
                     validate(candidate)
-                    yield candidate
+                    suspended = time.monotonic()
+                    try:
+                        yield candidate
+                    finally:
+                        # The caller can stage a database batch while suspended;
+                        # that work is not part of the bounded archive parser.
+                        started += time.monotonic() - suspended
             finally:
                 database.close()
     except (

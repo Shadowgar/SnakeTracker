@@ -533,6 +533,20 @@ def inspect_local_taxonomy(connection: Connection) -> CompatibilityReport:
             "SELECT generation_id,provenance FROM taxonomy_generation_publications LIMIT 1"
         )
         connection.exec_driver_sql("SELECT search_rowid FROM taxonomy_facts LIMIT 1")
+        if (
+            connection.exec_driver_sql(
+                "SELECT 1 FROM taxa t LEFT JOIN taxonomy_search_keys k ON k.taxon_id=t.taxon_id "
+                "LEFT JOIN taxonomy_search s ON s.rowid=k.search_rowid "
+                "WHERE k.search_rowid IS NULL OR s.rowid IS NULL OR s.taxon_id IS NOT t.taxon_id "
+                "OR s.scope IS NOT 'catalog' LIMIT 1"
+            ).first()
+            or connection.exec_driver_sql(
+                "SELECT 1 FROM taxonomy_facts f LEFT JOIN taxonomy_search s "
+                "ON s.rowid=f.search_rowid WHERE s.rowid IS NULL OR s.taxon_id IS NOT f.taxon_id "
+                "OR s.scope IS NOT f.generation_id LIMIT 1"
+            ).first()
+        ):
+            raise ValueError("Missing or inconsistent local taxonomy search rows.")
         rows = connection.exec_driver_sql(
             "SELECT s.generation_id,s.reconciled_revision,g.state,p.generation_id "
             "FROM taxonomy_selection s LEFT JOIN taxonomy_generations g "
