@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from uuid import UUID
 
 import pytest
 from alembic import command
@@ -1839,3 +1840,99 @@ def test_resolve_returns_all_127_ancestors_allowed_by_generation_validation(cata
     assert [ancestor.scientific_name for ancestor in selected.ancestry] == [
         f"Ancestor {index}" for index in range(126, -1, -1)
     ]
+
+
+@pytest.mark.parametrize("publication", ["generation", "canonical", "alias"])
+def test_first_publication_preserves_other_qualified_alias_provenance(catalog, publication):
+    candidate = taxon("1", "Qualified reference")
+    generation = stage(catalog, "Reserved reference", [candidate])
+    with catalog.engine.connect() as connection:
+        identifier = UUID(
+            connection.exec_driver_sql(
+                "SELECT taxon_id FROM taxon_provider_mappings WHERE provider_id='1'"
+            ).scalar_one()
+        )
+    catalog.map_identity(
+        identifier,
+        "fixture",
+        "alias",
+        source_url="https://example.test/qualified-alias",
+        decided_by="Owner",
+        reason="Explicitly qualified alias before publication",
+    )
+
+    def provenance():
+        with catalog.engine.connect() as connection:
+            return {
+                row[0]: tuple(row[1:])
+                for row in connection.exec_driver_sql(
+                    "SELECT provider_id,source_url,retrieved_at,refreshed_at "
+                    "FROM taxon_provider_mappings WHERE provider='fixture'"
+                )
+            }
+
+    before = provenance()
+    if publication == "generation":
+        published_id = "1"
+        published_url = candidate.source_url
+        catalog.promote(generation)
+    else:
+        published_id = "1" if publication == "canonical" else "alias"
+        published_url = "https://example.test/published/" + published_id
+        catalog.publish(
+            replace(candidate, provider_id=published_id, source_url=published_url),
+            retrieved_at=NOW + timedelta(days=10),
+            source_effective_at=NOW + timedelta(days=10),
+        )
+    untouched = "alias" if published_id == "1" else "1"
+    after = provenance()
+    assert after[untouched] == before[untouched]
+    assert after[published_id][0] == published_url
+    references = {
+        item.provider_id: item.source_url
+        for item in catalog.resolve(identifier).provider_references
+    }
+    assert references[untouched] == before[untouched][0]
+    assert references[published_id] == published_url
+
+
+def test_alias_fallback_provenance_uses_exact_first_published_provider_id(catalog):
+    reservation = catalog.begin_generation(
+        replace(
+            source("Older private reservation"),
+            retrieved_at=NOW - timedelta(days=20),
+            snapshot_at=NOW - timedelta(days=30),
+        ),
+        imported_at=NOW,
+    )
+    catalog.stage(reservation, [taxon("z", "Retained reference")])
+    with catalog.engine.connect() as connection:
+        identifier = UUID(
+            connection.exec_driver_sql(
+                "SELECT taxon_id FROM taxon_provider_mappings WHERE provider_id='z'"
+            ).scalar_one()
+        )
+    catalog.map_identity(
+        identifier,
+        "fixture",
+        "a",
+        source_url="https://example.test/taxon/a",
+        decided_by="Owner",
+        reason="Qualified alias before first publication",
+    )
+    published = stage(catalog, "First alias publication", [taxon("a", "Retained reference")])
+    catalog.promote(published)
+    unrelated = stage(catalog, "Unrelated rollback view", [taxon("root", "Unrelated root")])
+    catalog.promote(unrelated)
+    selected = catalog.resolve(identifier)
+    assert selected.reference_state == "catalog_fallback"
+    assert selected.provider_id == "a"
+    assert selected.source_url == "https://example.test/taxon/a"
+    assert selected.retrieved_at == NOW
+    catalog.cleanup(published, retained_generations={unrelated})
+    assert catalog.resolve(identifier).retrieved_at == NOW
+    with catalog.engine.connect() as connection:
+        old = connection.exec_driver_sql(
+            "SELECT retrieved_at FROM taxon_provider_mappings WHERE provider_id='z'"
+        ).scalar_one()
+        assert datetime.fromisoformat(old) == NOW - timedelta(days=20)

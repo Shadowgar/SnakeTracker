@@ -197,7 +197,10 @@ def read_archive(
                 database.execute(
                     "CREATE TABLE records(id TEXT PRIMARY KEY, parent TEXT, payload TEXT)"
                 )
-                database.execute("CREATE TABLE names(id TEXT, name TEXT, PRIMARY KEY(id,name))")
+                database.execute(
+                    "CREATE TABLE names(id TEXT, name TEXT, preferred INTEGER, "
+                    "PRIMARY KEY(id,name))"
+                )
                 for record in _rows(archive, cores[0]):
                     check_bound()
                     if (
@@ -227,9 +230,17 @@ def read_archive(
                             raise ValueError("Vernacular name references an unknown taxon.")
                         if not record.get("vernacularName") or len(record["vernacularName"]) > 256:
                             raise ValueError("Invalid vernacularName.")
+                        preference = record.get("isPreferredName", "").strip().lower()
+                        if preference not in {"", "true", "false", "1", "0"}:
+                            raise ValueError("Invalid vernacular isPreferredName marker.")
                         database.execute(
-                            "INSERT OR IGNORE INTO names VALUES(?,?)",
-                            (record["_id"], record["vernacularName"]),
+                            "INSERT INTO names VALUES(?,?,?) ON CONFLICT(id,name) "
+                            "DO UPDATE SET preferred=max(preferred,excluded.preferred)",
+                            (
+                                record["_id"],
+                                record["vernacularName"],
+                                int(preference in {"true", "1"}),
+                            ),
                         )
                 database.commit()
                 # Validate ancestry before producing rows. No name-based identity inference.
@@ -264,7 +275,8 @@ def read_archive(
                     common = tuple(
                         row[0]
                         for row in database.execute(
-                            "SELECT name FROM names WHERE id=? ORDER BY name LIMIT 66",
+                            "SELECT name FROM names WHERE id=? "
+                            "ORDER BY preferred DESC,name LIMIT 66",
                             (identifier,),
                         )
                     )

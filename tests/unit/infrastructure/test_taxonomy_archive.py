@@ -548,3 +548,58 @@ def test_vernacular_alias_bound_rejects_excess_instead_of_truncating(tmp_path, c
         assert len(records[1].alternative_common_names) == 64
         assert records[1].preferred_common_name == "Vernacular 000"
         assert records[1].alternative_common_names[-1] == "Vernacular 064"
+
+
+@pytest.mark.parametrize("marker", ["true", " TRUE ", "1"])
+@pytest.mark.parametrize("reverse", [False, True])
+def test_vernacular_preferred_marker_survives_duplicate_rows_and_order(tmp_path, marker, reverse):
+    meta = META.replace(
+        "</extension>",
+        '<field index="2" term="http://rs.gbif.org/terms/1.0/isPreferredName"/></extension>',
+    )
+    names = [
+        "2\tA regional frog\tfalse\n",
+        "2\tZ preferred frog\tfalse\n",
+        f"2\tZ preferred frog\t{marker}\n",
+    ]
+    if reverse:
+        names.reverse()
+    records = tuple(
+        read_archive(archive(tmp_path, meta=meta, names="".join(names)), provider="fixture")
+    )
+    assert records[1].preferred_common_name == "Z preferred frog"
+    assert records[1].alternative_common_names == ("A regional frog",)
+
+
+@pytest.mark.parametrize("marker", ["sometimes", "2"])
+def test_malformed_vernacular_preference_requires_reconciliation(tmp_path, marker):
+    meta = META.replace(
+        "</extension>",
+        '<field index="2" term="http://rs.gbif.org/terms/1.0/isPreferredName"/></extension>',
+    )
+    with pytest.raises(ValueError, match="isPreferredName"):
+        tuple(
+            read_archive(
+                archive(tmp_path, meta=meta, names=f"2\tCommon frog\t{marker}\n"),
+                provider="fixture",
+            )
+        )
+
+
+def test_multiple_preferred_names_use_stable_order_and_retain_alternatives(tmp_path):
+    meta = META.replace(
+        "</extension>",
+        '<field index="2" term="http://rs.gbif.org/terms/1.0/isPreferredName"/></extension>',
+    )
+    records = tuple(
+        read_archive(
+            archive(
+                tmp_path,
+                meta=meta,
+                names="2\tZ preferred frog\ttrue\n2\tA preferred frog\ttrue\n2\tEarlier alias\t0\n",
+            ),
+            provider="fixture",
+        )
+    )
+    assert records[1].preferred_common_name == "A preferred frog"
+    assert records[1].alternative_common_names == ("Z preferred frog", "Earlier alias")

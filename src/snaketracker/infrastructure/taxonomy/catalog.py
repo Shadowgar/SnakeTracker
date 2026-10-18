@@ -481,10 +481,11 @@ class LocalTaxonomyCatalog:
             connection,
             "UPDATE taxon_provider_mappings SET source_url=:url,"
             "retrieved_at=:observed,refreshed_at=:observed WHERE taxon_id=:id "
-            "AND provider=:provider AND NOT EXISTS (SELECT 1 FROM taxonomy_publications "
-            "WHERE taxon_id=:id)",
+            "AND provider=:provider AND provider_id=:pid "
+            "AND NOT EXISTS (SELECT 1 FROM taxonomy_publications WHERE taxon_id=:id)",
             id=identifier,
             provider=candidate.provider,
+            pid=candidate.provider_id,
             url=candidate.source_url,
             observed=observed,
         )
@@ -1394,6 +1395,9 @@ class LocalTaxonomyCatalog:
                 "WHERE f.generation_id=:g AND f.taxon_id=taxon_provider_mappings.taxon_id),"
                 "retrieved_at=:retrieved,refreshed_at=:retrieved WHERE provider=:provider "
                 "AND taxon_id IN (SELECT taxon_id FROM taxonomy_facts WHERE generation_id=:g) "
+                "AND provider_id=(SELECT json_extract(f.payload,'$.provider_id') "
+                "FROM taxonomy_facts f WHERE f.generation_id=:g "
+                "AND f.taxon_id=taxon_provider_mappings.taxon_id) "
                 "AND NOT EXISTS (SELECT 1 FROM taxonomy_publications p "
                 "WHERE p.taxon_id=taxon_provider_mappings.taxon_id)",
                 g=str(generation),
@@ -1619,7 +1623,11 @@ class LocalTaxonomyCatalog:
                 "m.provider,m.provider_id,"
                 "m.source_url,m.retrieved_at "
                 "FROM taxa t JOIN taxonomy_publications p USING(taxon_id) "
-                "JOIN taxon_provider_mappings m USING(taxon_id) WHERE t.taxon_id=:id "
+                "JOIN taxon_provider_mappings m ON m.taxon_id=t.taxon_id "
+                "AND (p.payload IS NULL OR "
+                "(m.provider=json_extract(p.payload,'$.provider') "
+                "AND m.provider_id=json_extract(p.payload,'$.provider_id'))) "
+                "WHERE t.taxon_id=:id "
                 "ORDER BY CASE WHEN m.provider=t.taxonomy_provider THEN 0 ELSE 1 END,"
                 "m.provider LIMIT 1",
                 id=taxon_id,

@@ -1,0 +1,73 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+____ test_alias_fallback_provenance_uses_exact_first_published_provider_id _____
+
+catalog = <snaketracker.infrastructure.taxonomy.catalog.LocalTaxonomyCatalog object at 0xffffa8c96510>
+
+    def test_alias_fallback_provenance_uses_exact_first_published_provider_id(catalog):
+        reservation = catalog.begin_generation(
+            replace(
+                source("Older private reservation"),
+                retrieved_at=NOW - timedelta(days=20),
+                snapshot_at=NOW - timedelta(days=30),
+            ),
+            imported_at=NOW,
+        )
+        catalog.stage(reservation, [taxon("z", "Retained reference")])
+        with catalog.engine.connect() as connection:
+            identifier = UUID(
+                connection.exec_driver_sql(
+                    "SELECT taxon_id FROM taxon_provider_mappings WHERE provider_id='z'"
+                ).scalar_one()
+            )
+        catalog.map_identity(
+            identifier,
+            "fixture",
+            "a",
+            source_url="https://example.test/taxon/a",
+            decided_by="Owner",
+            reason="Qualified alias before first publication",
+        )
+        published = stage(catalog, "First alias publication", [taxon("a", "Retained reference")])
+        catalog.promote(published)
+        unrelated = stage(catalog, "Unrelated rollback view", [taxon("root", "Unrelated root")])
+        catalog.promote(unrelated)
+        selected = catalog.resolve(identifier)
+        assert selected.reference_state == "catalog_fallback"
+        assert selected.provider_id == "a"
+        assert selected.source_url == "https://example.test/taxon/a"
+>       assert selected.retrieved_at == NOW
+E       AssertionError: assert datetime.datetime(2026, 9, 27, 0, 0, tzinfo=datetime.timezone.utc) == datetime.datetime(2026, 10, 17, 0, 0, tzinfo=datetime.timezone.utc)
+E        +  where datetime.datetime(2026, 9, 27, 0, 0, tzinfo=datetime.timezone.utc) = TaxonomySummary(taxon_id=UUID('4c522f4f-0565-4407-8f8e-1e9e73d19bf6'), scientific_name='Retained reference', common_na...xture', provider_id='z', source_url='https://example.test/taxon/z', qualification_state='qualified')), authorship=None).retrieved_at
+
+tests/integration/test_local_taxonomy.py:1931: AssertionError
+---------------------------- Captured stderr setup -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+=========================== short test summary info ============================
+FAILED tests/integration/test_local_taxonomy.py::test_alias_fallback_provenance_uses_exact_first_published_provider_id
+1 failed, 126 deselected in 2.55s

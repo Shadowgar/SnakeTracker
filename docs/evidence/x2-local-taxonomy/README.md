@@ -313,3 +313,20 @@ for one-token queries across published generation scopes. Indexed token subqueri
 UUIDs before candidate and result limits; one- and multi-token regressions pass with a five-identity
 candidate budget over repeated generation matches. The historical Pi receipt predates these
 corrections too; final hosted checks qualify their functionality, not production import capacity.
+
+[Alias and preferred-name reproduction](alias-vernacular-provenance-red.log) confirmed that first
+publication updated every same-provider alias and the archive reader discarded preferred-name
+markers. Publication now updates only its exact provider ID; other qualified mappings retain
+their own URLs and timestamps. Serialized fallback selection also joins the exact published
+provider/ID, preventing a retained alias's facts from acquiring another mapping's retrieval date
+after rollback. That [fallback reproduction](alias-fallback-provenance-red.log) is covered through
+cleanup and preservation of the untouched mapping.
+
+The [28-case final focused run](alias-vernacular-final-green.log) passed: generation/live canonical/
+live alias first publication, qualified alias reconciliation, historical compatibility, rollback
+fallback/cleanup, preferred-marker row order/duplicates and operator staging. Vernacular markers
+accept true/false and 1/0 with whitespace/case normalization; absent/empty flags preserve lexical
+fallback. Invalid markers require reconciliation. Multiple flagged names use a deterministic
+lexical tie-break while retaining the others as alternatives. Name and archive limits remain
+unchanged. Independent read-only review found no remaining Important issue. These corrections
+also postdate the historical Pi performance receipt; fresh hosted checks qualify the final source.
