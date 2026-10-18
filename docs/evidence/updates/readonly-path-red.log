@@ -1,0 +1,157 @@
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+_ test_production_updates_are_opt_in_and_do_not_use_writable_database_directory _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-183/test_production_updates_are_op0')
+
+    def test_production_updates_are_opt_in_and_do_not_use_writable_database_directory(tmp_path):
+        settings = Settings(
+            environment=Environment.PRODUCTION,
+            external_origin="https://example.test",
+            database_path=tmp_path / "app.db",
+            runtime_secret=SecretStr("production-test-only-secret-32-bytes"),
+        )
+>       assert settings.updates_ledger_path is None
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/bootstrap/test_configuration.py:265:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = Settings(environment=<Environment.PRODUCTION: 'production'>, database_path=PosixPath('/tmp/pytest-of-rocco/pytest-183/...liveryMode.DISABLED: 'disabled'>, password_reset_delivery_path=None, platform_operator_user_ids='', build_git_sha=None)
+item = 'updates_ledger_path'
+
+    def __getattr__(self, item: str) -> Any:
+        private_attributes = object.__getattribute__(self, '__private_attributes__')
+        if item in private_attributes:
+            attribute = private_attributes[item]
+            if hasattr(attribute, '__get__'):
+                return attribute.__get__(self, type(self))  # type: ignore
+
+            try:
+                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
+                return self.__pydantic_private__[item]  # type: ignore
+            except KeyError as exc:
+                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+        else:
+            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
+            # See `BaseModel.__repr_args__` for more details
+            try:
+                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
+            except AttributeError:
+                pydantic_extra = None
+
+            if pydantic_extra and item in pydantic_extra:
+                return pydantic_extra[item]
+            else:
+                if hasattr(self.__class__, item):
+                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
+                else:
+                    # this is the current error
+>                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+E                   AttributeError: 'Settings' object has no attribute 'updates_ledger_path'
+
+.venv/lib/python3.13/site-packages/pydantic/main.py:1042: AttributeError
+________ test_configured_production_release_directory_must_be_read_only ________
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-183/test_configured_production_rel0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0xffff96afab10>
+
+    def test_configured_production_release_directory_must_be_read_only(tmp_path, monkeypatch):
+        import os
+        from types import SimpleNamespace
+
+        values = {
+            "environment": Environment.PRODUCTION,
+            "external_origin": "https://example.test",
+            "database_path": tmp_path / "app.db",
+            "runtime_secret": SecretStr("production-test-only-secret-32-bytes"),
+            "production_release_history_path": tmp_path / "releases" / "history.json",
+        }
+        (tmp_path / "releases").mkdir()
+>       with pytest.raises(ValueError, match="read-only"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'read-only'
+E         Actual message: '1 validation error for Settings\nproduction_release_history_path\n  Extra inputs are not permitted [type=extra_forbidden]\n    For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden'
+
+tests/unit/bootstrap/test_configuration.py:282: AssertionError
+_________________ test_release_path_is_loaded_from_environment _________________
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-183/test_release_path_is_loaded_fr0')
+
+    def test_release_path_is_loaded_from_environment(tmp_path):
+        settings = load_settings(
+            {"SNAKETRACKER_PRODUCTION_RELEASE_HISTORY_PATH": str(tmp_path / "notes.json")}
+        )
+>       assert settings.updates_ledger_path == tmp_path / "notes.json"
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/bootstrap/test_configuration.py:297:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = Settings(environment=<Environment.DEVELOPMENT: 'development'>, database_path=PosixPath('data/snaketracker.sqlite3'), a...liveryMode.DISABLED: 'disabled'>, password_reset_delivery_path=None, platform_operator_user_ids='', build_git_sha=None)
+item = 'updates_ledger_path'
+
+    def __getattr__(self, item: str) -> Any:
+        private_attributes = object.__getattribute__(self, '__private_attributes__')
+        if item in private_attributes:
+            attribute = private_attributes[item]
+            if hasattr(attribute, '__get__'):
+                return attribute.__get__(self, type(self))  # type: ignore
+
+            try:
+                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
+                return self.__pydantic_private__[item]  # type: ignore
+            except KeyError as exc:
+                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+        else:
+            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
+            # See `BaseModel.__repr_args__` for more details
+            try:
+                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
+            except AttributeError:
+                pydantic_extra = None
+
+            if pydantic_extra and item in pydantic_extra:
+                return pydantic_extra[item]
+            else:
+                if hasattr(self.__class__, item):
+                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
+                else:
+                    # this is the current error
+>                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+E                   AttributeError: 'Settings' object has no attribute 'updates_ledger_path'
+
+.venv/lib/python3.13/site-packages/pydantic/main.py:1042: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/bootstrap/test_configuration.py::test_production_updates_are_opt_in_and_do_not_use_writable_database_directory
+FAILED tests/unit/bootstrap/test_configuration.py::test_configured_production_release_directory_must_be_read_only
+FAILED tests/unit/bootstrap/test_configuration.py::test_release_path_is_loaded_from_environment
+3 failed, 20 deselected in 0.33s
+
+F                                                                        [100%]
+=================================== FAILURES ===================================
+____ test_release_file_cannot_escape_readonly_parent_into_writable_storage _____
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-185/test_release_file_cannot_escap0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0xffff8da30e90>
+
+    def test_release_file_cannot_escape_readonly_parent_into_writable_storage(tmp_path, monkeypatch):
+        import os
+        from types import SimpleNamespace
+
+        ledger = tmp_path / "history.json"
+        ledger.write_text("[]")
+        monkeypatch.setattr(
+            os,
+            "statvfs",
+            lambda path: SimpleNamespace(f_flag=0 if Path(path) == ledger else os.ST_RDONLY),
+        )
+>       with pytest.raises(ValueError, match="read-only"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/bootstrap/test_configuration.py:311: Failed
+=========================== short test summary info ============================
+FAILED tests/unit/bootstrap/test_configuration.py::test_release_file_cannot_escape_readonly_parent_into_writable_storage
+1 failed, 23 deselected in 0.28s

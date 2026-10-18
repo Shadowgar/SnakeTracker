@@ -59,3 +59,18 @@ service, dependency, framework or database migration was added.
 PR #24 remains the only review destination. No merge, deployment, production import, container
 restart, live-data/attachment/backup change, X3 implementation or kernel-security work occurred.
 Stop for owner design approval before merge.
+
+## Final review correction: production read-only ledger
+
+Hosted review identified that placing an operator-only ledger beside the writable database
+cannot enforce its file-system boundary. Production now defaults to no ledger and accepts an
+explicit `SNAKETRACKER_PRODUCTION_RELEASE_HISTORY_PATH` only on an absolute read-only-mounted
+directory; ordinary startup checks the parent and any existing file mount flags. Development/test fallback remains local.
+The runbook shows a normal read-only **directory** bind outside writable data volumes so atomic
+host-side publication remains visible. No production mount, configuration or container was changed.
+
+The [regressions](readonly-path-red.log) fail on the preceding configuration source. The
+[41-test focused run](readonly-path-green.log) covers the new opt-in, mount rejection, environment
+loading and existing release/configuration behavior. No local full gate was restarted. The old
+run remains in progress after automatic approval review declined interruption; fresh hosted CI
+will qualify the corrected commit. Earlier-head passes are not substituted.

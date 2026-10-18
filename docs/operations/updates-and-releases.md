@@ -16,10 +16,15 @@ production updates**. The bundled feature history is audited from 294 commits an
 
 ## Recording actual production updates (not part of this PR's deployment)
 
-The ledger path is `<database directory>/production-release-history.json`. The application
-only **reads** this file, never creates or rewrites it. It must remain on the same persistent
-host volume through image upgrades and rollbacks and be included with operational recovery
-materials. No new application database tables or migrations are needed.
+Production release display is opt-in through `SNAKETRACKER_PRODUCTION_RELEASE_HISTORY_PATH`.
+By default production publishes no release records; it never falls back to the writable database
+directory. A configured production path must be absolute and its parent and any existing file must be on read-only
+mounts (checked at startup). The application only **reads** the file. No database migration is needed.
+
+For development/test previews only, the default remains
+`<database directory>/production-release-history.json`. The operator's persistent host release
+directory must be outside writable application/attachment volumes, survive image upgrades and
+rollbacks, and be retained with release recovery materials.
 
 The operator must prepare user-friendly release notes *before* deployment but write the
 ledger **only after** separately authorized deployment verification. Confirm the running
@@ -87,11 +92,11 @@ service/data owner (or another UID readable by the web process): replacement fil
 ```sh
 # Validate notes and the existing ledger; no persistent files are created.
 uv run python -m snaketracker.operations.record_release verified-notes.json \
-  --ledger /absolute/persistent/data/production-release-history.json
+  --ledger /absolute/persistent/releases/production-release-history.json
 
 # Only after separately authorized, successful deployment verification:
 uv run python -m snaketracker.operations.record_release verified-notes.json \
-  --ledger /absolute/persistent/data/production-release-history.json --apply
+  --ledger /absolute/persistent/releases/production-release-history.json --apply
 ```
 
 The command serializes competing appends, writes and fsyncs a same-directory temporary file,
@@ -108,8 +113,40 @@ withdrawn version. Older deployment events remain visible as history. Ledger dat
 inferred from the bundled development stories. The UI describes the latest *recorded* version;
 it does not claim the ledger is an independent probe of the currently running application.
 
-The persistent ledger lives outside the image, beside the database. Preserve this file and
+The persistent production ledger lives outside the image and writable database volume. Preserve this file and
 its permissions when changing images or rolling back, and retain it with release recovery
 materials. This PR does not execute either command against production or change the existing
 backup/restore workflow. Keep historical receipts if a directory is restored or moved; never
 initialize an empty release history over an existing one.
+
+
+## Read-only production mount (future authorized deployment only)
+
+Keep the host release directory outside all volumes the application can write. Mount the
+**directory**, not an individual JSON file: atomic replacement creates a new inode, which a
+single-file bind mount would continue hiding. The operator publishes on the host side using
+the data-owner UID; the container sees the same notes through a read-only bind. Mode `0600`
+is compatible when the web process has that UID inside the container; the mount still denies
+its writes. Do not run the publisher inside the read-only web container.
+
+A future deployment can supply this Compose override, with an existing, appropriately owned
+persistent host directory. This is configuration guidance only; this PR does not apply it:
+
+```yaml
+services:
+  web:
+    environment:
+      SNAKETRACKER_PRODUCTION_RELEASE_HISTORY_PATH: /release-history/production-release-history.json
+    volumes:
+      - type: bind
+        source: ${SNAKETRACKER_RELEASE_HISTORY_DIR:?Set an existing host release directory}
+        target: /release-history
+        read_only: true
+        bind:
+          create_host_path: false
+```
+
+No new service or privileged mount helper is needed. Existing Compose and production settings
+are unchanged in this PR. Without this opt-in the release section displays its honest empty
+state. If opted in with a missing/writable mount, startup rejects the configuration before the
+application can advertise operator-only history on writable storage.

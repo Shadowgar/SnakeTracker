@@ -362,9 +362,7 @@ def build_application(settings: Settings) -> FastAPI:
                 expected_origin=external_origin,
                 directory_service=directory_service,
                 care_guide_repository=SQLAlchemyCareGuideRepository(engine),
-                production_release_history_path=(
-                    settings.database_path.parent / "production-release-history.json"
-                ),
+                production_release_history_path=settings.updates_ledger_path,
             )
         )
         app.include_router(

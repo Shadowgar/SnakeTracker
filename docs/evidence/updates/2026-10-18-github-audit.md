@@ -48,7 +48,7 @@ All 21 merged PRs are accounted for: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 
 
 ## Release-recording contract
 
-The production release ledger is `production-release-history.json` next to the active database on the persistent data volume. It is **read-only to the app** and must be updated only by an operator *after* a verified deployment (or rollback). It is not generated automatically from Git merges. A record requires a deployed UTC offset timestamp, approved build SHA, version, verification flag, short title, concise plain-language changes, and status (`deployed` or `rolled_back`). The app never updates this file during a page view.
+The production release ledger uses an explicitly configured read-only-mounted directory outside the writable database volume. Development/test previews default to `production-release-history.json` beside their isolated database. It is **read-only to the app** and must be updated only by an operator *after* a verified deployment (or rollback). It is not generated automatically from Git merges. A record requires a deployed UTC offset timestamp, approved build SHA, version, verification flag, short title, concise plain-language changes, and status (`deployed` or `rolled_back`). The app never updates this file during a page view.
 
 The deployment runbook must preserve this ledger across upgrades/rollbacks and atomically append confirmed records. Existing accounts, animal history, attachments and active database are outside this feature's mutation scope.
 

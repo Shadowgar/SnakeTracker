@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     attachment_storage_path: Path | None = None
     reference_image_storage_path: Path | None = None
     backup_storage_path: Path | None = None
+    production_release_history_path: Path | None = None
     external_origin: HttpUrl | None = None
     runtime_secret: SecretStr | None = None
     backup_encryption_key: SecretStr | None = None
@@ -54,6 +55,14 @@ class Settings(BaseSettings):
     password_reset_delivery_path: Path | None = None
     platform_operator_user_ids: str = ""
     build_git_sha: str | None = None
+
+    @property
+    def updates_ledger_path(self) -> Path | None:
+        if self.production_release_history_path is not None:
+            return self.production_release_history_path
+        if self.environment is Environment.PRODUCTION:
+            return None
+        return self.database_path.parent / "production-release-history.json"
 
     @field_validator("build_git_sha", mode="before")
     @classmethod
@@ -144,6 +153,22 @@ class Settings(BaseSettings):
             and not self.backup_storage_path.is_absolute()
         ):
             raise ValueError("production backup storage path must be absolute")
+        if self.environment is Environment.PRODUCTION and self.production_release_history_path:
+            if not self.production_release_history_path.is_absolute():
+                raise ValueError("production release history path must be absolute")
+            mounts = [self.production_release_history_path.parent]
+            if self.production_release_history_path.exists():
+                mounts.append(self.production_release_history_path)
+            try:
+                readonly = all(os.statvfs(path).f_flag & os.ST_RDONLY for path in mounts)
+            except OSError as error:
+                raise ValueError(
+                    "production release history needs an existing read-only directory"
+                ) from error
+            if not readonly:
+                raise ValueError(
+                    "production release history requires a read-only mounted directory"
+                )
         if self.password_reset_delivery is PasswordResetDeliveryMode.LOCAL_FILE:
             if self.environment is Environment.PRODUCTION:
                 raise ValueError("local password-reset delivery is forbidden in production")
@@ -179,6 +204,7 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         "SNAKETRACKER_ATTACHMENT_STORAGE_PATH": "attachment_storage_path",
         "SNAKETRACKER_REFERENCE_IMAGE_STORAGE_PATH": "reference_image_storage_path",
         "SNAKETRACKER_BACKUP_STORAGE_PATH": "backup_storage_path",
+        "SNAKETRACKER_PRODUCTION_RELEASE_HISTORY_PATH": "production_release_history_path",
         "SNAKETRACKER_BACKUP_ENCRYPTION_KEY_ID": "backup_encryption_key_id",
         "SNAKETRACKER_EXTERNAL_ORIGIN": "external_origin",
         "SNAKETRACKER_LOG_LEVEL": "log_level",
