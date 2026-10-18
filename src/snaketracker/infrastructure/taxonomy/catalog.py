@@ -1318,9 +1318,12 @@ class LocalTaxonomyCatalog:
                     connection,
                     "SELECT DISTINCT taxon_id FROM taxonomy_changes "
                     "WHERE revision>:start AND revision<=:cutoff "
-                    "AND kind NOT IN ('snapshot_identity_reserved','snapshot_labels') LIMIT :limit",
+                    "AND kind NOT IN ('snapshot_identity_reserved','snapshot_labels') "
+                    "AND (kind!='reference_identity_published' "
+                    "OR json_extract(details,'$.generation') IS NOT :g) LIMIT :limit",
                     start=source["starting_revision"],
                     cutoff=cutoff,
+                    g=str(generation),
                     limit=max_revisions + 1,
                 )
                 .scalars()
@@ -1334,11 +1337,14 @@ class LocalTaxonomyCatalog:
                 "LEFT JOIN taxonomy_search_keys k ON k.taxon_id=c.taxon_id "
                 "LEFT JOIN taxonomy_search s ON s.rowid=k.search_rowid "
                 "WHERE c.revision>:start AND c.revision<=:cutoff "
-                "AND c.kind NOT IN ('snapshot_identity_reserved','snapshot_labels') AND "
+                "AND c.kind NOT IN ('snapshot_identity_reserved','snapshot_labels') "
+                "AND (c.kind!='reference_identity_published' "
+                "OR json_extract(c.details,'$.generation') IS NOT :g) AND "
                 "(t.taxon_id IS NULL OR k.search_rowid IS NULL "
                 "OR s.rowid IS NULL OR s.taxon_id!=c.taxon_id OR s.scope!='catalog') LIMIT 1",
                 start=source["starting_revision"],
                 cutoff=cutoff,
+                g=str(generation),
             ).first()
             if invalid:
                 raise ValueError(
@@ -1814,7 +1820,7 @@ class LocalTaxonomyCatalog:
             key = f"term{index}"
             parameters[key] = 'names : "' + token + '"*'
             matches.append(
-                "SELECT taxon_id FROM taxonomy_search WHERE taxonomy_search MATCH :"
+                "SELECT DISTINCT taxon_id FROM taxonomy_search WHERE taxonomy_search MATCH :"
                 + key
                 + " AND (scope='catalog' OR scope IN "
                 "(SELECT generation_id FROM taxonomy_generation_publications))"

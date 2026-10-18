@@ -1,0 +1,214 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_ test_repromotion_excludes_own_publication_but_still_bounds_external_changes[False] _
+
+catalog = <snaketracker.infrastructure.taxonomy.catalog.LocalTaxonomyCatalog object at 0xffff873b23c0>
+switch_generation = False
+
+    @pytest.mark.parametrize("switch_generation", [False, True])
+    def test_repromotion_excludes_own_publication_but_still_bounds_external_changes(
+        catalog, switch_generation
+    ):
+        records = [taxon(str(i), f"Retained species {i}") for i in range(5)]
+        target = stage(catalog, "Retained rollback target", records)
+        catalog.promote(target, max_revisions=0)
+        if switch_generation:
+            newer = stage(catalog, "Intervening generation", records)
+            catalog.promote(newer, max_revisions=0)
+>       catalog.promote(target, max_revisions=0)
+
+tests/integration/test_local_taxonomy.py:1493:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <snaketracker.infrastructure.taxonomy.catalog.LocalTaxonomyCatalog object at 0xffff873b23c0>
+generation = UUID('3e8b3eb6-1ddc-4733-abbf-b590910cbb6c'), max_revisions = 0
+max_seconds = 2.0
+
+    def promote(
+        self, generation: UUID, *, max_revisions: int = 10000, max_seconds: float = 2.0
+    ) -> None:
+        if max_revisions < 0 or not isfinite(max_seconds) or max_seconds <= 0:
+            raise ValueError("Invalid reconciliation bound.")
+        with self._write(max_seconds=max_seconds) as connection:
+            started = time.monotonic()
+            source = (
+                execute(
+                    connection,
+                    "SELECT * FROM taxonomy_generations WHERE generation_id=:g",
+                    g=str(generation),
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if not source or source["state"] != "ready":
+                raise ValueError("Only a validated generation can be promoted.")
+            contexts = self._relationship_generations(
+                connection, source["provider"], include=str(generation)
+            )
+            if execute(
+                connection,
+                "SELECT 1 FROM taxonomy_conflicts c WHERE resolved_at IS NULL "
+                "AND (generation_id=:g OR (generation_id IS NULL AND taxon_id IN "
+                "(SELECT taxon_id FROM taxonomy_facts WHERE generation_id=:g))) LIMIT 1",
+                g=str(generation),
+            ).first():
+                raise TaxonomyConflictError(
+                    "Resolve generation identity conflicts before promotion."
+                )
+            cutoff = self._revision(connection)
+            # The index is durable, shared by every generation and published
+            # atomically with identity.
+            # Reconcile only bounded changed identities, rather than rebuilding a private A/B index.
+            changes = (
+                execute(
+                    connection,
+                    "SELECT DISTINCT taxon_id FROM taxonomy_changes "
+                    "WHERE revision>:start AND revision<=:cutoff "
+                    "AND kind NOT IN ('snapshot_identity_reserved','snapshot_labels') LIMIT :limit",
+                    start=source["starting_revision"],
+                    cutoff=cutoff,
+                    limit=max_revisions + 1,
+                )
+                .scalars()
+                .all()
+            )
+            if len(changes) > max_revisions:
+>               raise ValueError("Final reconciliation exceeds the configured identity bound.")
+E               ValueError: Final reconciliation exceeds the configured identity bound.
+
+src/snaketracker/infrastructure/taxonomy/catalog.py:1330: ValueError
+---------------------------- Captured stderr setup -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+_ test_repromotion_excludes_own_publication_but_still_bounds_external_changes[True] _
+
+catalog = <snaketracker.infrastructure.taxonomy.catalog.LocalTaxonomyCatalog object at 0xffff872020d0>
+switch_generation = True
+
+    @pytest.mark.parametrize("switch_generation", [False, True])
+    def test_repromotion_excludes_own_publication_but_still_bounds_external_changes(
+        catalog, switch_generation
+    ):
+        records = [taxon(str(i), f"Retained species {i}") for i in range(5)]
+        target = stage(catalog, "Retained rollback target", records)
+        catalog.promote(target, max_revisions=0)
+        if switch_generation:
+            newer = stage(catalog, "Intervening generation", records)
+            catalog.promote(newer, max_revisions=0)
+>       catalog.promote(target, max_revisions=0)
+
+tests/integration/test_local_taxonomy.py:1493:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <snaketracker.infrastructure.taxonomy.catalog.LocalTaxonomyCatalog object at 0xffff872020d0>
+generation = UUID('bc2ff727-d311-483f-92ab-7e4d218d2193'), max_revisions = 0
+max_seconds = 2.0
+
+    def promote(
+        self, generation: UUID, *, max_revisions: int = 10000, max_seconds: float = 2.0
+    ) -> None:
+        if max_revisions < 0 or not isfinite(max_seconds) or max_seconds <= 0:
+            raise ValueError("Invalid reconciliation bound.")
+        with self._write(max_seconds=max_seconds) as connection:
+            started = time.monotonic()
+            source = (
+                execute(
+                    connection,
+                    "SELECT * FROM taxonomy_generations WHERE generation_id=:g",
+                    g=str(generation),
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if not source or source["state"] != "ready":
+                raise ValueError("Only a validated generation can be promoted.")
+            contexts = self._relationship_generations(
+                connection, source["provider"], include=str(generation)
+            )
+            if execute(
+                connection,
+                "SELECT 1 FROM taxonomy_conflicts c WHERE resolved_at IS NULL "
+                "AND (generation_id=:g OR (generation_id IS NULL AND taxon_id IN "
+                "(SELECT taxon_id FROM taxonomy_facts WHERE generation_id=:g))) LIMIT 1",
+                g=str(generation),
+            ).first():
+                raise TaxonomyConflictError(
+                    "Resolve generation identity conflicts before promotion."
+                )
+            cutoff = self._revision(connection)
+            # The index is durable, shared by every generation and published
+            # atomically with identity.
+            # Reconcile only bounded changed identities, rather than rebuilding a private A/B index.
+            changes = (
+                execute(
+                    connection,
+                    "SELECT DISTINCT taxon_id FROM taxonomy_changes "
+                    "WHERE revision>:start AND revision<=:cutoff "
+                    "AND kind NOT IN ('snapshot_identity_reserved','snapshot_labels') LIMIT :limit",
+                    start=source["starting_revision"],
+                    cutoff=cutoff,
+                    limit=max_revisions + 1,
+                )
+                .scalars()
+                .all()
+            )
+            if len(changes) > max_revisions:
+>               raise ValueError("Final reconciliation exceeds the configured identity bound.")
+E               ValueError: Final reconciliation exceeds the configured identity bound.
+
+src/snaketracker/infrastructure/taxonomy/catalog.py:1330: ValueError
+---------------------------- Captured stderr setup -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+=========================== short test summary info ============================
+FAILED tests/integration/test_local_taxonomy.py::test_repromotion_excludes_own_publication_but_still_bounds_external_changes[False]
+FAILED tests/integration/test_local_taxonomy.py::test_repromotion_excludes_own_publication_but_still_bounds_external_changes[True]
+2 failed, 117 deselected in 6.37s

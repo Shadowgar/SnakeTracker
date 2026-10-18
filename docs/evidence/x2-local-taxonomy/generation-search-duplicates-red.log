@@ -1,0 +1,107 @@
+F.                                                                       [100%]
+=================================== FAILURES ===================================
+_ test_search_deduplicates_published_generation_matches_before_candidate_limit[Repeated] _
+
+catalog = <snaketracker.infrastructure.taxonomy.catalog.LocalTaxonomyCatalog object at 0xffffa9fda510>
+query = 'Repeated'
+
+    @pytest.mark.parametrize("query", ["Repeated", "Repeated species"])
+    def test_search_deduplicates_published_generation_matches_before_candidate_limit(catalog, query):
+        records = [taxon(str(i), f"Repeated species {i}") for i in range(5)]
+        first = stage(catalog, "First reference", records)
+        catalog.promote(first)
+        second = stage(catalog, "Second reference", records)
+        catalog.promote(second)
+        bounded = LocalTaxonomyCatalog(catalog.engine, search_max_candidates=5)
+>       matches = bounded.search(query, limit=20)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/integration/test_local_taxonomy.py:1522:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src/snaketracker/infrastructure/taxonomy/catalog.py:1873: in search
+    for identifier in self.search_ids(connection, query, group=group, limit=limit)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <snaketracker.infrastructure.taxonomy.catalog.LocalTaxonomyCatalog object at 0xffffa9c579d0>
+connection = <sqlalchemy.engine.base.Connection object at 0xffffa9c6b1d0>
+query = 'Repeated', group = None, limit = 20
+
+    def search_ids(
+        self, connection: Connection, query: str, *, group: str | None = None, limit: int = 10
+    ) -> tuple[UUID, ...]:
+        tokens = re.findall(r"[^\W_]+", query, flags=re.UNICODE)
+        if not 2 <= len(query.strip()) <= 100 or not 1 <= limit <= 20 or not tokens:
+            raise ValueError("Search requires 2-100 characters and 1-20 results.")
+        if group is not None and not re.fullmatch(r"[a-z][a-z0-9_]{0,31}", group):
+            raise ValueError("Invalid taxonomy workflow group.")
+        # Intersect indexed identity matches across qualified rows. An old name and newer
+        # classification may live in different published generations, including after rollback.
+        matches = []
+        parameters = {}
+        for index, token in enumerate(dict.fromkeys(tokens)):
+            key = f"term{index}"
+            parameters[key] = 'names : "' + token + '"*'
+            matches.append(
+                "SELECT taxon_id FROM taxonomy_search WHERE taxonomy_search MATCH :"
+                + key
+                + " AND (scope='catalog' OR scope IN "
+                "(SELECT generation_id FROM taxonomy_generation_publications))"
+            )
+        deadline = time.monotonic() + self._search_max_seconds
+        native = connection.connection.driver_connection
+        assert native is not None
+        message = "Search is too broad. Refine it with more of the scientific or common name."
+        native.set_progress_handler(lambda: int(time.monotonic() > deadline), 1000)
+        try:
+            identifiers = (
+                execute(
+                    connection,
+                    "WITH matches AS (" + " INTERSECT ".join(matches) + ") "
+                    "SELECT m.taxon_id FROM matches m JOIN taxa t USING(taxon_id) "
+                    "JOIN taxonomy_publications p USING(taxon_id) "
+                    "ORDER BY t.accepted_scientific_name COLLATE NOCASE,m.taxon_id "
+                    "LIMIT :candidate_limit",
+                    candidate_limit=self._search_max_candidates + 1,
+                    **parameters,
+                )
+                .scalars()
+                .all()
+            )
+            result: list[UUID] = []
+            for index, identifier in enumerate(identifiers):
+                if index >= self._search_max_candidates or time.monotonic() > deadline:
+>                   raise TaxonomySearchLimitError(message)
+E                   snaketracker.application.local_taxonomy.TaxonomySearchLimitError: Search is too broad. Refine it with more of the scientific or common name.
+
+src/snaketracker/infrastructure/taxonomy/catalog.py:1851: TaxonomySearchLimitError
+---------------------------- Captured stderr setup -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+=========================== short test summary info ============================
+FAILED tests/integration/test_local_taxonomy.py::test_search_deduplicates_published_generation_matches_before_candidate_limit[Repeated]
+1 failed, 1 passed, 121 deselected in 5.31s

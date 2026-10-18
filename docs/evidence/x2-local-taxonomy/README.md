@@ -299,3 +299,17 @@ refused by startup. Fixtures now populate schema 23 and run the real schema-24 m
 taxon uses catalog publication. All original behavioral assertions remain unchanged, and the
 [complete five-test Care Guide suite](care-guide-startup-green.log) passed. Runtime integrity checks,
 quality gates and thresholds were preserved. Final hosted qualification applies to the pushed head.
+
+[Repeat-promotion/rollback reproduction](rollback-own-publication-red.log) found that a generation's
+own first-publication receipts were incorrectly counted as concurrent reconciliation work.
+Promotion now excludes only publication receipts explicitly attributed to its target generation;
+external discoveries and changes to the same permanent UUID remain bounded. Durable publication
+history is preserved. The [12-case focused run](rollback-search-reconciliation-green.log) passed,
+including same/new external UUIDs, rollback/re-promotion, another generation's first publication,
+and the indexed query-plan assertion. No default limit was raised.
+
+The rollback assertions also [exposed duplicate search results](generation-search-duplicates-red.log)
+for one-token queries across published generation scopes. Indexed token subqueries now deduplicate
+UUIDs before candidate and result limits; one- and multi-token regressions pass with a five-identity
+candidate budget over repeated generation matches. The historical Pi receipt predates these
+corrections too; final hosted checks qualify their functionality, not production import capacity.

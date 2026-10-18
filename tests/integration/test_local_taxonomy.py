@@ -840,7 +840,9 @@ def test_reconciliation_bound_excludes_staged_population_but_counts_live_delta(c
         plan = connection.exec_driver_sql(
             "EXPLAIN QUERY PLAN SELECT DISTINCT taxon_id FROM taxonomy_changes "
             "WHERE revision>0 AND revision<=30000 "
-            "AND kind NOT IN ('snapshot_identity_reserved','snapshot_labels') LIMIT 10001"
+            "AND kind NOT IN ('snapshot_identity_reserved','snapshot_labels') "
+            "AND (kind!='reference_identity_published' "
+            "OR json_extract(details,'$.generation') IS NOT 'target') LIMIT 10001"
         ).all()
         assert any("ix_taxonomy_public_changes" in row[3] for row in plan)
 
@@ -1478,6 +1480,48 @@ def test_new_reference_publication_must_leave_fallback_graph_acyclic(catalog):
         catalog.validate_generation(g)
     assert catalog.active_generation() is None
     assert catalog.search("Second") == ()
+
+
+@pytest.mark.parametrize("switch_generation", [False, True])
+@pytest.mark.parametrize("existing_identity", [False, True])
+def test_repromotion_excludes_own_publication_but_still_bounds_external_changes(
+    catalog, switch_generation, existing_identity
+):
+    records = [taxon(str(i), f"Retained species {i}") for i in range(5)]
+    target = stage(catalog, "Retained rollback target", records)
+    catalog.promote(target, max_revisions=0)
+    if switch_generation:
+        newer = stage(catalog, "Intervening generation", records)
+        catalog.promote(newer, max_revisions=0)
+    catalog.promote(target, max_revisions=0)
+    assert catalog.active_generation() == target
+    assert len(catalog.search("Retained")) == 5
+    with catalog.engine.connect() as connection:
+        assert (
+            connection.exec_driver_sql(
+                "SELECT count(*) FROM taxonomy_changes WHERE kind='reference_identity_published'"
+            ).scalar_one()
+            == 5
+        )
+    external = records[0] if existing_identity else taxon("external", "External discovery")
+    catalog.publish(external, retrieved_at=NOW)
+    with pytest.raises(ValueError, match="identity bound"):
+        catalog.promote(target, max_revisions=0)
+    catalog.promote(target, max_revisions=1)
+    assert catalog.search(external.accepted_scientific_name)[0].provider_id == external.provider_id
+
+
+@pytest.mark.parametrize("query", ["Repeated", "Repeated species"])
+def test_search_deduplicates_published_generation_matches_before_candidate_limit(catalog, query):
+    records = [taxon(str(i), f"Repeated species {i}") for i in range(5)]
+    first = stage(catalog, "First reference", records)
+    catalog.promote(first)
+    second = stage(catalog, "Second reference", records)
+    catalog.promote(second)
+    bounded = LocalTaxonomyCatalog(catalog.engine, search_max_candidates=5)
+    matches = bounded.search(query, limit=20)
+    assert len(matches) == 5
+    assert len({summary.taxon_id for summary in matches}) == 5
 
 
 def test_other_generation_first_publication_is_a_qualified_reconciliation_delta(catalog):
