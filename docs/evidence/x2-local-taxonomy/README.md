@@ -228,7 +228,7 @@ in this correction.
 [All 38 archive tests](archive-optional-status.log) passed after normalizing optional taxonomic-status
 cells: missing, empty and whitespace-only values become `unknown`; surrounding whitespace and case
 are normalized before the existing supported-status validation. Dry-run and applied staging exercise
-the same reader. 
+the same reader.
 
 The [19-test directory suite](atomic-directory-images.log) passed with publication and image
 mutation in one `BEGIN IMMEDIATE` transaction. Publication returns whether the incoming observation
