@@ -278,7 +278,7 @@ def read_archive(
                         if len(groups) > 1:
                             raise ValueError("Conflicting qualified workflow ancestry.")
                         group = groups[0] if groups else ""
-                    status = record.get("taxonomicStatus", "unknown").lower()
+                    status = record.get("taxonomicStatus", "").strip().lower() or "unknown"
                     candidate = ProviderTaxon(
                         provider,
                         identifier,

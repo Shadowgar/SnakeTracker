@@ -104,7 +104,10 @@ def test_unknown_extension_and_missing_common_name_taxon_fail_closed(tmp_path):
         tuple(read_archive(path, provider="fixture"))
 
 
-def test_operator_validate_stage_promote_search_and_checksum_guard(tmp_path, monkeypatch, capsys):
+@pytest.mark.parametrize("blank_status", [False, True])
+def test_operator_validate_stage_promote_search_and_checksum_guard(
+    tmp_path, monkeypatch, capsys, blank_status
+):
     import hashlib
     import json
     import sys
@@ -115,7 +118,21 @@ def test_operator_validate_stage_promote_search_and_checksum_guard(tmp_path, mon
 
     from snaketracker.operations.taxonomy import main
 
-    path = archive(tmp_path)
+    if blank_status:
+        meta = META.replace(
+            "</core>",
+            '<field index="4" term="http://rs.tdwg.org/dwc/terms/taxonomicStatus"/></core>',
+        )
+        path = archive(
+            tmp_path,
+            meta=meta,
+            taxa=(
+                "id\tname\tparent\tclass\tstatus\n1\tAnimalia\t\t\t \n"
+                "2\tRana temporaria\t1\tAmphibia\t\n"
+            ),
+        )
+    else:
+        path = archive(tmp_path)
     checksum = hashlib.sha256(path.read_bytes()).hexdigest()
     args = [
         "stage",
@@ -354,3 +371,33 @@ def test_materialized_defaults_cannot_exceed_archive_expanded_byte_budget(tmp_pa
                 limits=replace(ArchiveLimits(), max_expanded_bytes=expanded),
             )
         )
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("", "unknown"),
+        ("   ", "unknown"),
+        (" ACCEPTED ", "accepted"),
+        (" unknown ", "unknown"),
+        (" InAcTiVe ", "inactive"),
+        (" Synonym ", "synonym"),
+    ],
+)
+def test_optional_archive_status_normalizes_blank_space_and_case(tmp_path, raw, expected):
+    meta = META.replace(
+        "</core>",
+        '<field index="4" term="http://rs.tdwg.org/dwc/terms/taxonomicStatus"/></core>',
+    )
+    path = archive(
+        tmp_path,
+        meta=meta,
+        taxa=(
+            f"id\tname\tparent\tclass\tstatus\n1\tAnimalia\t\t\t{raw}\n"
+            f"2\tRana temporaria\t1\tAmphibia\t{raw}\n"
+        ),
+    )
+    assert [record.taxonomic_status for record in read_archive(path, provider="fixture")] == [
+        expected,
+        expected,
+    ]
