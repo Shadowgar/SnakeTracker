@@ -1428,8 +1428,8 @@ class LocalTaxonomyCatalog:
             ).scalar_one_or_none()
             if active_provider is not None and active_provider != source["provider"]:
                 # A foreign reference pointer must not discard the selected preferred-provider
-                # snapshot of explicitly shared identities. Retain those facts in the durable
-                # information overlay, preserving original source dates and per-identity audit.
+                # snapshot, including identities absent from the incoming generation. Retain
+                # those facts in the durable overlay with original dates and per-identity audit.
                 execute(
                     connection,
                     "INSERT INTO taxonomy_changes(taxon_id,kind,recorded_at,details) "
@@ -1438,8 +1438,7 @@ class LocalTaxonomyCatalog:
                     "'payload',json(f.payload)) FROM taxonomy_facts f "
                     "JOIN taxonomy_selection s ON s.generation_id=f.generation_id "
                     "JOIN taxonomy_generations old USING(generation_id) "
-                    "JOIN taxonomy_facts incoming ON incoming.taxon_id=f.taxon_id "
-                    "AND incoming.generation_id=:g JOIN taxa t ON t.taxon_id=f.taxon_id "
+                    "JOIN taxa t ON t.taxon_id=f.taxon_id "
                     "LEFT JOIN taxonomy_overlay o ON o.taxon_id=f.taxon_id "
                     "AND o.provider=t.taxonomy_provider WHERE t.taxonomy_provider!=:provider "
                     "AND json_extract(f.payload,'$.provider')=t.taxonomy_provider "

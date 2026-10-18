@@ -1,0 +1,196 @@
+.FF...                                                                   [100%]
+=================================== FAILURES ===================================
+_ test_foreign_generation_retains_selected_origin_after_conflict_decision[False-snapshot] _
+
+catalog = <snaketracker.infrastructure.taxonomy.catalog.LocalTaxonomyCatalog object at 0xffff8b2da710>
+origin = 'snapshot', mapped = False
+
+    @pytest.mark.parametrize("origin", ["overlay", "snapshot", "snapshot_with_old_overlay"])
+    @pytest.mark.parametrize("mapped", [False, True])
+    def test_foreign_generation_retains_selected_origin_after_conflict_decision(
+        catalog, origin, mapped
+    ):
+        if origin == "overlay":
+            identifier = catalog.publish(
+                taxon(name="Preferred current", group="snake"), retrieved_at=NOW
+            )
+        else:
+            a = stage(catalog, "Original snapshot", [taxon(name="Preferred old", group="lizard")])
+            catalog.promote(a)
+            identifier = catalog.search("Preferred")[0].taxon_id
+            if origin == "snapshot_with_old_overlay":
+                catalog.publish(
+                    taxon(name="Preferred old", group="lizard"),
+                    retrieved_at=NOW,
+                    source_effective_at=NOW - timedelta(days=10),
+                )
+            b = catalog.begin_generation(
+                replace(source("New preferred"), snapshot_at=NOW), imported_at=NOW
+            )
+            catalog.stage(b, [taxon(name="Preferred current", group="snake")])
+            catalog.validate_generation(b)
+            catalog.promote(b)
+        before = catalog.resolve(identifier)
+        if mapped:
+            catalog.map_identity(
+                identifier,
+                "foreign",
+                "other",
+                source_url="https://example.test/other",
+                decided_by="Owner",
+                reason="Qualified identity",
+            )
+        foreign = catalog.begin_generation(
+            replace(source("Foreign"), provider="foreign"), imported_at=NOW
+        )
+        catalog.stage(
+            foreign,
+            [replace(taxon("other", "Foreign replacement", group="lizard"), provider="foreign")],
+        )
+        catalog.validate_generation(foreign)
+        conflicts = [c for c in catalog.conflicts() if c.kind == "cross_provider_order"]
+        if mapped:
+            assert conflicts
+            with pytest.raises(TaxonomyConflictError):
+                catalog.promote(foreign)
+        else:
+            assert not conflicts
+        for conflict in conflicts:
+            catalog.resolve_conflict(
+                conflict.conflict_id, decided_by="Owner", reason="Retain preferred origin"
+            )
+        catalog.promote(foreign)
+        selected = catalog.resolve(identifier)
+>       assert selected.scientific_name == "Preferred current"
+E       AssertionError: assert 'Preferred old' == 'Preferred current'
+E
+E         - Preferred current
+E         + Preferred old
+
+tests/integration/test_local_taxonomy.py:1092: AssertionError
+---------------------------- Captured stderr setup -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+_ test_foreign_generation_retains_selected_origin_after_conflict_decision[False-snapshot_with_old_overlay] _
+
+catalog = <snaketracker.infrastructure.taxonomy.catalog.LocalTaxonomyCatalog object at 0xffff8b470cd0>
+origin = 'snapshot_with_old_overlay', mapped = False
+
+    @pytest.mark.parametrize("origin", ["overlay", "snapshot", "snapshot_with_old_overlay"])
+    @pytest.mark.parametrize("mapped", [False, True])
+    def test_foreign_generation_retains_selected_origin_after_conflict_decision(
+        catalog, origin, mapped
+    ):
+        if origin == "overlay":
+            identifier = catalog.publish(
+                taxon(name="Preferred current", group="snake"), retrieved_at=NOW
+            )
+        else:
+            a = stage(catalog, "Original snapshot", [taxon(name="Preferred old", group="lizard")])
+            catalog.promote(a)
+            identifier = catalog.search("Preferred")[0].taxon_id
+            if origin == "snapshot_with_old_overlay":
+                catalog.publish(
+                    taxon(name="Preferred old", group="lizard"),
+                    retrieved_at=NOW,
+                    source_effective_at=NOW - timedelta(days=10),
+                )
+            b = catalog.begin_generation(
+                replace(source("New preferred"), snapshot_at=NOW), imported_at=NOW
+            )
+            catalog.stage(b, [taxon(name="Preferred current", group="snake")])
+            catalog.validate_generation(b)
+            catalog.promote(b)
+        before = catalog.resolve(identifier)
+        if mapped:
+            catalog.map_identity(
+                identifier,
+                "foreign",
+                "other",
+                source_url="https://example.test/other",
+                decided_by="Owner",
+                reason="Qualified identity",
+            )
+        foreign = catalog.begin_generation(
+            replace(source("Foreign"), provider="foreign"), imported_at=NOW
+        )
+        catalog.stage(
+            foreign,
+            [replace(taxon("other", "Foreign replacement", group="lizard"), provider="foreign")],
+        )
+        catalog.validate_generation(foreign)
+        conflicts = [c for c in catalog.conflicts() if c.kind == "cross_provider_order"]
+        if mapped:
+            assert conflicts
+            with pytest.raises(TaxonomyConflictError):
+                catalog.promote(foreign)
+        else:
+            assert not conflicts
+        for conflict in conflicts:
+            catalog.resolve_conflict(
+                conflict.conflict_id, decided_by="Owner", reason="Retain preferred origin"
+            )
+        catalog.promote(foreign)
+        selected = catalog.resolve(identifier)
+>       assert selected.scientific_name == "Preferred current"
+E       AssertionError: assert 'Preferred old' == 'Preferred current'
+E
+E         - Preferred current
+E         + Preferred old
+
+tests/integration/test_local_taxonomy.py:1092: AssertionError
+---------------------------- Captured stderr setup -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+=========================== short test summary info ============================
+FAILED tests/integration/test_local_taxonomy.py::test_foreign_generation_retains_selected_origin_after_conflict_decision[False-snapshot]
+FAILED tests/integration/test_local_taxonomy.py::test_foreign_generation_retains_selected_origin_after_conflict_decision[False-snapshot_with_old_overlay]
+2 failed, 4 passed, 124 deselected in 16.27s

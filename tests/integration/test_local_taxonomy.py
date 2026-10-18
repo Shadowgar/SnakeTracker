@@ -1034,7 +1034,10 @@ def test_live_observation_compares_selected_snapshot_even_with_older_overlay(cat
 
 
 @pytest.mark.parametrize("origin", ["overlay", "snapshot", "snapshot_with_old_overlay"])
-def test_foreign_generation_retains_selected_origin_after_conflict_decision(catalog, origin):
+@pytest.mark.parametrize("mapped", [False, True])
+def test_foreign_generation_retains_selected_origin_after_conflict_decision(
+    catalog, origin, mapped
+):
     if origin == "overlay":
         identifier = catalog.publish(
             taxon(name="Preferred current", group="snake"), retrieved_at=NOW
@@ -1055,14 +1058,16 @@ def test_foreign_generation_retains_selected_origin_after_conflict_decision(cata
         catalog.stage(b, [taxon(name="Preferred current", group="snake")])
         catalog.validate_generation(b)
         catalog.promote(b)
-    catalog.map_identity(
-        identifier,
-        "foreign",
-        "other",
-        source_url="https://example.test/other",
-        decided_by="Owner",
-        reason="Qualified identity",
-    )
+    before = catalog.resolve(identifier)
+    if mapped:
+        catalog.map_identity(
+            identifier,
+            "foreign",
+            "other",
+            source_url="https://example.test/other",
+            decided_by="Owner",
+            reason="Qualified identity",
+        )
     foreign = catalog.begin_generation(
         replace(source("Foreign"), provider="foreign"), imported_at=NOW
     )
@@ -1072,9 +1077,12 @@ def test_foreign_generation_retains_selected_origin_after_conflict_decision(cata
     )
     catalog.validate_generation(foreign)
     conflicts = [c for c in catalog.conflicts() if c.kind == "cross_provider_order"]
-    assert conflicts
-    with pytest.raises(TaxonomyConflictError):
-        catalog.promote(foreign)
+    if mapped:
+        assert conflicts
+        with pytest.raises(TaxonomyConflictError):
+            catalog.promote(foreign)
+    else:
+        assert not conflicts
     for conflict in conflicts:
         catalog.resolve_conflict(
             conflict.conflict_id, decided_by="Owner", reason="Retain preferred origin"
@@ -1085,8 +1093,13 @@ def test_foreign_generation_retains_selected_origin_after_conflict_decision(cata
     assert selected.workflow_group == "snake"
     assert selected.provider == "fixture"
     assert selected.selection_state == "selected"
+    assert selected.retrieved_at == before.retrieved_at
+    assert selected.source_effective_at == before.source_effective_at
     if origin != "overlay":
         catalog.cleanup(b, retained_generations={foreign})
+        assert catalog.resolve(identifier).scientific_name == "Preferred current"
+        assert catalog.resolve(identifier).retrieved_at == before.retrieved_at
+        catalog.promote(a)
         assert catalog.resolve(identifier).scientific_name == "Preferred current"
 
 
@@ -1936,3 +1949,41 @@ def test_alias_fallback_provenance_uses_exact_first_published_provider_id(catalo
             "SELECT retrieved_at FROM taxon_provider_mappings WHERE provider_id='z'"
         ).scalar_one()
         assert datetime.fromisoformat(old) == NOW - timedelta(days=20)
+
+
+def test_foreign_generation_preserves_absent_preferred_ancestry_through_cleanup(catalog):
+    first = stage(
+        catalog,
+        "Original preferred ancestry",
+        [
+            taxon("root", "Old root"),
+            taxon("child", "Old child", parent_provider_id="root"),
+        ],
+    )
+    catalog.promote(first)
+    newer = catalog.begin_generation(
+        replace(source("Updated ancestry"), snapshot_at=NOW), imported_at=NOW
+    )
+    catalog.stage(
+        newer,
+        [taxon("root", "Updated root"), taxon("child", "Updated child", parent_provider_id="root")],
+    )
+    catalog.validate_generation(newer)
+    catalog.promote(newer)
+    before = catalog.search("Updated child")[0]
+    foreign = catalog.begin_generation(
+        replace(source("Unrelated foreign"), provider="foreign"), imported_at=NOW
+    )
+    catalog.stage(foreign, [replace(taxon("unrelated", "Foreign reference"), provider="foreign")])
+    catalog.validate_generation(foreign)
+    catalog.promote(foreign)
+    for cleanup in (False, True):
+        if cleanup:
+            catalog.cleanup(newer, retained_generations={foreign})
+        selected = catalog.resolve(before.taxon_id)
+        assert selected.scientific_name == "Updated child"
+        assert selected.retrieved_at == before.retrieved_at
+        assert selected.source_effective_at == before.source_effective_at
+        assert selected.ancestry == before.ancestry
+        assert selected.ancestry[0].scientific_name == "Updated root"
+        assert catalog.search("Updated child")[0].taxon_id == before.taxon_id

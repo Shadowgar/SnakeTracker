@@ -330,3 +330,13 @@ fallback. Invalid markers require reconciliation. Multiple flagged names use a d
 lexical tie-break while retaining the others as alternatives. Name and archive limits remain
 unchanged. Independent read-only review found no remaining Important issue. These corrections
 also postdate the historical Pi performance receipt; fresh hosted checks qualify the final source.
+
+[Absent-identity reproduction](absent-foreign-retention-red.log) found that switching to an unrelated
+provider generation retained preferred snapshots only for identities shared with the incoming
+archive. Promotion now preserves selected outgoing preferred-provider facts even when their
+identities are absent from that archive. Existing newer overlays remain authoritative; facts,
+original source clocks and per-identity audit are retained atomically. The [12-test focused run](absent-foreign-retention-green.log)
+passed for mapped/absent identities, with/without older overlays, rollback, cleanup and complete
+preferred-provider ancestry/search retention. Independent read-only review found no Important
+issue. Graph validation and SQL-work time guards remain enabled; no bound was raised. This path
+also postdates the historical Pi receipt and carries no production-size capacity claim.
