@@ -1987,3 +1987,41 @@ def test_foreign_generation_preserves_absent_preferred_ancestry_through_cleanup(
         assert selected.ancestry == before.ancestry
         assert selected.ancestry[0].scientific_name == "Updated root"
         assert catalog.search("Updated child")[0].taxon_id == before.taxon_id
+
+
+@pytest.mark.parametrize("identifier", [" ", "\u2003"])
+@pytest.mark.parametrize("action", ["publish", "map", "stage"])
+def test_blank_provider_ids_cannot_create_permanent_namespace_state(catalog, identifier, action):
+    existing = catalog.publish(taxon("existing"), retrieved_at=NOW)
+    generation = catalog.begin_generation(source("Invalid identity"), imported_at=NOW)
+
+    def counts():
+        with catalog.engine.connect() as connection:
+            return tuple(
+                connection.exec_driver_sql("SELECT count(*) FROM " + table).scalar_one()
+                for table in (
+                    "taxa",
+                    "taxon_provider_mappings",
+                    "taxonomy_facts",
+                    "taxonomy_changes",
+                )
+            )
+
+    before = counts()
+    candidate = replace(taxon("valid"), provider_id=identifier)
+    with pytest.raises(ValueError):
+        if action == "publish":
+            catalog.publish(candidate, retrieved_at=NOW)
+        elif action == "map":
+            catalog.map_identity(
+                existing,
+                "fixture",
+                identifier,
+                source_url="https://example.test/id",
+                decided_by="Owner",
+                reason="Reject invalid namespace identity",
+            )
+        else:
+            catalog.stage(generation, [candidate])
+    assert counts() == before
+    assert catalog.resolve(existing) is not None

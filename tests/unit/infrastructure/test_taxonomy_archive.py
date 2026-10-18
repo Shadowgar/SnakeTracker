@@ -797,3 +797,63 @@ def test_unused_qualified_metadata_is_not_reinterpreted_as_taxonomy(tmp_path):
     )
     assert records[1].accepted_scientific_name == "Rana temporaria"
     assert records[1].class_name == "Amphibia"
+
+
+@pytest.mark.parametrize(
+    "attribute", ['linesTerminatedBy="|"', 'fieldsEscapedBy="\\"', 'fieldsEscapedBy="!"']
+)
+def test_unsupported_archive_record_dialects_reject_before_parsing(tmp_path, attribute):
+    meta = META.replace('encoding="UTF-8"', 'encoding="UTF-8" ' + attribute, 1)
+    with pytest.raises(ValueError, match=r"schema|dialect"):
+        tuple(read_archive(archive(tmp_path, meta=meta), provider="fixture"))
+
+
+def test_pipe_record_separator_cannot_silently_collapse_taxonomy_rows(tmp_path):
+    meta = META.replace('ignoreHeaderLines="1"', 'ignoreHeaderLines="0" linesTerminatedBy="|"')
+    with pytest.raises(ValueError, match=r"schema|dialect"):
+        tuple(
+            read_archive(
+                archive(
+                    tmp_path,
+                    meta=meta,
+                    names="",
+                    taxa="1\tAnimalia\t\t|2\tRana temporaria\t1\tAmphibia|",
+                ),
+                provider="fixture",
+            )
+        )
+
+
+@pytest.mark.parametrize("declared,ending", [(r"\n", "\n"), (r"\r\n", "\r\n"), (r"\r", "\r")])
+def test_supported_newline_dialects_preserve_every_record(tmp_path, declared, ending):
+    meta = META.replace(
+        'encoding="UTF-8"', f'encoding="UTF-8" linesTerminatedBy="{declared}" fieldsEscapedBy=""', 1
+    )
+    taxa = "id\tname\tparent\tclass\n1\tAnimalia\t\t\n2\tRana temporaria\t1\tAmphibia\n".replace(
+        "\n", ending
+    )
+    assert (
+        len(tuple(read_archive(archive(tmp_path, meta=meta, taxa=taxa), provider="fixture"))) == 2
+    )
+
+
+@pytest.mark.parametrize(
+    "base", ["https://example.org/taxa", "https://example.org/taxa/", "https://example.org"]
+)
+def test_taxon_base_url_joins_one_encoded_identity_path_component(tmp_path, base):
+    path = archive(
+        tmp_path,
+        taxa="id\tname\tparent\tclass\n1\tAnimalia\t\t\nabc/def\tRana temporaria\t1\tAmphibia\n",
+        names="abc/def\tCommon frog\n",
+    )
+    records = tuple(read_archive(path, provider="custom", source_base_url=base))
+    assert records[1].source_url == base.rstrip("/") + "/abc%2Fdef"
+
+
+@pytest.mark.parametrize(
+    "base",
+    ["https://example.org/taxa?search=", "https://example.org/taxa#record", "https:///taxa/"],
+)
+def test_taxon_base_url_requires_an_absolute_https_path_base(tmp_path, base):
+    with pytest.raises(ValueError, match=r"URL base|path"):
+        tuple(read_archive(archive(tmp_path), provider="custom", source_base_url=base))

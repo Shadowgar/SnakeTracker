@@ -72,7 +72,7 @@ def timestamp(value: datetime) -> str:
 def validate(candidate: ProviderTaxon) -> None:
     if (
         not re.fullmatch(r"[a-z][a-z0-9_]{0,31}", candidate.provider)
-        or not candidate.provider_id
+        or not candidate.provider_id.strip()
         or len(candidate.provider_id) > 128
         or not candidate.accepted_scientific_name.strip()
         or len(candidate.accepted_scientific_name) > 256

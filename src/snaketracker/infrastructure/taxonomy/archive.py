@@ -17,7 +17,7 @@ import xml.etree.ElementTree as ET
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit, urlunsplit
 from zipfile import BadZipFile, ZipFile
 
 from snaketracker.application.species_directory import ProviderTaxon
@@ -62,10 +62,13 @@ def _rows(archive: ZipFile, element: ET.Element) -> Iterator[dict[str, str]]:
     location = element.findtext("d:files/d:location", namespaces=NS)
     delimiter = element.get("fieldsTerminatedBy", "\\t").replace("\\t", "\t")
     quote_char = element.get("fieldsEnclosedBy", '"') or None
+    line_ending = element.get("linesTerminatedBy", r"\n").replace(r"\r", "\r").replace(r"\n", "\n")
     if (
         not location
         or len(element.findall("d:files/d:location", NS)) != 1
         or len(delimiter) != 1
+        or line_ending not in {"\n", "\r\n", "\r"}
+        or bool(element.get("fieldsEscapedBy", ""))
         or (quote_char is not None and len(quote_char) != 1)
         or element.get("encoding", "UTF-8").upper() not in {"UTF-8", "UTF8"}
     ):
@@ -153,10 +156,18 @@ def read_archive(
         raise ValueError(
             "An archive namespace requires an explicit qualified taxon source URL base."
         )
-    if source_base_url is not None and (
-        not source_base_url.startswith("https://") or len(source_base_url) > 1024
-    ):
-        raise ValueError("A taxon source URL base must be an explicit bounded HTTPS URL.")
+    if source_base_url is not None:
+        base = urlsplit(source_base_url)
+        if (
+            base.scheme != "https"
+            or not base.netloc
+            or base.query
+            or base.fragment
+            or len(source_base_url) > 1024
+        ):
+            raise ValueError("A taxon source URL base must be a bounded absolute HTTPS path URL.")
+        base_path = base.path if base.path.endswith("/") else base.path + "/"
+        source_base_url = urlunsplit((base.scheme, base.netloc, base_path, "", ""))
     if not path.is_file() or path.stat().st_size > limits.max_bytes:
         raise ValueError("Archive exceeds the compressed byte bound or is missing.")
     rows = 0

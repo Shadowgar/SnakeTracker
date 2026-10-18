@@ -1,0 +1,508 @@
+FFFFFFFFFF...F.FFFF                                                      [100%]
+=================================== FAILURES ===================================
+__ test_blank_provider_ids_cannot_create_permanent_namespace_state[publish- ] __
+
+catalog = <snaketracker.infrastructure.taxonomy.catalog.LocalTaxonomyCatalog object at 0xffff8e3763c0>
+identifier = ' ', action = 'publish'
+
+    @pytest.mark.parametrize("identifier", [" ", "\u2003"])
+    @pytest.mark.parametrize("action", ["publish", "map", "stage"])
+    def test_blank_provider_ids_cannot_create_permanent_namespace_state(catalog, identifier, action):
+        existing = catalog.publish(taxon("existing"), retrieved_at=NOW)
+        generation = catalog.begin_generation(source("Invalid identity"), imported_at=NOW)
+
+        def counts():
+            with catalog.engine.connect() as connection:
+                return tuple(
+                    connection.exec_driver_sql("SELECT count(*) FROM " + table).scalar_one()
+                    for table in (
+                        "taxa",
+                        "taxon_provider_mappings",
+                        "taxonomy_facts",
+                        "taxonomy_changes",
+                    )
+                )
+
+        before = counts()
+        candidate = replace(taxon("valid"), provider_id=identifier)
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/integration/test_local_taxonomy.py:2012: Failed
+---------------------------- Captured stderr setup -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+_ test_blank_provider_ids_cannot_create_permanent_namespace_state[publish-\u2003] _
+
+catalog = <snaketracker.infrastructure.taxonomy.catalog.LocalTaxonomyCatalog object at 0xffff8e3ff250>
+identifier = '\u2003', action = 'publish'
+
+    @pytest.mark.parametrize("identifier", [" ", "\u2003"])
+    @pytest.mark.parametrize("action", ["publish", "map", "stage"])
+    def test_blank_provider_ids_cannot_create_permanent_namespace_state(catalog, identifier, action):
+        existing = catalog.publish(taxon("existing"), retrieved_at=NOW)
+        generation = catalog.begin_generation(source("Invalid identity"), imported_at=NOW)
+
+        def counts():
+            with catalog.engine.connect() as connection:
+                return tuple(
+                    connection.exec_driver_sql("SELECT count(*) FROM " + table).scalar_one()
+                    for table in (
+                        "taxa",
+                        "taxon_provider_mappings",
+                        "taxonomy_facts",
+                        "taxonomy_changes",
+                    )
+                )
+
+        before = counts()
+        candidate = replace(taxon("valid"), provider_id=identifier)
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/integration/test_local_taxonomy.py:2012: Failed
+---------------------------- Captured stderr setup -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+____ test_blank_provider_ids_cannot_create_permanent_namespace_state[map- ] ____
+
+catalog = <snaketracker.infrastructure.taxonomy.catalog.LocalTaxonomyCatalog object at 0xffff8e0cda90>
+identifier = ' ', action = 'map'
+
+    @pytest.mark.parametrize("identifier", [" ", "\u2003"])
+    @pytest.mark.parametrize("action", ["publish", "map", "stage"])
+    def test_blank_provider_ids_cannot_create_permanent_namespace_state(catalog, identifier, action):
+        existing = catalog.publish(taxon("existing"), retrieved_at=NOW)
+        generation = catalog.begin_generation(source("Invalid identity"), imported_at=NOW)
+
+        def counts():
+            with catalog.engine.connect() as connection:
+                return tuple(
+                    connection.exec_driver_sql("SELECT count(*) FROM " + table).scalar_one()
+                    for table in (
+                        "taxa",
+                        "taxon_provider_mappings",
+                        "taxonomy_facts",
+                        "taxonomy_changes",
+                    )
+                )
+
+        before = counts()
+        candidate = replace(taxon("valid"), provider_id=identifier)
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/integration/test_local_taxonomy.py:2012: Failed
+---------------------------- Captured stderr setup -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+_ test_blank_provider_ids_cannot_create_permanent_namespace_state[map-\u2003] __
+
+catalog = <snaketracker.infrastructure.taxonomy.catalog.LocalTaxonomyCatalog object at 0xffff8dd7a3f0>
+identifier = '\u2003', action = 'map'
+
+    @pytest.mark.parametrize("identifier", [" ", "\u2003"])
+    @pytest.mark.parametrize("action", ["publish", "map", "stage"])
+    def test_blank_provider_ids_cannot_create_permanent_namespace_state(catalog, identifier, action):
+        existing = catalog.publish(taxon("existing"), retrieved_at=NOW)
+        generation = catalog.begin_generation(source("Invalid identity"), imported_at=NOW)
+
+        def counts():
+            with catalog.engine.connect() as connection:
+                return tuple(
+                    connection.exec_driver_sql("SELECT count(*) FROM " + table).scalar_one()
+                    for table in (
+                        "taxa",
+                        "taxon_provider_mappings",
+                        "taxonomy_facts",
+                        "taxonomy_changes",
+                    )
+                )
+
+        before = counts()
+        candidate = replace(taxon("valid"), provider_id=identifier)
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/integration/test_local_taxonomy.py:2012: Failed
+---------------------------- Captured stderr setup -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+___ test_blank_provider_ids_cannot_create_permanent_namespace_state[stage- ] ___
+
+catalog = <snaketracker.infrastructure.taxonomy.catalog.LocalTaxonomyCatalog object at 0xffff8d992650>
+identifier = ' ', action = 'stage'
+
+    @pytest.mark.parametrize("identifier", [" ", "\u2003"])
+    @pytest.mark.parametrize("action", ["publish", "map", "stage"])
+    def test_blank_provider_ids_cannot_create_permanent_namespace_state(catalog, identifier, action):
+        existing = catalog.publish(taxon("existing"), retrieved_at=NOW)
+        generation = catalog.begin_generation(source("Invalid identity"), imported_at=NOW)
+
+        def counts():
+            with catalog.engine.connect() as connection:
+                return tuple(
+                    connection.exec_driver_sql("SELECT count(*) FROM " + table).scalar_one()
+                    for table in (
+                        "taxa",
+                        "taxon_provider_mappings",
+                        "taxonomy_facts",
+                        "taxonomy_changes",
+                    )
+                )
+
+        before = counts()
+        candidate = replace(taxon("valid"), provider_id=identifier)
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/integration/test_local_taxonomy.py:2012: Failed
+---------------------------- Captured stderr setup -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+_ test_blank_provider_ids_cannot_create_permanent_namespace_state[stage-\u2003] _
+
+catalog = <snaketracker.infrastructure.taxonomy.catalog.LocalTaxonomyCatalog object at 0xffff8d7db770>
+identifier = '\u2003', action = 'stage'
+
+    @pytest.mark.parametrize("identifier", [" ", "\u2003"])
+    @pytest.mark.parametrize("action", ["publish", "map", "stage"])
+    def test_blank_provider_ids_cannot_create_permanent_namespace_state(catalog, identifier, action):
+        existing = catalog.publish(taxon("existing"), retrieved_at=NOW)
+        generation = catalog.begin_generation(source("Invalid identity"), imported_at=NOW)
+
+        def counts():
+            with catalog.engine.connect() as connection:
+                return tuple(
+                    connection.exec_driver_sql("SELECT count(*) FROM " + table).scalar_one()
+                    for table in (
+                        "taxa",
+                        "taxon_provider_mappings",
+                        "taxonomy_facts",
+                        "taxonomy_changes",
+                    )
+                )
+
+        before = counts()
+        candidate = replace(taxon("valid"), provider_id=identifier)
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/integration/test_local_taxonomy.py:2012: Failed
+---------------------------- Captured stderr setup -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+_ test_unsupported_archive_record_dialects_reject_before_parsing[linesTerminatedBy="|"] _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-165/test_unsupported_archive_recor0')
+attribute = 'linesTerminatedBy="|"'
+
+    @pytest.mark.parametrize(
+        "attribute", ['linesTerminatedBy="|"', 'fieldsEscapedBy="\\"', 'fieldsEscapedBy="!"']
+    )
+    def test_unsupported_archive_record_dialects_reject_before_parsing(tmp_path, attribute):
+        meta = META.replace('encoding="UTF-8"', 'encoding="UTF-8" ' + attribute, 1)
+>       with pytest.raises(ValueError, match=r"schema|dialect"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/infrastructure/test_taxonomy_archive.py:807: Failed
+_ test_unsupported_archive_record_dialects_reject_before_parsing[fieldsEscapedBy="\\"] _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-165/test_unsupported_archive_recor1')
+attribute = 'fieldsEscapedBy="\\"'
+
+    @pytest.mark.parametrize(
+        "attribute", ['linesTerminatedBy="|"', 'fieldsEscapedBy="\\"', 'fieldsEscapedBy="!"']
+    )
+    def test_unsupported_archive_record_dialects_reject_before_parsing(tmp_path, attribute):
+        meta = META.replace('encoding="UTF-8"', 'encoding="UTF-8" ' + attribute, 1)
+>       with pytest.raises(ValueError, match=r"schema|dialect"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/infrastructure/test_taxonomy_archive.py:807: Failed
+_ test_unsupported_archive_record_dialects_reject_before_parsing[fieldsEscapedBy="!"] _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-165/test_unsupported_archive_recor2')
+attribute = 'fieldsEscapedBy="!"'
+
+    @pytest.mark.parametrize(
+        "attribute", ['linesTerminatedBy="|"', 'fieldsEscapedBy="\\"', 'fieldsEscapedBy="!"']
+    )
+    def test_unsupported_archive_record_dialects_reject_before_parsing(tmp_path, attribute):
+        meta = META.replace('encoding="UTF-8"', 'encoding="UTF-8" ' + attribute, 1)
+>       with pytest.raises(ValueError, match=r"schema|dialect"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/infrastructure/test_taxonomy_archive.py:807: Failed
+______ test_pipe_record_separator_cannot_silently_collapse_taxonomy_rows _______
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-165/test_pipe_record_separator_can0')
+
+    def test_pipe_record_separator_cannot_silently_collapse_taxonomy_rows(tmp_path):
+        meta = META.replace('ignoreHeaderLines="1"', 'ignoreHeaderLines="0" linesTerminatedBy="|"')
+>       with pytest.raises(ValueError, match=r"schema|dialect"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/infrastructure/test_taxonomy_archive.py:813: Failed
+_ test_taxon_base_url_joins_one_encoded_identity_path_component[https://example.org/taxa] _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-165/test_taxon_base_url_joins_one_0')
+base = 'https://example.org/taxa'
+
+    @pytest.mark.parametrize(
+        "base", ["https://example.org/taxa", "https://example.org/taxa/", "https://example.org"]
+    )
+    def test_taxon_base_url_joins_one_encoded_identity_path_component(tmp_path, base):
+        path = archive(
+            tmp_path,
+            taxa="id\tname\tparent\tclass\n1\tAnimalia\t\t\nabc/def\tRana temporaria\t1\tAmphibia\n",
+            names="abc/def\tCommon frog\n",
+        )
+        records = tuple(read_archive(path, provider="custom", source_base_url=base))
+>       assert records[1].source_url == base.rstrip("/") + "/abc%2Fdef"
+E       AssertionError: assert 'https://exam...taxaabc%2Fdef' == 'https://exam...axa/abc%2Fdef'
+E
+E         - https://example.org/taxa/abc%2Fdef
+E         ?                         -
+E         + https://example.org/taxaabc%2Fdef
+
+tests/unit/infrastructure/test_taxonomy_archive.py:850: AssertionError
+_ test_taxon_base_url_joins_one_encoded_identity_path_component[https://example.org] _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-165/test_taxon_base_url_joins_one_2')
+base = 'https://example.org'
+
+    @pytest.mark.parametrize(
+        "base", ["https://example.org/taxa", "https://example.org/taxa/", "https://example.org"]
+    )
+    def test_taxon_base_url_joins_one_encoded_identity_path_component(tmp_path, base):
+        path = archive(
+            tmp_path,
+            taxa="id\tname\tparent\tclass\n1\tAnimalia\t\t\nabc/def\tRana temporaria\t1\tAmphibia\n",
+            names="abc/def\tCommon frog\n",
+        )
+        records = tuple(read_archive(path, provider="custom", source_base_url=base))
+>       assert records[1].source_url == base.rstrip("/") + "/abc%2Fdef"
+E       AssertionError: assert 'https://example.orgabc%2Fdef' == 'https://exam...org/abc%2Fdef'
+E
+E         - https://example.org/abc%2Fdef
+E         ?                    -
+E         + https://example.orgabc%2Fdef
+
+tests/unit/infrastructure/test_taxonomy_archive.py:850: AssertionError
+_ test_taxon_base_url_requires_an_absolute_https_path_base[https://example.org/taxa?search=] _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-165/test_taxon_base_url_requires_a0')
+base = 'https://example.org/taxa?search='
+
+    @pytest.mark.parametrize(
+        "base",
+        ["https://example.org/taxa?search=", "https://example.org/taxa#record", "https:///taxa/"],
+    )
+    def test_taxon_base_url_requires_an_absolute_https_path_base(tmp_path, base):
+>       with pytest.raises(ValueError, match=r"URL base|path"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/infrastructure/test_taxonomy_archive.py:858: Failed
+_ test_taxon_base_url_requires_an_absolute_https_path_base[https://example.org/taxa#record] _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-165/test_taxon_base_url_requires_a1')
+base = 'https://example.org/taxa#record'
+
+    @pytest.mark.parametrize(
+        "base",
+        ["https://example.org/taxa?search=", "https://example.org/taxa#record", "https:///taxa/"],
+    )
+    def test_taxon_base_url_requires_an_absolute_https_path_base(tmp_path, base):
+>       with pytest.raises(ValueError, match=r"URL base|path"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/infrastructure/test_taxonomy_archive.py:858: Failed
+___ test_taxon_base_url_requires_an_absolute_https_path_base[https:///taxa/] ___
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-165/test_taxon_base_url_requires_a2')
+base = 'https:///taxa/'
+
+    @pytest.mark.parametrize(
+        "base",
+        ["https://example.org/taxa?search=", "https://example.org/taxa#record", "https:///taxa/"],
+    )
+    def test_taxon_base_url_requires_an_absolute_https_path_base(tmp_path, base):
+>       with pytest.raises(ValueError, match=r"URL base|path"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/infrastructure/test_taxonomy_archive.py:858: Failed
+=========================== short test summary info ============================
+FAILED tests/integration/test_local_taxonomy.py::test_blank_provider_ids_cannot_create_permanent_namespace_state[publish- ]
+FAILED tests/integration/test_local_taxonomy.py::test_blank_provider_ids_cannot_create_permanent_namespace_state[publish-\u2003]
+FAILED tests/integration/test_local_taxonomy.py::test_blank_provider_ids_cannot_create_permanent_namespace_state[map- ]
+FAILED tests/integration/test_local_taxonomy.py::test_blank_provider_ids_cannot_create_permanent_namespace_state[map-\u2003]
+FAILED tests/integration/test_local_taxonomy.py::test_blank_provider_ids_cannot_create_permanent_namespace_state[stage- ]
+FAILED tests/integration/test_local_taxonomy.py::test_blank_provider_ids_cannot_create_permanent_namespace_state[stage-\u2003]
+FAILED tests/unit/infrastructure/test_taxonomy_archive.py::test_unsupported_archive_record_dialects_reject_before_parsing[linesTerminatedBy="|"]
+FAILED tests/unit/infrastructure/test_taxonomy_archive.py::test_unsupported_archive_record_dialects_reject_before_parsing[fieldsEscapedBy="\\"]
+FAILED tests/unit/infrastructure/test_taxonomy_archive.py::test_unsupported_archive_record_dialects_reject_before_parsing[fieldsEscapedBy="!"]
+FAILED tests/unit/infrastructure/test_taxonomy_archive.py::test_pipe_record_separator_cannot_silently_collapse_taxonomy_rows
+FAILED tests/unit/infrastructure/test_taxonomy_archive.py::test_taxon_base_url_joins_one_encoded_identity_path_component[https://example.org/taxa]
+FAILED tests/unit/infrastructure/test_taxonomy_archive.py::test_taxon_base_url_joins_one_encoded_identity_path_component[https://example.org]
+FAILED tests/unit/infrastructure/test_taxonomy_archive.py::test_taxon_base_url_requires_an_absolute_https_path_base[https://example.org/taxa?search=]
+FAILED tests/unit/infrastructure/test_taxonomy_archive.py::test_taxon_base_url_requires_an_absolute_https_path_base[https://example.org/taxa#record]
+FAILED tests/unit/infrastructure/test_taxonomy_archive.py::test_taxon_base_url_requires_an_absolute_https_path_base[https:///taxa/]
+15 failed, 4 passed, 203 deselected in 9.95s

@@ -40,7 +40,8 @@ def main() -> None:
     stage.add_argument("--label", required=True)
     stage.add_argument("--source-url", required=True)
     stage.add_argument(
-        "--taxon-base-url", help="Qualified source URL base for other archive namespaces"
+        "--taxon-base-url",
+        help="Qualified HTTPS path base without query or fragment; IDs append as path components",
     )
     stage.add_argument("--retrieved-at", required=True, type=datetime.fromisoformat)
     stage.add_argument("--snapshot-at", type=datetime.fromisoformat)

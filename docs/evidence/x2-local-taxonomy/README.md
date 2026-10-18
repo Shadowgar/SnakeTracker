@@ -402,3 +402,16 @@ Core metadata remains acceptable. The [complete 102-test compatibility/archive r
 passed, including migrated, cleaned-snapshot and staged-then-live publication loss and valid
 private reservations. Independent read-only review found no Important issue. These checks also
 postdate the historical Pi receipt and add no production performance claim or infrastructure.
+
+[Dialect, source-URL and identity regressions](dialect-url-identity-red.log) reproduced ignored
+archive record/escape settings, missing URL path separators and whitespace-only provider IDs.
+Unsupported record separators and escape dialects now fail explicitly before parsing; supported
+LF, CRLF and CR dialects retain every record. Explicit source bases must be absolute HTTPS paths
+without query or fragment, and opaque identifiers append as one encoded path component. Shared
+identity validation rejects blank IDs before publication, mapping or staging can create state.
+
+The [complete archive suite and focused identity regressions](dialect-url-identity-green.log)
+passed: 91 cases, including unchanged database counts on rejected writes. Ruff, formatting, mypy,
+architecture, freeze, document links and full-PR whitespace checks passed. The duplicate ZIP warning
+is expected from its rejection fixture. These corrections postdate the historical Pi receipt and
+make no new performance claim. No production operation or registration workflow changed.
