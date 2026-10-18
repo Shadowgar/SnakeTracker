@@ -1,0 +1,178 @@
+FF..FF..                                                                 [100%]
+=================================== FAILURES ===================================
+___ test_migrated_classification_and_authorship_are_indexed_without_refresh ____
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-159/test_migrated_classification_a0')
+
+    def test_migrated_classification_and_authorship_are_indexed_without_refresh(tmp_path):
+        database = tmp_path / "legacy-classification.db"
+        config = config_for(database)
+        command.upgrade(config, "0023_sourced_care_guides")
+        engine = create_sqlite_engine(database, require_local_storage=False)
+        identifier = uuid4()
+        fields = (
+            "authorship",
+            "rank",
+            "kingdom",
+            "phylum_division",
+            "class_name",
+            "order_name",
+            "family",
+            "genus",
+            "species",
+            "infra_rank",
+        )
+        values = {field: "Legacy" + field.replace("_", "") + "needle" for field in fields}
+        try:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "INSERT INTO taxa(taxon_id,supported_group,accepted_scientific_name,"
+                        "taxonomic_status,created_at,refreshed_at," + ",".join(fields) + ") "
+                        "VALUES(:id,'snake','Historical reference','accepted',:now,:now,"
+                        + ",".join(":" + field for field in fields)
+                        + ")"
+                    ),
+                    {"id": str(identifier), "now": NOW.isoformat(), **values},
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO taxon_provider_mappings VALUES(:id,'fixture','legacy',"
+                        "'https://example.test/legacy',:now,:now)"
+                    ),
+                    {"id": str(identifier), "now": NOW.isoformat()},
+                )
+            command.upgrade(config, "head")
+            catalog = LocalTaxonomyCatalog(engine)
+            for value in values.values():
+>               assert [item.taxon_id for item in catalog.search(value, group="snake")] == [identifier]
+E               AssertionError: assert [] == [UUID('a4d24e...33f6e03c24f')]
+E
+E                 Right contains one more item: UUID('a4d24ef8-7184-4e42-86b2-833f6e03c24f')
+E                 Use -v to get more diff
+
+tests/integration/test_taxonomy_compatibility.py:513: AssertionError
+----------------------------- Captured stderr call -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+_ test_core_vernacular_name_is_retained_with_preferred_extension_names[Core common frog] _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-159/test_core_vernacular_name_is_r0')
+core_common = 'Core common frog'
+
+    @pytest.mark.parametrize("core_common", ["Core common frog", "Z preferred frog", "Another alias"])
+    def test_core_vernacular_name_is_retained_with_preferred_extension_names(tmp_path, core_common):
+        meta = META.replace(
+            "</core>", '<field index="4" term="http://rs.tdwg.org/dwc/terms/vernacularName"/></core>'
+        )
+        meta = meta.replace(
+            "</extension>",
+            '<field index="2" term="http://rs.gbif.org/terms/1.0/isPreferredName"/></extension>',
+        )
+        records = tuple(
+            read_archive(
+                archive(
+                    tmp_path,
+                    meta=meta,
+                    taxa=f"id\tname\tparent\tclass\tcommon\n1\tAnimalia\t\t\t\n2\tRana temporaria\t1\tAmphibia\t{core_common}\n",
+                    names="2\tZ preferred frog\ttrue\n2\tAnother alias\tfalse\n",
+                ),
+                provider="fixture",
+            )
+        )
+        selected = records[1]
+        assert selected.preferred_common_name == "Z preferred frog"
+>       assert set(selected.alternative_common_names) == {core_common, "Another alias"} - {
+            "Z preferred frog"
+        }
+E       AssertionError: assert {'Another alias'} == {'Another ali... common frog'}
+E
+E         Extra items in the right set:
+E         'Core common frog'
+E         Use -v to get more diff
+
+tests/unit/infrastructure/test_taxonomy_archive.py:716: AssertionError
+_ test_combined_core_and_extension_names_share_one_unique_alias_bound[False-64] _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-159/test_combined_core_and_extensi0')
+count = 64, duplicate = False
+
+    @pytest.mark.parametrize("count", [64, 65])
+    @pytest.mark.parametrize("duplicate", [False, True])
+    def test_combined_core_and_extension_names_share_one_unique_alias_bound(tmp_path, count, duplicate):
+        meta = META.replace(
+            "</core>", '<field index="4" term="http://rs.tdwg.org/dwc/terms/vernacularName"/></core>'
+        )
+        common = "Vernacular 000" if duplicate else "Core common frog"
+        path = archive(
+            tmp_path,
+            meta=meta,
+            taxa=f"id\tname\tparent\tclass\tcommon\n1\tAnimalia\t\t\t\n2\tRana temporaria\t1\tAmphibia\t{common}\n",
+            names="".join(f"2\tVernacular {i:03d}\n" for i in range(count)),
+        )
+        if count == 65 and not duplicate:
+            with pytest.raises(ValueError, match="vernacular"):
+                tuple(read_archive(path, provider="fixture"))
+        else:
+            selected = tuple(read_archive(path, provider="fixture"))[1]
+            retained = {selected.preferred_common_name, *selected.alternative_common_names}
+>           assert common in retained
+E           AssertionError: assert 'Core common frog' in {'Vernacular 000', 'Vernacular 001', 'Vernacular 002', 'Vernacular 003', 'Vernacular 004', 'Vernacular 005', ...}
+
+tests/unit/infrastructure/test_taxonomy_archive.py:741: AssertionError
+_ test_combined_core_and_extension_names_share_one_unique_alias_bound[False-65] _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-159/test_combined_core_and_extensi1')
+count = 65, duplicate = False
+
+    @pytest.mark.parametrize("count", [64, 65])
+    @pytest.mark.parametrize("duplicate", [False, True])
+    def test_combined_core_and_extension_names_share_one_unique_alias_bound(tmp_path, count, duplicate):
+        meta = META.replace(
+            "</core>", '<field index="4" term="http://rs.tdwg.org/dwc/terms/vernacularName"/></core>'
+        )
+        common = "Vernacular 000" if duplicate else "Core common frog"
+        path = archive(
+            tmp_path,
+            meta=meta,
+            taxa=f"id\tname\tparent\tclass\tcommon\n1\tAnimalia\t\t\t\n2\tRana temporaria\t1\tAmphibia\t{common}\n",
+            names="".join(f"2\tVernacular {i:03d}\n" for i in range(count)),
+        )
+        if count == 65 and not duplicate:
+>           with pytest.raises(ValueError, match="vernacular"):
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           Failed: DID NOT RAISE ValueError
+
+tests/unit/infrastructure/test_taxonomy_archive.py:736: Failed
+=========================== short test summary info ============================
+FAILED tests/integration/test_taxonomy_compatibility.py::test_migrated_classification_and_authorship_are_indexed_without_refresh
+FAILED tests/unit/infrastructure/test_taxonomy_archive.py::test_core_vernacular_name_is_retained_with_preferred_extension_names[Core common frog]
+FAILED tests/unit/infrastructure/test_taxonomy_archive.py::test_combined_core_and_extension_names_share_one_unique_alias_bound[False-64]
+FAILED tests/unit/infrastructure/test_taxonomy_archive.py::test_combined_core_and_extension_names_share_one_unique_alias_bound[False-65]
+4 failed, 4 passed, 81 deselected in 3.41s

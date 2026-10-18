@@ -360,3 +360,17 @@ indexes remain accepted. The [complete 29-test compatibility/Care Guide run](orp
 passed, including historical migration and rejection before mutable engine initialization.
 Independent read-only review found no Important issue. No schema, recovery mutation or operating
 limit was added. This integrity correction also postdates the historical Pi receipt.
+
+[Legacy classification/core-name reproduction](legacy-classification-core-names-red.log) confirmed
+that initial migration search documents omitted stored classification/authorship, and imports
+silently lost core common names when extension names existed. The unpublished X2 migration now
+indexes its frozen list of all 12 legacy labels plus retained aliases without changing historical
+rows or references. Tests query unique values for every classification/authorship field immediately
+after migration, without refresh.
+
+Core common names now enter the same private bounded/deduplicated name set as extension names.
+Explicit preferred extension markers remain authoritative; core/extension duplicates count once,
+and combined overflow fails explicitly. The [complete 89-test compatibility/archive run](legacy-classification-core-names-green.log)
+passed. Independent read-only review found no Important issue. The historical Pi receipt binds
+an earlier source/migration version; these corrections carry no new performance or production
+capacity claim. No production migration or import was performed.

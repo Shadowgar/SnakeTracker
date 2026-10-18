@@ -689,3 +689,60 @@ def test_synonym_parent_and_accepted_name_conflicting_groups_require_reconciliat
         tuple(
             read_archive(synonym_archive(tmp_path, synonym_parent="47126"), provider="inaturalist")
         )
+
+
+@pytest.mark.parametrize("core_common", ["Core common frog", "Z preferred frog", "Another alias"])
+def test_core_vernacular_name_is_retained_with_preferred_extension_names(tmp_path, core_common):
+    meta = META.replace(
+        "</core>", '<field index="4" term="http://rs.tdwg.org/dwc/terms/vernacularName"/></core>'
+    )
+    meta = meta.replace(
+        "</extension>",
+        '<field index="2" term="http://rs.gbif.org/terms/1.0/isPreferredName"/></extension>',
+    )
+    records = tuple(
+        read_archive(
+            archive(
+                tmp_path,
+                meta=meta,
+                taxa=(
+                    "id\tname\tparent\tclass\tcommon\n1\tAnimalia\t\t\t\n"
+                    f"2\tRana temporaria\t1\tAmphibia\t{core_common}\n"
+                ),
+                names="2\tZ preferred frog\ttrue\n2\tAnother alias\tfalse\n",
+            ),
+            provider="fixture",
+        )
+    )
+    selected = records[1]
+    assert selected.preferred_common_name == "Z preferred frog"
+    assert set(selected.alternative_common_names) == {core_common, "Another alias"} - {
+        "Z preferred frog"
+    }
+    assert len(selected.alternative_common_names) == len(set(selected.alternative_common_names))
+
+
+@pytest.mark.parametrize("count", [64, 65])
+@pytest.mark.parametrize("duplicate", [False, True])
+def test_combined_core_and_extension_names_share_one_unique_alias_bound(tmp_path, count, duplicate):
+    meta = META.replace(
+        "</core>", '<field index="4" term="http://rs.tdwg.org/dwc/terms/vernacularName"/></core>'
+    )
+    common = "Vernacular 000" if duplicate else "Core common frog"
+    path = archive(
+        tmp_path,
+        meta=meta,
+        taxa=(
+            "id\tname\tparent\tclass\tcommon\n1\tAnimalia\t\t\t\n"
+            f"2\tRana temporaria\t1\tAmphibia\t{common}\n"
+        ),
+        names="".join(f"2\tVernacular {i:03d}\n" for i in range(count)),
+    )
+    if count == 65 and not duplicate:
+        with pytest.raises(ValueError, match="vernacular"):
+            tuple(read_archive(path, provider="fixture"))
+    else:
+        selected = tuple(read_archive(path, provider="fixture"))[1]
+        retained = {selected.preferred_common_name, *selected.alternative_common_names}
+        assert common in retained
+        assert len(retained) == count + int(not duplicate)

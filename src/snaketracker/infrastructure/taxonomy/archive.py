@@ -218,6 +218,13 @@ def read_archive(
                             materialize(record),
                         ),
                     )
+                    core_common = record.get("vernacularName")
+                    if core_common:
+                        if not core_common.strip() or len(core_common) > 256:
+                            raise ValueError("Invalid vernacularName.")
+                        database.execute(
+                            "INSERT INTO names VALUES(?,?,0)", (record["_id"], core_common)
+                        )
                 if not database.execute("SELECT 1 FROM records LIMIT 1").fetchone():
                     raise ValueError("Empty taxonomy generation.")
                 for extension in extensions:

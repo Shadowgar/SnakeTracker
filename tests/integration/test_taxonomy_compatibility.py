@@ -467,3 +467,53 @@ def test_mapping_conflict_alone_blocks_schema_downgrade_and_preserves_evidence(t
             assert connection.execute(text("SELECT COUNT(*) FROM taxa")).scalar_one() == 2
     finally:
         engine.dispose()
+
+
+def test_migrated_classification_and_authorship_are_indexed_without_refresh(tmp_path):
+    database = tmp_path / "legacy-classification.db"
+    config = config_for(database)
+    command.upgrade(config, "0023_sourced_care_guides")
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    identifier = uuid4()
+    fields = (
+        "authorship",
+        "rank",
+        "kingdom",
+        "phylum_division",
+        "class_name",
+        "order_name",
+        "family",
+        "genus",
+        "species",
+        "infra_rank",
+    )
+    values = {field: "Legacy" + field.replace("_", "") + "needle" for field in fields}
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO taxa(taxon_id,supported_group,accepted_scientific_name,"
+                    "taxonomic_status,created_at,refreshed_at," + ",".join(fields) + ") "
+                    "VALUES(:id,'snake','Historical reference','accepted',:now,:now,"
+                    + ",".join(":" + field for field in fields)
+                    + ")"
+                ),
+                {"id": str(identifier), "now": NOW.isoformat(), **values},
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO taxon_provider_mappings VALUES(:id,'fixture','legacy',"
+                    "'https://example.test/legacy',:now,:now)"
+                ),
+                {"id": str(identifier), "now": NOW.isoformat()},
+            )
+        command.upgrade(config, "head")
+        catalog = LocalTaxonomyCatalog(engine)
+        for value in values.values():
+            assert [item.taxon_id for item in catalog.search(value, group="snake")] == [identifier]
+        assert catalog.search("Historical " + values["family"])[0].taxon_id == identifier
+        with engine.connect() as connection:
+            retained = connection.execute(text("SELECT " + ",".join(fields) + " FROM taxa")).one()
+            assert tuple(retained) == tuple(values.values())
+    finally:
+        engine.dispose()

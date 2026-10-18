@@ -103,11 +103,28 @@ def upgrade() -> None:
         "scope UNINDEXED, names, workflow_groups, "
         "tokenize='unicode61 remove_diacritics 2', prefix='2 3 4')"
     )
+    legacy_labels = " || ' ' || ".join(
+        "coalesce(t." + field + ",'')"
+        for field in (
+            "accepted_scientific_name",
+            "preferred_common_name",
+            "authorship",
+            "rank",
+            "kingdom",
+            "phylum_division",
+            "class_name",
+            "order_name",
+            "family",
+            "genus",
+            "species",
+            "infra_rank",
+        )
+    )
     op.execute(
         "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
-        "SELECT t.taxon_id,'catalog',t.accepted_scientific_name || ' ' || "
-        "coalesce(t.preferred_common_name,'') || ' ' || coalesce(group_concat(n.name,' '),''), "
-        "t.supported_group "
+        "SELECT t.taxon_id,'catalog',"
+        + legacy_labels
+        + " || ' ' || coalesce(group_concat(n.name,' '),''),t.supported_group "
         "FROM taxa t LEFT JOIN taxon_names n USING(taxon_id) GROUP BY t.taxon_id"
     )
     op.execute(
