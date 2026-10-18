@@ -1,0 +1,108 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+________ test_deeply_nested_ledger_falls_back_without_breaking_the_page ________
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-187/test_deeply_nested_ledger_fall0')
+
+    def test_deeply_nested_ledger_falls_back_without_breaking_the_page(tmp_path):
+        path = tmp_path / "releases.json"
+        path.write_text("[" * 10000 + "]" * 10000)
+        before = path.read_bytes()
+>       assert confirmed_production_updates(path) == ()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/presentation/test_updates.py:176:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src/snaketracker/presentation/updates.py:102: in confirmed_production_updates
+    data = json.loads(contents.decode("utf-8"))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/rocco/.local/share/uv/python/cpython-3.13.14-linux-aarch64-gnu/lib/python3.13/json/__init__.py:352: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/rocco/.local/share/uv/python/cpython-3.13.14-linux-aarch64-gnu/lib/python3.13/json/decoder.py:345: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <json.decoder.JSONDecoder object at 0xffffb31b0590>
+s = '[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[...]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]'
+idx = 0
+
+    def raw_decode(self, s, idx=0):
+        """Decode a JSON document from ``s`` (a ``str`` beginning with
+        a JSON document) and return a 2-tuple of the Python
+        representation and the index in ``s`` where the document ended.
+
+        This can be used to decode a JSON document from a string that may
+        have extraneous data at the end.
+
+        """
+        try:
+>           obj, end = self.scan_once(s, idx)
+                       ^^^^^^^^^^^^^^^^^^^^^^
+E           RecursionError: maximum recursion depth exceeded while decoding a JSON array from a unicode string
+
+/home/rocco/.local/share/uv/python/cpython-3.13.14-linux-aarch64-gnu/lib/python3.13/json/decoder.py:361: RecursionError
+_________ test_cli_reports_deeply_nested_history_without_replacing_it __________
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-187/test_cli_reports_deeply_nested0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0xffffb26d1f30>
+
+    def test_cli_reports_deeply_nested_history_without_replacing_it(tmp_path, monkeypatch):
+        import sys
+
+        from snaketracker.operations.record_release import main
+
+        ledger = tmp_path / "history.json"
+        ledger.write_text("[" * 10000 + "]" * 10000)
+        before = ledger.read_bytes()
+        note = tmp_path / "notes.json"
+        note.write_text(json.dumps(entry()))
+        monkeypatch.setattr(
+            sys, "argv", ["record_release", str(note), "--ledger", str(ledger), "--apply"]
+        )
+        with pytest.raises(SystemExit) as error:
+>           main()
+
+tests/unit/operations/test_record_release.py:134:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src/snaketracker/operations/record_release.py:86: in main
+    count = record_release(args.ledger, json.loads(contents.decode("utf-8")), apply=args.apply)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/snaketracker/operations/record_release.py:53: in record_release
+    contents, count = _prepared(ledger, entry)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^
+src/snaketracker/operations/record_release.py:23: in _prepared
+    records = json.loads(existing.decode("utf-8"))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/rocco/.local/share/uv/python/cpython-3.13.14-linux-aarch64-gnu/lib/python3.13/json/__init__.py:352: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/rocco/.local/share/uv/python/cpython-3.13.14-linux-aarch64-gnu/lib/python3.13/json/decoder.py:345: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <json.decoder.JSONDecoder object at 0xffffb31b0590>
+s = '[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[...]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]'
+idx = 0
+
+    def raw_decode(self, s, idx=0):
+        """Decode a JSON document from ``s`` (a ``str`` beginning with
+        a JSON document) and return a 2-tuple of the Python
+        representation and the index in ``s`` where the document ended.
+
+        This can be used to decode a JSON document from a string that may
+        have extraneous data at the end.
+
+        """
+        try:
+>           obj, end = self.scan_once(s, idx)
+                       ^^^^^^^^^^^^^^^^^^^^^^
+E           RecursionError: maximum recursion depth exceeded while decoding a JSON array from a unicode string
+
+/home/rocco/.local/share/uv/python/cpython-3.13.14-linux-aarch64-gnu/lib/python3.13/json/decoder.py:361: RecursionError
+=========================== short test summary info ============================
+FAILED tests/unit/presentation/test_updates.py::test_deeply_nested_ledger_falls_back_without_breaking_the_page
+FAILED tests/unit/operations/test_record_release.py::test_cli_reports_deeply_nested_history_without_replacing_it
+2 failed, 16 deselected in 0.53s

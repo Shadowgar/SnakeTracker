@@ -84,7 +84,7 @@ def main() -> None:
         if len(contents) > MAX_RELEASE_BYTES:
             raise ValueError("Release record exceeds the size limit.")
         count = record_release(args.ledger, json.loads(contents.decode("utf-8")), apply=args.apply)
-    except (OSError, ValueError) as error:
+    except (OSError, ValueError, RecursionError) as error:
         parser.error(str(error))
     print(f"{'Recorded' if args.apply else 'Validated'} release history: {count} entries.")
 

@@ -115,3 +115,22 @@ def test_operator_cli_requires_apply_and_reports_invalid_notes(tmp_path, monkeyp
         main()
     assert error.value.code == 2
     assert ledger.read_bytes() == before
+
+
+def test_cli_reports_deeply_nested_history_without_replacing_it(tmp_path, monkeypatch):
+    import sys
+
+    from snaketracker.operations.record_release import main
+
+    ledger = tmp_path / "history.json"
+    ledger.write_text("[" * 10000 + "]" * 10000)
+    before = ledger.read_bytes()
+    note = tmp_path / "notes.json"
+    note.write_text(json.dumps(entry()))
+    monkeypatch.setattr(
+        sys, "argv", ["record_release", str(note), "--ledger", str(ledger), "--apply"]
+    )
+    with pytest.raises(SystemExit) as error:
+        main()
+    assert error.value.code == 2
+    assert ledger.read_bytes() == before

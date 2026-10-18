@@ -74,3 +74,11 @@ The [regressions](readonly-path-red.log) fail on the preceding configuration sou
 loading and existing release/configuration behavior. No local full gate was restarted. The old
 run remains in progress after automatic approval review declined interruption; fresh hosted CI
 will qualify the corrected commit. Earlier-head passes are not substituted.
+
+## Invalid nested ledger regression
+
+[A deeply nested but small JSON ledger](nested-json-red.log) reproduced decoder recursion
+failures escaping the page reader and operator command. Both paths now treat that decoder
+error as invalid input: the page keeps its empty state, and the command reports an error
+without replacing existing history. The [43-test focused run](nested-json-green.log) passed,
+including the production read-only guards. No schema, design or operating service changed.

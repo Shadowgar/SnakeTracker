@@ -167,3 +167,11 @@ def test_stories_are_chronological_actionable_and_photos_are_credited():
             assert item["credit"]["creator"]
             assert item["credit"]["license_code"] in {"cc0", "cc-by", "cc-by-sa"}
     assert {item["id"] for item in entries if item.get("featured")} == {"x1", "x2", "guides"}
+
+
+def test_deeply_nested_ledger_falls_back_without_breaking_the_page(tmp_path):
+    path = tmp_path / "releases.json"
+    path.write_text("[" * 10000 + "]" * 10000)
+    before = path.read_bytes()
+    assert confirmed_production_updates(path) == ()
+    assert path.read_bytes() == before

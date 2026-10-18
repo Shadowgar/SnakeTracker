@@ -100,7 +100,7 @@ def confirmed_production_updates(
         if len(contents) > MAX_RELEASE_BYTES:
             return ()
         data = json.loads(contents.decode("utf-8"))
-    except (OSError, UnicodeError, ValueError):
+    except (OSError, UnicodeError, ValueError, RecursionError):
         return ()
     if not isinstance(data, list) or len(data) > 200:
         return ()
