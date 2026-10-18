@@ -1,0 +1,268 @@
+{
+  "audit_date": "2026-10-18",
+  "source_sha": "a6d54a7f2f65999e2ae7f376a3df7b0c6dd24c08",
+  "merge_activity": [
+    {
+      "month": "August 2026",
+      "count": 7,
+      "width": 78
+    },
+    {
+      "month": "September 2026",
+      "count": 9,
+      "width": 100
+    },
+    {
+      "month": "October 2026",
+      "count": 5,
+      "width": 56
+    }
+  ],
+  "milestones": [
+    {
+      "id": "x2",
+      "month": "October 2026",
+      "date": "2026-10-18",
+      "category": "Finding species",
+      "title": "Find animals by more names",
+      "description": "We built a better species directory that understands scientific names, common names, and other known names. It's designed to keep saved species connected when the directory is updated.",
+      "benefit": "Finding the right animal should be easier as we add more species data.",
+      "image": "/static/animal-fallbacks/lizard.webp",
+      "alt": "Lizard illustration",
+      "prs": [
+        23
+      ],
+      "kind": "development"
+    },
+    {
+      "id": "x1",
+      "month": "October 2026",
+      "date": "2026-10-17",
+      "category": "More animals",
+      "title": "Making room for more kinds of pets",
+      "description": "Care Keeper's animal tracking is being prepared for more than snakes, lizards, spiders, and scorpions. Your current animals and their histories keep working as before.",
+      "benefit": "Dogs, fish, birds, frogs, and others can be added in future updates; they are not available to add yet.",
+      "image": "/static/animal-fallbacks/snake.webp",
+      "alt": "Snake illustration",
+      "prs": [
+        22
+      ],
+      "kind": "development"
+    },
+    {
+      "id": "guides",
+      "month": "October 2026",
+      "date": "2026-10-05",
+      "category": "Care guides",
+      "title": "Helpful care guides, with sources",
+      "description": "Species pages gained clearer care information and a quick overview. When a guide is available, you can check its source instead of guessing where the advice came from.",
+      "benefit": "Understand the available guidance and where it came from, without wading through long documents.",
+      "image": "/static/animal-fallbacks/spider.webp",
+      "alt": "Spider illustration",
+      "prs": [
+        17
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "reliability",
+      "month": "October 2026",
+      "date": "2026-10-09",
+      "category": "Behind the scenes",
+      "title": "More dependable care history",
+      "description": "We improved how saved records are read when different actions happen close together, and prepared Care Keeper for new animal types without losing older records.",
+      "benefit": "Fewer confusing errors when records change at the same time.",
+      "image": "/static/animal-fallbacks/scorpion.webp",
+      "alt": "Scorpion illustration",
+      "prs": [
+        18,
+        20
+      ],
+      "kind": "fix"
+    },
+    {
+      "id": "support",
+      "month": "September 2026",
+      "date": "2026-09-27",
+      "category": "Behind the scenes",
+      "title": "Better tools for support",
+      "description": "Trusted operators gained a way to review account and system problems without changing a keeper's records.",
+      "benefit": "When something goes wrong, support can understand the problem without altering your animal history.",
+      "image": "/static/animal-fallbacks/lizard.webp",
+      "alt": "Lizard illustration",
+      "prs": [
+        16
+      ],
+      "kind": "behind"
+    },
+    {
+      "id": "clean-history",
+      "month": "September 2026",
+      "date": "2026-09-26",
+      "category": "Care records",
+      "title": "A cleaner view of your care history",
+      "description": "Routine technical entries are no longer mixed into the care history that you see for your animals.",
+      "benefit": "Find feeding, cleaning, and other care records without unrelated background entries getting in the way.",
+      "image": "/static/animal-fallbacks/snake.webp",
+      "alt": "Snake illustration",
+      "prs": [
+        15
+      ],
+      "kind": "fix"
+    },
+    {
+      "id": "directory",
+      "month": "September 2026",
+      "date": "2026-09-26",
+      "category": "Finding species",
+      "title": "Search for animals and plants",
+      "description": "We added a species and plant directory, with suggestions when you type a name and the option to enter an animal manually if you can't find it.",
+      "benefit": "Adding an animal can start with a name you know, even when a species isn't listed.",
+      "image": "/static/animal-fallbacks/lizard.webp",
+      "alt": "Lizard illustration",
+      "prs": [
+        14
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "stock",
+      "month": "September 2026",
+      "date": "2026-09-13",
+      "category": "Supplies & spending",
+      "title": "Know what supplies you have and what they cost",
+      "description": "Inventory gained food and supply tracking, purchase history, stock counts, and reports to help you see what you're using and spending.",
+      "benefit": "See when you're running low, keep counts accurate, and understand the cost of caring for your animals.",
+      "image": "/static/animal-fallbacks/scorpion.webp",
+      "alt": "Scorpion illustration",
+      "prs": [
+        10,
+        11,
+        12,
+        13
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "delete",
+      "month": "September 2026",
+      "date": "2026-09-10",
+      "category": "Care records",
+      "title": "Fix a care entry you made by mistake",
+      "description": "We added a way to remove an incorrect care record from the normal view while keeping its change history safe.",
+      "benefit": "Correct mistakes without losing the story of what happened.",
+      "image": "/static/animal-fallbacks/snake.webp",
+      "alt": "Snake illustration",
+      "prs": [
+        9
+      ],
+      "kind": "fix"
+    },
+    {
+      "id": "redesign",
+      "month": "September 2026",
+      "date": "2026-09-04",
+      "category": "Everyday care",
+      "title": "A fresh Care Keeper for phone and desktop",
+      "description": "The application gained its current look, Today and Calendar views, Quick Log, easier navigation, charts, reports, and account tools.",
+      "benefit": "Check what needs doing, record care quickly, and review your animals from a phone or computer.",
+      "image": "/static/animal-fallbacks/lizard.webp",
+      "alt": "Lizard illustration",
+      "prs": [
+        8
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "spiders",
+      "month": "August 2026",
+      "date": "2026-08-15",
+      "category": "More animals",
+      "title": "Spiders join the collection",
+      "description": "Spiders gained their own care needs, including molting and premolt records, while sharing useful features such as feeding, photos, and reminders.",
+      "benefit": "Keep track of a spider's care without pretending it needs exactly the same records as a snake.",
+      "image": "/static/animal-fallbacks/spider.webp",
+      "alt": "Spider illustration",
+      "prs": [
+        7
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "reminders",
+      "month": "August 2026",
+      "date": "2026-08-11",
+      "category": "Everyday care",
+      "title": "Reminders, supplies, and expenses",
+      "description": "Care Keeper gained care schedules, a list of what's due today or later, basic supplies, and expense tracking.",
+      "benefit": "Keep important tasks together and get a clearer view of your care routine.",
+      "image": "/static/animal-fallbacks/scorpion.webp",
+      "alt": "Scorpion illustration",
+      "prs": [
+        6
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "profiles",
+      "month": "August 2026",
+      "date": "2026-08-10",
+      "category": "Your animals",
+      "title": "Animal profiles, photos, and enclosures",
+      "description": "The first animal pages brought together feeding and care notes, measurements, enclosure changes, photos, and corrections.",
+      "benefit": "See an animal's story in one place and keep its care records organized.",
+      "image": "/static/animal-fallbacks/snake.webp",
+      "alt": "Snake illustration",
+      "prs": [
+        5
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "history",
+      "month": "August 2026",
+      "date": "2026-08-07",
+      "category": "Behind the scenes",
+      "title": "Saving changes more reliably",
+      "description": "We built the record-keeping foundation that helps Care Keeper keep history straight when details are corrected or updated.",
+      "benefit": "Your existing care information has a more dependable history behind it.",
+      "image": "/static/animal-fallbacks/lizard.webp",
+      "alt": "Lizard illustration",
+      "prs": [
+        4
+      ],
+      "kind": "behind"
+    },
+    {
+      "id": "accounts",
+      "month": "August 2026",
+      "date": "2026-08-06",
+      "category": "Getting started",
+      "title": "Personal accounts and households",
+      "description": "Care Keeper gained sign-in, account setup, and private household spaces.",
+      "benefit": "Your collection can be kept separate from someone else's.",
+      "image": "/static/animal-fallbacks/spider.webp",
+      "alt": "Spider illustration",
+      "prs": [
+        3
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "beginning",
+      "month": "August 2026",
+      "date": "2026-08-05",
+      "category": "Getting started",
+      "title": "The beginning of Care Keeper",
+      "description": "We created the basic application, its local database, and the tools needed to build the animal-care features that followed.",
+      "benefit": "The foundation for everything else in Care Keeper.",
+      "image": "/static/animal-fallbacks/snake.webp",
+      "alt": "Snake illustration",
+      "prs": [
+        1,
+        2
+      ],
+      "kind": "behind"
+    }
+  ]
+}
