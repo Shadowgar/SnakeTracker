@@ -1,0 +1,1478 @@
+{
+  "repository": "Shadowgar/SnakeTracker",
+  "base": "a6d54a7f2f65999e2ae7f376a3df7b0c6dd24c08",
+  "audit_date": "2026-10-18",
+  "total": 294,
+  "commits": [
+    {
+      "sha": "a6d54a7f2f65999e2ae7f376a3df7b0c6dd24c08",
+      "date": "2026-10-18T13:00:01Z",
+      "subject": "Merge pull request #23 from Shadowgar/phase6.6/x2-local-taxonomy-foundation"
+    },
+    {
+      "sha": "986d896e319d5e7964e2eb9da6b10f1d57a79805",
+      "date": "2026-10-18T03:13:29Z",
+      "subject": "Keep cache freshness bound to the selected provider identity"
+    },
+    {
+      "sha": "6ef2b783fc143cc9c91a4c9cfa97ec7dab43fc84",
+      "date": "2026-10-18T03:06:09Z",
+      "subject": "Protect provider identity keys and chronological snapshot provenance"
+    },
+    {
+      "sha": "1b5e53b18c1cd32bf75a62722b7af6c6d224a40f",
+      "date": "2026-10-18T02:54:04Z",
+      "subject": "Validate taxonomy archive dialects and identity source paths"
+    },
+    {
+      "sha": "978444666fbddd3fc402a258c502df7f613458dd",
+      "date": "2026-10-18T02:42:54Z",
+      "subject": "fix(taxonomy): validate publication coverage and qualified archive terms"
+    },
+    {
+      "sha": "b098fc6a57b000c565ae6d677acd106157613918",
+      "date": "2026-10-18T02:30:31Z",
+      "subject": "fix(taxonomy): retain providerless legacy references in local reads"
+    },
+    {
+      "sha": "7523f02663197d24347cb07f8e51ae86c29b7c2d",
+      "date": "2026-10-18T02:22:23Z",
+      "subject": "fix(taxonomy): preserve legacy classification and core common names"
+    },
+    {
+      "sha": "f7067fd40e31f2cd8065800707915f64bbbf4186",
+      "date": "2026-10-18T02:13:19Z",
+      "subject": "fix(taxonomy): reject orphan search rows before mutable startup"
+    },
+    {
+      "sha": "cd645de77f40e34e2eb849765fbaf7cfe681d9fd",
+      "date": "2026-10-18T02:06:08Z",
+      "subject": "fix(taxonomy): classify synonyms through accepted-name ancestry"
+    },
+    {
+      "sha": "3d849554194c760f0720d009906b31990a738150",
+      "date": "2026-10-18T01:57:34Z",
+      "subject": "fix(taxonomy): retain preferred facts absent from foreign references"
+    },
+    {
+      "sha": "7a681aaea375b1bc3da3732fa9a228c4a832caf9",
+      "date": "2026-10-18T01:49:51Z",
+      "subject": "fix(taxonomy): retain alias provenance and preferred vernacular names"
+    },
+    {
+      "sha": "b40c211f042e1405c51e1eb321b3f98387fc9853",
+      "date": "2026-10-18T01:40:14Z",
+      "subject": "fix(taxonomy): bound external rollback deltas and unique search matches"
+    },
+    {
+      "sha": "88305974550314542b4af26a9b3d217c62b07d26",
+      "date": "2026-10-18T01:32:45Z",
+      "subject": "docs(x2): normalize saved failure receipt whitespace"
+    },
+    {
+      "sha": "f09d195765e76f4ec78632457afc38134f58d7ac",
+      "date": "2026-10-18T01:32:00Z",
+      "subject": "fix(taxonomy): preserve check freshness and complete bounded reads"
+    },
+    {
+      "sha": "5871dc11a22b3ccc57ee332ddc7586b138a7e8c4",
+      "date": "2026-10-18T01:19:36Z",
+      "subject": "Reconcile qualified taxonomy aliases and validate search references"
+    },
+    {
+      "sha": "69b61ba96386ef5c448c0f290764602430a598a5",
+      "date": "2026-10-18T01:00:12Z",
+      "subject": "Scope generation uncertainty to the active reference view"
+    },
+    {
+      "sha": "3899b5c5e90d1935a99f0d31a5aa8495c4949957",
+      "date": "2026-10-18T00:51:29Z",
+      "subject": "Retain migrated aliases and bind staging to verified archive bytes"
+    },
+    {
+      "sha": "396d56bc7d52dba6dde3b522cad7031fa6a75b51",
+      "date": "2026-10-18T00:43:43Z",
+      "subject": "Remove trailing whitespace from X2 qualification evidence"
+    },
+    {
+      "sha": "ad946f484183470a8e21d0e9eeea3b955e4b5c4d",
+      "date": "2026-10-18T00:43:32Z",
+      "subject": "Serialize taxonomy image observations and preserve ancestry namespaces"
+    },
+    {
+      "sha": "b556115fbcee8e76d32acfb2960dc623189ce8f4",
+      "date": "2026-10-18T00:31:05Z",
+      "subject": "Normalize optional taxonomy archive status values"
+    },
+    {
+      "sha": "493c2705175eb6f608e6195ee0f92d290b30c92e",
+      "date": "2026-10-18T00:24:21Z",
+      "subject": "Validate taxonomy aliases within coherent retained views"
+    },
+    {
+      "sha": "483f629fbe6622d4aef34aaea38090dc2c2f2bd3",
+      "date": "2026-10-18T00:14:04Z",
+      "subject": "Preserve taxonomy relationship integrity across live and rollback views"
+    },
+    {
+      "sha": "2442837b06ad28dcfbbf2077c9e9d217a288c3d4",
+      "date": "2026-10-17T23:42:48Z",
+      "subject": "fix(taxonomy): retain intermediate live facts and protect conflict evidence"
+    },
+    {
+      "sha": "9734ef044af79e74f22cf3b54577608fec11e7eb",
+      "date": "2026-10-17T23:35:17Z",
+      "subject": "fix(taxonomy): establish legacy provider preference and reject unknown cleanup"
+    },
+    {
+      "sha": "ebf3386fc1b84b932f78b5e7690a20d8dfe2cedc",
+      "date": "2026-10-17T23:28:57Z",
+      "subject": "fix(taxonomy): bind conflict decisions and guard directory boundaries"
+    },
+    {
+      "sha": "e2542e0d5d3912a2be1eac95ad14ae666c894be4",
+      "date": "2026-10-17T23:19:51Z",
+      "subject": "fix(taxonomy): preserve provider selections and validate relationships"
+    },
+    {
+      "sha": "6a5b85dcb0a6abb7c5f297572672108b1d982af9",
+      "date": "2026-10-17T23:11:31Z",
+      "subject": "fix(taxonomy): retain selected snapshot and reject invalid archives"
+    },
+    {
+      "sha": "aded8a1c54071ee5af4a90a4be55627ffef48804",
+      "date": "2026-10-17T23:05:14Z",
+      "subject": "fix(taxonomy): bound local search and validate import metadata"
+    },
+    {
+      "sha": "0fdc687db8a9aedde4f0aa8b09fc54837157322e",
+      "date": "2026-10-17T22:48:53Z",
+      "subject": "Separate taxonomy population from reconciliation and persist ordering decisions"
+    },
+    {
+      "sha": "a4828fe8344c733ed702aa324f73157f28d2f791",
+      "date": "2026-10-17T22:33:22Z",
+      "subject": "Use selected taxonomy consistently across guides and directory details"
+    },
+    {
+      "sha": "332048687c4e4ae4e985f743180cc50eb38e1cea",
+      "date": "2026-10-17T22:24:03Z",
+      "subject": "Isolate staged labels and compact retired taxonomy generations safely"
+    },
+    {
+      "sha": "81f8bf1385a4387dff4a6a949701ddb13d9fbd4f",
+      "date": "2026-10-17T22:13:33Z",
+      "subject": "Guard staged taxonomy visibility and retain qualified rollback provenance"
+    },
+    {
+      "sha": "8f7aa12fb9ec3a04d51fc092867db84fdd3b237a",
+      "date": "2026-10-17T22:03:18Z",
+      "subject": "Implement X2 permanent local taxonomy and reference generations"
+    },
+    {
+      "sha": "a6dc77242a4066864dbe1d72c50b76690a9a1b7e",
+      "date": "2026-10-17T21:22:57Z",
+      "subject": "Merge pull request #22 from Shadowgar/phase6.6/x1-animal-capability-foundation"
+    },
+    {
+      "sha": "8e9522ee22af6f5a6cbbaf114a2a970661fbf0de",
+      "date": "2026-10-16T07:10:51Z",
+      "subject": "Align X1 architecture with the owner-approved course correction"
+    },
+    {
+      "sha": "afa2e08d059bdb64ad5f254f55f8450ed22e56bd",
+      "date": "2026-10-15T08:16:09Z",
+      "subject": "feat(animals): establish extensible capability foundation"
+    },
+    {
+      "sha": "8ba5a03ee9bc76fc26fc9ed109471b90cda5f18e",
+      "date": "2026-10-09T18:40:23Z",
+      "subject": "Merge pull request #18 from Shadowgar/docs/pre-x1-architecture-reconciliation"
+    },
+    {
+      "sha": "c58e74f39ae2cb06aa7dabea3365920c066358d9",
+      "date": "2026-10-09T18:20:39Z",
+      "subject": "fix: enforce proposed ADR existence and content approval"
+    },
+    {
+      "sha": "2f6ad1fef344b5c126df1fd75b78941605479734",
+      "date": "2026-10-09T18:00:03Z",
+      "subject": "Merge pull request #20 from Shadowgar/fix/event-stream-consistent-snapshot"
+    },
+    {
+      "sha": "f6f0fcb65a0d7452eef1978ea9bc6ae99b74fc9d",
+      "date": "2026-10-09T17:36:21Z",
+      "subject": "fix: read event streams from one SQLite snapshot"
+    },
+    {
+      "sha": "6ecc796910a06f95bca232edc64d96d7018d9985",
+      "date": "2026-10-09T02:54:58Z",
+      "subject": "test: align browser lifecycle fixtures with household dates"
+    },
+    {
+      "sha": "8460f51014e8e1ecd39ac3c7c88047422f80f3a5",
+      "date": "2026-10-09T02:54:39Z",
+      "subject": "fix: reject removal of mandatory architecture documents"
+    },
+    {
+      "sha": "c283e3d99b86e127ddd56ff252a5fa2e0d8c918c",
+      "date": "2026-10-09T01:41:48Z",
+      "subject": "fix: enforce content-bound protection for controlling docs"
+    },
+    {
+      "sha": "bf922414722d54364ff98e63d866c055484bec3e",
+      "date": "2026-10-09T01:14:23Z",
+      "subject": "docs: finalize pre-X1 reconciliation status"
+    },
+    {
+      "sha": "0188238d29b7e4d00f1acde7a4fdf06659400193",
+      "date": "2026-10-05T17:50:40Z",
+      "subject": "docs: clarify X2 X3 source ownership"
+    },
+    {
+      "sha": "97ad89c27ca602fbf17f503e80ce230abf42f072",
+      "date": "2026-10-05T16:09:22Z",
+      "subject": "docs: record owner review of pre-X1 reconciliation"
+    },
+    {
+      "sha": "93a871c57bbe105045adb394e60f603aab98e51e",
+      "date": "2026-10-05T14:58:26Z",
+      "subject": "docs: reconcile extensibility architecture before X1"
+    },
+    {
+      "sha": "4be4deb146314dd7613e296a9abb12db0c0daa6b",
+      "date": "2026-10-05T14:16:03Z",
+      "subject": "Merge pull request #17 from Shadowgar/phase6.6/sourced-care-guides"
+    },
+    {
+      "sha": "ae84a7003bf826f0305884dc1f642f355b30579d",
+      "date": "2026-10-05T13:51:55Z",
+      "subject": "docs: accept M6.6-B sourced care guides"
+    },
+    {
+      "sha": "f2700404e691104a977f16673b0fb745f23801ec",
+      "date": "2026-10-02T10:46:02Z",
+      "subject": "docs: label integrity digests explicitly in quality evidence"
+    },
+    {
+      "sha": "63435ee14314ea77ce06859eb14760f744e205b6",
+      "date": "2026-10-02T10:40:17Z",
+      "subject": "docs: record qualified and deployed reference density correction"
+    },
+    {
+      "sha": "04364cc4cad6c600dc167f32f4a9099b84667e98",
+      "date": "2026-10-02T10:20:03Z",
+      "subject": "fix(ux): fit primary reference hierarchy in desktop viewport"
+    },
+    {
+      "sha": "02a12cf974a3f07193f6191704bd1e23ac073544",
+      "date": "2026-10-02T10:08:51Z",
+      "subject": "fix(ux): densify Animal reference sheet with native taxonomy details"
+    },
+    {
+      "sha": "6ae7ca4d4275456e96643c44ecaf929780548910",
+      "date": "2026-10-02T09:33:05Z",
+      "subject": "docs: record qualified Animal reference navigation deployment"
+    },
+    {
+      "sha": "dd1785fe5508127f8c292b28cc8363b3e70e735d",
+      "date": "2026-10-02T09:15:59Z",
+      "subject": "fix: move Animal species reference into dedicated profile tab"
+    },
+    {
+      "sha": "f526d9d3712b371448fa140c9b7c9bd417bd554e",
+      "date": "2026-10-02T06:17:40Z",
+      "subject": "Record compact reference owner-review deployment evidence"
+    },
+    {
+      "sha": "21a0fca7c04bea090008d7fab180ef9db2e876f7",
+      "date": "2026-10-02T06:00:58Z",
+      "subject": "Compact inline Species Reference for owner review"
+    },
+    {
+      "sha": "e02bfabcbcc7028fe4b8694bf3832447f3ec4fb4",
+      "date": "2026-10-01T10:15:19Z",
+      "subject": "docs: record M6.6-B live owner review deployment"
+    },
+    {
+      "sha": "f1d4d33c27bdb79be31b7c9fbf33b5291c036377",
+      "date": "2026-10-01T09:12:43Z",
+      "subject": "docs: qualify complete immutable attachment recovery point"
+    },
+    {
+      "sha": "65a0b3d3d582a0ee15ce3beb6027eaee45bfe1ff",
+      "date": "2026-10-01T08:55:56Z",
+      "subject": "fix: make backup-only worker entrypoint accessible"
+    },
+    {
+      "sha": "606e8a2024674a9c9c1f3d9903b6f41d61c31199",
+      "date": "2026-10-01T08:49:59Z",
+      "subject": "fix: preserve all finalized attachments in backups"
+    },
+    {
+      "sha": "f7d53239efc1ab2d7cda7c6c3a96c6329c751d8e",
+      "date": "2026-10-01T08:01:11Z",
+      "subject": "docs: record correction source and blocked backup release gate"
+    },
+    {
+      "sha": "859ca2964953b26657cf4699bc128ac646c347e4",
+      "date": "2026-10-01T08:00:09Z",
+      "subject": "fix: qualify M6.6-B species and precise length corrections"
+    },
+    {
+      "sha": "3432cb5405e8e44b6905c0d116a904121da4b44f",
+      "date": "2026-10-01T06:55:35Z",
+      "subject": "docs: define extensible animal and taxonomy foundation"
+    },
+    {
+      "sha": "1132dc8d0da42d1d4c13cee2052fb1b10575b82b",
+      "date": "2026-09-27T09:56:46Z",
+      "subject": "Record Animal species reference deployment and data integrity"
+    },
+    {
+      "sha": "c4740b32c1b80f054725c0a037d47689bc283474",
+      "date": "2026-09-27T09:53:33Z",
+      "subject": "Show reviewed species reference on linked Animal overviews"
+    },
+    {
+      "sha": "628f49bea7d58e340b88712d3eefb30bb3de1c46",
+      "date": "2026-09-27T09:09:35Z",
+      "subject": "Record M6.6-B visual correction deployment and data integrity"
+    },
+    {
+      "sha": "e9bad88d991a8fe0739b52a2e1062e18ae28e081",
+      "date": "2026-09-27T09:05:51Z",
+      "subject": "Polish sourced Care Guide reading and taxon hero for owner review"
+    },
+    {
+      "sha": "16aec7c73ea5b398586d6c401119284f092fa1f9",
+      "date": "2026-09-27T08:25:19Z",
+      "subject": "docs(care-guides): record production owner-review qualification"
+    },
+    {
+      "sha": "6cbecf76f2f04be2a6e110acaef599a5a24bc597",
+      "date": "2026-09-27T08:16:01Z",
+      "subject": "feat(care-guides): add versioned sourced reference guides"
+    },
+    {
+      "sha": "87652f8ea80f6328a15385dc2cc32beaf4dbc9e2",
+      "date": "2026-09-27T06:59:06Z",
+      "subject": "Merge pull request #16 from Shadowgar/phase6.6-ops/operator-console-v1"
+    },
+    {
+      "sha": "ecfe4e188ad5f3f5958b93ca3ddc930849f4bd64",
+      "date": "2026-09-27T06:53:14Z",
+      "subject": "docs(ops): record OPS-A owner acceptance"
+    },
+    {
+      "sha": "f8c429562c2b38ca29ba8ecf6a48b81426a51059",
+      "date": "2026-09-27T06:15:34Z",
+      "subject": "Qualify production operator console and improve admin readability"
+    },
+    {
+      "sha": "e898b38c0f70826f85a42234724b3636910c5b0e",
+      "date": "2026-09-27T04:46:31Z",
+      "subject": "feat(ops): add read-only platform administration console"
+    },
+    {
+      "sha": "bf30006606cced5f9106699086de57e057b4fd15",
+      "date": "2026-09-26T07:10:12Z",
+      "subject": "docs: refresh README for current Care Keeper"
+    },
+    {
+      "sha": "38abda9e91f3e908e84c9b5b07e156a40e9803e8",
+      "date": "2026-09-26T06:55:04Z",
+      "subject": "Merge pull request #15 from Shadowgar/incident/keeper-history-review"
+    },
+    {
+      "sha": "c6da6c4ca2c05f7b783ede76de5d9a840832351f",
+      "date": "2026-09-26T06:54:21Z",
+      "subject": "Merge pull request #14 from Shadowgar/phase6.6/universal-species-directory"
+    },
+    {
+      "sha": "088371a1404dfe5fb57599c339362dccb6bf0a02",
+      "date": "2026-09-26T06:20:34Z",
+      "subject": "docs(ui): distinguish concurrent live feeding activity"
+    },
+    {
+      "sha": "22c83dda7923151de6bf4b35ebc125601dbafbb1",
+      "date": "2026-09-26T06:19:02Z",
+      "subject": "docs(ui): record final visual closure qualification"
+    },
+    {
+      "sha": "d0f544a2550b223b1ad3cbe8a7111dca49f4843f",
+      "date": "2026-09-26T06:13:04Z",
+      "subject": "fix(history): retain enclosure cleaning and water care"
+    },
+    {
+      "sha": "1125ad704819240a1eb7279f976f8b7768917353",
+      "date": "2026-09-26T05:51:34Z",
+      "subject": "fix(history): restrict keeper care and search events"
+    },
+    {
+      "sha": "2027a9b5e1535e38f2f526c3c6a62801bd475f75",
+      "date": "2026-09-26T05:38:47Z",
+      "subject": "fix(ui): advance cache key for closure stylesheet"
+    },
+    {
+      "sha": "8951288bc13afc3064ded89ef3c98e29fa33b9da",
+      "date": "2026-09-26T05:34:35Z",
+      "subject": "fix(ui): separate desktop Animals toolbar controls"
+    },
+    {
+      "sha": "6d9e8850ea08f2a3c8da0861eb6263cba0c0a90a",
+      "date": "2026-09-26T05:17:49Z",
+      "subject": "fix(ui): retain established Add action label"
+    },
+    {
+      "sha": "14d246a97772a66780526766af3fe6035ee7f827",
+      "date": "2026-09-26T05:10:54Z",
+      "subject": "fix(ui): close Calendar and Today visual gaps"
+    },
+    {
+      "sha": "0d6f583ac99a6e013aafd52e7002c86cea6f65d4",
+      "date": "2026-09-16T09:38:34Z",
+      "subject": "Updated GitIgnore"
+    },
+    {
+      "sha": "1e682e5adbd45daf8a909bab7667feb35bdbf4d2",
+      "date": "2026-09-16T09:10:26Z",
+      "subject": "fix(ui): make cards primary interaction targets"
+    },
+    {
+      "sha": "7cbac580e3ebdb3222e6e8547158a4c0ddb4f112",
+      "date": "2026-09-16T08:25:12Z",
+      "subject": "feat(ux): reconstruct M6.6-A visual experience"
+    },
+    {
+      "sha": "251c12ea39d66deef04e3f3c424c9e75ee698cdf",
+      "date": "2026-09-14T18:23:11Z",
+      "subject": "feat(ux): complete M6.6-A visual fidelity reset"
+    },
+    {
+      "sha": "f3298aa19b0acccbf3c840f5db232b2570418fa8",
+      "date": "2026-09-14T16:50:33Z",
+      "subject": "Approve owner design evidence in architecture freeze"
+    },
+    {
+      "sha": "bd27e945b1ff022d2115f733b34ddce51a15dc4a",
+      "date": "2026-09-14T16:48:40Z",
+      "subject": "Complete M6.6-A owner fidelity and reference imagery"
+    },
+    {
+      "sha": "5c76800ce781117bdf65ec4957712c792fe43a0b",
+      "date": "2026-09-14T09:13:40Z",
+      "subject": "Complete M6.6-A owner correction 3"
+    },
+    {
+      "sha": "3f1653ca6400c2ce41d01f880a151958b322233c",
+      "date": "2026-09-14T08:00:36Z",
+      "subject": "Complete M6.6-A owner review corrections"
+    },
+    {
+      "sha": "d3e33981f9850755f710e4e85f34242b7df9b7f2",
+      "date": "2026-09-14T05:09:26Z",
+      "subject": "feat: add universal species directory"
+    },
+    {
+      "sha": "306f465623c50f8a24513975fa85b2104d88d82d",
+      "date": "2026-09-13T09:28:42Z",
+      "subject": "Merge pull request #13 from Shadowgar/phase6.5/expense-reports"
+    },
+    {
+      "sha": "cbd16e641082fe63cd98d46ccb40254b0f30e5b0",
+      "date": "2026-09-13T09:25:50Z",
+      "subject": "Merge pull request #12 from Shadowgar/phase6.5/inventory-intelligence-ux"
+    },
+    {
+      "sha": "d6a5e2587e94b3c9581f0f6bb3e3adcf213030a9",
+      "date": "2026-09-13T09:24:58Z",
+      "subject": "Merge pull request #11 from Shadowgar/phase6.5/purchases-fifo"
+    },
+    {
+      "sha": "2cb68f8d4df9a2b96886e9ab45122b435f85fbae",
+      "date": "2026-09-13T09:24:17Z",
+      "subject": "Merge pull request #10 from Shadowgar/phase6.5/inventory-intelligence"
+    },
+    {
+      "sha": "bdef752e152c07e3ad20648af1cc8ca28096f272",
+      "date": "2026-09-13T09:23:39Z",
+      "subject": "docs: record M6.5 owner acceptance"
+    },
+    {
+      "sha": "659519ad546886ba60670f6bbb635af0b9ba4a63",
+      "date": "2026-09-13T09:11:35Z",
+      "subject": "docs(evidence): qualify M6.5 milestone"
+    },
+    {
+      "sha": "37e003eb04de4e0ad42876f469ddf7749bcc0018",
+      "date": "2026-09-13T08:32:40Z",
+      "subject": "docs(evidence): qualify report and weight corrections"
+    },
+    {
+      "sha": "fb03f6acc13f1fb6ed10f5da789a7a296346d5ca",
+      "date": "2026-09-13T07:57:09Z",
+      "subject": "test(reports): cover spending direction states"
+    },
+    {
+      "sha": "f2e479e7904701899dcd5e22ec765fc86f570be9",
+      "date": "2026-09-13T07:43:07Z",
+      "subject": "fix(animals): preserve decimal body weights"
+    },
+    {
+      "sha": "49dfdb5a0a17d2208fcdef09dbb0a6469338c5ce",
+      "date": "2026-09-13T07:41:10Z",
+      "subject": "feat(reports): add visual spending dashboard"
+    },
+    {
+      "sha": "7ff505dc40ad5df4ab09c4700c7d9fe6509fe800",
+      "date": "2026-09-13T07:07:23Z",
+      "subject": "feat: add inventory spending reports"
+    },
+    {
+      "sha": "2b597177e1fd99364ec6e2f37ba2e179d68f42e3",
+      "date": "2026-09-13T05:11:37Z",
+      "subject": "fix: organize inventory around care stock"
+    },
+    {
+      "sha": "b5b49b62943b46873394c73f933919d840a7dfa0",
+      "date": "2026-09-12T10:49:31Z",
+      "subject": "test(inventory): use household-local acquisition time"
+    },
+    {
+      "sha": "378c9498ce5e9621d85b6e337b737e850b618c26",
+      "date": "2026-09-12T10:15:36Z",
+      "subject": "fix(container): apply Debian security updates"
+    },
+    {
+      "sha": "f0f85ce7907de573de8e0fbe7d50f97e00736d9d",
+      "date": "2026-09-12T10:09:49Z",
+      "subject": "feat(inventory): add M6.5-B intelligence and counts"
+    },
+    {
+      "sha": "05ed87feec74db23f9442ac55ffbbfc81abe6f4a",
+      "date": "2026-09-12T05:20:21Z",
+      "subject": "fix: redesign guided inventory acquisition"
+    },
+    {
+      "sha": "a9f113e870e435e37e356fe92df2812431102272",
+      "date": "2026-09-11T21:20:23Z",
+      "subject": "feat: unify inventory acquisition and cost assignment"
+    },
+    {
+      "sha": "a627ca99011ebad301097946974bb9e34628b74d",
+      "date": "2026-09-11T13:36:27Z",
+      "subject": "feat: add purchases and FIFO inventory costing"
+    },
+    {
+      "sha": "09aa91f88ba00dd04500402829859ce8342bf044",
+      "date": "2026-09-10T22:55:55Z",
+      "subject": "fix: complete guided inventory creation"
+    },
+    {
+      "sha": "b5fe31de18f8590aba961cd4628627c549c7d10a",
+      "date": "2026-09-10T18:47:41Z",
+      "subject": "feat: add structured inventory feeding foundation"
+    },
+    {
+      "sha": "ab7dc1827ec2a402bc995fd8f31a97134e635074",
+      "date": "2026-09-10T16:31:07Z",
+      "subject": "Merge remote-tracking branch 'origin/main' into phase6.5/inventory-intelligence"
+    },
+    {
+      "sha": "eeb58beb7f2ec42ac416c039a4ccfd72a23132b1",
+      "date": "2026-09-10T16:21:45Z",
+      "subject": "Merge pull request #9 from Shadowgar/hotfix/care-record-delete"
+    },
+    {
+      "sha": "121c3db8784fe8ca4e7427c9a1429c6aac2bd516",
+      "date": "2026-09-10T15:23:23Z",
+      "subject": "fix: normalize unlinked feeding inventory"
+    },
+    {
+      "sha": "09ddb631c56dca1864bd100e991c47fa6b2217bd",
+      "date": "2026-09-10T13:53:39Z",
+      "subject": "fix: add safe care record deletion"
+    },
+    {
+      "sha": "b93fd6634d35dc7faaa9dce31f4c762311241d15",
+      "date": "2026-09-04T07:10:29Z",
+      "subject": "Propose M6.5 inventory intelligence architecture"
+    },
+    {
+      "sha": "8b0c062a39453bd2a4e65cb6ce288eea6298137f",
+      "date": "2026-09-04T06:48:56Z",
+      "subject": "Merge PR #8: Phase 6 product experience"
+    },
+    {
+      "sha": "0e610ca5964e3b120d7182fdde14e5e8695ac8bd",
+      "date": "2026-09-04T06:27:40Z",
+      "subject": "Complete final M6 technical qualification"
+    },
+    {
+      "sha": "54009c4e3ec49527547959289d10bb72f57605ec",
+      "date": "2026-09-04T05:12:39Z",
+      "subject": "Complete bounded M6.1 usability corrections"
+    },
+    {
+      "sha": "b07e5ebfe3cdd258a866764edf7c424bd0d6b15d",
+      "date": "2026-09-04T03:49:28Z",
+      "subject": "Document normal phone photo upload requirement"
+    },
+    {
+      "sha": "edbc2725961374e8f8522646dc9ce552d834ef03",
+      "date": "2026-08-31T05:41:42Z",
+      "subject": "Document owner issue roadmap and traceability"
+    },
+    {
+      "sha": "1cdd611df2f029c34632a7042b6c97a557b78b08",
+      "date": "2026-08-31T05:13:43Z",
+      "subject": "Make isolation qualification timezone-safe"
+    },
+    {
+      "sha": "d60a8e03850b116dfb185d965c6ed550a3f3e342",
+      "date": "2026-08-31T05:00:28Z",
+      "subject": "Complete M6 UX overhaul pass 4"
+    },
+    {
+      "sha": "555ab3ed6f8a14cfd046caa2ce66186bd82dfc12",
+      "date": "2026-08-27T13:40:34Z",
+      "subject": "Correct M6 Pass 3 owner review"
+    },
+    {
+      "sha": "637fb522df181e522c3e6a3cb240fef117706030",
+      "date": "2026-08-27T13:02:13Z",
+      "subject": "Redesign M6 animal experience"
+    },
+    {
+      "sha": "d7c68d583cb1c5f17e028f20f6ccf4eaa5d572a4",
+      "date": "2026-08-26T13:21:24Z",
+      "subject": "Preserve mobile Today care context"
+    },
+    {
+      "sha": "04641ab687c33f1aee539d439569e68e88b47a3b",
+      "date": "2026-08-26T13:16:53Z",
+      "subject": "Refine M6 mobile density and fidelity"
+    },
+    {
+      "sha": "63b2bd9167b1c02bd93c7c376faaf8578521579e",
+      "date": "2026-08-25T22:16:02Z",
+      "subject": "Build M6 core daily experience"
+    },
+    {
+      "sha": "b385ac89aa45bf8e88df2d3a8d758feb51c17896",
+      "date": "2026-08-25T16:44:22Z",
+      "subject": "Build M6 UX design system and shell"
+    },
+    {
+      "sha": "fc8e553e98f9df0bb0d11de78ee648b1180b30fe",
+      "date": "2026-08-25T14:31:57Z",
+      "subject": "Prepare final M6 owner-review fixture"
+    },
+    {
+      "sha": "c58c2757b77bfb1060fb8611504de7fcbf4dca34",
+      "date": "2026-08-25T02:16:41Z",
+      "subject": "Add secure password recovery"
+    },
+    {
+      "sha": "ca3e8c7bbd73d92368921d5d958f2f8f5db0824a",
+      "date": "2026-08-25T01:25:37Z",
+      "subject": "Complete M6 correctness and account lifecycle"
+    },
+    {
+      "sha": "690c2077bcab05c11cd085262b9c936324717c72",
+      "date": "2026-08-24T14:30:47Z",
+      "subject": "feat: add four-group capability support"
+    },
+    {
+      "sha": "ab93db333f5195106e2d92a03b043e084ea76302",
+      "date": "2026-08-16T07:16:07Z",
+      "subject": "docs: record M6 hosted qualification"
+    },
+    {
+      "sha": "c7079ca0f896f7e80908b6bcdb9d6ceba4cb60e6",
+      "date": "2026-08-16T07:10:20Z",
+      "subject": "docs: qualify M6 mobile owner review correction"
+    },
+    {
+      "sha": "0dc458d11c8cdc433cd214416f0a017746e3979d",
+      "date": "2026-08-16T06:54:03Z",
+      "subject": "fix: focus profile recent care history"
+    },
+    {
+      "sha": "470dee9b8bf84ef9998f5eef4e8ae7203f1aeee8",
+      "date": "2026-08-16T06:50:50Z",
+      "subject": "fix: recover interrupted demo verification"
+    },
+    {
+      "sha": "6a89fb1a419da6a9b79dc387cb9d81aa2bd2ef0e",
+      "date": "2026-08-16T06:43:19Z",
+      "subject": "feat: deliver Care Keeper mobile workflows"
+    },
+    {
+      "sha": "26f5430fcd549e303a09fd466e85f20801df7e11",
+      "date": "2026-08-16T06:28:07Z",
+      "subject": "test: prove demo household isolation"
+    },
+    {
+      "sha": "2ae390ee353b0d6728a252a1bfbb868392d7f51a",
+      "date": "2026-08-16T06:25:02Z",
+      "subject": "test: expand deterministic M6 owner review household"
+    },
+    {
+      "sha": "2ce6c9f181caa07d6ea64ff42e2a511e63a66d8b",
+      "date": "2026-08-16T06:20:09Z",
+      "subject": "feat: provision isolated local demo household"
+    },
+    {
+      "sha": "358e3a56106a633d247b3d6b3abfbd2074a62355",
+      "date": "2026-08-16T06:15:58Z",
+      "subject": "docs: add M6 mobile-first correction plan"
+    },
+    {
+      "sha": "da7ee65e6cd8ed9e037b2837e9557f02b8b3a258",
+      "date": "2026-08-16T06:14:38Z",
+      "subject": "docs: accept trusted local demo provisioning"
+    },
+    {
+      "sha": "13ca01cc30c23cbf79391b698c3e6cccf9ca15a6",
+      "date": "2026-08-15T10:28:26Z",
+      "subject": "docs: record M6 owner review follow-up"
+    },
+    {
+      "sha": "cad1c58517897a298bb911fb284ff66d4ba52763",
+      "date": "2026-08-15T10:27:36Z",
+      "subject": "feat: add isolated M6 owner review demo"
+    },
+    {
+      "sha": "24c41ba56443a35d0388a2865498ef722def0dcf",
+      "date": "2026-08-15T10:03:59Z",
+      "subject": "fix: preserve login csrf across concurrent forms"
+    },
+    {
+      "sha": "ac37d2bd8cbbffd68467bd88877e7b7d422b70a1",
+      "date": "2026-08-15T08:17:22Z",
+      "subject": "docs: refresh M6 qualification evidence"
+    },
+    {
+      "sha": "e9b29fe9c76befe30d20c4520ea97a80befa798a",
+      "date": "2026-08-15T07:57:26Z",
+      "subject": "fix: consume active M6 projection generations"
+    },
+    {
+      "sha": "be44997fa13aa395033b288604d733659132bf83",
+      "date": "2026-08-15T07:17:30Z",
+      "subject": "fix: clear obsolete PWA shell caches"
+    },
+    {
+      "sha": "a324d67a09e0e686dc696ab1970399135f94984d",
+      "date": "2026-08-15T07:06:03Z",
+      "subject": "docs: record M6 implementation qualification"
+    },
+    {
+      "sha": "02919d8fbc04fd59de8c5498b4ed1244a2d2e308",
+      "date": "2026-08-15T06:53:07Z",
+      "subject": "test: add reproducible M6 qualification dataset"
+    },
+    {
+      "sha": "ae1bd9a2e5ba3996eab694b78f7ffe0ceb90f9de",
+      "date": "2026-08-15T06:48:29Z",
+      "subject": "fix: add accessible analytics empty states"
+    },
+    {
+      "sha": "926c5ae099b3e89b4c455db03ea961477e90ba7e",
+      "date": "2026-08-15T06:44:43Z",
+      "subject": "fix: remove technical metadata from keeper search"
+    },
+    {
+      "sha": "6a1d640505f2d5e96fc2236ad4637f7df67ef3f9",
+      "date": "2026-08-15T06:40:40Z",
+      "subject": "fix: serve M6 service worker from origin scope"
+    },
+    {
+      "sha": "5f45bb4d1cf2167a34e773eaaa76ce245ec62f3f",
+      "date": "2026-08-15T06:33:49Z",
+      "subject": "test: harden M6 product experience qualification"
+    },
+    {
+      "sha": "0d83515c1f6e6ee25d5604d20735aa91122bf90f",
+      "date": "2026-08-15T06:18:24Z",
+      "subject": "fix: render authoritative reminder facts on Today"
+    },
+    {
+      "sha": "6ecfe0a4ad70bcaac934bf03df75f2d45fdfcb92",
+      "date": "2026-08-15T06:16:20Z",
+      "subject": "feat: add gated references and read-only PWA shell"
+    },
+    {
+      "sha": "7ce053e4e16e2afbd5309b06782da33aba826448",
+      "date": "2026-08-15T06:07:47Z",
+      "subject": "feat: add capability-aware keeper insights"
+    },
+    {
+      "sha": "27048ee3ec8056c28a69f5c166037cd17a8dd1e3",
+      "date": "2026-08-15T05:57:53Z",
+      "subject": "style: format projection integration tests"
+    },
+    {
+      "sha": "e4b26b8c3132a92d70fa8155e7f65f2b852162ca",
+      "date": "2026-08-15T05:57:42Z",
+      "subject": "feat: add authorized FTS5 keeper search"
+    },
+    {
+      "sha": "b377a6e0f82713acb3509541a34f7294d9a61e21",
+      "date": "2026-08-15T05:31:13Z",
+      "subject": "feat: add asynchronous product projection runner"
+    },
+    {
+      "sha": "6d48605151de9d312e34f8f1d053dba02f0ee42d",
+      "date": "2026-08-15T05:21:06Z",
+      "subject": "feat: establish M6 read-model compatibility boundary"
+    },
+    {
+      "sha": "e963731e02a833b4d051654cd3c1848d93b49f4f",
+      "date": "2026-08-15T05:15:57Z",
+      "subject": "docs: approve M6 proportional suggestion windows"
+    },
+    {
+      "sha": "0c3a2d3f5afefd15f1d08fc2e301ff259b14798f",
+      "date": "2026-08-15T05:09:26Z",
+      "subject": "docs: add Phase 6 product experience plan"
+    },
+    {
+      "sha": "4092ac9c5587747cee8e71a405a400fc954ddc47",
+      "date": "2026-08-15T04:58:02Z",
+      "subject": "Merge pull request #7 from Shadowgar/phase5.5/multispecies-foundation"
+    },
+    {
+      "sha": "734658ef7f37ef47b2bcfb72349dbc378bccd7eb",
+      "date": "2026-08-15T04:56:10Z",
+      "subject": "docs: accept M5.5 multi-species foundation"
+    },
+    {
+      "sha": "0272fb7507ba60742b4bda162217c398ec6ba5f9",
+      "date": "2026-08-15T04:46:42Z",
+      "subject": "docs: align M5.5 final qualification evidence"
+    },
+    {
+      "sha": "726be26c2a7a528b39342730b1acba92949a60ef",
+      "date": "2026-08-15T04:22:35Z",
+      "subject": "docs: record M5.5 final technical review"
+    },
+    {
+      "sha": "ebd5200d4612ebad23020160e0e587a7d5522d34",
+      "date": "2026-08-15T03:42:54Z",
+      "subject": "fix: address M5.5 final review findings"
+    },
+    {
+      "sha": "48cb2c1f986cc14d572f6150c71ff4aec6f2a24c",
+      "date": "2026-08-11T18:59:05Z",
+      "subject": "docs: record M5.5 CI qualification"
+    },
+    {
+      "sha": "584d8fb67a5fe196ef12d2e05156f4ea08f57a73",
+      "date": "2026-08-11T18:54:52Z",
+      "subject": "docs: record M5.5 implementation evidence"
+    },
+    {
+      "sha": "fe4a476f493c64cb9ed3d338f4180a9238b90b43",
+      "date": "2026-08-11T18:46:00Z",
+      "subject": "test: cover multispecies fail-closed branches"
+    },
+    {
+      "sha": "ef7477dfc132daf33ecbfd205c35849577a51a94",
+      "date": "2026-08-11T18:34:28Z",
+      "subject": "fix: preserve multispecies compatibility gates"
+    },
+    {
+      "sha": "b5dabca9d9b7b49aba2ec24084055b202e8988f4",
+      "date": "2026-08-11T18:32:26Z",
+      "subject": "test: qualify multispecies effective care boundaries"
+    },
+    {
+      "sha": "63bfea308abb54e84e5a914e681fd466af74fac7",
+      "date": "2026-08-11T18:22:27Z",
+      "subject": "feat: add mixed-species keeper experience"
+    },
+    {
+      "sha": "27f44fa02312a1638169b9d9d6ae03296b2c2b24",
+      "date": "2026-08-11T18:07:15Z",
+      "subject": "feat: add capability-enforced spider care"
+    },
+    {
+      "sha": "02bfd02a13aca01580a713510f81062a8fed3854",
+      "date": "2026-08-11T17:59:38Z",
+      "subject": "feat: add versioned animal capability profiles"
+    },
+    {
+      "sha": "50c8a28c0ad82d42d4a980c546d9554f607a083c",
+      "date": "2026-08-11T17:43:45Z",
+      "subject": "docs: add M5.5 implementation plan"
+    },
+    {
+      "sha": "1122e23d0601c1946349efa209c014f06f37be47",
+      "date": "2026-08-11T17:43:45Z",
+      "subject": "docs: establish M5.5 multi-species architecture"
+    },
+    {
+      "sha": "f25cd9f8cef400e90c7cde8f894375055f26ecce",
+      "date": "2026-08-11T17:37:11Z",
+      "subject": "Merge pull request #6 from Shadowgar/phase5/operational-workflows"
+    },
+    {
+      "sha": "7d0e649ad6a884a64292c4f7ead775773d69f406",
+      "date": "2026-08-11T17:34:35Z",
+      "subject": "docs: record final M5 CI disposition"
+    },
+    {
+      "sha": "de39d1d17448d0016a0b83e13bcf301c23cc390b",
+      "date": "2026-08-11T17:33:19Z",
+      "subject": "test: make encrypted backup assertion deterministic"
+    },
+    {
+      "sha": "24ba1946674faac9b26ec544d8f7324d97374428",
+      "date": "2026-08-11T17:31:10Z",
+      "subject": "docs: finalize M5 review evidence"
+    },
+    {
+      "sha": "6f1bb5b8f5dc4b5d37dcf8acd839c6b2d05c6972",
+      "date": "2026-08-11T17:28:26Z",
+      "subject": "fix: enforce job tenant isolation and crash recovery"
+    },
+    {
+      "sha": "33ac9dbe60061799cf382b720cbd6aeb2e4c258c",
+      "date": "2026-08-11T17:25:10Z",
+      "subject": "docs: accept M5 operational workflows"
+    },
+    {
+      "sha": "e1a15025b4b5caa81391866d49c1b5a050f616be",
+      "date": "2026-08-11T17:23:02Z",
+      "subject": "fix: address Phase 5 final review findings"
+    },
+    {
+      "sha": "6c8d5de8e1289dc780691da6690894e810319c69",
+      "date": "2026-08-11T16:42:25Z",
+      "subject": "docs: requalify M5 reminder experience"
+    },
+    {
+      "sha": "567887cc95702fa0407cebdf12d33e22b11dd8fb",
+      "date": "2026-08-11T16:34:51Z",
+      "subject": "test: qualify profile care agenda"
+    },
+    {
+      "sha": "f9343b4b70f07b43ae4b6f2790f3adc7b3997e37",
+      "date": "2026-08-11T16:32:14Z",
+      "subject": "fix: move care schedules to animal profiles"
+    },
+    {
+      "sha": "9175f55399bb540cfc471c9cc0e7f3c8d5a04ed3",
+      "date": "2026-08-11T15:55:12Z",
+      "subject": "docs: record M5 implementation evidence"
+    },
+    {
+      "sha": "f976b4622a0f72bd165c906cdc8ab5d72a399cc6",
+      "date": "2026-08-11T15:53:54Z",
+      "subject": "fix: separate reminder rule status"
+    },
+    {
+      "sha": "2483d3b76e0fe06514cc8a33b93f387c7acbdc2b",
+      "date": "2026-08-11T15:36:13Z",
+      "subject": "fix: label Phase 5 container image"
+    },
+    {
+      "sha": "7802ab63c5291cfecda0a60df4162ce7493ef1d9",
+      "date": "2026-08-11T15:35:42Z",
+      "subject": "test: qualify M5 operational boundaries"
+    },
+    {
+      "sha": "9b10729fe84cdee4641d91e51d53370ee4bfccf9",
+      "date": "2026-08-11T15:20:32Z",
+      "subject": "feat: add accessible operational workflow screens"
+    },
+    {
+      "sha": "a91b7999ecf8d016bada4324128c09180243d166",
+      "date": "2026-08-10T21:42:30Z",
+      "subject": "test: prove external effect crash recovery"
+    },
+    {
+      "sha": "38539fbf46f3760080e421fb1be8dd675427f844",
+      "date": "2026-08-10T21:38:59Z",
+      "subject": "feat: add retry reconciliation and dead letters"
+    },
+    {
+      "sha": "7163794c79151d562435464f7d119fe63ead9c3c",
+      "date": "2026-08-10T21:35:36Z",
+      "subject": "feat: add leased durable job execution"
+    },
+    {
+      "sha": "709cfe23d14a48a97b71958c1deb257b6c61fcd5",
+      "date": "2026-08-10T21:33:59Z",
+      "subject": "feat: add notification intent and outbox handoff"
+    },
+    {
+      "sha": "84354c438900774a7b43db39ed7f53f8600ae204",
+      "date": "2026-08-10T21:29:54Z",
+      "subject": "feat: add reminder rules and factual occurrences"
+    },
+    {
+      "sha": "8c0453703411416a00ee882a8281313c2bc2feac",
+      "date": "2026-08-10T21:23:03Z",
+      "subject": "feat: add authorized expense workflows"
+    },
+    {
+      "sha": "4a910a9cb5d15baecdcaa50eae99a16fda7e3ac8",
+      "date": "2026-08-10T21:16:45Z",
+      "subject": "feat: make feeding inventory consumption atomic"
+    },
+    {
+      "sha": "5a29a5835777ec96c84470698fc1818385f15fcb",
+      "date": "2026-08-10T21:08:43Z",
+      "subject": "feat: add inventory events and balance projection"
+    },
+    {
+      "sha": "cb20dc7bd6fddce5474f8c860de66a156a2bcfd7",
+      "date": "2026-08-10T21:08:43Z",
+      "subject": "feat: define M5 contracts and migration boundaries"
+    },
+    {
+      "sha": "a85d49548407581971c1d5622e90521d62c8a7a5",
+      "date": "2026-08-10T20:55:48Z",
+      "subject": "docs: amend M5 scheduling and M6 extension points"
+    },
+    {
+      "sha": "6d2992623f1f6e657eb3491cb1aaced4060a1424",
+      "date": "2026-08-10T20:50:19Z",
+      "subject": "docs: add Phase 5 operational workflows plan"
+    },
+    {
+      "sha": "3f328d75173d1740f5ee2491292cecdfb5e1b2bf",
+      "date": "2026-08-10T20:45:41Z",
+      "subject": "Merge pull request #5 from Shadowgar/phase4/animal-care"
+    },
+    {
+      "sha": "30aff9f6be85cd2a179cf72f5b296cb8070e05c6",
+      "date": "2026-08-10T20:43:51Z",
+      "subject": "docs: accept M4 internal baseline"
+    },
+    {
+      "sha": "732b29200364d2913e7d1a7dafd5758748484fac",
+      "date": "2026-08-10T20:28:33Z",
+      "subject": "docs: record final Phase 4 review corrections"
+    },
+    {
+      "sha": "c62f02f659140de9840ce98ffe9524abc924743a",
+      "date": "2026-08-10T20:25:47Z",
+      "subject": "fix: harden Phase 4 concurrent operations"
+    },
+    {
+      "sha": "dc0aacbf150dbb816dee673f791ace07b8b8a6e0",
+      "date": "2026-08-10T20:14:24Z",
+      "subject": "docs: refresh M4 enclosure qualification evidence"
+    },
+    {
+      "sha": "735bbdcc45eb4a499b4023f876774839468468a0",
+      "date": "2026-08-10T20:12:05Z",
+      "subject": "docs: qualify enclosure history correction"
+    },
+    {
+      "sha": "3a82acf01b06043e26f0f351c98a3ea3ab70f489",
+      "date": "2026-08-10T20:11:06Z",
+      "subject": "fix: identify enclosure assignment history"
+    },
+    {
+      "sha": "0002bae15be84d51ff9c24ef898d663543fb7553",
+      "date": "2026-08-10T19:39:10Z",
+      "subject": "docs: finalize M4 review qualification evidence"
+    },
+    {
+      "sha": "0212faff63b9371b4d70904354808012ce7a8c9a",
+      "date": "2026-08-10T19:34:37Z",
+      "subject": "test: cover Phase 4 persisted care invariants"
+    },
+    {
+      "sha": "4438e49df5e64a3e52c45c490b266a4efd40feda",
+      "date": "2026-08-10T19:32:21Z",
+      "subject": "fix: resolve Phase 4 review findings"
+    },
+    {
+      "sha": "226bddebd759cc847157d93f19c4272509a7d7ce",
+      "date": "2026-08-10T19:25:50Z",
+      "subject": "fix: harden Phase 4 attachment and backup lifecycles"
+    },
+    {
+      "sha": "8134378929359484bab66966490788fdee5e30bd",
+      "date": "2026-08-10T19:11:50Z",
+      "subject": "fix: preserve effective animal care history"
+    },
+    {
+      "sha": "4513e3a544a3bb33066de323cadc87d798ff9ced",
+      "date": "2026-08-10T18:53:31Z",
+      "subject": "docs: refresh M4 keeper UX qualification evidence"
+    },
+    {
+      "sha": "e3ac2064b2571f300a8a80586d92c46735011e66",
+      "date": "2026-08-10T18:41:25Z",
+      "subject": "feat: focus Phase 4 keeper care workflows"
+    },
+    {
+      "sha": "36957083a9e895c0d2be3c043535a6e277509f63",
+      "date": "2026-08-10T18:33:01Z",
+      "subject": "docs: add Phase 4 keeper UX correction plan"
+    },
+    {
+      "sha": "1f3f644faf61b67e4836aee0b3d0c1d73d82ca3e",
+      "date": "2026-08-10T18:12:58Z",
+      "subject": "docs: record M4 implementation qualification evidence"
+    },
+    {
+      "sha": "8bb6ebe94289f40178393f887d13485ba2947ac0",
+      "date": "2026-08-10T18:08:59Z",
+      "subject": "feat: add responsive Phase 4 keeper workflows"
+    },
+    {
+      "sha": "d977e7e0f94b8ee50d01a2d1cfa8cb73eac75907",
+      "date": "2026-08-10T18:08:47Z",
+      "subject": "feat: add verified local backup workflow"
+    },
+    {
+      "sha": "fad472de50b4ffd184e81b4372f4afd20ddd4399",
+      "date": "2026-08-10T18:08:39Z",
+      "subject": "feat: add immutable profile photo attachments"
+    },
+    {
+      "sha": "09b130ceeb4964f074cbcc1364f22720adf0756f",
+      "date": "2026-08-10T18:08:31Z",
+      "subject": "feat: add animal care events and enclosure projections"
+    },
+    {
+      "sha": "6b0a0d16c56e193aca548a42a1af0e62a4cd433c",
+      "date": "2026-08-10T18:08:13Z",
+      "subject": "docs: refine Phase 4 animal care plan and shed contract amendment"
+    },
+    {
+      "sha": "67e75e985cc1e33a31ffdd2e6b507e028ffaf3a5",
+      "date": "2026-08-07T07:29:11Z",
+      "subject": "Merge pull request #4 from Shadowgar/phase3/event-platform"
+    },
+    {
+      "sha": "41349cdcf2a80cae3d28de97fb8d4e5ed6bf06ff",
+      "date": "2026-08-07T07:22:47Z",
+      "subject": "docs: accept M3 event integrity"
+    },
+    {
+      "sha": "b282f45ac40f77dce2f606516c20d3da9bd7afac",
+      "date": "2026-08-07T06:56:15Z",
+      "subject": "docs: record Phase 3 final review evidence"
+    },
+    {
+      "sha": "75b68047b888a32c0f6685ff74728305b34b943c",
+      "date": "2026-08-07T06:37:37Z",
+      "subject": "fix: harden Phase 3 event integrity"
+    },
+    {
+      "sha": "4b791a0904791c3d330bb23e8574d06b079e5f5b",
+      "date": "2026-08-06T08:31:29Z",
+      "subject": "docs: record Phase 3 implementation qualification"
+    },
+    {
+      "sha": "bf46a32947a84d61b6909ba42426351863167a9e",
+      "date": "2026-08-06T08:28:30Z",
+      "subject": "test: align recovery reason with general event scan"
+    },
+    {
+      "sha": "0e6e9502256248643f4d758ac8904a724f552720",
+      "date": "2026-08-06T08:26:05Z",
+      "subject": "test: prove Phase 2 event migration compatibility"
+    },
+    {
+      "sha": "4b210be53bd46da3e01d7659f53504b94699afbb",
+      "date": "2026-08-06T08:25:25Z",
+      "subject": "fix: fail startup on any unknown event contract"
+    },
+    {
+      "sha": "cd6657bd22a4cf9a622770663e7d953a8c04d304",
+      "date": "2026-08-06T08:21:07Z",
+      "subject": "test: harden event policy and rebuild recovery"
+    },
+    {
+      "sha": "04fb0689ac5675ea1f6b8a6051a3db53e16219ef",
+      "date": "2026-08-06T08:11:56Z",
+      "subject": "test: add Phase 3 performance qualification harness"
+    },
+    {
+      "sha": "909cb1e9ffe7528caf152328dce0561c208a8c83",
+      "date": "2026-08-06T08:06:05Z",
+      "subject": "feat: add correction controls and projection rebuilds"
+    },
+    {
+      "sha": "b98b66abf806ce6beca5579a23d453c2be415cb5",
+      "date": "2026-08-06T07:54:55Z",
+      "subject": "feat: add atomic event persistence and snapshot recovery"
+    },
+    {
+      "sha": "490b398877a4e95cd9218a03da1a25e2372126a9",
+      "date": "2026-08-06T07:40:52Z",
+      "subject": "feat: generalize event contracts and stream storage"
+    },
+    {
+      "sha": "f770dbc61201f9ed0ce282d6f76a0408af10bd35",
+      "date": "2026-08-06T07:40:52Z",
+      "subject": "test: preserve Phase 2 household event compatibility"
+    },
+    {
+      "sha": "8993dae04c3a174fc531205c44f9f7d8bf454559",
+      "date": "2026-08-06T07:32:50Z",
+      "subject": "docs: record Phase 3 implementation approval"
+    },
+    {
+      "sha": "cae5cbf8ffe34ae57de9e485cd58a6271ebc5ec7",
+      "date": "2026-08-06T07:27:55Z",
+      "subject": "docs: add Phase 3 event platform implementation plan"
+    },
+    {
+      "sha": "d8fac71679da4df89c1026c6c3e3c9b864391598",
+      "date": "2026-08-06T07:25:39Z",
+      "subject": "Merge pull request #3 from Shadowgar/phase2/identity-household"
+    },
+    {
+      "sha": "15c3e1954e92a5548813b85e3c6d1bd744289cb6",
+      "date": "2026-08-06T07:24:27Z",
+      "subject": "docs: accept M2 security boundary"
+    },
+    {
+      "sha": "b5a4ba73f5e9192bc73d4761ee365a8807c4e370",
+      "date": "2026-08-06T07:21:42Z",
+      "subject": "docs: retain Phase 2 review qualification"
+    },
+    {
+      "sha": "2bf72386005113901d758f40d8887a57c08a3734",
+      "date": "2026-08-06T07:18:09Z",
+      "subject": "docs: reconcile Phase 2 review evidence"
+    },
+    {
+      "sha": "25d52a34ce3cb343d1678de75118863d844d80b5",
+      "date": "2026-08-06T07:15:49Z",
+      "subject": "fix: address Phase 2 review findings"
+    },
+    {
+      "sha": "8fb97e13420a9837c38843c500afbae9db2dc3c4",
+      "date": "2026-08-06T06:53:13Z",
+      "subject": "fix: correct animal feature phase wording"
+    },
+    {
+      "sha": "9dc30e12357d9ebd1aff4b77aa963ce58aff18f9",
+      "date": "2026-08-06T05:24:38Z",
+      "subject": "test: make csrf expiry checks deterministic"
+    },
+    {
+      "sha": "fdb1bd86919be59ad987ead1d866fc28b8e8a4d2",
+      "date": "2026-08-06T05:24:38Z",
+      "subject": "fix: allow verified browser form submissions"
+    },
+    {
+      "sha": "25d31f26bdd34f6c421b294eeb24c42690ec65c0",
+      "date": "2026-08-05T09:37:35Z",
+      "subject": "fix: support Windows access to WSL containers"
+    },
+    {
+      "sha": "b02ee860185e5e3daaf9202f1e85bf54a54e853d",
+      "date": "2026-08-05T09:25:54Z",
+      "subject": "fix: re-resolve web container in nginx"
+    },
+    {
+      "sha": "6bc32b3876f78c9e051c9da0a0712cf4c59f5d55",
+      "date": "2026-08-05T09:02:05Z",
+      "subject": "docs: record Phase 2 qualification evidence"
+    },
+    {
+      "sha": "0bcbc801c2f7fbfed0812f6ad0212eba209f307c",
+      "date": "2026-08-05T08:58:07Z",
+      "subject": "security: enforce same-origin form submissions"
+    },
+    {
+      "sha": "0b79e975faa9459d1b4f01d71f40f035629f77c2",
+      "date": "2026-08-05T08:56:41Z",
+      "subject": "fix: make interface contrast measurable"
+    },
+    {
+      "sha": "77e018559610ee9469f811cb768861409505ed35",
+      "date": "2026-08-05T08:53:37Z",
+      "subject": "chore: ignore local browser and SQLite sidecar state"
+    },
+    {
+      "sha": "86700ada69e7c3496cde3df30de8ac1b99915055",
+      "date": "2026-08-05T08:53:37Z",
+      "subject": "feat: invalidate sessions after restoration"
+    },
+    {
+      "sha": "ecd57ff69988f923037ab06ed6b83b514bf59f4d",
+      "date": "2026-08-05T08:50:14Z",
+      "subject": "feat: bind sessions to household authorization context"
+    },
+    {
+      "sha": "ae28f9e4afccbaf1aadce1b916078bbfe2c11282",
+      "date": "2026-08-05T08:46:43Z",
+      "subject": "fix: serve the browser icon without console errors"
+    },
+    {
+      "sha": "9967ef1751f267131527ea5772596f2fbc98d200",
+      "date": "2026-08-05T08:44:12Z",
+      "subject": "fix: keep Phase 2 schema portable across SQLite runtimes"
+    },
+    {
+      "sha": "88745c2baba64c5f85eb1ccb5cccb3a937a6e858",
+      "date": "2026-08-05T08:41:30Z",
+      "subject": "feat: add first-run and login browser experience"
+    },
+    {
+      "sha": "a6ae4d18dda09aa4b21e43073c62ea251e3ac291",
+      "date": "2026-08-05T08:41:30Z",
+      "subject": "feat: add secure sessions and authorization"
+    },
+    {
+      "sha": "77a3266ac3e265bac30eede9f58d144cdd1e5ae6",
+      "date": "2026-08-05T08:32:49Z",
+      "subject": "feat: add atomic household bootstrap events"
+    },
+    {
+      "sha": "0583b985252c99143ee589d10deca1c86b2ccb97",
+      "date": "2026-08-05T08:32:49Z",
+      "subject": "feat: add identity and household persistence"
+    },
+    {
+      "sha": "d24f4ed3a490ec250a02cee1ccc50d1ab11a0108",
+      "date": "2026-08-05T08:21:34Z",
+      "subject": "build: add Phase 2 identity dependencies"
+    },
+    {
+      "sha": "8fb0da838fbcf65878c7f4c811718cf2b2fd6787",
+      "date": "2026-08-05T08:21:14Z",
+      "subject": "docs: add Phase 2 identity implementation checklist"
+    },
+    {
+      "sha": "70027a1d9902b3d54f29749459599cab7135f2aa",
+      "date": "2026-08-05T08:20:48Z",
+      "subject": "docs: accept minimal Phase 2 household event amendment"
+    },
+    {
+      "sha": "6c6ae1fa9a1690ab30d453666aecee3eae0acffb",
+      "date": "2026-08-05T08:14:53Z",
+      "subject": "Merge pull request #2 from Shadowgar/phase1/platform-foundation"
+    },
+    {
+      "sha": "b3d6557f31b49cbe736ab2a6bc8c399830aec9c1",
+      "date": "2026-08-05T06:42:30Z",
+      "subject": "docs: record M0 and M1 milestone completion"
+    },
+    {
+      "sha": "675a6de585ba35b8396ffb668886b5a8ea146f8f",
+      "date": "2026-08-05T06:27:43Z",
+      "subject": "docs: separate development and Pi qualification"
+    },
+    {
+      "sha": "f8fdd2bcde1e4f86350c5ab60cd22d1222fbad1c",
+      "date": "2026-08-04T10:35:39Z",
+      "subject": "Merge pull request #1 from Shadowgar/chore/remove-generated-spec-workflow"
+    },
+    {
+      "sha": "e37a915dc088dd970c53c3c2b12b44d530c08a48",
+      "date": "2026-08-04T10:34:20Z",
+      "subject": "Revert \"feat: add technology stack template for project documentation\""
+    },
+    {
+      "sha": "481f5f30b86184132db2d05cbbcaaca5175c72c3",
+      "date": "2026-08-04T10:27:52Z",
+      "subject": "docs: record successful Phase 1 CI qualification"
+    },
+    {
+      "sha": "419b8949e9ca60bce18b5b69b6730fce2e546b43",
+      "date": "2026-08-04T10:25:04Z",
+      "subject": "ci: fetch architecture baseline for freeze check"
+    },
+    {
+      "sha": "d54737ab8e04a21cc7774e39e667ff95de737aa8",
+      "date": "2026-08-04T10:13:41Z",
+      "subject": "docs: record Phase 1 qualification evidence"
+    },
+    {
+      "sha": "da061911a7956892adbf8b5a1414e7407ce05b2a",
+      "date": "2026-08-04T10:05:22Z",
+      "subject": "fix: parse block storage metadata safely"
+    },
+    {
+      "sha": "2cdf9208570fcdbcd921252a9c99455a8009b3d2",
+      "date": "2026-08-04T10:03:39Z",
+      "subject": "fix: harden Phase 1 qualification and recovery"
+    },
+    {
+      "sha": "cd8edfc6306cd807a1254d51045a8c9269e3d283",
+      "date": "2026-08-04T09:39:40Z",
+      "subject": "test: add reproducible Phase 1 qualification harness"
+    },
+    {
+      "sha": "e1e74d48974b248e21cb95fdbeae371fa8182132",
+      "date": "2026-08-04T09:30:44Z",
+      "subject": "ci: enforce Phase 1 quality and ARM64 gates"
+    },
+    {
+      "sha": "7573bc0b432562ab51df307cd364529e947ae964",
+      "date": "2026-08-04T09:27:10Z",
+      "subject": "build: add local ARM64 container foundation"
+    },
+    {
+      "sha": "817f081342d47aac5915c975efa444b7b4d2352a",
+      "date": "2026-08-04T09:16:39Z",
+      "subject": "feat: add Phase 1 worker lifecycle shell"
+    },
+    {
+      "sha": "ded3988d549a795d0dc721a1e3b8c69bbffbf6da",
+      "date": "2026-08-04T09:12:01Z",
+      "subject": "feat: add safe observability and health probes"
+    },
+    {
+      "sha": "7cc22a711f9c46cf53c14d49e577510fd3632a45",
+      "date": "2026-08-04T09:08:14Z",
+      "subject": "chore: establish reversible migration framework"
+    },
+    {
+      "sha": "e317ac544ce3b3b31bc44588180f4332f261d767",
+      "date": "2026-08-04T09:07:16Z",
+      "subject": "feat: establish SQLite operational profile"
+    },
+    {
+      "sha": "fd6769eb51cd481019887311feb5d2984ecf3eb2",
+      "date": "2026-08-04T09:03:27Z",
+      "subject": "feat: add safe startup compatibility checks"
+    },
+    {
+      "sha": "ad2ab741acbe21eb1e91396fba2d1867a903e51d",
+      "date": "2026-08-04T09:02:05Z",
+      "subject": "feat: add typed runtime configuration"
+    },
+    {
+      "sha": "50124c1152355cd83bffc5f3ccb40b3d51384d4a",
+      "date": "2026-08-04T08:59:15Z",
+      "subject": "test: enforce architecture and phase boundaries"
+    },
+    {
+      "sha": "13308e2567f7432ca4de004034ae2558ef6562a6",
+      "date": "2026-08-04T08:58:29Z",
+      "subject": "chore: establish Python project toolchain"
+    },
+    {
+      "sha": "baa49649759ec943e02f5d63bf1d703c7c1691b1",
+      "date": "2026-08-04T08:54:17Z",
+      "subject": "docs: add Phase 1 platform implementation plan"
+    },
+    {
+      "sha": "5ef19ba9209587ce9883afb2a9d72e497afb4692",
+      "date": "2026-08-04T08:50:54Z",
+      "subject": "feat: add technology stack template for project documentation"
+    },
+    {
+      "sha": "bb3ab394a1487943424dad6d7544995c71156c98",
+      "date": "2026-08-04T08:43:32Z",
+      "subject": "docs: approve SnakeTracker architecture baseline"
+    }
+  ]
+}

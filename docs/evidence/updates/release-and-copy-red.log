@@ -1,0 +1,73 @@
+...FFFF                                                                  [100%]
+=================================== FAILURES ===================================
+_____________ test_releases_sort_by_actual_instant_across_offsets ______________
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-173/test_releases_sort_by_actual_i0')
+
+    def test_releases_sort_by_actual_instant_across_offsets(tmp_path):
+        from datetime import UTC, datetime
+
+        path = tmp_path / "releases.json"
+        path.write_text(json.dumps([
+            _release(version="older", deployed_at="2026-10-17T22:00:00+10:00"),
+            _release(version="newer", deployed_at="2026-10-17T15:00:00Z"),
+        ]))
+>       result = confirmed_production_updates(path, now=datetime(2026, 10, 20, tzinfo=UTC))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: confirmed_production_updates() got an unexpected keyword argument 'now'
+
+tests/unit/presentation/test_updates.py:112: TypeError
+__ test_future_deployments_and_ambiguous_instants_do_not_claim_a_live_release __
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-173/test_future_deployments_and_am0')
+
+    def test_future_deployments_and_ambiguous_instants_do_not_claim_a_live_release(tmp_path):
+        from datetime import UTC, datetime
+
+        path = tmp_path / "releases.json"
+        path.write_text(json.dumps([
+            _release(),
+            _release(version="future", deployed_at="2026-10-21T12:00:00Z"),
+            _release(version="conflict", build_sha="b" * 40),
+        ]))
+>       assert confirmed_production_updates(path, now=datetime(2026, 10, 20, tzinfo=UTC)) == ()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: confirmed_production_updates() got an unexpected keyword argument 'now'
+
+tests/unit/presentation/test_updates.py:125: TypeError
+_________ test_rollback_remains_an_event_and_ledger_is_never_rewritten _________
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-173/test_rollback_remains_an_event0')
+
+    def test_rollback_remains_an_event_and_ledger_is_never_rewritten(tmp_path):
+        from datetime import UTC, datetime
+
+        path = tmp_path / "releases.json"
+        path.write_text(json.dumps([
+            _release(version="2", deployed_at="2026-10-17T12:00:00Z"),
+            _release(version="1", status="rolled_back", deployed_at="2026-10-18T12:00:00Z"),
+        ]))
+        before = path.read_bytes()
+>       result = confirmed_production_updates(path, now=datetime(2026, 10, 20, tzinfo=UTC))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: confirmed_production_updates() got an unexpected keyword argument 'now'
+
+tests/unit/presentation/test_updates.py:137: TypeError
+______ test_stories_are_chronological_actionable_and_photos_are_credited _______
+
+    def test_stories_are_chronological_actionable_and_photos_are_credited():
+        history = development_history()
+        entries = history["milestones"]
+>       assert [item["date"] for item in entries] == sorted((item["date"] for item in entries), reverse=True)
+E       AssertionError: assert ['2026-10-18'...6-09-26', ...] == ['2026-10-18'...6-09-26', ...]
+E
+E         At index 2 diff: '2026-10-05' != '2026-10-09'
+E         Use -v to get more diff
+
+tests/unit/presentation/test_updates.py:147: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/presentation/test_updates.py::test_releases_sort_by_actual_instant_across_offsets
+FAILED tests/unit/presentation/test_updates.py::test_future_deployments_and_ambiguous_instants_do_not_claim_a_live_release
+FAILED tests/unit/presentation/test_updates.py::test_rollback_remains_an_event_and_ledger_is_never_rewritten
+FAILED tests/unit/presentation/test_updates.py::test_stories_are_chronological_actionable_and_photos_are_credited
+4 failed, 3 passed in 0.17s

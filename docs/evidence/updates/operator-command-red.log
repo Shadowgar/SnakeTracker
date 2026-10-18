@@ -1,0 +1,13 @@
+
+==================================== ERRORS ====================================
+________ ERROR collecting tests/unit/operations/test_record_release.py _________
+ImportError while importing test module '/tmp/snaketracker-visual-updates-20261018/tests/unit/operations/test_record_release.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/operations/test_record_release.py:9: in <module>
+    from snaketracker.operations.record_release import record_release
+E   ModuleNotFoundError: No module named 'snaketracker.operations.record_release'
+=========================== short test summary info ============================
+ERROR tests/unit/operations/test_record_release.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.16s

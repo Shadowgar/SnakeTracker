@@ -1176,6 +1176,7 @@ def create_web_router(
     expected_origin: str | None = None,
     directory_service: SpeciesDirectoryService | None = None,
     care_guide_repository: CareGuideReader | None = None,
+    production_release_history_path: Path | None = None,
 ) -> APIRouter:
     router = APIRouter(include_in_schema=False)
     animal_visual_resolver = AnimalVisualResolver(directory_service)
@@ -2107,6 +2108,36 @@ def create_web_router(
         if principal is None:
             return RedirectResponse("/login", status_code=303)
         return protected_page(request, "more.html", principal)
+
+    @router.get("/updates", response_class=HTMLResponse)
+    async def updates_page(request: Request) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        from snaketracker.presentation.updates import (
+            confirmed_production_updates,
+            development_history,
+        )
+
+        history = development_history()
+        milestones = history["milestones"]
+        archived = [item for item in milestones if not item.get("featured")]
+        archive = tuple(
+            {"label": month, "entries": tuple(item for item in archived if item["month"] == month)}
+            for month in dict.fromkeys(item["month"] for item in archived)
+        )
+        return protected_page(
+            request,
+            "updates.html",
+            principal,
+            context={
+                "featured_updates": tuple(item for item in milestones if item.get("featured")),
+                "history_months": archive,
+                "merge_activity": history["merge_activity"],
+                "history_audited_at": history["audit_date"],
+                "production_updates": confirmed_production_updates(production_release_history_path),
+            },
+        )
 
     @router.get("/directory", response_class=HTMLResponse)
     async def directory(request: Request, group: str = "plant", q: str = "") -> Response:

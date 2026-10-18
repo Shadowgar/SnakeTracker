@@ -3,11 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
+from pydantic import SecretStr, ValidationError
 
 from snaketracker.bootstrap.configuration import (
     Environment,
     PasswordResetDeliveryMode,
+    Settings,
     load_settings,
 )
 
@@ -252,3 +253,66 @@ def test_validation_errors_never_include_secret_input(
     message = str(raised.value)
     assert environment["SNAKETRACKER_RUNTIME_SECRET"] not in message
     assert "input_value=" not in message
+
+
+def test_production_updates_are_opt_in_and_do_not_use_writable_database_directory(tmp_path):
+    settings = Settings(
+        environment=Environment.PRODUCTION,
+        external_origin="https://example.test",
+        database_path=tmp_path / "app.db",
+        runtime_secret=SecretStr("production-test-only-secret-32-bytes"),
+    )
+    assert settings.updates_ledger_path is None
+    local = Settings(database_path=tmp_path / "preview.db")
+    assert local.updates_ledger_path == tmp_path / "production-release-history.json"
+
+
+def test_configured_production_release_directory_must_be_read_only(tmp_path, monkeypatch):
+    import os
+    from types import SimpleNamespace
+
+    values = {
+        "environment": Environment.PRODUCTION,
+        "external_origin": "https://example.test",
+        "database_path": tmp_path / "app.db",
+        "runtime_secret": SecretStr("production-test-only-secret-32-bytes"),
+        "production_release_history_path": tmp_path / "releases" / "history.json",
+    }
+    (tmp_path / "releases").mkdir()
+    with pytest.raises(ValueError, match="read-only"):
+        Settings(**values)
+    monkeypatch.setattr(os, "statvfs", lambda _: SimpleNamespace(f_flag=0))
+    with pytest.raises(ValueError, match="read-only"):
+        Settings(**values)
+    monkeypatch.setattr(os, "statvfs", lambda _: SimpleNamespace(f_flag=os.ST_RDONLY))
+    assert Settings(**values).updates_ledger_path == values["production_release_history_path"]
+    with pytest.raises(ValueError, match="absolute"):
+        Settings(**{**values, "production_release_history_path": Path("relative/history.json")})
+
+
+def test_release_path_is_loaded_from_environment(tmp_path):
+    settings = load_settings(
+        {"SNAKETRACKER_PRODUCTION_RELEASE_HISTORY_PATH": str(tmp_path / "notes.json")}
+    )
+    assert settings.updates_ledger_path == tmp_path / "notes.json"
+
+
+def test_release_file_cannot_escape_readonly_parent_into_writable_storage(tmp_path, monkeypatch):
+    import os
+    from types import SimpleNamespace
+
+    ledger = tmp_path / "history.json"
+    ledger.write_text("[]")
+    monkeypatch.setattr(
+        os,
+        "statvfs",
+        lambda path: SimpleNamespace(f_flag=0 if Path(path) == ledger else os.ST_RDONLY),
+    )
+    with pytest.raises(ValueError, match="read-only"):
+        Settings(
+            environment=Environment.PRODUCTION,
+            external_origin="https://example.test",
+            database_path=tmp_path / "app.db",
+            runtime_secret=SecretStr("production-test-only-secret-32-bytes"),
+            production_release_history_path=ledger,
+        )
