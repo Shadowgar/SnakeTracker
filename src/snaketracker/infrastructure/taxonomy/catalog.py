@@ -1574,7 +1574,7 @@ class LocalTaxonomyCatalog:
             "SELECT 1 FROM taxonomy_conflicts WHERE taxon_id=:id "
             "AND resolved_at IS NULL AND kind IN ('unknown_order','equal_freshness',"
             "'cross_provider_order') AND (generation_id IS NULL OR generation_id IN "
-            "(SELECT generation_id FROM taxonomy_generation_publications)) LIMIT 1",
+            "(SELECT generation_id FROM taxonomy_selection)) LIMIT 1",
             id=taxon_id,
         ).first():
             ordering = "unknown_order"

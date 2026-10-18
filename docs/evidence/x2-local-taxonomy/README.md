@@ -253,6 +253,14 @@ original ZIP between verification and parsing cannot change imported facts or re
 [Two additional database/provenance assertions](verified-archive-database.log) verify the recorded
 checksum and original taxon payload after that replacement. Temporary storage is cleaned on exit.
 
-The Pi receipt above predates these two legacy-alias and operator-input corrections. Its measured
+The Pi receipt above predates the later legacy-alias, operator-input and active-conflict corrections. Its measured
 source snapshot is retained exactly; no performance claim is made for paths added afterward. The
 final unchanged hosted gate qualifies the resulting committed tree.
+
+[Six active-view conflict cases](active-view-conflicts.log) passed. Equal/unknown-order conflicts
+scoped to inactive generations remain auditable and continue blocking promotion of those
+generations, but do not mark a newer unambiguous selected view uncertain. Cleanup preserves the
+conflict evidence. Global conflicts and conflicts attached to the active generation continue to
+affect current selection. An earlier cleanup test conflated durable evidence with current
+uncertainty; its corrected expectation additionally asserts preserved evidence and rollback blocking.
+Independent read-only review found no Important issue in this scope correction.

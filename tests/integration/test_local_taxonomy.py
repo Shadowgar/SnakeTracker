@@ -897,7 +897,7 @@ def test_foreign_overlay_order_has_durable_resolvable_decision(catalog, rollback
     assert catalog.resolve(identifier).selection_state == "selected"
 
 
-def test_published_conflict_qualification_survives_generation_cleanup(catalog):
+def test_published_conflict_evidence_survives_cleanup_without_tainting_active_selection(catalog):
     a = stage(catalog, "A", [taxon(name="Original selected")])
     catalog.promote(a)
     b = catalog.begin_generation(replace(source("B"), snapshot_at=NOW), imported_at=NOW)
@@ -909,9 +909,13 @@ def test_published_conflict_qualification_survives_generation_cleanup(catalog):
         taxon(name="Live equal B"), retrieved_at=NOW, source_effective_at=NOW
     )
     conflicts = [c for c in catalog.conflicts() if c.generation_id == b]
-    assert conflicts and catalog.resolve(identifier).selection_state == "unknown_order"
+    assert conflicts and catalog.resolve(identifier).selection_state == "selected"
+    assert catalog.resolve(identifier).scientific_name == "Live equal B"
+    with pytest.raises(TaxonomyConflictError):
+        catalog.promote(b)
     catalog.cleanup(b, retained_generations={a})
-    assert catalog.resolve(identifier).selection_state == "unknown_order"
+    assert [c for c in catalog.conflicts() if c.generation_id == b] == conflicts
+    assert catalog.resolve(identifier).selection_state == "selected"
     for conflict in conflicts:
         catalog.resolve_conflict(
             conflict.conflict_id, decided_by="Owner", reason="Retain selected live facts"
@@ -1564,3 +1568,53 @@ def test_ancestry_keeps_the_child_relationship_namespace(catalog, parent_scope):
     ]
     assert catalog.resolve(parent).scientific_name == "Foreign parent"
     assert foreign_root not in {item.taxon_id for item in catalog.resolve(child).ancestry}
+
+
+@pytest.mark.parametrize("old_clock", [None, NOW - timedelta(days=2)])
+@pytest.mark.parametrize("action", ["cleanup", "rollback"])
+def test_historical_generation_conflict_does_not_taint_newer_selected_view(
+    catalog, old_clock, action
+):
+    a = catalog.begin_generation(
+        replace(source("Historical reference"), snapshot_at=old_clock), imported_at=NOW
+    )
+    catalog.stage(a, [taxon("1", "Historical taxonomy")])
+    catalog.validate_generation(a)
+    catalog.promote(a)
+    b = catalog.begin_generation(
+        replace(source("Newer reference"), snapshot_at=NOW), imported_at=NOW
+    )
+    catalog.stage(b, [taxon("1", "Newer taxonomy")])
+    catalog.validate_generation(b)
+    for conflict in catalog.conflicts():
+        catalog.resolve_conflict(
+            conflict.conflict_id, decided_by="Owner", reason="Retain qualified newer reference"
+        )
+    catalog.promote(b)
+    identifier = catalog.publish(
+        taxon("1", "Historical live observation"),
+        retrieved_at=NOW,
+        source_effective_at=old_clock or NOW - timedelta(days=1),
+    )
+    pending = catalog.conflicts()
+    assert pending and all(conflict.generation_id == a for conflict in pending)
+    selected = catalog.resolve(identifier)
+    assert selected.scientific_name == "Newer taxonomy"
+    assert selected.selection_state == "selected"
+    with pytest.raises(TaxonomyConflictError):
+        catalog.promote(a)
+    if action == "cleanup":
+        catalog.cleanup(a, retained_generations={b})
+        assert catalog.conflicts() == pending
+        assert catalog.resolve(identifier).selection_state == "selected"
+        assert catalog.resolve(identifier).scientific_name == "Newer taxonomy"
+    else:
+        for conflict in pending:
+            catalog.resolve_conflict(
+                conflict.conflict_id,
+                decided_by="Owner",
+                reason="Explicit historical rollback decision",
+            )
+        catalog.promote(a)
+        assert catalog.active_generation() == a
+        assert catalog.resolve(identifier).selection_state == "selected"
