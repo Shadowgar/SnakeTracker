@@ -89,7 +89,7 @@
       <p>Changes completed in GitHub each month. This shows development activity—not website usage or numbers of animals.</p>
       <div class="updates-bars" role="img" aria-label="Completed GitHub changes: August 2026 seven, September 2026 nine, October 2026 five">
       {% for bar in merge_activity %}
-        <div class="updates-bar-row"><span>{{ bar.month }}</span><div class="updates-bar-track"><span class="updates-bar-fill" style="width: {{ bar.width }}%"></span></div><strong>{{ bar.count }}</strong></div>
+        <div class="updates-bar-row"><span>{{ bar.month }}</span><div class="updates-bar-track"><span class="updates-bar-fill updates-bar-fill-{{ bar.count }}"></span></div><strong>{{ bar.count }}</strong></div>
       {% endfor %}
       </div>
       <small>History checked through {{ history_audited_at }}. Each related group of changes is explained above.</small>

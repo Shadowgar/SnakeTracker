@@ -46,6 +46,7 @@ def _verified_release(entry: Any) -> dict[str, Any] | None:
         or not isinstance(timestamp, str)
         or not isinstance(build_sha, str)
         or not _SHA_PATTERN.fullmatch(build_sha)
+        or not isinstance(status, str)
         or status not in _ALLOWED_STATUSES
     ):
         return None
@@ -65,7 +66,8 @@ def _verified_release(entry: Any) -> dict[str, Any] | None:
         kind = change.get("kind")
         wording = change.get("text")
         if (
-            kind not in _ALLOWED_KINDS
+            not isinstance(kind, str)
+            or kind not in _ALLOWED_KINDS
             or not isinstance(wording, str)
             or not 1 <= len(wording.strip()) <= 200
         ):

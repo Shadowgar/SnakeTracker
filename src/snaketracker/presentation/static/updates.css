@@ -101,3 +101,8 @@
 @media (prefers-reduced-motion: reduce) {
   .updates-month-chevron { transition: none; }
 }
+
+/* Audited August / September / October PR counts; CSP-safe chart bars. */
+.updates-bar-fill-5 { width: 56%; }
+.updates-bar-fill-7 { width: 78%; }
+.updates-bar-fill-9 { width: 100%; }

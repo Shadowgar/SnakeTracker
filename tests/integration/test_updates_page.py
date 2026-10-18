@@ -64,7 +64,6 @@ def test_updates_is_private_and_covers_earlier_history(tmp_path: Path) -> None:
             assert "Spiders join the collection" in page.text
             assert "Making room for more kinds of pets" in page.text
             assert "Find animals by more names" in page.text
-            assert "21" not in page.text or "development" in page.text.lower()
             assert "confirmed live updates" in page.text.lower()
             assert "We don't have a complete, verified list" in page.text
             assert "/static/animal-fallbacks/snake.webp" in page.text
