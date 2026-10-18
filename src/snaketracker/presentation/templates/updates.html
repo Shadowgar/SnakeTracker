@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}What’s new · Care Keeper{% endblock %}
+{% block page_styles %}<link rel="stylesheet" href="/static/updates.css?v=20261018">{% endblock %}
+{% block content %}
+<section class="updates-page" aria-labelledby="updates-title">
+  <header class="updates-hero">
+    <div class="updates-hero-copy">
+      <p class="page-kicker">Care Keeper · Our story</p>
+      <h1 id="updates-title">What’s new with your Care Keeper?</h1>
+      <p class="updates-lede">From your first animal profile to smarter species searching, here’s how Care Keeper has grown. Just the useful stuff, explained simply.</p>
+      <div class="updates-hero-actions"><a href="#latest">Explore highlights <span aria-hidden="true">↓</span></a><span>Built with keepers in mind</span></div>
+    </div>
+    <div class="updates-art" aria-hidden="true">
+      <img src="/static/animal-fallbacks/snake.webp" alt="" width="340" height="230">
+      <img src="/static/animal-fallbacks/lizard.webp" alt="" width="340" height="230">
+      <img src="/static/animal-fallbacks/spider.webp" alt="" width="340" height="230">
+      <img src="/static/animal-fallbacks/scorpion.webp" alt="" width="340" height="230">
+      <span class="updates-art-label">Every animal has a story.</span>
+    </div>
+  </header>
+
+  <section class="updates-on-site" aria-labelledby="on-site-heading">
+    <div class="updates-section-heading"><div><p class="page-kicker">On this website</p><h2 id="on-site-heading">Confirmed live updates</h2></div></div>
+    {% if production_updates %}
+      <div class="updates-live-list">
+      {% for release in production_updates %}
+        <article class="updates-live-card">
+          <div class="updates-live-top"><span class="updates-live-indicator">{{ "Earlier version restored" if release.status == "rolled_back" else "Website update" }}</span><span class="updates-live-date">{{ release.date_label }}</span></div>
+          <h3>{{ release.title }}</h3>
+          <p>{{ release.description }}</p>
+          <ul>{% for change in release.changes %}<li><strong>{{ change.kind }}:</strong> {{ change.text }}</li>{% endfor %}</ul>
+          <span class="updates-version">Version {{ release.version }}</span>
+        </article>
+      {% endfor %}
+      </div>
+    {% else %}
+      <div class="updates-empty" role="status">
+        <span class="updates-empty-icon" aria-hidden="true">✦</span>
+        <div><strong>We're starting a better update history.</strong>
+          <p>We don't have a complete, verified list of older website releases yet. The milestones below show when features were finished—not necessarily when they appeared on your website.</p>
+        </div>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="updates-featured" id="latest" aria-labelledby="latest-heading">
+    <div class="updates-section-heading"><div><p class="page-kicker">Milestone highlights</p><h2 id="latest-heading">The latest things we've built</h2><p>These are development milestones. A finished feature isn't necessarily on your website yet.</p></div></div>
+    <div class="updates-featured-grid">
+      {% for item in featured_updates %}
+      <article class="updates-feature-card">
+        <div class="updates-feature-media"><img src="{{ item.image }}" alt="{{ item.alt }}" loading="lazy" width="600" height="420"><span class="updates-feature-category">{{ item.category }}</span></div>
+        <div class="updates-feature-copy">
+          <p class="updates-feature-date">{{ item.date }} · Finished in development</p>
+          <h3>{{ item.title }}</h3>
+          <p>{{ item.description }}</p>
+          <div class="updates-benefit"><span aria-hidden="true">✦</span><span>{{ item.benefit }}</span></div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="updates-journey" aria-labelledby="journey-heading" id="history">
+    <div class="updates-section-heading"><div><p class="page-kicker">Since August 2026</p><h2 id="journey-heading">Explore Care Keeper's earlier updates</h2><p>We've grouped older work by month so you can find what interests you without scrolling through hundreds of developer notes.</p></div></div>
+    {% for month in history_months %}
+    <details class="updates-month"{% if loop.first %} open{% endif %}>
+      <summary><span>{{ month.label }}</span><span class="updates-month-count">{{ month.entries|length }} stories</span><span class="updates-month-chevron" aria-hidden="true">⌄</span></summary>
+      <div class="updates-timeline">
+      {% for item in month.entries %}
+      <article class="updates-timeline-card">
+        <img src="{{ item.image }}" alt="{{ item.alt }}" loading="lazy" width="220" height="160">
+        <div class="updates-timeline-copy">
+          <div class="updates-timeline-top"><span>{{ item.category }}</span><time datetime="{{ item.date }}">{{ item.date }}</time></div>
+          <h3>{{ item.title }}</h3>
+          <p>{{ item.description }}</p>
+          <p class="updates-timeline-benefit"><strong>Why it matters:</strong> {{ item.benefit }}</p>
+          <details class="updates-source"><summary>Where this came from</summary><p>Based on completed Care Keeper development work: {% for pr in item.prs %}<a href="https://github.com/Shadowgar/SnakeTracker/pull/{{ pr }}" rel="noopener noreferrer" target="_blank">Change #{{ pr }}</a>{% if not loop.last %}, {% endif %}{% endfor %}. These are development dates, not confirmed website release dates.</p></details>
+        </div>
+      </article>
+      {% endfor %}
+      </div>
+    </details>
+    {% endfor %}
+  </section>
+
+  <details class="updates-chart">
+    <summary><span aria-hidden="true">▥</span> See how Care Keeper has grown <span class="updates-chart-hint">A little look behind the scenes</span></summary>
+    <div class="updates-chart-content">
+      <p>Changes completed in GitHub each month. This shows development activity—not website usage or numbers of animals.</p>
+      <div class="updates-bars" role="img" aria-label="Completed GitHub changes: August 2026 seven, September 2026 nine, October 2026 five">
+      {% for bar in merge_activity %}
+        <div class="updates-bar-row"><span>{{ bar.month }}</span><div class="updates-bar-track"><span class="updates-bar-fill" style="width: {{ bar.width }}%"></span></div><strong>{{ bar.count }}</strong></div>
+      {% endfor %}
+      </div>
+      <small>History checked through {{ history_audited_at }}. Each related group of changes is explained above.</small>
+    </div>
+  </details>
+  <p class="updates-footer-note">Made for keepers, not developers. All illustrations are locally hosted. No private animal or household records are used to build this page.</p>
+</section>
+{% endblock %}
