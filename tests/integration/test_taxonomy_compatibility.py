@@ -312,6 +312,16 @@ def test_corrupt_active_reference_fails_before_mutable_startup(tmp_path):
         "UPDATE taxonomy_search SET taxon_id='wrong' WHERE scope!='catalog'",
         "UPDATE taxonomy_search SET scope=NULL WHERE scope='catalog'",
         "UPDATE taxonomy_search SET taxon_id=NULL WHERE scope!='catalog'",
+        "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+        "SELECT taxon_id,'catalog','Injected term','' FROM taxa",
+        "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+        "SELECT taxon_id,generation_id,'Injected term','' FROM taxonomy_facts",
+        "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+        "SELECT taxon_id,'unknown','Injected term','' FROM taxa",
+        "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+        "SELECT taxon_id,NULL,'Injected term','' FROM taxa",
+        "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+        "SELECT NULL,'catalog','Injected term','' FROM taxa",
     ],
 )
 def test_missing_or_unreadable_search_metadata_rejects_mutable_startup(
@@ -340,8 +350,10 @@ def test_missing_or_unreadable_search_metadata_rejects_mutable_startup(
         generation,
         [ProviderTaxon("fixture", "1", "https://example.test/1", "", "Reference fixture")],
     )
+    assert inspect_startup_compatibility(engine).mode is CompatibilityMode.NORMAL
     catalog.validate_generation(generation)
     catalog.promote(generation)
+    assert inspect_startup_compatibility(engine).mode is CompatibilityMode.NORMAL
     with engine.begin() as connection:
         connection.exec_driver_sql(damage)
     assert inspect_startup_compatibility(engine).reason_code == "taxonomy_reference_incompatible"

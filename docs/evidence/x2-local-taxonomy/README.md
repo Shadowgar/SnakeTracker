@@ -351,3 +351,12 @@ and group-filtered local synonym search. Existing missing-parent, cycle, depth, 
 archive-size, preferred-name and identity guards remain enabled. The duplicate ZIP warning is
 expected from its rejection fixture. No runtime Animal registration group was added. This path
 also postdates the historical Pi performance receipt.
+
+[Five orphan-index cases](orphan-search-startup-red.log) reproduced startup accepting unowned
+catalog/generation FTS rows, including unknown/NULL scopes and NULL identities. Read-only startup
+inspection now checks both reference directions: every catalog row must be its permanent key's
+exact row and every generation row must belong to its matching fact. Valid private and published
+indexes remain accepted. The [complete 29-test compatibility/Care Guide run](orphan-search-startup-green.log)
+passed, including historical migration and rejection before mutable engine initialization.
+Independent read-only review found no Important issue. No schema, recovery mutation or operating
+limit was added. This integrity correction also postdates the historical Pi receipt.

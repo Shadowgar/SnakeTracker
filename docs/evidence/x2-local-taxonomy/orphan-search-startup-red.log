@@ -1,0 +1,509 @@
+FFFFF                                                                    [100%]
+=================================== FAILURES ===================================
+_ test_missing_or_unreadable_search_metadata_rejects_mutable_startup[INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) SELECT taxon_id,'catalog','Injected term','' FROM taxa] _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-157/test_missing_or_unreadable_sea0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0xffffab945a70>
+damage = "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) SELECT taxon_id,'catalog','Injected term','' FROM taxa"
+
+    @pytest.mark.parametrize(
+        "damage",
+        [
+            "DROP TABLE taxonomy_search_keys",
+            "DROP TABLE taxonomy_publications",
+            "DROP TABLE taxonomy_generation_publications",
+            "ALTER TABLE taxonomy_facts RENAME COLUMN search_rowid TO unsupported_column",
+            "ALTER TABLE taxonomy_search_keys RENAME COLUMN search_rowid TO unsupported_column",
+            "DELETE FROM taxonomy_search_keys",
+            "DELETE FROM taxonomy_search WHERE scope='catalog'",
+            "DELETE FROM taxonomy_search WHERE scope!='catalog'",
+            "UPDATE taxonomy_search SET scope='wrong' WHERE scope='catalog'",
+            "UPDATE taxonomy_search SET scope='wrong' WHERE scope!='catalog'",
+            "UPDATE taxonomy_search SET taxon_id='wrong' WHERE scope='catalog'",
+            "UPDATE taxonomy_search SET taxon_id='wrong' WHERE scope!='catalog'",
+            "UPDATE taxonomy_search SET scope=NULL WHERE scope='catalog'",
+            "UPDATE taxonomy_search SET taxon_id=NULL WHERE scope!='catalog'",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT taxon_id,'catalog','Injected term','' FROM taxa",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT taxon_id,generation_id,'Injected term','' FROM taxonomy_facts",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT taxon_id,'unknown','Injected term','' FROM taxa",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT taxon_id,NULL,'Injected term','' FROM taxa",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT NULL,'catalog','Injected term','' FROM taxa",
+        ],
+    )
+    def test_missing_or_unreadable_search_metadata_rejects_mutable_startup(
+        tmp_path, monkeypatch, damage
+    ):
+        from snaketracker.bootstrap import application
+        from snaketracker.bootstrap.configuration import load_settings
+
+        database = tmp_path / "missing-index.db"
+        command.upgrade(config_for(database), "head")
+        engine = create_sqlite_engine(database, require_local_storage=False)
+        catalog = LocalTaxonomyCatalog(engine)
+        generation = catalog.begin_generation(
+            GenerationSource(
+                "Startup fixture",
+                "fixture",
+                "https://example.test/archive",
+                NOW,
+                NOW,
+                "a" * 64,
+                "Synthetic fixture",
+            ),
+            imported_at=NOW,
+        )
+        catalog.stage(
+            generation,
+            [ProviderTaxon("fixture", "1", "https://example.test/1", "", "Reference fixture")],
+        )
+        catalog.validate_generation(generation)
+        catalog.promote(generation)
+        assert inspect_startup_compatibility(engine).mode is CompatibilityMode.NORMAL
+        with engine.begin() as connection:
+            connection.exec_driver_sql(damage)
+>       assert inspect_startup_compatibility(engine).reason_code == "taxonomy_reference_incompatible"
+E       AssertionError: assert 'compatible' == 'taxonomy_ref..._incompatible'
+E
+E         - taxonomy_reference_incompatible
+E         + compatible
+
+tests/integration/test_taxonomy_compatibility.py:358: AssertionError
+----------------------------- Captured stderr call -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+_ test_missing_or_unreadable_search_metadata_rejects_mutable_startup[INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) SELECT taxon_id,generation_id,'Injected term','' FROM taxonomy_facts] _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-157/test_missing_or_unreadable_sea1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0xffffad6a4e90>
+damage = "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) SELECT taxon_id,generation_id,'Injected term','' FROM taxonomy_facts"
+
+    @pytest.mark.parametrize(
+        "damage",
+        [
+            "DROP TABLE taxonomy_search_keys",
+            "DROP TABLE taxonomy_publications",
+            "DROP TABLE taxonomy_generation_publications",
+            "ALTER TABLE taxonomy_facts RENAME COLUMN search_rowid TO unsupported_column",
+            "ALTER TABLE taxonomy_search_keys RENAME COLUMN search_rowid TO unsupported_column",
+            "DELETE FROM taxonomy_search_keys",
+            "DELETE FROM taxonomy_search WHERE scope='catalog'",
+            "DELETE FROM taxonomy_search WHERE scope!='catalog'",
+            "UPDATE taxonomy_search SET scope='wrong' WHERE scope='catalog'",
+            "UPDATE taxonomy_search SET scope='wrong' WHERE scope!='catalog'",
+            "UPDATE taxonomy_search SET taxon_id='wrong' WHERE scope='catalog'",
+            "UPDATE taxonomy_search SET taxon_id='wrong' WHERE scope!='catalog'",
+            "UPDATE taxonomy_search SET scope=NULL WHERE scope='catalog'",
+            "UPDATE taxonomy_search SET taxon_id=NULL WHERE scope!='catalog'",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT taxon_id,'catalog','Injected term','' FROM taxa",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT taxon_id,generation_id,'Injected term','' FROM taxonomy_facts",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT taxon_id,'unknown','Injected term','' FROM taxa",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT taxon_id,NULL,'Injected term','' FROM taxa",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT NULL,'catalog','Injected term','' FROM taxa",
+        ],
+    )
+    def test_missing_or_unreadable_search_metadata_rejects_mutable_startup(
+        tmp_path, monkeypatch, damage
+    ):
+        from snaketracker.bootstrap import application
+        from snaketracker.bootstrap.configuration import load_settings
+
+        database = tmp_path / "missing-index.db"
+        command.upgrade(config_for(database), "head")
+        engine = create_sqlite_engine(database, require_local_storage=False)
+        catalog = LocalTaxonomyCatalog(engine)
+        generation = catalog.begin_generation(
+            GenerationSource(
+                "Startup fixture",
+                "fixture",
+                "https://example.test/archive",
+                NOW,
+                NOW,
+                "a" * 64,
+                "Synthetic fixture",
+            ),
+            imported_at=NOW,
+        )
+        catalog.stage(
+            generation,
+            [ProviderTaxon("fixture", "1", "https://example.test/1", "", "Reference fixture")],
+        )
+        catalog.validate_generation(generation)
+        catalog.promote(generation)
+        assert inspect_startup_compatibility(engine).mode is CompatibilityMode.NORMAL
+        with engine.begin() as connection:
+            connection.exec_driver_sql(damage)
+>       assert inspect_startup_compatibility(engine).reason_code == "taxonomy_reference_incompatible"
+E       AssertionError: assert 'compatible' == 'taxonomy_ref..._incompatible'
+E
+E         - taxonomy_reference_incompatible
+E         + compatible
+
+tests/integration/test_taxonomy_compatibility.py:358: AssertionError
+----------------------------- Captured stderr call -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+_ test_missing_or_unreadable_search_metadata_rejects_mutable_startup[INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) SELECT taxon_id,'unknown','Injected term','' FROM taxa] _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-157/test_missing_or_unreadable_sea2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0xffffaa4184d0>
+damage = "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) SELECT taxon_id,'unknown','Injected term','' FROM taxa"
+
+    @pytest.mark.parametrize(
+        "damage",
+        [
+            "DROP TABLE taxonomy_search_keys",
+            "DROP TABLE taxonomy_publications",
+            "DROP TABLE taxonomy_generation_publications",
+            "ALTER TABLE taxonomy_facts RENAME COLUMN search_rowid TO unsupported_column",
+            "ALTER TABLE taxonomy_search_keys RENAME COLUMN search_rowid TO unsupported_column",
+            "DELETE FROM taxonomy_search_keys",
+            "DELETE FROM taxonomy_search WHERE scope='catalog'",
+            "DELETE FROM taxonomy_search WHERE scope!='catalog'",
+            "UPDATE taxonomy_search SET scope='wrong' WHERE scope='catalog'",
+            "UPDATE taxonomy_search SET scope='wrong' WHERE scope!='catalog'",
+            "UPDATE taxonomy_search SET taxon_id='wrong' WHERE scope='catalog'",
+            "UPDATE taxonomy_search SET taxon_id='wrong' WHERE scope!='catalog'",
+            "UPDATE taxonomy_search SET scope=NULL WHERE scope='catalog'",
+            "UPDATE taxonomy_search SET taxon_id=NULL WHERE scope!='catalog'",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT taxon_id,'catalog','Injected term','' FROM taxa",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT taxon_id,generation_id,'Injected term','' FROM taxonomy_facts",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT taxon_id,'unknown','Injected term','' FROM taxa",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT taxon_id,NULL,'Injected term','' FROM taxa",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT NULL,'catalog','Injected term','' FROM taxa",
+        ],
+    )
+    def test_missing_or_unreadable_search_metadata_rejects_mutable_startup(
+        tmp_path, monkeypatch, damage
+    ):
+        from snaketracker.bootstrap import application
+        from snaketracker.bootstrap.configuration import load_settings
+
+        database = tmp_path / "missing-index.db"
+        command.upgrade(config_for(database), "head")
+        engine = create_sqlite_engine(database, require_local_storage=False)
+        catalog = LocalTaxonomyCatalog(engine)
+        generation = catalog.begin_generation(
+            GenerationSource(
+                "Startup fixture",
+                "fixture",
+                "https://example.test/archive",
+                NOW,
+                NOW,
+                "a" * 64,
+                "Synthetic fixture",
+            ),
+            imported_at=NOW,
+        )
+        catalog.stage(
+            generation,
+            [ProviderTaxon("fixture", "1", "https://example.test/1", "", "Reference fixture")],
+        )
+        catalog.validate_generation(generation)
+        catalog.promote(generation)
+        assert inspect_startup_compatibility(engine).mode is CompatibilityMode.NORMAL
+        with engine.begin() as connection:
+            connection.exec_driver_sql(damage)
+>       assert inspect_startup_compatibility(engine).reason_code == "taxonomy_reference_incompatible"
+E       AssertionError: assert 'compatible' == 'taxonomy_ref..._incompatible'
+E
+E         - taxonomy_reference_incompatible
+E         + compatible
+
+tests/integration/test_taxonomy_compatibility.py:358: AssertionError
+----------------------------- Captured stderr call -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+_ test_missing_or_unreadable_search_metadata_rejects_mutable_startup[INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) SELECT taxon_id,NULL,'Injected term','' FROM taxa] _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-157/test_missing_or_unreadable_sea3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0xffffaa63b460>
+damage = "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) SELECT taxon_id,NULL,'Injected term','' FROM taxa"
+
+    @pytest.mark.parametrize(
+        "damage",
+        [
+            "DROP TABLE taxonomy_search_keys",
+            "DROP TABLE taxonomy_publications",
+            "DROP TABLE taxonomy_generation_publications",
+            "ALTER TABLE taxonomy_facts RENAME COLUMN search_rowid TO unsupported_column",
+            "ALTER TABLE taxonomy_search_keys RENAME COLUMN search_rowid TO unsupported_column",
+            "DELETE FROM taxonomy_search_keys",
+            "DELETE FROM taxonomy_search WHERE scope='catalog'",
+            "DELETE FROM taxonomy_search WHERE scope!='catalog'",
+            "UPDATE taxonomy_search SET scope='wrong' WHERE scope='catalog'",
+            "UPDATE taxonomy_search SET scope='wrong' WHERE scope!='catalog'",
+            "UPDATE taxonomy_search SET taxon_id='wrong' WHERE scope='catalog'",
+            "UPDATE taxonomy_search SET taxon_id='wrong' WHERE scope!='catalog'",
+            "UPDATE taxonomy_search SET scope=NULL WHERE scope='catalog'",
+            "UPDATE taxonomy_search SET taxon_id=NULL WHERE scope!='catalog'",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT taxon_id,'catalog','Injected term','' FROM taxa",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT taxon_id,generation_id,'Injected term','' FROM taxonomy_facts",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT taxon_id,'unknown','Injected term','' FROM taxa",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT taxon_id,NULL,'Injected term','' FROM taxa",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT NULL,'catalog','Injected term','' FROM taxa",
+        ],
+    )
+    def test_missing_or_unreadable_search_metadata_rejects_mutable_startup(
+        tmp_path, monkeypatch, damage
+    ):
+        from snaketracker.bootstrap import application
+        from snaketracker.bootstrap.configuration import load_settings
+
+        database = tmp_path / "missing-index.db"
+        command.upgrade(config_for(database), "head")
+        engine = create_sqlite_engine(database, require_local_storage=False)
+        catalog = LocalTaxonomyCatalog(engine)
+        generation = catalog.begin_generation(
+            GenerationSource(
+                "Startup fixture",
+                "fixture",
+                "https://example.test/archive",
+                NOW,
+                NOW,
+                "a" * 64,
+                "Synthetic fixture",
+            ),
+            imported_at=NOW,
+        )
+        catalog.stage(
+            generation,
+            [ProviderTaxon("fixture", "1", "https://example.test/1", "", "Reference fixture")],
+        )
+        catalog.validate_generation(generation)
+        catalog.promote(generation)
+        assert inspect_startup_compatibility(engine).mode is CompatibilityMode.NORMAL
+        with engine.begin() as connection:
+            connection.exec_driver_sql(damage)
+>       assert inspect_startup_compatibility(engine).reason_code == "taxonomy_reference_incompatible"
+E       AssertionError: assert 'compatible' == 'taxonomy_ref..._incompatible'
+E
+E         - taxonomy_reference_incompatible
+E         + compatible
+
+tests/integration/test_taxonomy_compatibility.py:358: AssertionError
+----------------------------- Captured stderr call -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+_ test_missing_or_unreadable_search_metadata_rejects_mutable_startup[INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) SELECT NULL,'catalog','Injected term','' FROM taxa] _
+
+tmp_path = PosixPath('/tmp/pytest-of-rocco/pytest-157/test_missing_or_unreadable_sea4')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0xffffaa4bc6b0>
+damage = "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) SELECT NULL,'catalog','Injected term','' FROM taxa"
+
+    @pytest.mark.parametrize(
+        "damage",
+        [
+            "DROP TABLE taxonomy_search_keys",
+            "DROP TABLE taxonomy_publications",
+            "DROP TABLE taxonomy_generation_publications",
+            "ALTER TABLE taxonomy_facts RENAME COLUMN search_rowid TO unsupported_column",
+            "ALTER TABLE taxonomy_search_keys RENAME COLUMN search_rowid TO unsupported_column",
+            "DELETE FROM taxonomy_search_keys",
+            "DELETE FROM taxonomy_search WHERE scope='catalog'",
+            "DELETE FROM taxonomy_search WHERE scope!='catalog'",
+            "UPDATE taxonomy_search SET scope='wrong' WHERE scope='catalog'",
+            "UPDATE taxonomy_search SET scope='wrong' WHERE scope!='catalog'",
+            "UPDATE taxonomy_search SET taxon_id='wrong' WHERE scope='catalog'",
+            "UPDATE taxonomy_search SET taxon_id='wrong' WHERE scope!='catalog'",
+            "UPDATE taxonomy_search SET scope=NULL WHERE scope='catalog'",
+            "UPDATE taxonomy_search SET taxon_id=NULL WHERE scope!='catalog'",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT taxon_id,'catalog','Injected term','' FROM taxa",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT taxon_id,generation_id,'Injected term','' FROM taxonomy_facts",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT taxon_id,'unknown','Injected term','' FROM taxa",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT taxon_id,NULL,'Injected term','' FROM taxa",
+            "INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) "
+            "SELECT NULL,'catalog','Injected term','' FROM taxa",
+        ],
+    )
+    def test_missing_or_unreadable_search_metadata_rejects_mutable_startup(
+        tmp_path, monkeypatch, damage
+    ):
+        from snaketracker.bootstrap import application
+        from snaketracker.bootstrap.configuration import load_settings
+
+        database = tmp_path / "missing-index.db"
+        command.upgrade(config_for(database), "head")
+        engine = create_sqlite_engine(database, require_local_storage=False)
+        catalog = LocalTaxonomyCatalog(engine)
+        generation = catalog.begin_generation(
+            GenerationSource(
+                "Startup fixture",
+                "fixture",
+                "https://example.test/archive",
+                NOW,
+                NOW,
+                "a" * 64,
+                "Synthetic fixture",
+            ),
+            imported_at=NOW,
+        )
+        catalog.stage(
+            generation,
+            [ProviderTaxon("fixture", "1", "https://example.test/1", "", "Reference fixture")],
+        )
+        catalog.validate_generation(generation)
+        catalog.promote(generation)
+        assert inspect_startup_compatibility(engine).mode is CompatibilityMode.NORMAL
+        with engine.begin() as connection:
+            connection.exec_driver_sql(damage)
+>       assert inspect_startup_compatibility(engine).reason_code == "taxonomy_reference_incompatible"
+E       AssertionError: assert 'compatible' == 'taxonomy_ref..._incompatible'
+E
+E         - taxonomy_reference_incompatible
+E         + compatible
+
+tests/integration/test_taxonomy_compatibility.py:358: AssertionError
+----------------------------- Captured stderr call -----------------------------
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_phase1_baseline, Establish the empty Phase 1 relational baseline.
+INFO  [alembic.runtime.migration] Running upgrade 0001_phase1_baseline -> 0002_identity_household, Add permanent Phase 2 identity and household bootstrap storage.
+INFO  [alembic.runtime.migration] Running upgrade 0002_identity_household -> 0003_phase2_review_hardening, Remove the domain-stream index duplicated by its uniqueness constraint.
+INFO  [alembic.runtime.migration] Running upgrade 0003_phase2_review_hardening -> 0004_event_platform, Add Phase 3 event-platform operational and derived storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_event_platform -> 0005_animal_profiles, Add the synchronous Animal current-profile projection.
+INFO  [alembic.runtime.migration] Running upgrade 0005_animal_profiles -> 0006_enclosures, Add synchronous Enclosure current-state projection.
+INFO  [alembic.runtime.migration] Running upgrade 0006_enclosures -> 0007_profile_photos, Add staged and immutable local profile-photo metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_profile_photos -> 0008_local_backups, Add M4 local backup coordination state.
+INFO  [alembic.runtime.migration] Running upgrade 0008_local_backups -> 0009_operational_workflows, Add Phase 5 operational workflow projections and delivery state.
+INFO  [alembic.runtime.migration] Running upgrade 0009_operational_workflows -> 0010_multispecies_foundation, Add the M5.5 multi-species Animal projection discriminator.
+INFO  [alembic.runtime.migration] Running upgrade 0010_multispecies_foundation -> 0011_product_experience, Add M6 product projection compatibility metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0011_product_experience -> 0012_account_reminder_inventory, Add inventory item lifecycle projection state.
+INFO  [alembic.runtime.migration] Running upgrade 0012_account_reminder_inventory -> 0013_password_recovery, Add ephemeral identity password-reset credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0013_password_recovery -> 0014_structured_inventory_feeding, Add structured Inventory catalog and scaled feeding links.
+INFO  [alembic.runtime.migration] Running upgrade 0014_structured_inventory_feeding -> 0015_purchases_fifo, Add Purchase and synchronous effective-receipt read models.
+INFO  [alembic.runtime.migration] Running upgrade 0015_purchases_fifo -> 0016_inventory_acquisition, Add unified acquisition and current-stock cost-assignment state.
+INFO  [alembic.runtime.migration] Running upgrade 0016_inventory_acquisition -> 0017_inventory_intelligence, Add inventory policy and physical-count state.
+INFO  [alembic.runtime.migration] Running upgrade 0017_inventory_intelligence -> 0018_inventory_stock_roles, Add owner-overridable Inventory stock roles.
+INFO  [alembic.runtime.migration] Running upgrade 0018_inventory_stock_roles -> 0019_universal_species_directory, Add the universal taxon cache and Animal taxon-link projection.
+INFO  [alembic.runtime.migration] Running upgrade 0019_universal_species_directory -> 0020_enclosure_plants, Add enclosure-owned plant roster projection.
+INFO  [alembic.runtime.migration] Running upgrade 0020_enclosure_plants -> 0021_reference_images, Add local species-reference image state and Animal preference.
+INFO  [alembic.runtime.migration] Running upgrade 0021_reference_images -> 0022_reference_image_provenance, Retain licensed reference-image provider provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0022_reference_image_provenance -> 0023_sourced_care_guides, Add immutable, global reviewed care-guide versions and source claims.
+INFO  [alembic.runtime.migration] Running upgrade 0023_sourced_care_guides -> 0024_local_taxonomy, Permanent catalog, durable overlay and replaceable local reference generations.
+=========================== short test summary info ============================
+FAILED tests/integration/test_taxonomy_compatibility.py::test_missing_or_unreadable_search_metadata_rejects_mutable_startup[INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) SELECT taxon_id,'catalog','Injected term','' FROM taxa]
+FAILED tests/integration/test_taxonomy_compatibility.py::test_missing_or_unreadable_search_metadata_rejects_mutable_startup[INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) SELECT taxon_id,generation_id,'Injected term','' FROM taxonomy_facts]
+FAILED tests/integration/test_taxonomy_compatibility.py::test_missing_or_unreadable_search_metadata_rejects_mutable_startup[INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) SELECT taxon_id,'unknown','Injected term','' FROM taxa]
+FAILED tests/integration/test_taxonomy_compatibility.py::test_missing_or_unreadable_search_metadata_rejects_mutable_startup[INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) SELECT taxon_id,NULL,'Injected term','' FROM taxa]
+FAILED tests/integration/test_taxonomy_compatibility.py::test_missing_or_unreadable_search_metadata_rejects_mutable_startup[INSERT INTO taxonomy_search(taxon_id,scope,names,workflow_groups) SELECT NULL,'catalog','Injected term','' FROM taxa]
+5 failed, 19 deselected in 6.49s

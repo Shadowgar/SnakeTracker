@@ -545,6 +545,15 @@ def inspect_local_taxonomy(connection: Connection) -> CompatibilityReport:
                 "ON s.rowid=f.search_rowid WHERE s.rowid IS NULL OR s.taxon_id IS NOT f.taxon_id "
                 "OR s.scope IS NOT f.generation_id LIMIT 1"
             ).first()
+            or connection.exec_driver_sql(
+                "SELECT 1 FROM taxonomy_search s WHERE "
+                "(s.scope='catalog' AND NOT EXISTS "
+                "(SELECT 1 FROM taxonomy_search_keys k WHERE k.taxon_id=s.taxon_id "
+                "AND k.search_rowid=s.rowid)) OR "
+                "(s.scope IS NOT 'catalog' AND NOT EXISTS "
+                "(SELECT 1 FROM taxonomy_facts f WHERE f.generation_id=s.scope "
+                "AND f.taxon_id=s.taxon_id AND f.search_rowid=s.rowid)) LIMIT 1"
+            ).first()
         ):
             raise ValueError("Missing or inconsistent local taxonomy search rows.")
         rows = connection.exec_driver_sql(
