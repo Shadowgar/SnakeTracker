@@ -1619,14 +1619,16 @@ class LocalTaxonomyCatalog:
             execute(
                 connection,
                 "SELECT t.*,p.source_effective_at,p.payload AS catalog_payload,"
-                "m.provider,m.provider_id,"
-                "m.source_url,m.retrieved_at "
+                "coalesce(m.provider,'local') AS provider,"
+                "coalesce(m.provider_id,t.taxon_id) AS provider_id,"
+                "coalesce(m.source_url,'/directory/' || t.taxon_id) AS source_url,"
+                "coalesce(m.retrieved_at,t.refreshed_at) AS retrieved_at "
                 "FROM taxa t JOIN taxonomy_publications p USING(taxon_id) "
-                "JOIN taxon_provider_mappings m ON m.taxon_id=t.taxon_id "
+                "LEFT JOIN taxon_provider_mappings m ON m.taxon_id=t.taxon_id "
                 "AND (p.payload IS NULL OR "
                 "(m.provider=json_extract(p.payload,'$.provider') "
                 "AND m.provider_id=json_extract(p.payload,'$.provider_id'))) "
-                "WHERE t.taxon_id=:id "
+                "WHERE t.taxon_id=:id AND (p.payload IS NULL OR m.taxon_id IS NOT NULL) "
                 "ORDER BY CASE WHEN m.provider=t.taxonomy_provider THEN 0 ELSE 1 END,"
                 "m.provider LIMIT 1",
                 id=taxon_id,

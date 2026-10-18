@@ -280,8 +280,12 @@ class SQLAlchemyTaxonRepository:
         row = (
             connection.execute(
                 text(
-                    "SELECT t.*,m.provider,m.provider_id,m.source_url,m.retrieved_at,"
-                    "m.refreshed_at AS provider_refreshed_at,i.source_url AS image_source_url,"
+                    "SELECT t.*,coalesce(m.provider,'local') AS provider,"
+                    "coalesce(m.provider_id,t.taxon_id) AS provider_id,"
+                    "coalesce(m.source_url,'/directory/' || t.taxon_id) AS source_url,"
+                    "coalesce(m.retrieved_at,t.refreshed_at) AS retrieved_at,"
+                    "coalesce(m.refreshed_at,t.refreshed_at) AS provider_refreshed_at,"
+                    "i.source_url AS image_source_url,"
                     "i.creator AS image_creator,i.attribution AS image_attribution,"
                     "i.license_code AS image_license_code,i.license_url AS image_license_url,"
                     "i.local_filename AS image_local_filename,"
@@ -292,10 +296,13 @@ class SQLAlchemyTaxonRepository:
                     "i.provider_record_id AS image_provider_record_id,"
                     "i.source_page_url AS image_source_page_url,"
                     "i.retrieved_at AS image_retrieved_at,i.image_kind AS image_kind "
-                    "FROM taxa t JOIN taxon_provider_mappings m ON m.taxon_id=t.taxon_id "
+                    "FROM taxa t JOIN taxonomy_publications p USING(taxon_id) "
+                    "LEFT JOIN taxon_provider_mappings m ON m.taxon_id=t.taxon_id "
+                    "AND (p.payload IS NULL OR (m.provider=json_extract(p.payload,'$.provider') "
+                    "AND m.provider_id=json_extract(p.payload,'$.provider_id'))) "
                     "LEFT JOIN taxon_images i ON i.taxon_id=t.taxon_id "
-                    "WHERE t.taxon_id=:taxon_id AND EXISTS (SELECT 1 FROM taxonomy_publications p "
-                    "WHERE p.taxon_id=t.taxon_id) ORDER BY m.provider LIMIT 1"
+                    "WHERE t.taxon_id=:taxon_id AND (p.payload IS NULL OR m.taxon_id IS NOT NULL) "
+                    "ORDER BY m.provider LIMIT 1"
                 ),
                 {"taxon_id": str(taxon_id)},
             )

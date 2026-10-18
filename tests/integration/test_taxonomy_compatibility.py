@@ -17,6 +17,7 @@ from snaketracker.bootstrap.compatibility import CompatibilityMode, inspect_star
 from snaketracker.infrastructure.database.engine import create_sqlite_engine
 from snaketracker.infrastructure.taxonomy.care_guides import SQLAlchemyCareGuideRepository
 from snaketracker.infrastructure.taxonomy.catalog import LocalTaxonomyCatalog
+from snaketracker.infrastructure.taxonomy.repository import SQLAlchemyTaxonRepository
 
 ROOT = Path(__file__).parents[2]
 NOW = datetime(2026, 10, 17, tzinfo=UTC)
@@ -85,7 +86,8 @@ def snapshot(connection):
     }
 
 
-def test_23_to_24_preserves_every_reference_and_immutable_guide_trigger(tmp_path):
+@pytest.mark.parametrize("mapped", [False, True])
+def test_23_to_24_preserves_every_reference_and_immutable_guide_trigger(tmp_path, mapped):
     from snaketracker.application.animals import AnimalService, RegisterAnimalCommand
     from snaketracker.application.household_bootstrap import (
         BootstrapCommand,
@@ -151,13 +153,14 @@ def test_23_to_24_preserves_every_reference_and_immutable_guide_trigger(tmp_path
             ),
             {"id": identifier, "now": NOW.isoformat()},
         )
-        connection.execute(
-            text(
-                "INSERT INTO taxon_provider_mappings VALUES(:id,'fixture','1',"
-                "'https://example.test/taxa/1',:now,:now)"
-            ),
-            {"id": identifier, "now": NOW.isoformat()},
-        )
+        if mapped:
+            connection.execute(
+                text(
+                    "INSERT INTO taxon_provider_mappings VALUES(:id,'fixture','1',"
+                    "'https://example.test/taxa/1',:now,:now)"
+                ),
+                {"id": identifier, "now": NOW.isoformat()},
+            )
         connection.execute(
             text(
                 "INSERT INTO taxon_names VALUES(:id,'Python regius','python regius','scientific')"
@@ -214,6 +217,31 @@ def test_23_to_24_preserves_every_reference_and_immutable_guide_trigger(tmp_path
         )
     catalog = LocalTaxonomyCatalog(engine)
     summary = catalog.resolve(UUID(identifier))
+    assert summary is not None
+    assert summary.provider == ("fixture" if mapped else "local")
+    assert summary.retrieved_at == NOW
+    if not mapped:
+        assert summary.provider_id == identifier
+        assert summary.source_url == "/directory/" + identifier
+        assert summary.provider_references == ()
+    assert SQLAlchemyCareGuideRepository(engine).current(UUID(identifier)) == guide
+    repository = SQLAlchemyTaxonRepository(engine)
+    record = repository.get(UUID(identifier), stale_after=NOW)
+    assert record is not None
+    assert record.taxon_id == UUID(identifier)
+    assert record.provider == summary.provider
+    assert record.image_local_filename == "retained.webp"
+    assert repository.search("Historical Python", "snake", limit=10, stale_after=NOW)[
+        0
+    ].taxon_id == UUID(identifier)
+    with engine.connect() as connection:
+        linked = connection.exec_driver_sql(
+            "SELECT household_id,animal_id FROM animal_taxon_current WHERE taxon_id=?",
+            (identifier,),
+        ).one()
+    assert repository.linked_for(
+        UUID(linked[0]), UUID(linked[1]), stale_after=NOW
+    ).taxon.taxon_id == UUID(identifier)
     assert summary.synonyms == ("Historical Python",)
     assert summary.common_names == ("Royal python alias",)
     assert catalog.search("Historical Python")[0].synonyms == ("Historical Python",)
@@ -224,7 +252,7 @@ def test_23_to_24_preserves_every_reference_and_immutable_guide_trigger(tmp_path
         "DELETE FROM care_guide_versions",
         "UPDATE care_guide_claims SET label='changed'",
         "DELETE FROM taxa",
-        "DELETE FROM taxon_provider_mappings",
+        *(("DELETE FROM taxon_provider_mappings",) if mapped else ()),
     ):
         with pytest.raises(IntegrityError), engine.begin() as connection:
             connection.exec_driver_sql(sql)
@@ -390,6 +418,16 @@ def test_first_mapping_of_migrated_providerless_taxon_establishes_preference(tmp
             )
         command.upgrade(config, "head")
         catalog = LocalTaxonomyCatalog(engine)
+        local = catalog.resolve(identifier)
+        assert local is not None and local.provider == "local"
+        assert catalog.search("Python")[0].taxon_id == identifier
+        with engine.connect() as connection:
+            assert (
+                connection.exec_driver_sql(
+                    "SELECT count(*) FROM taxon_provider_mappings"
+                ).scalar_one()
+                == 0
+            )
         for provider, provider_id in (("z_origin", "original"), ("a_foreign", "secondary")):
             catalog.map_identity(
                 identifier,

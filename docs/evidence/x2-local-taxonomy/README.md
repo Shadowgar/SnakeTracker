@@ -374,3 +374,16 @@ and combined overflow fails explicitly. The [complete 89-test compatibility/arch
 passed. Independent read-only review found no Important issue. The historical Pi receipt binds
 an earlier source/migration version; these corrections carry no new performance or production
 capacity claim. No production migration or import was performed.
+
+[Providerless legacy reproduction](providerless-legacy-red.log) confirmed that migrated, locally
+qualified taxa without external mappings disappeared from resolution/search despite retained
+UUIDs and guide references. Catalog and directory reads now preserve payload-null legacy records
+with explicit local provenance, the same permanent UUID, a local directory URL and the retained
+local timestamp. Reads create no provider mapping; the first later explicit qualification still
+establishes provider preference. Serialized publications continue requiring their exact external
+provider/ID rather than silently becoming local if corrupted.
+
+The [complete 51-test historical/directory/Care Guide run](providerless-legacy-green.log) passed.
+Mapped and providerless historical fixtures retain raw rows, immutable guide triggers, linked
+Animal/media references and alias search. Independent read-only review found no Important issue.
+The historical Pi receipt predates this compatibility correction; no new performance claim is made.
