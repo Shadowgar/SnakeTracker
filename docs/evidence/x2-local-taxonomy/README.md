@@ -415,3 +415,18 @@ passed: 91 cases, including unchanged database counts on rejected writes. Ruff, 
 architecture, freeze, document links and full-PR whitespace checks passed. The duplicate ZIP warning
 is expected from its rejection fixture. These corrections postdate the historical Pi receipt and
 make no new performance claim. No production operation or registration workflow changed.
+
+[Provenance and mapping guard regressions](provenance-mapping-red.log) reproduced future snapshot
+clocks and mutable provider namespace/ID columns. Generation source validation now requires
+snapshot time at or before archive retrieval, before inserting any row. The unpublished migration's
+mapping trigger protects provider, provider ID and permanent UUID, including NULL-safe comparisons,
+while permitting idempotent identity updates and provenance timestamp/URL updates.
+
+The [full taxonomy and compatibility run](provenance-mapping-broad-before-fixture.log) completed
+with 196 passed and one old fixture failure: that fixture retrieved an archive before its snapshot.
+Its chronology was corrected without changing fallback provenance assertions; the
+[targeted rerun passed](provenance-fixture-green.log). Nine other later-snapshot fixtures gained
+matching retrieval times before that broad run. Independent read-only review found no Important
+issue; static, architecture and protected-content checks passed. Final hosted Quality qualifies
+the corrected tree. These source/migration changes postdate the historical Pi measurement and
+carry no new performance claim. All databases were isolated; no production migration occurred.

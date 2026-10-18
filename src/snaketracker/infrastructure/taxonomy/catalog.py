@@ -126,6 +126,8 @@ def validate_generation_source(source: GenerationSource) -> None:
     timestamp(source.retrieved_at)
     if source.snapshot_at is not None:
         timestamp(source.snapshot_at)
+        if source.snapshot_at > source.retrieved_at:
+            raise ValueError("A snapshot cannot postdate archive retrieval.")
 
 
 class LocalTaxonomyCatalog:

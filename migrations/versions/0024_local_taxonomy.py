@@ -147,8 +147,9 @@ def upgrade() -> None:
         "BEGIN SELECT RAISE(ABORT,'permanent taxon identity'); END"
     )
     op.execute(
-        "CREATE TRIGGER taxon_mapping_no_relink BEFORE UPDATE OF taxon_id "
-        "ON taxon_provider_mappings WHEN NEW.taxon_id != OLD.taxon_id "
+        "CREATE TRIGGER taxon_mapping_no_relink BEFORE UPDATE OF taxon_id,provider,provider_id "
+        "ON taxon_provider_mappings WHEN NEW.taxon_id IS NOT OLD.taxon_id "
+        "OR NEW.provider IS NOT OLD.provider OR NEW.provider_id IS NOT OLD.provider_id "
         "BEGIN SELECT RAISE(ABORT,'permanent provider mapping'); END"
     )
     op.execute(

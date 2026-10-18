@@ -250,7 +250,11 @@ def test_older_live_observation_cannot_replace_newer_source_and_import_time_neve
     )
     assert catalog.resolve(identifier).scientific_name == "Fresh name"
     generation = catalog.begin_generation(
-        replace(source("new snapshot"), snapshot_at=NOW + timedelta(days=2)),
+        replace(
+            source("new snapshot"),
+            snapshot_at=NOW + timedelta(days=2),
+            retrieved_at=NOW + timedelta(days=2),
+        ),
         imported_at=NOW + timedelta(days=3),
     )
     catalog.stage(generation, [taxon(name="Newest snapshot")])
@@ -558,7 +562,12 @@ def test_first_promotion_preserves_qualified_fallback_provenance(catalog):
     a = stage(catalog, "A", [taxon("root", "Animalia")])
     catalog.promote(a)
     failed = catalog.begin_generation(
-        replace(source("Failed"), retrieved_at=NOW - timedelta(days=20)), imported_at=NOW
+        replace(
+            source("Failed"),
+            retrieved_at=NOW - timedelta(days=20),
+            snapshot_at=NOW - timedelta(days=30),
+        ),
+        imported_at=NOW,
     )
     catalog.stage(failed, [replace(taxon(), source_url="https://example.test/FAILED")])
     good = stage(
@@ -1335,7 +1344,12 @@ def test_alias_mapping_checks_retained_relationships_beneath_newer_facts(
     catalog.promote(a)
     if state == "hidden_overlay":
         b = catalog.begin_generation(
-            replace(source("Newer snapshot"), snapshot_at=NOW + timedelta(days=1)), imported_at=NOW
+            replace(
+                source("Newer snapshot"),
+                snapshot_at=NOW + timedelta(days=1),
+                retrieved_at=NOW + timedelta(days=1),
+            ),
+            imported_at=NOW,
         )
         catalog.stage(b, [taxon()])
         catalog.validate_generation(b)
@@ -1380,7 +1394,12 @@ def test_mapping_alias_checks_hidden_multi_record_live_chain(catalog):
         taxon("2", "Second", parent_provider_id="alias"), retrieved_at=NOW, source_effective_at=NOW
     )
     b = catalog.begin_generation(
-        replace(source("Hiding both edges"), snapshot_at=NOW + timedelta(days=1)), imported_at=NOW
+        replace(
+            source("Hiding both edges"),
+            snapshot_at=NOW + timedelta(days=1),
+            retrieved_at=NOW + timedelta(days=1),
+        ),
+        imported_at=NOW,
     )
     catalog.stage(b, [taxon("1", "First"), taxon("2", "Second")])
     catalog.validate_generation(b)
@@ -1402,7 +1421,11 @@ def test_live_cycle_guard_covers_the_rollback_overlay_view(catalog):
     )
     catalog.publish(taxon("b", "Second"), retrieved_at=NOW, source_effective_at=NOW)
     g = catalog.begin_generation(
-        replace(source("Hiding old live edge"), snapshot_at=NOW + timedelta(days=1)),
+        replace(
+            source("Hiding old live edge"),
+            snapshot_at=NOW + timedelta(days=1),
+            retrieved_at=NOW + timedelta(days=1),
+        ),
         imported_at=NOW,
     )
     catalog.stage(g, [taxon("a", "First"), taxon("b", "Second")])
@@ -1424,7 +1447,12 @@ def test_generation_validation_rejects_cycle_with_newer_durable_overlay(catalog)
         source_effective_at=NOW + timedelta(days=2),
     )
     g = catalog.begin_generation(
-        replace(source("Overlay union"), snapshot_at=NOW + timedelta(days=1)), imported_at=NOW
+        replace(
+            source("Overlay union"),
+            snapshot_at=NOW + timedelta(days=1),
+            retrieved_at=NOW + timedelta(days=1),
+        ),
+        imported_at=NOW,
     )
     catalog.stage(g, [taxon("a", "First", parent_provider_id="b"), taxon("b", "Second")])
     with pytest.raises(ValueError, match="cycle"):
@@ -1436,7 +1464,12 @@ def test_late_live_change_cannot_introduce_cycle_at_generation_promotion(catalog
     catalog.publish(taxon("a", "First"), retrieved_at=NOW, source_effective_at=NOW)
     catalog.publish(taxon("b", "Second"), retrieved_at=NOW, source_effective_at=NOW)
     g = catalog.begin_generation(
-        replace(source("Late cycle"), snapshot_at=NOW + timedelta(days=1)), imported_at=NOW
+        replace(
+            source("Late cycle"),
+            snapshot_at=NOW + timedelta(days=1),
+            retrieved_at=NOW + timedelta(days=1),
+        ),
+        imported_at=NOW,
     )
     catalog.stage(g, [taxon("a", "First", parent_provider_id="b"), taxon("b", "Second")])
     catalog.validate_generation(g)
@@ -1486,7 +1519,11 @@ def test_new_reference_publication_must_leave_fallback_graph_acyclic(catalog):
         taxon("a", "First", parent_provider_id="b"), retrieved_at=NOW, source_effective_at=NOW
     )
     g = catalog.begin_generation(
-        replace(source("New catalog fallback"), snapshot_at=NOW + timedelta(days=1)),
+        replace(
+            source("New catalog fallback"),
+            snapshot_at=NOW + timedelta(days=1),
+            retrieved_at=NOW + timedelta(days=1),
+        ),
         imported_at=NOW,
     )
     catalog.stage(g, [taxon("a", "First"), taxon("b", "Second", parent_provider_id="a")])
@@ -1712,7 +1749,12 @@ def test_qualified_alias_records_coalesce_deterministically_and_remain_searchabl
     if reverse:
         records.reverse()
     b = catalog.begin_generation(
-        replace(source("Qualified aliases"), snapshot_at=NOW + timedelta(days=1)), imported_at=NOW
+        replace(
+            source("Qualified aliases"),
+            snapshot_at=NOW + timedelta(days=1),
+            retrieved_at=NOW + timedelta(days=1),
+        ),
+        imported_at=NOW,
     )
     if separate_batches:
         for record in records:
@@ -1754,7 +1796,12 @@ def test_qualified_alias_fact_disagreement_requires_a_fresh_content_bound_decisi
             reason="Explicit qualified identity",
         )
     g = catalog.begin_generation(
-        replace(source("Alias conflict"), snapshot_at=NOW + timedelta(days=1)), imported_at=NOW
+        replace(
+            source("Alias conflict"),
+            snapshot_at=NOW + timedelta(days=1),
+            retrieved_at=NOW + timedelta(days=1),
+        ),
+        imported_at=NOW,
     )
     catalog.stage(g, [taxon("2", "Conflicting second name"), taxon("1", "Chosen name")])
     first = [c for c in catalog.conflicts() if c.kind == "qualified_alias_facts"]
@@ -2025,3 +2072,63 @@ def test_blank_provider_ids_cannot_create_permanent_namespace_state(catalog, ide
             catalog.stage(generation, [candidate])
     assert counts() == before
     assert catalog.resolve(existing) is not None
+
+
+@pytest.mark.parametrize("offset", [timedelta(microseconds=1), timedelta(days=2)])
+def test_snapshot_cannot_postdate_archive_retrieval(catalog, offset):
+    with catalog.engine.connect() as connection:
+        before = connection.execute(text("SELECT COUNT(*) FROM taxonomy_generations")).scalar_one()
+    with pytest.raises(ValueError, match=r"snapshot|retriev"):
+        catalog.begin_generation(
+            replace(source("Impossible provenance"), snapshot_at=NOW + offset),
+            imported_at=NOW + timedelta(days=3),
+        )
+    with catalog.engine.connect() as connection:
+        assert (
+            connection.execute(text("SELECT COUNT(*) FROM taxonomy_generations")).scalar_one()
+            == before
+        )
+    assert catalog.active_generation() is None
+
+
+@pytest.mark.parametrize("column", ["taxon_id", "provider", "provider_id"])
+def test_every_qualified_provider_identity_column_is_immutable(catalog, column):
+    from sqlalchemy.exc import IntegrityError
+
+    identifier = catalog.publish(taxon(), retrieved_at=NOW, source_effective_at=NOW)
+    other = catalog.publish(taxon("other", "Other taxon"), retrieved_at=NOW)
+    replacement = str(other) if column == "taxon_id" else "replacement"
+    with (
+        pytest.raises(IntegrityError, match="permanent provider mapping"),
+        catalog.engine.begin() as connection,
+    ):
+        connection.execute(
+            text(
+                f"UPDATE taxon_provider_mappings SET {column}=:value "
+                "WHERE provider='fixture' AND provider_id='1'"
+            ),
+            {"value": replacement},
+        )
+    with catalog.engine.begin() as connection:
+        connection.execute(
+            text(
+                "UPDATE taxon_provider_mappings SET provider=provider,provider_id=provider_id,"
+                "taxon_id=taxon_id,source_url=:url,refreshed_at=:checked "
+                "WHERE provider='fixture' AND provider_id='1'"
+            ),
+            {
+                "url": "https://example.test/updated/1",
+                "checked": (NOW + timedelta(days=1)).isoformat(),
+            },
+        )
+        row = connection.execute(
+            text(
+                "SELECT taxon_id,source_url,refreshed_at "
+                "FROM taxon_provider_mappings "
+                "WHERE provider='fixture' AND provider_id='1'"
+            )
+        ).one()
+    assert row.taxon_id == str(identifier)
+    assert row.source_url == "https://example.test/updated/1"
+    assert row.refreshed_at == (NOW + timedelta(days=1)).isoformat()
+    assert catalog.publish(taxon(), retrieved_at=NOW) == identifier
