@@ -119,7 +119,7 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0xffff9fa7d480>
                     },
                 )
         engine.dispose()
-    
+
         app = build_application(
             Settings(
                 environment=Environment.TEST,
