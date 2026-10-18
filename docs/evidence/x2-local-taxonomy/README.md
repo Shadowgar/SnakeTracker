@@ -254,7 +254,7 @@ original ZIP between verification and parsing cannot change imported facts or re
 [Two additional database/provenance assertions](verified-archive-database.log) verify the recorded
 checksum and original taxon payload after that replacement. Temporary storage is cleaned on exit.
 
-The Pi receipt above predates the later legacy-alias, operator-input, active-conflict and qualified-alias/startup corrections. Its measured
+The Pi receipt above predates the later legacy-alias, operator-input, active-conflict and qualified-alias/startup and cache/name/depth corrections. Its measured
 source snapshot is retained exactly; no performance claim is made for paths added afterward. The
 final unchanged hosted gate qualifies the resulting committed tree.
 
@@ -285,3 +285,17 @@ UUID cycles remain invalid. Private FTS rows and the generation content revision
 Cleanup strips import-only metadata before projecting labels. Scientific ordering decisions bind
 only factual fields and source clocks, preventing equivalent import bookkeeping from reopening a
 reviewed decision. No production import capacity is claimed for this later alias path.
+
+[Five focused regressions](cache-names-depth.log) qualify monotonic successful-provider-check
+freshness independently of retained fact provenance, rejection of excess vernacular names instead
+of silent truncation, and all 127 ancestors supported by the 128-node graph validator. The complete
+[20-test directory suite](directory-freshness-regressions.log) also passed. Repeated successful checks
+do not repeatedly call a provider merely because selected source facts retain an older date.
+
+The hosted Quality run on `5871dc11a22b3ccc57ee332ddc7586b138a7e8c4` found two Care Guide
+fixture failures (1,385 other tests passed). [Isolated reproduction](care-guide-startup-red.log)
+confirmed that direct fixture inserts omitted mandatory catalog search rows and were correctly
+refused by startup. Fixtures now populate schema 23 and run the real schema-24 migration; a new
+taxon uses catalog publication. All original behavioral assertions remain unchanged, and the
+[complete five-test Care Guide suite](care-guide-startup-green.log) passed. Runtime integrity checks,
+quality gates and thresholds were preserved. Final hosted qualification applies to the pushed head.

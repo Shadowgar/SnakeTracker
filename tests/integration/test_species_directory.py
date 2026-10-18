@@ -1007,3 +1007,58 @@ def test_older_response_cannot_resurrect_image_after_newer_no_image_observation(
         assert selected.image_resolution_state is None  # Explicit media discovery remains eligible.
     finally:
         engine.dispose()
+
+
+def test_successful_check_freshens_cache_without_changing_selected_fact_provenance(tmp_path):
+    from snaketracker.application.local_taxonomy import GenerationSource
+    from snaketracker.infrastructure.taxonomy.catalog import LocalTaxonomyCatalog
+
+    engine = _database(tmp_path)
+    catalog = LocalTaxonomyCatalog(engine)
+    repository = SQLAlchemyTaxonRepository(engine)
+    now = datetime.now(UTC)
+    old = now - timedelta(days=100)
+    selected = _taxon("cache-clock", "plant", "Retained snapshot", "Retained")
+    try:
+        generation = catalog.begin_generation(
+            GenerationSource(
+                "Old dated source",
+                "fixture",
+                "https://example.test/archive",
+                old,
+                old,
+                "a" * 64,
+                "Synthetic fixture",
+            ),
+            imported_at=now,
+        )
+        catalog.stage(generation, [selected])
+        catalog.validate_generation(generation)
+        catalog.promote(generation)
+        identifier = catalog.search("Retained")[0].taxon_id
+        assert repository.get(identifier, stale_after=now - timedelta(days=30)).stale
+        provider = FixtureProvider(
+            {
+                "plant:retained": (
+                    replace(selected, accepted_scientific_name="Undated proposed name"),
+                )
+            }
+        )
+        service = SpeciesDirectoryService(
+            repository,
+            provider,
+            event_store=SQLAlchemyEventStore(engine),
+            animal_projection=SQLAlchemyAnimalCurrentProjection(engine),
+        )
+        first = service.search("Retained", "plant")
+        second = service.search("Retained", "plant")
+        assert len(provider.calls) == 1
+        assert second.state == "cached"
+        record = first.records[0]
+        assert record.accepted_scientific_name == "Retained snapshot"
+        assert record.retrieved_at == old
+        assert record.refreshed_at >= now
+        assert not record.stale
+        assert catalog.resolve(identifier).retrieved_at == old
+    finally:
+        engine.dispose()

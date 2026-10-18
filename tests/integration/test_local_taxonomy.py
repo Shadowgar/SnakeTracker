@@ -1781,3 +1781,17 @@ def test_equivalent_alias_metadata_does_not_reopen_unchanged_ordering_decision(c
     catalog.validate_generation(g)
     catalog.promote(g)
     assert catalog.active_generation() == g
+
+
+def test_resolve_returns_all_127_ancestors_allowed_by_generation_validation(catalog):
+    records = [
+        taxon(str(index), f"Ancestor {index}", parent_provider_id=str(index - 1) if index else None)
+        for index in range(128)
+    ]
+    generation = stage(catalog, "Full supported ancestry", records)
+    catalog.promote(generation)
+    selected = catalog.search("Ancestor 127")[0]
+    assert len(selected.ancestry) == 127
+    assert [ancestor.scientific_name for ancestor in selected.ancestry] == [
+        f"Ancestor {index}" for index in range(126, -1, -1)
+    ]

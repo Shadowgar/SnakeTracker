@@ -27,12 +27,13 @@ def archive(
     meta=META,
     taxa="id\tname\tparent\tclass\n1\tAnimalia\t\t\n2\tRana temporaria\t1\tAmphibia\n",
     extra=None,
+    names="2\tCommon frog\n",
 ):
     path = tmp_path / "synthetic.zip"
     with ZipFile(path, "w") as handle:
         handle.writestr("meta.xml", meta)
         handle.writestr("taxa.tsv", taxa)
-        handle.writestr("names.tsv", "2\tCommon frog\n")
+        handle.writestr("names.tsv", names)
         if extra:
             handle.writestr(*extra)
     return path
@@ -532,3 +533,18 @@ def test_archive_active_parse_work_still_obeys_deadline(tmp_path, monkeypatch):
                 limits=replace(ArchiveLimits(), max_seconds=1),
             )
         )
+
+
+@pytest.mark.parametrize("count", [65, 66, 100])
+def test_vernacular_alias_bound_rejects_excess_instead_of_truncating(tmp_path, count):
+    path = archive(
+        tmp_path, names="".join(f"2\tVernacular {index:03d}\n" for index in range(count))
+    )
+    if count > 65:
+        with pytest.raises(ValueError, match="vernacular"):
+            tuple(read_archive(path, provider="fixture"))
+    else:
+        records = tuple(read_archive(path, provider="fixture"))
+        assert len(records[1].alternative_common_names) == 64
+        assert records[1].preferred_common_name == "Vernacular 000"
+        assert records[1].alternative_common_names[-1] == "Vernacular 064"

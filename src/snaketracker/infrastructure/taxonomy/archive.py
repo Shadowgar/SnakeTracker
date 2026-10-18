@@ -264,10 +264,12 @@ def read_archive(
                     common = tuple(
                         row[0]
                         for row in database.execute(
-                            "SELECT name FROM names WHERE id=? ORDER BY name LIMIT 65",
+                            "SELECT name FROM names WHERE id=? ORDER BY name LIMIT 66",
                             (identifier,),
                         )
                     )
+                    if len(common) > 65:
+                        raise ValueError("Too many taxonomy vernacular names for one taxon.")
                     group = ""
                     if provider == "inaturalist":
                         groups = [

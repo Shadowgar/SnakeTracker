@@ -705,6 +705,27 @@ class LocalTaxonomyCatalog:
         identifier = self._reserve(connection, candidate, observed)
         previous = self._selected(connection, identifier)
         self._publish_identity(connection, identifier, candidate, observed, effective_text, payload)
+        checked = datetime.fromisoformat(
+            str(
+                execute(
+                    connection,
+                    "SELECT refreshed_at FROM taxon_provider_mappings "
+                    "WHERE provider=:provider AND provider_id=:pid",
+                    provider=candidate.provider,
+                    pid=candidate.provider_id,
+                ).scalar_one()
+            )
+        )
+        if checked.tzinfo is None:
+            checked = checked.replace(tzinfo=UTC)
+        execute(
+            connection,
+            "UPDATE taxon_provider_mappings SET refreshed_at=:checked "
+            "WHERE provider=:provider AND provider_id=:pid",
+            checked=timestamp(max(checked, retrieved_at)),
+            provider=candidate.provider,
+            pid=candidate.provider_id,
+        )
         revision = self._change(
             connection,
             identifier,
@@ -1705,7 +1726,7 @@ class LocalTaxonomyCatalog:
             if parent
             else None
         )
-        while parent and len(ancestry) < 64:
+        while parent and len(ancestry) < 127:
             identifier = execute(
                 connection,
                 "SELECT taxon_id FROM taxon_provider_mappings "

@@ -315,6 +315,14 @@ class SQLAlchemyTaxonRepository:
         selected = LocalTaxonomyCatalog(self._engine).resolve_on(connection, taxon_id)
         if selected is None:
             return record
+        checks = connection.execute(
+            text(
+                "SELECT refreshed_at FROM taxon_provider_mappings "
+                "WHERE taxon_id=:taxon_id AND provider=:provider"
+            ),
+            {"taxon_id": str(taxon_id), "provider": selected.provider},
+        ).scalars()
+        refreshed_at = max([selected.retrieved_at, *(_datetime(value) for value in checks)])
         return replace(
             record,
             accepted_scientific_name=selected.scientific_name,
@@ -330,8 +338,8 @@ class SQLAlchemyTaxonRepository:
             taxonomy_selection_state=selected.selection_state,
             taxonomy_reference_state=selected.reference_state,
             retrieved_at=selected.retrieved_at,
-            refreshed_at=selected.retrieved_at,
-            stale=selected.retrieved_at < stale_after,
+            refreshed_at=refreshed_at,
+            stale=refreshed_at < stale_after,
             rank=dict(selected.classification).get("rank"),
             kingdom=dict(selected.classification).get("kingdom"),
             phylum_division=dict(selected.classification).get("phylum_division"),
