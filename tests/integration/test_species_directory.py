@@ -791,3 +791,219 @@ def test_reference_only_selected_taxon_skips_unsupported_provider_refresh(
         assert retained.accepted_scientific_name == "Rana temporaria"
     finally:
         engine.dispose()
+
+
+def test_taxonomy_and_image_refresh_publish_atomically(tmp_path, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+
+    engine = _database(tmp_path)
+    repository = SQLAlchemyTaxonRepository(engine)
+    initial = _taxon("race", "plant", "Initial name", "Initial", image_license="cc-by")
+    now = datetime.now(UTC)
+    initial = replace(initial, source_effective_at=now)
+    older = replace(
+        initial,
+        accepted_scientific_name="Older refresh",
+        source_effective_at=now + timedelta(seconds=1),
+        image_source_url="https://images.example.test/older.jpg",
+    )
+    newer = replace(
+        initial,
+        accepted_scientific_name="Newer refresh",
+        source_effective_at=now + timedelta(seconds=2),
+        image_source_url="https://images.example.test/newer.jpg",
+    )
+    first = repository.upsert(initial, observed_at=now)
+    entered, release = Event(), Event()
+    original = repository._store_image
+
+    def paused(connection, identifier, candidate, *args, **kwargs):
+        if candidate.accepted_scientific_name == "Older refresh":
+            entered.set()
+            assert release.wait(5)
+        return original(connection, identifier, candidate, *args, **kwargs)
+
+    monkeypatch.setattr(repository, "_store_image", paused)
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            old = pool.submit(repository.upsert, older, observed_at=now + timedelta(seconds=1))
+            try:
+                assert entered.wait(5)
+                fresh = pool.submit(
+                    repository.upsert, newer, observed_at=now + timedelta(seconds=2)
+                )
+                visible = repository.get(first.taxon_id, stale_after=now)
+                assert visible.accepted_scientific_name == "Initial name"
+                assert visible.image_source_url == initial.image_source_url
+            finally:
+                release.set()
+            old.result()
+            fresh.result()
+        selected = repository.get(first.taxon_id, stale_after=now)
+        assert selected.accepted_scientific_name == "Newer refresh"
+        assert selected.image_source_url == newer.image_source_url
+    finally:
+        release.set()
+        engine.dispose()
+
+
+@pytest.mark.parametrize("stale_missing_image", [False, True])
+def test_old_identical_taxonomy_refresh_cannot_replace_or_delete_fresher_image(
+    tmp_path, stale_missing_image
+):
+    engine = _database(tmp_path)
+    repository = SQLAlchemyTaxonRepository(engine)
+    now = datetime.now(UTC)
+    candidate = _taxon("image-clock", "plant", "Same facts", "Same", image_license="cc-by")
+    newer = replace(candidate, image_source_url="https://images.example.test/newer.jpg")
+    older = replace(
+        candidate,
+        image_source_url="https://images.example.test/older.jpg",
+        image_license_code=None if stale_missing_image else "cc-by",
+    )
+    try:
+        identifier = repository.upsert(newer, observed_at=now).taxon_id
+        repository.upsert(older, observed_at=now - timedelta(seconds=1))
+        selected = repository.get(identifier, stale_after=now)
+        assert selected.image_source_url == newer.image_source_url
+        assert selected.image_provider == "fixture"
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize("failure", ["image", "readback"])
+def test_failed_taxon_image_publication_rolls_back_the_whole_observation(
+    tmp_path, monkeypatch, failure
+):
+    engine = _database(tmp_path)
+    repository = SQLAlchemyTaxonRepository(engine)
+    now = datetime.now(UTC)
+    original = replace(
+        _taxon("atomic-failure", "plant", "Original", "Original", image_license="cc-by"),
+        source_effective_at=now,
+    )
+    identifier = repository.upsert(original, observed_at=now).taxon_id
+    newer = replace(
+        original,
+        accepted_scientific_name="Uncommitted",
+        source_effective_at=now + timedelta(seconds=1),
+        image_source_url="https://images.example.test/uncommitted.jpg",
+    )
+    try:
+        with monkeypatch.context() as patch:
+            if failure == "image":
+
+                def fail(*args, **kwargs):
+                    raise RuntimeError("Synthetic image failure")
+
+                patch.setattr(repository, "_store_image", fail)
+            else:
+                patch.setattr(repository, "_get", lambda *args: None)
+            with pytest.raises(RuntimeError):
+                repository.upsert(newer, observed_at=now + timedelta(seconds=1))
+        retained = repository.get(identifier, stale_after=now)
+        assert retained.accepted_scientific_name == "Original"
+        assert retained.image_source_url == original.image_source_url
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize("missing_image", [False, True])
+def test_rejected_source_observation_cannot_mutate_selected_image(tmp_path, missing_image):
+    engine = _database(tmp_path)
+    repository = SQLAlchemyTaxonRepository(engine)
+    now = datetime.now(UTC)
+    candidate = replace(
+        _taxon("image-selection", "plant", "Selected", "Selected", image_license="cc-by"),
+        source_effective_at=now,
+    )
+    try:
+        identifier = repository.upsert(candidate, observed_at=now).taxon_id
+        rejected = replace(
+            candidate,
+            accepted_scientific_name="Obsolete",
+            source_effective_at=now - timedelta(days=1),
+            image_source_url="https://images.example.test/obsolete.jpg",
+            image_license_code=None if missing_image else "cc-by",
+        )
+        repository.upsert(rejected, observed_at=now + timedelta(seconds=1))
+        selected = repository.get(identifier, stale_after=now)
+        assert selected.accepted_scientific_name == "Selected"
+        assert selected.image_source_url == candidate.image_source_url
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize("selection", ["snapshot", "foreign_provider"])
+def test_unselected_overlay_cannot_mutate_reference_image(tmp_path, selection):
+    from snaketracker.application.local_taxonomy import GenerationSource
+    from snaketracker.infrastructure.taxonomy.catalog import LocalTaxonomyCatalog
+
+    engine = _database(tmp_path)
+    repository = SQLAlchemyTaxonRepository(engine)
+    catalog = LocalTaxonomyCatalog(engine)
+    now = datetime.now(UTC)
+    candidate = replace(
+        _taxon("selected-image", "plant", "Original", "Original", image_license="cc-by"),
+        source_effective_at=now,
+    )
+    try:
+        identifier = repository.upsert(candidate, observed_at=now).taxon_id
+        if selection == "snapshot":
+            generation = catalog.begin_generation(
+                GenerationSource(
+                    "New snapshot",
+                    "fixture",
+                    "https://example.test/archive",
+                    now,
+                    now + timedelta(days=2),
+                    "a" * 64,
+                    "Synthetic fixture",
+                ),
+                imported_at=now,
+            )
+            catalog.stage(generation, [replace(candidate, accepted_scientific_name="Snapshot")])
+            catalog.validate_generation(generation)
+            catalog.promote(generation)
+            expected = "Snapshot"
+            incoming = replace(candidate, source_effective_at=now + timedelta(days=1))
+        else:
+            catalog.map_identity(
+                identifier,
+                "other",
+                "selected-image",
+                source_url="https://example.test/other",
+                decided_by="Owner",
+                reason="Explicit cross-provider identity",
+            )
+            expected = "Original"
+            incoming = replace(
+                candidate, provider="other", accepted_scientific_name="Other provider"
+            )
+        incoming = replace(incoming, image_source_url="https://images.example.test/unselected.jpg")
+        repository.upsert(incoming, observed_at=now + timedelta(days=3))
+        selected = repository.get(identifier, stale_after=now)
+        assert selected.accepted_scientific_name == expected
+        assert selected.image_source_url == candidate.image_source_url
+    finally:
+        engine.dispose()
+
+
+def test_older_response_cannot_resurrect_image_after_newer_no_image_observation(tmp_path):
+    engine = _database(tmp_path)
+    repository = SQLAlchemyTaxonRepository(engine)
+    now = datetime.now(UTC)
+    candidate = _taxon("deleted-image-clock", "plant", "Same facts", "Same", image_license="cc-by")
+    try:
+        identifier = repository.upsert(candidate, observed_at=now).taxon_id
+        repository.upsert(
+            replace(candidate, image_license_code=None), observed_at=now + timedelta(seconds=2)
+        )
+        repository.upsert(candidate, observed_at=now + timedelta(seconds=1))
+        selected = repository.get(identifier, stale_after=now)
+        assert selected.image_source_url is None
+        assert selected.image_checked_at == now + timedelta(seconds=2)
+        assert selected.image_resolution_state is None  # Explicit media discovery remains eligible.
+    finally:
+        engine.dispose()

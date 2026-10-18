@@ -667,6 +667,26 @@ class LocalTaxonomyCatalog:
         retrieved_at: datetime,
         source_effective_at: datetime | None = None,
     ) -> UUID:
+        with self._write() as connection:
+            identifier, _ = self.publish_on(
+                connection,
+                candidate,
+                retrieved_at=retrieved_at,
+                source_effective_at=source_effective_at,
+            )
+            return identifier
+
+    def publish_on(
+        self,
+        connection: Connection,
+        candidate: ProviderTaxon,
+        *,
+        retrieved_at: datetime,
+        source_effective_at: datetime | None = None,
+    ) -> tuple[UUID, bool]:
+        """Publish in the caller's BEGIN IMMEDIATE transaction; report selection."""
+        if not connection.in_transaction():
+            raise ValueError("Taxonomy publication requires an owned write transaction.")
         validate(candidate)
         observed = timestamp(retrieved_at)
         effective = source_effective_at or candidate.source_effective_at
@@ -674,156 +694,158 @@ class LocalTaxonomyCatalog:
         payload = json.dumps(
             {field: getattr(candidate, field) for field in FACT_FIELDS}, sort_keys=True
         )
-        with self._write() as connection:
-            self._validate_live_relationships(connection, candidate)
-            identifier = self._reserve(connection, candidate, observed)
-            previous = self._selected(connection, identifier)
-            self._publish_identity(
-                connection, identifier, candidate, observed, effective_text, payload
+        self._validate_live_relationships(connection, candidate)
+        identifier = self._reserve(connection, candidate, observed)
+        previous = self._selected(connection, identifier)
+        self._publish_identity(connection, identifier, candidate, observed, effective_text, payload)
+        revision = self._change(
+            connection,
+            identifier,
+            "live_observation",
+            json.dumps(
+                {
+                    "payload": json.loads(payload),
+                    "retrieved_at": observed,
+                    "source_effective_at": effective_text,
+                }
+            ),
+        )
+        old = (
+            execute(
+                connection,
+                "SELECT * FROM taxonomy_overlay WHERE taxon_id=:id AND provider=:provider",
+                id=identifier,
+                provider=candidate.provider,
             )
-            revision = self._change(
+            .mappings()
+            .one_or_none()
+        )
+        keep_old = False
+        if old:
+            keep_old = self._retain_observation(
                 connection,
                 identifier,
-                "live_observation",
-                json.dumps(
-                    {
-                        "payload": json.loads(payload),
-                        "retrieved_at": observed,
-                        "source_effective_at": effective_text,
-                    }
-                ),
+                payload,
+                effective_text,
+                json.loads(old["payload"]),
+                old["source_effective_at"],
             )
-            old = (
-                execute(
-                    connection,
-                    "SELECT * FROM taxonomy_overlay WHERE taxon_id=:id AND provider=:provider",
-                    id=identifier,
-                    provider=candidate.provider,
-                )
-                .mappings()
-                .one_or_none()
+        if (
+            previous is not None
+            and previous[0]["provider"] == candidate.provider
+            # A comparable older observation can improve the durable overlay;
+            # the newer selected snapshot still wins at read time.
+            and not (
+                effective_text
+                and previous[0]["source_effective_at"]
+                and previous[0]["source_effective_at"] > effective_text
             )
-            keep_old = False
-            if old:
-                keep_old = self._retain_observation(
+        ):
+            keep_old = (
+                self._retain_observation(
                     connection,
                     identifier,
                     payload,
                     effective_text,
-                    json.loads(old["payload"]),
-                    old["source_effective_at"],
+                    previous[0],
+                    previous[0]["source_effective_at"],
                 )
-            if (
-                previous is not None
-                and previous[0]["provider"] == candidate.provider
-                # A comparable older observation can improve the durable overlay;
-                # the newer selected snapshot still wins at read time.
-                and not (
-                    effective_text
-                    and previous[0]["source_effective_at"]
-                    and previous[0]["source_effective_at"] > effective_text
-                )
-            ):
-                keep_old = (
-                    self._retain_observation(
+                or keep_old
+            )
+        if not keep_old:
+            execute(
+                connection,
+                "INSERT INTO taxonomy_overlay "
+                "(taxon_id,provider,payload,retrieved_at,source_effective_at,revision) "
+                "VALUES(:id,:provider,:payload,:observed,:effective,:revision) "
+                "ON CONFLICT(taxon_id,provider) DO UPDATE SET payload=excluded.payload, "
+                "retrieved_at=excluded.retrieved_at,"
+                "source_effective_at=excluded.source_effective_at, "
+                "revision=excluded.revision",
+                id=identifier,
+                provider=candidate.provider,
+                payload=payload,
+                observed=observed,
+                effective=effective_text,
+                revision=revision,
+            )
+        for snapshot in execute(
+            connection,
+            "SELECT f.generation_id,f.payload,g.snapshot_at,g.provider FROM taxonomy_facts f "
+            "JOIN taxonomy_generations g USING(generation_id) WHERE f.taxon_id=:id",
+            id=identifier,
+        ):
+            opposing = json.loads(snapshot.payload)
+            if _facts_differ(opposing, json.loads(payload)):
+                kind = None
+                if snapshot.provider != candidate.provider:
+                    kind = "cross_provider_order"
+                elif not snapshot.snapshot_at or not effective_text:
+                    kind = "unknown_order"
+                elif snapshot.snapshot_at == effective_text:
+                    kind = "equal_freshness"
+                if kind:
+                    self._ordering_conflict(
                         connection,
                         identifier,
+                        kind,
                         payload,
                         effective_text,
-                        previous[0],
-                        previous[0]["source_effective_at"],
+                        opposing,
+                        snapshot.snapshot_at,
+                        snapshot.generation_id,
                     )
-                    or keep_old
-                )
-            if not keep_old:
-                execute(
-                    connection,
-                    "INSERT INTO taxonomy_overlay "
-                    "(taxon_id,provider,payload,retrieved_at,source_effective_at,revision) "
-                    "VALUES(:id,:provider,:payload,:observed,:effective,:revision) "
-                    "ON CONFLICT(taxon_id,provider) DO UPDATE SET payload=excluded.payload, "
-                    "retrieved_at=excluded.retrieved_at,"
-                    "source_effective_at=excluded.source_effective_at, "
-                    "revision=excluded.revision",
-                    id=identifier,
-                    provider=candidate.provider,
-                    payload=payload,
-                    observed=observed,
-                    effective=effective_text,
-                    revision=revision,
-                )
-            for snapshot in execute(
+        if (
+            previous is not None
+            and previous[0]["provider"] != candidate.provider
+            and _facts_differ(previous[0], json.loads(payload))
+        ):
+            self._ordering_conflict(
                 connection,
-                "SELECT f.generation_id,f.payload,g.snapshot_at,g.provider FROM taxonomy_facts f "
-                "JOIN taxonomy_generations g USING(generation_id) WHERE f.taxon_id=:id",
-                id=identifier,
-            ):
-                opposing = json.loads(snapshot.payload)
-                if _facts_differ(opposing, json.loads(payload)):
-                    kind = None
-                    if snapshot.provider != candidate.provider:
-                        kind = "cross_provider_order"
-                    elif not snapshot.snapshot_at or not effective_text:
-                        kind = "unknown_order"
-                    elif snapshot.snapshot_at == effective_text:
-                        kind = "equal_freshness"
-                    if kind:
-                        self._ordering_conflict(
-                            connection,
-                            identifier,
-                            kind,
-                            payload,
-                            effective_text,
-                            opposing,
-                            snapshot.snapshot_at,
-                            snapshot.generation_id,
-                        )
-            if (
-                previous is not None
-                and previous[0]["provider"] != candidate.provider
-                and _facts_differ(previous[0], json.loads(payload))
-            ):
+                identifier,
+                "cross_provider_order",
+                payload,
+                effective_text,
+                previous[0],
+                previous[0]["source_effective_at"],
+            )
+        for other in execute(
+            connection,
+            "SELECT payload,source_effective_at FROM taxonomy_overlay "
+            "WHERE taxon_id=:id AND provider!=:provider",
+            id=identifier,
+            provider=candidate.provider,
+        ):
+            if _facts_differ(json.loads(other.payload), json.loads(payload)):
                 self._ordering_conflict(
                     connection,
                     identifier,
                     "cross_provider_order",
                     payload,
                     effective_text,
-                    previous[0],
-                    previous[0]["source_effective_at"],
+                    json.loads(other.payload),
+                    other.source_effective_at,
                 )
-            for other in execute(
-                connection,
-                "SELECT payload,source_effective_at FROM taxonomy_overlay "
-                "WHERE taxon_id=:id AND provider!=:provider",
-                id=identifier,
-                provider=candidate.provider,
-            ):
-                if _facts_differ(json.loads(other.payload), json.loads(payload)):
-                    self._ordering_conflict(
-                        connection,
-                        identifier,
-                        "cross_provider_order",
-                        payload,
-                        effective_text,
-                        json.loads(other.payload),
-                        other.source_effective_at,
-                    )
-            label_source = candidate
-            if keep_old and old is not None:
-                label_source = ProviderTaxon(**json.loads(old["payload"]))
-            elif keep_old and previous is not None:
-                retained_fact: dict[str, Any] = {
-                    field: previous[0].get(field) for field in FACT_FIELDS
-                }
-                label_source = ProviderTaxon(**retained_fact)
-            self._labels(connection, identifier, label_source)
-            if (
-                candidate.accepted_provider_id
-                and candidate.accepted_provider_id != candidate.provider_id
-            ):
-                self._conflict(connection, identifier, "replacement", payload)
-        return UUID(identifier)
+        label_source = candidate
+        if keep_old and old is not None:
+            label_source = ProviderTaxon(**json.loads(old["payload"]))
+        elif keep_old and previous is not None:
+            retained_fact: dict[str, Any] = {field: previous[0].get(field) for field in FACT_FIELDS}
+            label_source = ProviderTaxon(**retained_fact)
+        self._labels(connection, identifier, label_source)
+        if (
+            candidate.accepted_provider_id
+            and candidate.accepted_provider_id != candidate.provider_id
+        ):
+            self._conflict(connection, identifier, "replacement", payload)
+        selected = self._selected(connection, identifier)
+        selected_observation = bool(
+            selected is not None
+            and selected[1] == "overlay"
+            and selected[0]["provider"] == candidate.provider
+            and selected[0]["revision"] == revision
+        )
+        return UUID(identifier), selected_observation
 
     def map_identity(
         self,
@@ -1554,6 +1576,16 @@ class LocalTaxonomyCatalog:
         seen = {str(taxon_id)}
         parent = fact.get("parent_provider_id")
         provider = fact["provider"]
+        relationship_generation = (
+            execute(
+                connection,
+                "SELECT g.generation_id FROM taxonomy_selection s "
+                "JOIN taxonomy_generations g USING(generation_id) WHERE g.provider=:provider",
+                provider=provider,
+            ).scalar_one_or_none()
+            if parent
+            else None
+        )
         while parent and len(ancestry) < 64:
             identifier = execute(
                 connection,
@@ -1565,10 +1597,11 @@ class LocalTaxonomyCatalog:
             if not identifier or identifier in seen:
                 break
             seen.add(identifier)
-            ancestor = self._selected(connection, identifier)
-            if ancestor is None:
+            ancestor_fact = self._known_provider_fact(
+                connection, identifier, provider, relationship_generation
+            )
+            if ancestor_fact is None:
                 break
-            ancestor_fact = ancestor[0]
             ancestry.append(
                 TaxonAncestor(
                     UUID(identifier),
@@ -1577,7 +1610,6 @@ class LocalTaxonomyCatalog:
                 )
             )
             parent = ancestor_fact.get("parent_provider_id")
-            provider = ancestor_fact["provider"]
         mapping_conflict = execute(
             connection,
             "SELECT 1 FROM taxonomy_conflicts WHERE taxon_id=:id "

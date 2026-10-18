@@ -47,13 +47,18 @@ class SQLAlchemyTaxonRepository:
             )
 
     def upsert(self, candidate: ProviderTaxon, *, observed_at: datetime) -> TaxonRecord:
-        identifier = LocalTaxonomyCatalog(self._engine).publish(candidate, retrieved_at=observed_at)
+        catalog = LocalTaxonomyCatalog(self._engine)
         with self._engine.begin() as connection:
-            self._store_image(connection, identifier, candidate)
+            connection.exec_driver_sql("BEGIN IMMEDIATE")
+            identifier, selected = catalog.publish_on(
+                connection, candidate, retrieved_at=observed_at
+            )
+            if selected:
+                self._store_image(connection, identifier, candidate, observed_at=observed_at)
             record = self._get(connection, identifier, observed_at)
-        if record is None:
-            raise RuntimeError("Taxon cache upsert did not persist its record.")
-        return record
+            if record is None:
+                raise RuntimeError("Taxon cache upsert did not persist its record.")
+            return record
 
     def get(self, taxon_id: UUID, *, stale_after: datetime) -> TaxonRecord | None:
         with self._engine.connect() as connection:
@@ -339,8 +344,26 @@ class SQLAlchemyTaxonRepository:
         )
 
     def _store_image(
-        self, connection: Connection, taxon_id: UUID, candidate: ProviderTaxon
+        self,
+        connection: Connection,
+        taxon_id: UUID,
+        candidate: ProviderTaxon,
+        *,
+        observed_at: datetime,
     ) -> None:
+        previous = connection.execute(
+            text("SELECT source_url,retrieved_at FROM taxon_images WHERE taxon_id=:taxon_id"),
+            {"taxon_id": str(taxon_id)},
+        ).first()
+        checked = connection.execute(
+            text("SELECT image_checked_at FROM taxa WHERE taxon_id=:taxon_id"),
+            {"taxon_id": str(taxon_id)},
+        ).scalar_one_or_none()
+        if (
+            previous and previous.retrieved_at and _datetime(previous.retrieved_at) > observed_at
+        ) or (checked is not None and _datetime(checked) > observed_at):
+            return
+        observed = observed_at.astimezone(UTC).isoformat(timespec="microseconds")
         fields = (
             candidate.image_source_url,
             candidate.image_creator,
@@ -358,11 +381,18 @@ class SQLAlchemyTaxonRepository:
                     text("DELETE FROM taxon_images WHERE taxon_id=:taxon_id"),
                     {"taxon_id": str(taxon_id)},
                 )
+                # Retain the no-image observation watermark independently of the
+                # deleted row. A missing taxonomy image does not exhaust explicit
+                # discovery through the existing media-provider cascade.
+                connection.execute(
+                    text(
+                        "UPDATE taxa SET image_resolution_state=NULL,image_checked_at=:observed "
+                        "WHERE taxon_id=:taxon_id"
+                    ),
+                    {"taxon_id": str(taxon_id), "observed": observed},
+                )
             return
-        previous_source = connection.execute(
-            text("SELECT source_url FROM taxon_images WHERE taxon_id=:taxon_id"),
-            {"taxon_id": str(taxon_id)},
-        ).scalar_one_or_none()
+        previous_source = previous.source_url if previous else None
         connection.execute(
             text(
                 "INSERT INTO taxon_images "
@@ -387,7 +417,7 @@ class SQLAlchemyTaxonRepository:
                 "provider": candidate.provider,
                 "provider_record_id": (candidate.image_provider_record_id or candidate.provider_id),
                 "source_page_url": candidate.image_source_page_url or candidate.source_url,
-                "retrieved_at": datetime.now(UTC).isoformat(timespec="microseconds"),
+                "retrieved_at": observed,
             },
         )
         connection.execute(
@@ -397,7 +427,7 @@ class SQLAlchemyTaxonRepository:
             ),
             {
                 "taxon_id": str(taxon_id),
-                "checked_at": datetime.now(UTC).isoformat(timespec="microseconds"),
+                "checked_at": observed,
             },
         )
         if previous_source is not None and previous_source != candidate.image_source_url:

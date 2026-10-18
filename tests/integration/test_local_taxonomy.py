@@ -1519,3 +1519,48 @@ def test_alias_mapping_does_not_mix_obsolete_edges_across_coherent_views(catalog
         catalog.promote(generation)
         assert [item.taxon_id for item in catalog.resolve(second).ancestry] == [first]
         assert {r.provider_id for r in catalog.resolve(first).provider_references} == {"x", "alias"}
+
+
+@pytest.mark.parametrize("parent_scope", ["overlay", "snapshot"])
+def test_ancestry_keeps_the_child_relationship_namespace(catalog, parent_scope):
+    foreign_root = catalog.publish(
+        replace(taxon("foreign-grand", "Foreign grandparent"), provider="other"), retrieved_at=NOW
+    )
+    parent = catalog.publish(
+        replace(
+            taxon("foreign-parent", "Foreign parent", parent_provider_id="foreign-grand"),
+            provider="other",
+        ),
+        retrieved_at=NOW,
+    )
+    catalog.map_identity(
+        parent,
+        "fixture",
+        "parent",
+        source_url="https://example.test/parent",
+        decided_by="Owner",
+        reason="Explicit cross-provider parent identity",
+    )
+    facts = [
+        taxon("grand", "Fixture grandparent"),
+        taxon("parent", "Fixture parent", parent_provider_id="grand"),
+    ]
+    if parent_scope == "overlay":
+        for fact in facts:
+            catalog.publish(fact, retrieved_at=NOW)
+    else:
+        generation = stage(catalog, "Fixture ancestry", facts)
+        for conflict in catalog.conflicts():
+            catalog.resolve_conflict(
+                conflict.conflict_id, decided_by="Owner", reason="Retain origin"
+            )
+        catalog.promote(generation)
+    child = catalog.publish(
+        taxon("child", "Fixture child", parent_provider_id="parent"), retrieved_at=NOW
+    )
+    assert [item.scientific_name for item in catalog.resolve(child).ancestry] == [
+        "Fixture parent",
+        "Fixture grandparent",
+    ]
+    assert catalog.resolve(parent).scientific_name == "Foreign parent"
+    assert foreign_root not in {item.taxon_id for item in catalog.resolve(child).ancestry}

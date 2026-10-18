@@ -209,13 +209,13 @@ existing permanent-identity/catalog-index integrity checks; the previously faili
 qualifies the final committed tree.
 
 The [catalog Pi receipt](pi-synthetic-final.json) imports and promotes **10,001 synthetic rows**:
-import 79.018 seconds (28.840 CPU seconds), promotion 7.266 seconds including lock/commit I/O,
-warm search median 85.1 ms / p95 101.2 ms, peak RSS 110,072 KiB. The default 10,000 concurrent-delta
+import 79.403 seconds (29.926 CPU seconds), promotion 5.631 seconds including lock/commit I/O,
+warm search median 86.2 ms / p95 105.8 ms, peak RSS 110,184 KiB. The default 10,000 concurrent-delta
 limit is retained; this capacity measurement explicitly uses a 30-second SQL-work budget. The
 installed X1 binary refuses schema 24 and the database hash remains unchanged. SHA-256 bindings
 cover every application/migration Python source and the measurement script; they identify the
-measured working tree committed as `493c2705175eb6f608e6195ee0f92d290b30c92e`. This supersedes
-earlier receipts for catalog performance evidence and remains synthetic development qualification only.
+measured working tree before the accompanying implementation commit. This supersedes earlier
+receipts for catalog performance evidence and remains synthetic development qualification only.
 
 [Thirty focused graph/alias/publication cases](coherent-alias-views.log) passed after the final
 alias correction. Explicit mappings validate each coherent generation/overlay/fallback selection
@@ -228,7 +228,18 @@ in this correction.
 [All 38 archive tests](archive-optional-status.log) passed after normalizing optional taxonomic-status
 cells: missing, empty and whitespace-only values become `unknown`; surrounding whitespace and case
 are normalized before the existing supported-status validation. Dry-run and applied staging exercise
-the same reader. The Pi measurement above does not execute the archive reader; its catalog and
-measurement-script hashes remain unchanged after this archive-only correction. The recorded full
-source snapshot continues to identify the measured `493c270` tree, rather than falsely claiming that
-the later archive normalization was present during that measurement.
+the same reader. 
+
+The [19-test directory suite](atomic-directory-images.log) passed with publication and image
+mutation in one `BEGIN IMMEDIATE` transaction. Publication returns whether the incoming observation
+is actually selected; rejected facts, foreign-provider overlays and observations beneath newer
+snapshots cannot mutate the selected image. Image freshness uses the observation time, retaining
+a durable watermark even after deletion, so late responses cannot replace, delete or resurrect
+newer image state. Image/readback failures roll back the complete observation. Missing taxonomy
+images still permit the existing explicit media-provider discovery cascade.
+
+[Provider ancestry and image race regressions](provider-ancestry-image-races.log) passed: ancestry
+keeps the child's relationship provider and coherent active-generation/overlay/fallback view even
+when a parent UUID prefers another provider. It never splices independently qualified provider
+trees. The [historical compatibility run](image-historical-compatibility.log) also passed before
+the final image-watermark correction; the unchanged hosted gate qualifies the final tree.
