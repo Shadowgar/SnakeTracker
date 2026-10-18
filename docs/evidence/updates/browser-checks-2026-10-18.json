@@ -1,0 +1,54 @@
+{
+  "checked_at_utc": "2026-10-18T15:37:11.933190+00:00",
+  "scope": "Isolated /tmp synthetic database and own loopback preview only; no production access",
+  "desktop": {
+    "width": 1440,
+    "height": 900,
+    "horizontal_overflow": false,
+    "sidebar_visible": true
+  },
+  "mobile": {
+    "width": 390,
+    "height": 844,
+    "horizontal_overflow": false,
+    "bottom_navigation_visible": true,
+    "disclosure_height_px": 44
+  },
+  "additional_widths_without_overflow": [
+    320,
+    768
+  ],
+  "keyboard": {
+    "enter_opens_story": true,
+    "space_closes_story": true,
+    "focus_outline_px": 2,
+    "more_menu_navigation": true
+  },
+  "reduced_motion_transition_seconds": 1e-05,
+  "image_failures": [],
+  "console_errors": [],
+  "failed_requests": [],
+  "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+  "sampled_contrast_ratios": {
+    ".updates-feature-date": 5,
+    ".updates-photo-credit": 5,
+    ".updates-story > summary": 6.91,
+    ".updates-month-count": 5,
+    ".updates-empty p": 10.5
+  },
+  "contrast_limit": "Representative rendered text against nearest solid surface; not a complete accessibility certification",
+  "synthetic_rollback": {
+    "latest_recorded_version": "preview-1",
+    "restored_version_first": true,
+    "prior_deployment_retained": true,
+    "records": 2,
+    "production_claim": false
+  },
+  "screenshots": {
+    "synthetic-rollback-preview.png": "67e152408ffdda869529e213e67a67f4f84e9cb2cd36ff8cac9c5ae6af0673b5",
+    "desktop-full.png": "4daac2e3231e3da185771f16ddc08771ed9f11ae7089ac0e9c852ee3da8755f7",
+    "mobile-390x844.png": "4c9c74ea6ff80de81c1e84da2379d78bebd8f277621bae0ae023b795056c4211",
+    "desktop-1440x900.png": "9d15db7a24037bf5021a0736b4784179b857255792e7bea27543ceb20f76ff2a",
+    "mobile-history.png": "1ee1a9c711b77ceda733a016615b7ce0ebf4af8b03bd6f70b5d600b61ca4a173"
+  }
+}

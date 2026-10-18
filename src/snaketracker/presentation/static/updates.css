@@ -106,3 +106,87 @@
 .updates-bar-fill-5 { width: 56%; }
 .updates-bar-fill-7 { width: 78%; }
 .updates-bar-fill-9 { width: 100%; }
+
+/* Finish within the approved compact, photo-led Care Keeper visual system. */
+.updates-page { gap: 1.8rem; }
+.updates-hero { grid-template-columns: minmax(0,1.15fr) minmax(14rem,.85fr); padding: 1.65rem 2rem; background: radial-gradient(ellipse at 10% 10%,#241c34 0%,transparent 65%),#111016; gap: 2rem; }
+.updates-hero h1 { font-size: clamp(2rem,3.2vw,2.8rem); max-width: 20ch; }
+.updates-hero-copy { gap: .75rem; }
+.updates-lede { max-width: 45ch; font-size: 1rem; }
+.updates-art { min-height: 0; max-width: 29rem; justify-self: end; }
+.updates-art img { max-height: 7.2rem; }
+.updates-art-label { font-size: .76rem; padding: .4rem; }
+.updates-hero-actions .updates-history-link { background: transparent; color: var(--color-text-secondary); padding-inline: .25rem; font-weight: 600; font-size: .88rem; }
+.updates-hero-actions .updates-history-link:hover { color: var(--color-text); text-decoration: underline; }
+.updates-section-index { flex: 0 0 auto; color: var(--color-text-muted); font-size: .75rem; padding-bottom: .15rem; margin-left: 1rem; }
+.updates-page h2 { font-size: clamp(1.3rem,2vw,1.65rem); }
+.updates-section-heading p:not(.page-kicker) { font-size: .9rem; }
+.updates-featured-grid { grid-template-columns: 1.2fr 1fr 1fr; }
+.updates-feature-card { transition: border-color .2s, transform .2s; }
+.updates-feature-card:hover { border-color: #62517d; transform: translateY(-2px); }
+.updates-feature-media img { height: 13rem; aspect-ratio: auto; }
+.updates-feature-copy { gap: .55rem; padding: 1.1rem; }
+.updates-feature-copy h3 { font-size: 1.2rem; }
+.updates-photo-credit { display: block; margin: 0; color: var(--color-text-muted); font-size: .7rem; line-height: 1.5; overflow-wrap: anywhere; }
+.updates-photo-credit a { color: var(--color-text-secondary); text-underline-offset: 2px; }
+.updates-photo-credit a:hover { color: var(--color-primary); }
+.updates-story { margin-top: auto; padding-top: .35rem; }
+.updates-story > summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 2.75rem; cursor: pointer; color: var(--color-primary); font-size: .85rem; font-weight: 700; list-style: none; }
+.updates-story > summary::-webkit-details-marker { display: none; }
+.updates-story > summary span { transition: transform .2s; font-size: 1.1rem; }
+.updates-story[open] > summary span { transform: rotate(45deg); }
+.updates-story-body { border-top: 1px solid var(--color-border); padding-top: .65rem; font-size: .85rem; }
+.updates-story-body ul { padding-left: 1.1rem; display: grid; gap: .5rem; color: var(--color-text-secondary); line-height: 1.5; }
+.updates-page .updates-story-benefit { margin: .25rem 0 .7rem; color: var(--color-text); font-size: .9rem; }
+.updates-page .updates-action { border-left: 2px solid var(--color-primary); padding: .15rem 0 .15rem .75rem; color: var(--color-text-secondary); font-size: .85rem; }
+.updates-action strong { display: block; color: var(--color-text); margin-bottom: .3rem; }
+.updates-timeline { position: relative; padding-left: 1.5rem; }
+.updates-timeline::before { content: ""; position: absolute; top: 1.5rem; bottom: 2rem; left: .65rem; width: 1px; background: var(--color-border); }
+.updates-timeline-card { position: relative; grid-template-columns: 8rem minmax(0,1fr); }
+.updates-timeline-card::before { content: ""; width: .4rem; height: .4rem; border: 2px solid var(--color-surface); border-radius: 50%; background: var(--color-primary); position: absolute; top: 1.4rem; left: -1.1rem; }
+.updates-timeline-visual img { display: block; width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: .6rem; }
+.updates-timeline-visual .updates-photo-credit { margin-top: .35rem; font-size: .65rem; }
+.updates-timeline-copy > .updates-story { max-width: 65ch; }
+.updates-timeline-copy h3 { font-size: 1.05rem; }
+.updates-live-intro { margin: 0; color: var(--color-text-secondary); font-size: .9rem; }
+.updates-featured,.updates-journey { scroll-margin-top: 1rem; }
+@media (max-width: 63rem) {
+  .updates-hero { grid-template-columns: minmax(0,1.2fr) minmax(9rem,.8fr); padding: 1.25rem; gap: 1rem; }
+  .updates-art img { max-height: 6rem; }
+  .updates-art-label { display: none; }
+  .updates-featured-grid { grid-template-columns: 1fr 1fr; }
+  .updates-feature-card:first-child { grid-column: 1/-1; display: grid; grid-template-columns: 1fr 1fr; }
+  .updates-feature-card:first-child .updates-feature-media img { height: 100%; min-height: 15rem; }
+}
+@media (max-width: 42rem) {
+  .updates-hero { grid-template-columns: 1fr; padding: 1.15rem; gap: 1.1rem; }
+  .updates-hero h1 { font-size: 2rem; }
+  .updates-art { grid-template-rows: 1fr; width: 100%; max-width: none; justify-self: stretch; gap: .65rem; }
+  .updates-art img { max-height: 7rem; aspect-ratio: 1.5; transform: none; }
+  .updates-art img:nth-child(n+3) { display: none; }
+  .updates-hero-actions { gap: .3rem .9rem; }
+  .updates-hero-actions a { font-size: .85rem; padding: .6rem .9rem; }
+  .updates-hero-actions .updates-history-link { font-size: .8rem; }
+  .updates-section-index { display: none; }
+  .updates-featured-grid { grid-template-columns: 1fr; }
+  .updates-feature-card:first-child { display: flex; grid-column: auto; }
+  .updates-feature-card:first-child .updates-feature-media img,.updates-feature-media img { height: 12rem; min-height: 0; }
+  .updates-feature-copy { padding: 1rem; }
+  .updates-page { gap: 1.7rem; }
+  .updates-timeline-card { grid-template-columns: 4.5rem minmax(0,1fr); gap: .75rem; }
+  .updates-timeline-visual img { aspect-ratio: 1; }
+  .updates-timeline-visual .updates-photo-credit { font-size: .6rem; }
+  .updates-empty { padding: 1rem; gap: .75rem; }
+  .updates-empty p { font-size: .88rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .updates-feature-card,.updates-story > summary span { transition: none; }
+  .updates-feature-card:hover { transform: none; }
+}
+
+@media (max-width: 42rem) {
+  .updates-page { padding-inline: .75rem; }
+  .updates-art { display: none; }
+  .updates-hero-actions { flex-wrap: nowrap; gap: .75rem; }
+  .updates-hero-actions a { white-space: nowrap; }
+}

@@ -55,3 +55,29 @@ The deployment runbook must preserve this ledger across upgrades/rollbacks and a
 ## Limits
 
 This audit proves the repository history and the editorial crosswalk. It does not authenticate timestamps for previously deployed web builds, and it does not replace a live production audit or release-signoff process. New milestones after this snapshot require an explicit editorial update.
+
+## Completion verification and individual corrections
+
+The original inventory was preserved. Its 294 commit identities exactly match `git rev-list` at
+`a6d54a7`, and all 23 PR merge states and exact timestamps were checked against GitHub again.
+The 21 merged PRs still map to the same 16 stories; #19 and #21 remain excluded. Monthly counts
+7 / 9 / 5 agree with actual merge timestamps, not authored commit dates.
+
+The [verification crosswalk](2026-10-18-audit-verification.json) records 23 meaningful individual
+commits and their changed paths in addition to the PR mapping. These include changes inside
+merged branches as well as corrections; a commit need not have its own PR or story to matter.
+They cover password recovery, phone uploads, decimal weight/length retention, enclosure history,
+Today/Calendar, card interactions, stock acquisition/spending, keeper-history filtering and the
+compact dedicated species-reference tab. Relevant corrections are now named within expandable
+stories. Story dates anchor the associated development milestone; later corrections are
+explicitly described as later work, not as independently dated production releases.
+
+Credits and SHA-256 hashes for the reused Crested Gecko and Pink-toed Tarantula photographs
+were checked against the existing local reference manifest. Their original files are unchanged.
+The remaining art is the existing generic group illustration set. No household photographs, new
+remote image dependency or fabricated usage chart was introduced.
+
+No production backfill was manufactured. Repository owner-review deployment receipts are
+historical evidence, but this PR does not establish the currently running production build or
+create confirmed live records from merge dates. The persistent ledger accepts separately verified
+release events only; a future authorized operator can publish those after deployment verification.

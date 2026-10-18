@@ -75,3 +75,41 @@ sourced figures and must never fabricate usage, animal counts, or adoption stati
 Every future production update needs one human-readable, verified entry. Its date must
 reflect the successful deployment, not PR merge. The page itself adds no production
 change during code review and does not backfill prior deployments automatically.
+
+## Publishing a verified record
+
+A small offline command implements the atomic append described above. It never deploys,
+restarts a service, opens an application database, or replaces previous release entries.
+It validates the entire existing history before publishing another record. Run it as the
+service/data owner (or another UID readable by the web process): replacement files use mode
+`0600`, so publishing as an unrelated root/operator UID would prevent the app reading them.
+
+```sh
+# Validate notes and the existing ledger; no persistent files are created.
+uv run python -m snaketracker.operations.record_release verified-notes.json \
+  --ledger /absolute/persistent/data/production-release-history.json
+
+# Only after separately authorized, successful deployment verification:
+uv run python -m snaketracker.operations.record_release verified-notes.json \
+  --ledger /absolute/persistent/data/production-release-history.json --apply
+```
+
+The command serializes competing appends, writes and fsyncs a same-directory temporary file,
+atomically replaces the ledger, and fsyncs the parent directory. It rejects unverified notes,
+future/duplicate deployment instants, invalid existing history and size/count overflow. It
+never trims old entries to make room. The web reader orders records by the actual instant,
+including timestamps with different offsets, and hides ambiguous same-instant records.
+Exact repeated receipts coalesce for display. An ambiguous or invalid entry needs operator
+review; a page view never repairs it.
+
+For a rollback, append a **new** `rolled_back` event with the restored running version/build
+and actual restoration time. Its notes describe what was restored, not features from the
+withdrawn version. Older deployment events remain visible as history. Ledger dates are not
+inferred from the bundled development stories. The UI describes the latest *recorded* version;
+it does not claim the ledger is an independent probe of the currently running application.
+
+The persistent ledger lives outside the image, beside the database. Preserve this file and
+its permissions when changing images or rolling back, and retain it with release recovery
+materials. This PR does not execute either command against production or change the existing
+backup/restore workflow. Keep historical receipts if a directory is restored or moved; never
+initialize an empty release history over an existing one.

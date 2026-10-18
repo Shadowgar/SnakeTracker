@@ -1,0 +1,32 @@
+[
+  {
+    "verified": true,
+    "version": "preview-2",
+    "status": "deployed",
+    "deployed_at": "2026-10-17T12:00:00Z",
+    "build_sha": "bc0025b78f744f39df5745217aac40e68b3ff42c",
+    "title": "Preview only: a website update",
+    "description": "Synthetic notes for checking this page. This is not a production deployment.",
+    "changes": [
+      {
+        "kind": "Improved",
+        "text": "Preview of clearer care information."
+      }
+    ]
+  },
+  {
+    "verified": true,
+    "version": "preview-1",
+    "status": "rolled_back",
+    "deployed_at": "2026-10-17T13:00:00Z",
+    "build_sha": "bc0025b78f744f39df5745217aac40e68b3ff42c",
+    "title": "Preview only: an earlier version restored",
+    "description": "Synthetic notes for checking this page. This is not a production deployment.",
+    "changes": [
+      {
+        "kind": "Improved",
+        "text": "Preview of clearer care information."
+      }
+    ]
+  }
+]

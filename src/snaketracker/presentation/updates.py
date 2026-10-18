@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +24,9 @@ def development_history() -> dict[str, Any]:
     """Read bundled, source-audited milestones (not a deployment log)."""
     with HISTORY_FILE.open(encoding="utf-8") as handle:
         data: dict[str, Any] = json.load(handle)
+    data["milestones"].sort(key=lambda item: item["date"], reverse=True)
+    for item in data["milestones"]:
+        item["date_label"] = datetime.fromisoformat(item["date"]).strftime("%B %-d, %Y")
     return data
 
 
@@ -75,6 +78,7 @@ def _verified_release(entry: Any) -> dict[str, Any] | None:
         clean_changes.append({"kind": kind, "text": wording.strip()})
     return {
         "version": version,
+        "build_sha": build_sha,
         "title": title.strip(),
         "description": description.strip(),
         "deployed_at": instant.isoformat(),
@@ -84,18 +88,35 @@ def _verified_release(entry: Any) -> dict[str, Any] | None:
     }
 
 
-def confirmed_production_updates(path: Path | None) -> tuple[dict[str, Any], ...]:
+def confirmed_production_updates(
+    path: Path | None, *, now: datetime | None = None
+) -> tuple[dict[str, Any], ...]:
     """Read only compact, operator-verified records from persistent storage."""
     if path is None:
         return ()
     try:
-        if path.stat().st_size > MAX_RELEASE_BYTES:
+        with path.open("rb") as handle:
+            contents = handle.read(MAX_RELEASE_BYTES + 1)
+        if len(contents) > MAX_RELEASE_BYTES:
             return ()
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(contents.decode("utf-8"))
     except (OSError, UnicodeError, ValueError):
         return ()
     if not isinstance(data, list) or len(data) > 200:
         return ()
-    releases = [record for item in data if (record := _verified_release(item)) is not None]
-    releases.sort(key=lambda item: item["deployed_at"], reverse=True)
-    return tuple(releases)
+    observed = now or datetime.now(UTC)
+    # An instant cannot identify two different confirmed deployments. Keep an
+    # ambiguous instant out of the public history; exact repeated receipts coalesce.
+    releases: dict[datetime, dict[str, Any]] = {}
+    ambiguous: set[datetime] = set()
+    for item in data:
+        record = _verified_release(item)
+        if record is None:
+            continue
+        instant = datetime.fromisoformat(record["deployed_at"])
+        if instant > observed:
+            continue
+        if instant in releases and releases[instant] != record:
+            ambiguous.add(instant)
+        releases[instant] = record
+    return tuple(releases[key] for key in sorted(releases, reverse=True) if key not in ambiguous)

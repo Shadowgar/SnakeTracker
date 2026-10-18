@@ -27,12 +27,25 @@
       "title": "Find animals by more names",
       "description": "We built a better species directory that understands scientific names, common names, and other known names. It's designed to keep saved species connected when the directory is updated.",
       "benefit": "Finding the right animal should be easier as we add more species data.",
-      "image": "/static/animal-fallbacks/lizard.webp",
-      "alt": "Lizard illustration",
+      "image": "/static/species-references/correlophus-ciliatus.webp",
+      "alt": "Crested gecko reference photograph",
       "prs": [
         23
       ],
-      "kind": "development"
+      "kind": "development",
+      "details": [
+        "Search by scientific names, common names, or other names a species is known by.",
+        "Saved species links stay connected when the directory is refreshed.",
+        "More names can be added without changing your existing animal records."
+      ],
+      "action": "No action needed. A larger species collection still needs a separate website update.",
+      "featured": true,
+      "credit": {
+        "creator": "Lennart Hudel",
+        "license_code": "cc-by",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "source_page_url": "https://www.inaturalist.org/photos/33606417"
+      }
     },
     {
       "id": "x1",
@@ -47,22 +60,13 @@
       "prs": [
         22
       ],
-      "kind": "development"
-    },
-    {
-      "id": "guides",
-      "month": "October 2026",
-      "date": "2026-10-05",
-      "category": "Care guides",
-      "title": "Helpful care guides, with sources",
-      "description": "Species pages gained clearer care information and a quick overview. When a guide is available, you can check its source instead of guessing where the advice came from.",
-      "benefit": "Understand the available guidance and where it came from, without wading through long documents.",
-      "image": "/static/animal-fallbacks/spider.webp",
-      "alt": "Spider illustration",
-      "prs": [
-        17
+      "kind": "development",
+      "details": [
+        "Different animals can have different care needs. We made room for that.",
+        "Existing animals keep their profiles, care records, and familiar choices."
       ],
-      "kind": "feature"
+      "action": "No action needed. Frogs, fish, birds, dogs, and cats are still for future updates.",
+      "featured": true
     },
     {
       "id": "reliability",
@@ -78,7 +82,41 @@
         18,
         20
       ],
-      "kind": "fix"
+      "kind": "fix",
+      "details": [
+        "Made care records more dependable when several changes happen together.",
+        "Kept older records readable while preparing for more types of animals."
+      ],
+      "action": "No action needed. Your existing care history stays in place.",
+      "featured": false
+    },
+    {
+      "id": "guides",
+      "month": "October 2026",
+      "date": "2026-10-05",
+      "category": "Care guides",
+      "title": "Helpful care guides, with sources",
+      "description": "Species pages gained clearer care information and a quick overview. When a guide is available, you can check its source instead of guessing where the advice came from.",
+      "benefit": "Understand the available guidance and where it came from, without wading through long documents.",
+      "image": "/static/species-references/avicularia-avicularia.webp",
+      "alt": "Pink-toed tarantula reference photograph",
+      "prs": [
+        17
+      ],
+      "kind": "feature",
+      "details": [
+        "Read available care guidance and follow its sources.",
+        "Find species information in its own tab on an animal profile.",
+        "Shorter reference sections make the useful details easier to find on a phone."
+      ],
+      "action": "Look for the species information tab on a linked animal when this update is available.",
+      "featured": true,
+      "credit": {
+        "creator": "original: R. Bertani processing: P. Coxhead",
+        "license_code": "cc-by",
+        "license_url": "https://creativecommons.org/licenses/by/3.0",
+        "source_page_url": "https://commons.wikimedia.org/wiki/File:Avicularia_avicularia_female_morphotype_1_ZK36.jpg"
+      }
     },
     {
       "id": "support",
@@ -93,7 +131,13 @@
       "prs": [
         16
       ],
-      "kind": "behind"
+      "kind": "behind",
+      "details": [
+        "Support can check account and system problems in a read-only console.",
+        "Looking into a problem does not require editing your animal records."
+      ],
+      "action": "No action needed. These tools are for authorized support staff.",
+      "featured": false
     },
     {
       "id": "clean-history",
@@ -108,7 +152,13 @@
       "prs": [
         15
       ],
-      "kind": "fix"
+      "kind": "fix",
+      "details": [
+        "Removed background stock entries from the care history shown to keepers.",
+        "Kept enclosure cleaning and water care visible where they belong."
+      ],
+      "action": "No action needed. The clearer history uses your existing records.",
+      "featured": false
     },
     {
       "id": "directory",
@@ -118,12 +168,25 @@
       "title": "Search for animals and plants",
       "description": "We added a species and plant directory, with suggestions when you type a name and the option to enter an animal manually if you can't find it.",
       "benefit": "Adding an animal can start with a name you know, even when a species isn't listed.",
-      "image": "/static/animal-fallbacks/lizard.webp",
-      "alt": "Lizard illustration",
+      "image": "/static/species-references/correlophus-ciliatus.webp",
+      "alt": "Crested gecko reference photograph",
       "prs": [
         14
       ],
-      "kind": "feature"
+      "kind": "feature",
+      "details": [
+        "Find animal and plant species by typing a name.",
+        "Use a suggested species or enter an animal manually when it is missing.",
+        "Clearer species pictures and more compact cards help you browse."
+      ],
+      "action": "Try a common or scientific name when adding an animal; manual entry remains available.",
+      "featured": false,
+      "credit": {
+        "creator": "Lennart Hudel",
+        "license_code": "cc-by",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "source_page_url": "https://www.inaturalist.org/photos/33606417"
+      }
     },
     {
       "id": "stock",
@@ -141,7 +204,14 @@
         12,
         13
       ],
-      "kind": "feature"
+      "kind": "feature",
+      "details": [
+        "Record purchases and see how much food or other stock is left.",
+        "Correct supply counts when the shelf and the saved number differ.",
+        "Review spending by category and see whether costs are rising or falling."
+      ],
+      "action": "Check your stock counts against what you have before relying on low-stock reminders.",
+      "featured": false
     },
     {
       "id": "delete",
@@ -156,7 +226,13 @@
       "prs": [
         9
       ],
-      "kind": "fix"
+      "kind": "fix",
+      "details": [
+        "Remove an incorrect care entry from the usual view.",
+        "Keep a record of the correction so the history still makes sense."
+      ],
+      "action": "Only use the correction option for an entry that was recorded by mistake.",
+      "featured": false
     },
     {
       "id": "redesign",
@@ -171,7 +247,15 @@
       "prs": [
         8
       ],
-      "kind": "feature"
+      "kind": "feature",
+      "details": [
+        "See today’s care tasks or plan ahead in Calendar.",
+        "Use Add care to record a feeding, measurement, or other care quickly.",
+        "A clearer phone layout, wider desktop views, and easier photo uploads reduce extra steps.",
+        "Lizards and scorpions joined the animal choices, alongside snakes and spiders."
+      ],
+      "action": "Use the navigation at the bottom on a phone, or the sidebar on a larger screen.",
+      "featured": false
     },
     {
       "id": "spiders",
@@ -186,7 +270,13 @@
       "prs": [
         7
       ],
-      "kind": "feature"
+      "kind": "feature",
+      "details": [
+        "Record molts and premolt signs as well as feeding and other care.",
+        "Reminders follow the animal’s care needs instead of treating every animal like a snake."
+      ],
+      "action": "Choose the appropriate animal group when creating a profile.",
+      "featured": false
     },
     {
       "id": "reminders",
@@ -201,7 +291,14 @@
       "prs": [
         6
       ],
-      "kind": "feature"
+      "kind": "feature",
+      "details": [
+        "Set care schedules on individual animal profiles.",
+        "See what is due now and what is coming up.",
+        "Keep basic supplies and care expenses together."
+      ],
+      "action": "Set a schedule that suits each animal, and review it when their needs change.",
+      "featured": false
     },
     {
       "id": "profiles",
@@ -209,14 +306,21 @@
       "date": "2026-08-10",
       "category": "Your animals",
       "title": "Animal profiles, photos, and enclosures",
-      "description": "The first animal pages brought together feeding and care notes, measurements, enclosure changes, photos, and corrections.",
+      "description": "The first animal pages brought feeding notes, photographs, measurements, and enclosure moves together, with a history of corrections.",
       "benefit": "See an animal's story in one place and keep its care records organized.",
       "image": "/static/animal-fallbacks/snake.webp",
       "alt": "Snake illustration",
       "prs": [
         5
       ],
-      "kind": "feature"
+      "kind": "feature",
+      "details": [
+        "Keep photographs, feeding notes, measurements, and enclosure moves in one profile.",
+        "Correct details while preserving earlier care history.",
+        "Later corrections kept decimal weights and lengths from being rounded away."
+      ],
+      "action": "Add the measurements and photos you want to keep; existing records stay available.",
+      "featured": false
     },
     {
       "id": "history",
@@ -231,7 +335,13 @@
       "prs": [
         4
       ],
-      "kind": "behind"
+      "kind": "behind",
+      "details": [
+        "Saved changes keep a clear history when details are updated.",
+        "Corrections preserve the earlier information instead of quietly replacing it."
+      ],
+      "action": "No action needed. These improvements support the records you already keep.",
+      "featured": false
     },
     {
       "id": "accounts",
@@ -246,7 +356,14 @@
       "prs": [
         3
       ],
-      "kind": "feature"
+      "kind": "feature",
+      "details": [
+        "Create a personal account and a private household space.",
+        "Sign in to find your own collection and care records.",
+        "Later improvements added password recovery and clearer account controls."
+      ],
+      "action": "Use your own account, and keep its sign-in details private.",
+      "featured": false
     },
     {
       "id": "beginning",
@@ -254,7 +371,7 @@
       "date": "2026-08-05",
       "category": "Getting started",
       "title": "The beginning of Care Keeper",
-      "description": "We created the basic application, its local database, and the tools needed to build the animal-care features that followed.",
+      "description": "Care Keeper began with a simple goal: a dependable place to organize animal care, ready for the profiles and care tools that followed.",
       "benefit": "The foundation for everything else in Care Keeper.",
       "image": "/static/animal-fallbacks/snake.webp",
       "alt": "Snake illustration",
@@ -262,7 +379,13 @@
         1,
         2
       ],
-      "kind": "behind"
+      "kind": "behind",
+      "details": [
+        "Created the first Care Keeper application.",
+        "Put the groundwork in place for profiles, care records, and the features that followed."
+      ],
+      "action": "No action needed. This is where the Care Keeper story began.",
+      "featured": false
     }
   ]
 }

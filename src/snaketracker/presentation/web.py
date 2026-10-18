@@ -2121,19 +2121,17 @@ def create_web_router(
 
         history = development_history()
         milestones = history["milestones"]
+        archived = [item for item in milestones if not item.get("featured")]
         archive = tuple(
-            {
-                "label": month,
-                "entries": tuple(item for item in milestones[3:] if item["month"] == month),
-            }
-            for month in ("October 2026", "September 2026", "August 2026")
+            {"label": month, "entries": tuple(item for item in archived if item["month"] == month)}
+            for month in dict.fromkeys(item["month"] for item in archived)
         )
         return protected_page(
             request,
             "updates.html",
             principal,
             context={
-                "featured_updates": milestones[:3],
+                "featured_updates": tuple(item for item in milestones if item.get("featured")),
                 "history_months": archive,
                 "merge_activity": history["merge_activity"],
                 "history_audited_at": history["audit_date"],
