@@ -166,6 +166,14 @@ def test_23_to_24_preserves_every_reference_and_immutable_guide_trigger(tmp_path
         )
         connection.execute(
             text(
+                "INSERT INTO taxon_names VALUES "
+                "(:id,'Historical Python','historical python','synonym'),"
+                "(:id,'Royal python alias','royal python alias','alternative_common')"
+            ),
+            {"id": identifier},
+        )
+        connection.execute(
+            text(
                 "INSERT INTO taxon_images(taxon_id,source_url,creator,attribution,"
                 "license_code,license_url,local_filename,local_sha256) "
                 "VALUES(:id,'https://example.test/image',"
@@ -205,6 +213,11 @@ def test_23_to_24_preserves_every_reference_and_immutable_guide_trigger(tmp_path
             == triggers
         )
     catalog = LocalTaxonomyCatalog(engine)
+    summary = catalog.resolve(UUID(identifier))
+    assert summary.synonyms == ("Historical Python",)
+    assert summary.common_names == ("Royal python alias",)
+    assert catalog.search("Historical Python")[0].synonyms == ("Historical Python",)
+    assert catalog.search("Royal python alias")[0].common_names == ("Royal python alias",)
     assert catalog.resolve(UUID(identifier)).scientific_name == "Python regius"
     assert catalog.search("Python")[0].taxon_id == UUID(identifier)
     for sql in (

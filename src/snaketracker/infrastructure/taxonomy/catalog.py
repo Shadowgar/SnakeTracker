@@ -1499,6 +1499,19 @@ class LocalTaxonomyCatalog:
         selected: dict[str, Any] = dict(base)
         if base["catalog_payload"]:
             selected.update(json.loads(base["catalog_payload"]))
+        else:
+            # Schema-23 publications retain their qualified names in the legacy
+            # table rather than a serialized first-publication payload.
+            names = execute(
+                connection,
+                "SELECT name,name_kind FROM taxon_names WHERE taxon_id=:id "
+                "ORDER BY normalized_name,name",
+                id=taxon_id,
+            ).all()
+            selected["synonyms"] = [name for name, kind in names if kind == "synonym"]
+            selected["alternative_common_names"] = [
+                name for name, kind in names if kind == "alternative_common"
+            ]
         selected.update(
             synonyms=selected.get("synonyms", []),
             alternative_common_names=selected.get("alternative_common_names", []),

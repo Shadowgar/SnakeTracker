@@ -401,3 +401,91 @@ def test_optional_archive_status_normalizes_blank_space_and_case(tmp_path, raw, 
         expected,
         expected,
     ]
+
+
+@pytest.mark.parametrize("apply", [False, True])
+def test_operator_parses_the_verified_bytes_when_original_archive_is_replaced(
+    tmp_path, monkeypatch, capsys, apply
+):
+    import hashlib
+    import json
+    import sys
+    from pathlib import Path
+
+    from alembic import command
+    from alembic.config import Config
+
+    from snaketracker.operations import taxonomy
+
+    original = archive(tmp_path)
+    expected = hashlib.sha256(original.read_bytes()).hexdigest()
+    replacement_folder = tmp_path / "replacement"
+    replacement_folder.mkdir()
+    replacement = archive(
+        replacement_folder,
+        taxa="id\tname\tparent\tclass\n1\tAnimalia\t\t\n2\tReplacement species\t1\tAmphibia\n",
+    ).read_bytes()
+    real_reader = taxonomy.read_archive
+    parsed_checksums = []
+
+    def replace_original_before_parsing(path, **kwargs):
+        original.write_bytes(replacement)
+        parsed_checksums.append(hashlib.sha256(Path(path).read_bytes()).hexdigest())
+        yield from real_reader(path, **kwargs)
+
+    monkeypatch.setattr(taxonomy, "read_archive", replace_original_before_parsing)
+    prefix = []
+    if apply:
+        database = tmp_path / "isolated.db"
+        root = Path(__file__).parents[3]
+        config = Config(root / "alembic.ini")
+        config.set_main_option("script_location", str(root / "migrations"))
+        config.set_main_option("sqlalchemy.url", f"sqlite+pysqlite:///{database}")
+        command.upgrade(config, "head")
+        prefix = ["--database", str(database), "--apply"]
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "taxonomy",
+            *prefix,
+            "stage",
+            str(original),
+            "--provider",
+            "fixture",
+            "--label",
+            "Verified bytes",
+            "--source-url",
+            "https://example.test/archive",
+            "--retrieved-at",
+            "2026-10-17T00:00:00Z",
+            "--rights",
+            "Synthetic fixture",
+            "--sha256",
+            expected,
+        ],
+    )
+    taxonomy.main()
+    result = json.loads(capsys.readouterr().out)
+    assert parsed_checksums == [expected]
+    assert original.read_bytes() == replacement
+    assert result.get("state", "ready") == "ready"
+    if not apply:
+        assert result["checksum"] == expected
+    else:
+        engine = taxonomy.create_readonly_sqlite_engine(database)
+        try:
+            with engine.connect() as connection:
+                assert (
+                    connection.exec_driver_sql(
+                        "SELECT checksum FROM taxonomy_generations"
+                    ).scalar_one()
+                    == expected
+                )
+                payload = connection.exec_driver_sql(
+                    "SELECT payload FROM taxonomy_facts "
+                    "WHERE json_extract(payload,'$.provider_id')='2'"
+                ).scalar_one()
+                assert json.loads(payload)["accepted_scientific_name"] == "Rana temporaria"
+        finally:
+            engine.dispose()

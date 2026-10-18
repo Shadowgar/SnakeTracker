@@ -214,7 +214,7 @@ warm search median 86.2 ms / p95 105.8 ms, peak RSS 110,184 KiB. The default 10,
 limit is retained; this capacity measurement explicitly uses a 30-second SQL-work budget. The
 installed X1 binary refuses schema 24 and the database hash remains unchanged. SHA-256 bindings
 cover every application/migration Python source and the measurement script; they identify the
-measured working tree before the accompanying implementation commit. This supersedes earlier
+measured working tree committed as `396d56bc7d52dba6dde3b522cad7031fa6a75b51`. This supersedes earlier
 receipts for catalog performance evidence and remains synthetic development qualification only.
 
 [Thirty focused graph/alias/publication cases](coherent-alias-views.log) passed after the final
@@ -243,3 +243,16 @@ keeps the child's relationship provider and coherent active-generation/overlay/f
 when a parent UUID prefers another provider. It never splices independently qualified provider
 trees. The [historical compatibility run](image-historical-compatibility.log) also passed before
 the final image-watermark correction; the unchanged hosted gate qualifies the final tree.
+
+[All 50 archive/historical-compatibility cases](legacy-aliases-verified-archive.log) passed after
+restoring retained aliases in catalog summaries for schema-23 publications without serialized
+payloads. Alias-matched local search returns those same migrated synonyms/common names.
+The operator now copies and hashes one bounded input stream into private temporary storage;
+both dry-run and applied parsing read that verified copy for the whole operation. Replacing the
+original ZIP between verification and parsing cannot change imported facts or recorded provenance.
+[Two additional database/provenance assertions](verified-archive-database.log) verify the recorded
+checksum and original taxon payload after that replacement. Temporary storage is cleaned on exit.
+
+The Pi receipt above predates these two legacy-alias and operator-input corrections. Its measured
+source snapshot is retained exactly; no performance claim is made for paths added afterward. The
+final unchanged hosted gate qualifies the resulting committed tree.

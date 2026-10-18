@@ -5,10 +5,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+from contextlib import ExitStack
 from dataclasses import asdict
 from datetime import UTC, datetime
 from itertools import batched
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from uuid import UUID
 
 from snaketracker.application.local_taxonomy import GenerationSource
@@ -79,15 +81,37 @@ def main() -> None:
     decision.add_argument("--decided-by", required=True)
     decision.add_argument("--reason", required=True)
     arguments = parser.parse_args()
+    with ExitStack() as resources:
+        _execute(arguments, parser, resources)
+
+
+def _execute(
+    arguments: argparse.Namespace, parser: argparse.ArgumentParser, resources: ExitStack
+) -> None:
     mutating = arguments.action not in {"search", "resolve", "conflicts"}
     if arguments.action == "stage":
         limits = ArchiveLimits()
         if not arguments.archive.is_file() or arguments.archive.stat().st_size > limits.max_bytes:
             parser.error("Archive missing or outside the qualified compressed byte bound")
-        with arguments.archive.open("rb") as handle:
-            checksum = hashlib.file_digest(handle, "sha256").hexdigest()
+        directory = resources.enter_context(
+            TemporaryDirectory(prefix="care-keeper-verified-taxonomy-")
+        )
+        verified = Path(directory) / "archive.zip"
+        digest = hashlib.sha256()
+        copied = 0
+        # Copy and hash one bounded stream. Every parser reads these exact bytes,
+        # even if the operator's original path is replaced or modified later.
+        with arguments.archive.open("rb") as handle, verified.open("xb") as destination:
+            while chunk := handle.read(1024 * 1024):
+                copied += len(chunk)
+                if copied > limits.max_bytes:
+                    parser.error("Archive outside the qualified compressed byte bound")
+                destination.write(chunk)
+                digest.update(chunk)
+        checksum = digest.hexdigest()
         if checksum != arguments.sha256:
             parser.error("Archive checksum does not match the expected SHA-256")
+        arguments.archive = verified
         source = GenerationSource(
             arguments.label,
             arguments.provider,
