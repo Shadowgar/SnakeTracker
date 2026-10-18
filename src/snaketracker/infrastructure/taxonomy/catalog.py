@@ -489,6 +489,218 @@ class LocalTaxonomyCatalog:
             payload=payload,
         )
 
+    def _known_provider_fact(
+        self,
+        connection: Connection,
+        identifier: str,
+        provider: str,
+        generation: str | None,
+        *,
+        publication_generation: str | None = None,
+    ) -> dict[str, Any] | None:
+        # Select one coherent provider view. Historical snapshots must never be
+        # mixed into a newer overlay merely because their edges once existed.
+        selected = execute(
+            connection,
+            "SELECT payload,source_effective_at FROM taxonomy_publications "
+            "WHERE taxon_id=:id AND json_extract(payload,'$.provider')=:provider "
+            "UNION ALL SELECT f.payload,g.snapshot_at FROM taxonomy_facts f "
+            "JOIN taxonomy_generations g USING(generation_id) "
+            "WHERE f.taxon_id=:id AND f.generation_id=:publication AND g.provider=:provider "
+            "AND NOT EXISTS (SELECT 1 FROM taxonomy_publications p WHERE p.taxon_id=:id) LIMIT 1",
+            id=identifier,
+            provider=provider,
+            publication=publication_generation,
+        ).first()
+        snapshot = (
+            execute(
+                connection,
+                "SELECT f.payload,g.snapshot_at AS source_effective_at FROM taxonomy_facts f "
+                "JOIN taxonomy_generations g USING(generation_id) "
+                "WHERE f.taxon_id=:id AND f.generation_id=:generation AND g.provider=:provider",
+                id=identifier,
+                generation=generation,
+                provider=provider,
+            ).first()
+            if generation is not None
+            else None
+        )
+        if snapshot:
+            selected = snapshot
+        overlay = execute(
+            connection,
+            "SELECT payload,source_effective_at FROM taxonomy_overlay "
+            "WHERE taxon_id=:id AND provider=:provider",
+            id=identifier,
+            provider=provider,
+        ).first()
+        if overlay and not (
+            selected
+            and selected.source_effective_at
+            and overlay.source_effective_at
+            and selected.source_effective_at > overlay.source_effective_at
+        ):
+            selected = overlay
+        return dict(json.loads(selected.payload)) if selected else None
+
+    def _validate_relationship_view(
+        self,
+        connection: Connection,
+        fact: dict[str, Any],
+        generation: str | None,
+        *,
+        deadline: float | None = None,
+        publication_generation: str | None = None,
+    ) -> None:
+        current_identity = execute(
+            connection,
+            "SELECT taxon_id FROM taxon_provider_mappings WHERE provider=:provider "
+            "AND provider_id=:pid",
+            provider=fact["provider"],
+            pid=fact["provider_id"],
+        ).scalar_one_or_none()
+        for relationship in ("parent_provider_id", "accepted_provider_id"):
+            seen = {fact["provider_id"]}
+            seen_uuids = {current_identity} if current_identity else set()
+            related = fact.get(relationship)
+            while related:
+                if deadline is not None and time.monotonic() > deadline:
+                    raise ValueError("Taxonomy relationship validation exceeds its time bound.")
+                if related in seen or len(seen) >= 128:
+                    raise ValueError("Taxonomy live relationship cycle or depth bound.")
+                seen.add(related)
+                identifier = execute(
+                    connection,
+                    "SELECT taxon_id FROM taxon_provider_mappings "
+                    "WHERE provider=:provider AND provider_id=:pid",
+                    provider=fact["provider"],
+                    pid=related,
+                ).scalar_one_or_none()
+                if identifier is None:
+                    break  # Live discovery can legitimately know only part of an ancestry.
+                if identifier in seen_uuids:
+                    raise ValueError("Taxonomy live relationship cycle through an identity alias.")
+                seen_uuids.add(identifier)
+                ancestor = self._known_provider_fact(
+                    connection,
+                    identifier,
+                    fact["provider"],
+                    generation,
+                    publication_generation=publication_generation,
+                )
+                if ancestor is None:
+                    break
+                related = ancestor.get(relationship)
+
+    def _relationship_generations(
+        self, connection: Connection, provider: str, *, include: str | None = None
+    ) -> tuple[str | None, ...]:
+        generations = list(
+            execute(
+                connection,
+                "SELECT g.generation_id FROM taxonomy_generations g "
+                "JOIN taxonomy_generation_publications p USING(generation_id) "
+                "WHERE g.provider=:provider AND g.state='ready' LIMIT 129",
+                provider=provider,
+            ).scalars()
+        )
+        if (
+            include is not None
+            and execute(
+                connection,
+                "SELECT 1 FROM taxonomy_generations WHERE generation_id=:id AND provider=:provider",
+                id=include,
+                provider=provider,
+            ).first()
+        ):
+            generations.append(include)
+        contexts = tuple(dict.fromkeys([None, *generations]))
+        if len(contexts) > 129:
+            raise ValueError("Taxonomy validation exceeds the retained generation bound.")
+        return contexts
+
+    def _validate_prospective_views(
+        self,
+        connection: Connection,
+        identifier: str,
+        provider: str,
+        generation: str,
+        contexts: tuple[str | None, ...],
+        *,
+        deadline: float,
+    ) -> None:
+        for context in contexts:
+            selected = self._known_provider_fact(
+                connection, identifier, provider, context, publication_generation=generation
+            )
+            if selected is not None:
+                self._validate_relationship_view(
+                    connection,
+                    selected,
+                    context,
+                    deadline=deadline,
+                    publication_generation=generation,
+                )
+
+    def _validate_live_relationships(
+        self, connection: Connection, candidate: ProviderTaxon
+    ) -> None:
+        fact = {field: getattr(candidate, field) for field in FACT_FIELDS}
+        for generation in self._relationship_generations(connection, candidate.provider):
+            self._validate_relationship_view(connection, fact, generation)
+
+    def _validate_identity_alias(
+        self, connection: Connection, identifier: str, provider: str, alias: str
+    ) -> None:
+        # A new mapping gives previously unknown IDs meaning in retained facts.
+        # Inspect qualified history so a rollback cannot introduce an alias cycle.
+        for relationship in ("parent_provider_id", "accepted_provider_id"):
+            seen = {identifier}
+            pending = [identifier]
+            while pending:
+                current = pending.pop()
+                references = (
+                    execute(
+                        connection,
+                        "SELECT DISTINCT related FROM ("
+                        "SELECT json_extract(payload,:path) related FROM taxonomy_overlay "
+                        "WHERE taxon_id=:id AND provider=:provider UNION ALL "
+                        "SELECT json_extract(payload,:path) related FROM taxonomy_publications "
+                        "WHERE taxon_id=:id AND json_extract(payload,'$.provider')=:provider "
+                        "UNION ALL "
+                        "SELECT json_extract(f.payload,:path) related FROM taxonomy_facts f "
+                        "JOIN taxonomy_generation_publications p USING(generation_id) "
+                        "WHERE f.taxon_id=:id AND json_extract(f.payload,'$.provider')=:provider) "
+                        "WHERE related IS NOT NULL LIMIT 129",
+                        path="$." + relationship,
+                        id=current,
+                        provider=provider,
+                    )
+                    .scalars()
+                    .all()
+                )
+                if len(references) > 128:
+                    raise ValueError("Identity mapping relationship references exceed the bound.")
+                for related in references:
+                    if related == alias:
+                        raise ValueError(
+                            "Identity alias would create a retained relationship cycle."
+                        )
+                    target = execute(
+                        connection,
+                        "SELECT taxon_id FROM taxon_provider_mappings "
+                        "WHERE provider=:provider AND provider_id=:pid",
+                        provider=provider,
+                        pid=related,
+                    ).scalar_one_or_none()
+                    if target is not None and target not in seen:
+                        if len(seen) >= 128:
+                            raise ValueError(
+                                "Identity mapping relationship identities exceed the bound."
+                            )
+                        seen.add(target)
+                        pending.append(target)
+
     def publish(
         self,
         candidate: ProviderTaxon,
@@ -504,6 +716,7 @@ class LocalTaxonomyCatalog:
             {field: getattr(candidate, field) for field in FACT_FIELDS}, sort_keys=True
         )
         with self._write() as connection:
+            self._validate_live_relationships(connection, candidate)
             identifier = self._reserve(connection, candidate, observed)
             previous = self._selected(connection, identifier)
             self._publish_identity(
@@ -710,6 +923,7 @@ class LocalTaxonomyCatalog:
                     url=source_url,
                     now=timestamp(datetime.now(UTC)),
                 )
+                self._validate_identity_alias(connection, str(taxon_id), provider, provider_id)
                 self._change(connection, str(taxon_id), "mapping_qualified", details)
         if conflict:
             raise TaxonomyConflictError(
@@ -874,11 +1088,15 @@ class LocalTaxonomyCatalog:
         with self._read() as connection:
             source = execute(
                 connection,
-                "SELECT state,content_revision FROM taxonomy_generations WHERE generation_id=:g",
+                "SELECT state,content_revision,provider FROM taxonomy_generations "
+                "WHERE generation_id=:g",
                 g=str(generation),
             ).first()
             if not source or source.state != "staging":
                 raise ValueError("Generation is not staging.")
+            contexts = self._relationship_generations(
+                connection, source.provider, include=str(generation)
+            )
             rows = execute(
                 connection,
                 "SELECT payload FROM taxonomy_facts WHERE generation_id=:g",
@@ -916,6 +1134,21 @@ class LocalTaxonomyCatalog:
                         parent = json.loads(ancestor)[relationship]
                     if parent == identifier:
                         raise ValueError("Taxonomy ancestry/accepted identity cycle.")
+                root = execute(
+                    connection,
+                    "SELECT taxon_id FROM taxon_provider_mappings WHERE provider=:provider "
+                    "AND provider_id=:pid",
+                    provider=fact["provider"],
+                    pid=fact["provider_id"],
+                ).scalar_one()
+                self._validate_prospective_views(
+                    connection,
+                    root,
+                    fact["provider"],
+                    str(generation),
+                    contexts,
+                    deadline=started + max_seconds,
+                )
                 if time.monotonic() - started > max_seconds:
                     raise ValueError("Taxonomy validation exceeds its execution time bound.")
             if not count:
@@ -959,6 +1192,9 @@ class LocalTaxonomyCatalog:
             )
             if not source or source["state"] != "ready":
                 raise ValueError("Only a validated generation can be promoted.")
+            contexts = self._relationship_generations(
+                connection, source["provider"], include=str(generation)
+            )
             if execute(
                 connection,
                 "SELECT 1 FROM taxonomy_conflicts c WHERE resolved_at IS NULL "
@@ -995,13 +1231,23 @@ class LocalTaxonomyCatalog:
                 "LEFT JOIN taxonomy_search s ON s.rowid=k.search_rowid "
                 "WHERE c.revision>:start AND c.revision<=:cutoff "
                 "AND c.kind NOT IN ('snapshot_identity_reserved','snapshot_labels') AND "
-                "(t.taxon_id IS NULL OR k.search_rowid IS NULL OR s.rowid IS NULL) LIMIT 1",
+                "(t.taxon_id IS NULL OR k.search_rowid IS NULL "
+                "OR s.rowid IS NULL OR s.taxon_id!=c.taxon_id OR s.scope!='catalog') LIMIT 1",
                 start=source["starting_revision"],
                 cutoff=cutoff,
             ).first()
             if invalid:
                 raise ValueError(
                     "Final reconciliation found an unresolved identity or search delta."
+                )
+            for identifier in changes:
+                self._validate_prospective_views(
+                    connection,
+                    identifier,
+                    source["provider"],
+                    str(generation),
+                    contexts,
+                    deadline=started + max_seconds,
                 )
             if connection.exec_driver_sql("PRAGMA foreign_key_check").first():
                 raise ValueError("Final reconciliation found unresolved durable references.")
@@ -1043,6 +1289,16 @@ class LocalTaxonomyCatalog:
                 g=str(generation),
                 provider=source["provider"],
                 retrieved=source["retrieved_at"],
+            )
+            execute(
+                connection,
+                "INSERT INTO taxonomy_changes(taxon_id,kind,recorded_at,details) "
+                "SELECT f.taxon_id,'reference_identity_published',:now,"
+                "json_object('generation',:g) FROM taxonomy_facts f "
+                "WHERE f.generation_id=:g AND NOT EXISTS "
+                "(SELECT 1 FROM taxonomy_publications p WHERE p.taxon_id=f.taxon_id)",
+                g=str(generation),
+                now=timestamp(datetime.now(UTC)),
             )
             execute(
                 connection,
@@ -1095,7 +1351,28 @@ class LocalTaxonomyCatalog:
                     "revision=excluded.revision",
                     cutoff=cutoff,
                 )
-                cutoff = self._revision(connection)
+                retained_contexts: dict[str, tuple[str | None, ...]] = {}
+                for retained in execute(
+                    connection,
+                    "SELECT c.taxon_id,t.taxonomy_provider FROM taxonomy_changes c "
+                    "JOIN taxa t USING(taxon_id) WHERE c.revision>:cutoff "
+                    "AND c.kind='reference_selection_retained'",
+                    cutoff=cutoff,
+                ):
+                    provider = retained.taxonomy_provider
+                    if provider not in retained_contexts:
+                        retained_contexts[provider] = self._relationship_generations(
+                            connection, provider, include=str(generation)
+                        )
+                    self._validate_prospective_views(
+                        connection,
+                        retained.taxon_id,
+                        provider,
+                        str(generation),
+                        retained_contexts[provider],
+                        deadline=started + max_seconds,
+                    )
+            cutoff = self._revision(connection)
             execute(
                 connection,
                 "INSERT OR IGNORE INTO taxonomy_generation_publications VALUES(:g,:provenance)",
@@ -1402,7 +1679,7 @@ class LocalTaxonomyCatalog:
         # classification may live in different published generations, including after rollback.
         matches = []
         parameters = {}
-        for index, token in enumerate(tokens[:12]):
+        for index, token in enumerate(dict.fromkeys(tokens)):
             key = f"term{index}"
             parameters[key] = 'names : "' + token + '"*'
             matches.append(

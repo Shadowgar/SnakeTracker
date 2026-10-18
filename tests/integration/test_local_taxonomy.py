@@ -1161,3 +1161,316 @@ def test_newer_live_overlay_is_retained_beneath_snapshot_for_later_rollback(cata
     catalog.cleanup(b, retained_generations={a})
     assert catalog.resolve(identifier).scientific_name == "Intermediate live"
     assert catalog.resolve(identifier).source_effective_at == NOW - timedelta(days=5)
+
+
+@pytest.mark.parametrize("relationship", ["parent_provider_id", "accepted_provider_id"])
+@pytest.mark.parametrize("length", [2, 3])
+def test_live_relationships_reject_indirect_cycles_before_publication(
+    catalog, relationship, length
+):
+    for index in range(1, length):
+        catalog.publish(
+            taxon(str(index), f"Species {index}", **{relationship: str(index + 1)}),
+            retrieved_at=NOW,
+        )
+    with pytest.raises(ValueError, match="cycle"):
+        catalog.publish(
+            taxon(str(length), "Cycle closing taxon", **{relationship: "1"}), retrieved_at=NOW
+        )
+    assert catalog.search("Cycle closing") == ()
+    with catalog.engine.connect() as connection:
+        assert (
+            connection.execute(
+                text("SELECT COUNT(*) FROM taxon_provider_mappings WHERE provider_id=:id"),
+                {"id": str(length)},
+            ).scalar_one()
+            == 0
+        )
+
+
+@pytest.mark.parametrize("relationship", ["parent_provider_id", "accepted_provider_id"])
+def test_concurrent_live_observations_cannot_close_relationship_cycle(catalog, relationship):
+    def publish(index):
+        try:
+            catalog.publish(
+                taxon(str(index), f"Concurrent species {index}", **{relationship: str(3 - index)}),
+                retrieved_at=NOW,
+            )
+            return "published"
+        except ValueError as error:
+            assert "cycle" in str(error)
+            return "rejected"
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        outcomes = list(pool.map(publish, [1, 2]))
+    assert sorted(outcomes) == ["published", "rejected"]
+    assert len(catalog.search("Concurrent")) == 1
+
+
+def test_local_search_intersects_every_word_within_accepted_query_length(catalog):
+    prefix = "aa bb cc dd ee ff gg hh ii jj kk ll"
+    catalog.publish(taxon("1", prefix), retrieved_at=NOW)
+    catalog.publish(taxon("2", prefix + " zz"), retrieved_at=NOW)
+    assert catalog.search(prefix + " missing") == ()
+    assert [item.provider_id for item in catalog.search(prefix + " zz")] == ["2"]
+
+
+@pytest.mark.parametrize("relationship", ["parent_provider_id", "accepted_provider_id"])
+def test_live_cycle_cannot_hide_behind_an_alias_of_the_same_permanent_uuid(catalog, relationship):
+    identifier = catalog.publish(taxon(), retrieved_at=NOW, source_effective_at=NOW)
+    catalog.map_identity(
+        identifier,
+        "fixture",
+        "alias",
+        source_url="https://example.test/alias",
+        decided_by="Owner",
+        reason="Qualified synonymous provider identity",
+    )
+    with pytest.raises(ValueError, match="cycle"):
+        catalog.publish(
+            taxon(**{relationship: "alias"}),
+            retrieved_at=NOW + timedelta(days=1),
+            source_effective_at=NOW + timedelta(days=1),
+        )
+    assert catalog.resolve(identifier).source_effective_at == NOW
+    with catalog.engine.connect() as connection:
+        assert (
+            connection.execute(
+                text(
+                    "SELECT json_extract(payload,:field) FROM taxonomy_overlay WHERE taxon_id=:id"
+                ),
+                {"field": "$." + relationship, "id": str(identifier)},
+            ).scalar_one()
+            is None
+        )
+
+
+@pytest.mark.parametrize("facts", ["overlay", "snapshot"])
+def test_secondary_provider_relationship_cycles_use_its_own_qualified_facts(catalog, facts):
+    identifiers = {}
+    for key in ("a", "b"):
+        identifiers[key] = catalog.publish(taxon(key, f"Origin {key}"), retrieved_at=NOW)
+        catalog.map_identity(
+            identifiers[key],
+            "foreign",
+            key,
+            source_url=f"https://example.test/foreign/{key}",
+            decided_by="Owner",
+            reason="Qualified identity",
+        )
+    first = replace(taxon("a", "Foreign a", parent_provider_id="b"), provider="foreign")
+    if facts == "overlay":
+        catalog.publish(first, retrieved_at=NOW)
+    else:
+        generation = catalog.begin_generation(
+            replace(source("Foreign relationships"), provider="foreign"), imported_at=NOW
+        )
+        catalog.stage(generation, [first, replace(taxon("b", "Foreign b"), provider="foreign")])
+        catalog.validate_generation(generation)
+        for conflict in catalog.conflicts():
+            catalog.resolve_conflict(
+                conflict.conflict_id, decided_by="Owner", reason="Retain origin"
+            )
+        catalog.promote(generation)
+    with pytest.raises(ValueError, match="cycle"):
+        catalog.publish(
+            replace(
+                taxon("b", "Closing foreign cycle", parent_provider_id="a"), provider="foreign"
+            ),
+            retrieved_at=NOW,
+        )
+    assert catalog.resolve(identifiers["b"]).scientific_name == "Origin b"
+
+
+@pytest.mark.parametrize("relationship", ["parent_provider_id", "accepted_provider_id"])
+def test_new_identity_alias_mapping_cannot_close_an_existing_live_cycle(catalog, relationship):
+    identifier = catalog.publish(taxon(**{relationship: "alias"}), retrieved_at=NOW)
+    with pytest.raises(ValueError, match="cycle"):
+        catalog.map_identity(
+            identifier,
+            "fixture",
+            "alias",
+            source_url="https://example.test/alias",
+            decided_by="Owner",
+            reason="Proposed alias would close cycle",
+        )
+    assert [
+        reference.provider_id for reference in catalog.resolve(identifier).provider_references
+    ] == ["1"]
+
+
+@pytest.mark.parametrize("relationship", ["parent_provider_id", "accepted_provider_id"])
+@pytest.mark.parametrize("state", ["hidden_overlay", "first_fallback"])
+def test_alias_mapping_checks_retained_relationships_beneath_newer_facts(
+    catalog, relationship, state
+):
+    identifier = catalog.publish(
+        taxon(**{relationship: "alias"}), retrieved_at=NOW, source_effective_at=NOW
+    )
+    for conflict in catalog.conflicts():
+        catalog.resolve_conflict(
+            conflict.conflict_id, decided_by="Owner", reason="Retain partial reference"
+        )
+    a = stage(catalog, "Rollback without this taxon", [taxon("root", "Animalia")])
+    catalog.promote(a)
+    if state == "hidden_overlay":
+        b = catalog.begin_generation(
+            replace(source("Newer snapshot"), snapshot_at=NOW + timedelta(days=1)), imported_at=NOW
+        )
+        catalog.stage(b, [taxon()])
+        catalog.validate_generation(b)
+        catalog.promote(b)
+    else:
+        catalog.publish(
+            taxon(),
+            retrieved_at=NOW + timedelta(days=1),
+            source_effective_at=NOW + timedelta(days=1),
+        )
+    with pytest.raises(ValueError, match="cycle"):
+        catalog.map_identity(
+            identifier,
+            "fixture",
+            "alias",
+            source_url="https://example.test/alias",
+            decided_by="Owner",
+            reason="Proposed identity alias",
+        )
+    catalog.promote(a)
+    assert [
+        reference.provider_id for reference in catalog.resolve(identifier).provider_references
+    ] == ["1"]
+
+
+def test_mapping_alias_checks_hidden_multi_record_live_chain(catalog):
+    identifier = catalog.publish(
+        taxon("1", "First", parent_provider_id="2"), retrieved_at=NOW, source_effective_at=NOW
+    )
+    catalog.publish(
+        taxon("2", "Second", parent_provider_id="alias"), retrieved_at=NOW, source_effective_at=NOW
+    )
+    b = catalog.begin_generation(
+        replace(source("Hiding both edges"), snapshot_at=NOW + timedelta(days=1)), imported_at=NOW
+    )
+    catalog.stage(b, [taxon("1", "First"), taxon("2", "Second")])
+    catalog.validate_generation(b)
+    catalog.promote(b)
+    with pytest.raises(ValueError, match="cycle"):
+        catalog.map_identity(
+            identifier,
+            "fixture",
+            "alias",
+            source_url="https://example.test/alias",
+            decided_by="Owner",
+            reason="Proposed identity alias",
+        )
+
+
+def test_live_cycle_guard_covers_the_rollback_overlay_view(catalog):
+    catalog.publish(
+        taxon("a", "First", parent_provider_id="b"), retrieved_at=NOW, source_effective_at=NOW
+    )
+    catalog.publish(taxon("b", "Second"), retrieved_at=NOW, source_effective_at=NOW)
+    g = catalog.begin_generation(
+        replace(source("Hiding old live edge"), snapshot_at=NOW + timedelta(days=1)),
+        imported_at=NOW,
+    )
+    catalog.stage(g, [taxon("a", "First"), taxon("b", "Second")])
+    catalog.validate_generation(g)
+    catalog.promote(g)
+    with pytest.raises(ValueError, match="cycle"):
+        catalog.publish(
+            taxon("b", "Second", parent_provider_id="a"),
+            retrieved_at=NOW + timedelta(days=2),
+            source_effective_at=NOW + timedelta(days=2),
+        )
+
+
+def test_generation_validation_rejects_cycle_with_newer_durable_overlay(catalog):
+    catalog.publish(taxon("a", "First"), retrieved_at=NOW, source_effective_at=NOW)
+    catalog.publish(
+        taxon("b", "Second", parent_provider_id="a"),
+        retrieved_at=NOW,
+        source_effective_at=NOW + timedelta(days=2),
+    )
+    g = catalog.begin_generation(
+        replace(source("Overlay union"), snapshot_at=NOW + timedelta(days=1)), imported_at=NOW
+    )
+    catalog.stage(g, [taxon("a", "First", parent_provider_id="b"), taxon("b", "Second")])
+    with pytest.raises(ValueError, match="cycle"):
+        catalog.validate_generation(g)
+    assert catalog.active_generation() is None
+
+
+def test_late_live_change_cannot_introduce_cycle_at_generation_promotion(catalog):
+    catalog.publish(taxon("a", "First"), retrieved_at=NOW, source_effective_at=NOW)
+    catalog.publish(taxon("b", "Second"), retrieved_at=NOW, source_effective_at=NOW)
+    g = catalog.begin_generation(
+        replace(source("Late cycle"), snapshot_at=NOW + timedelta(days=1)), imported_at=NOW
+    )
+    catalog.stage(g, [taxon("a", "First", parent_provider_id="b"), taxon("b", "Second")])
+    catalog.validate_generation(g)
+    catalog.publish(
+        taxon("b", "Second", parent_provider_id="a"),
+        retrieved_at=NOW + timedelta(days=2),
+        source_effective_at=NOW + timedelta(days=2),
+    )
+    with pytest.raises(ValueError, match="cycle"):
+        catalog.promote(g)
+    assert catalog.active_generation() is None
+    catalog.publish(
+        taxon("a", "First"),
+        retrieved_at=NOW + timedelta(days=2),
+        source_effective_at=NOW + timedelta(days=2),
+    )
+    catalog.promote(g)
+    assert catalog.active_generation() == g
+
+
+def test_newer_live_reparenting_does_not_mix_in_unselected_historical_edges(catalog):
+    catalog.publish(
+        taxon("a", "First", parent_provider_id="b"), retrieved_at=NOW, source_effective_at=NOW
+    )
+    catalog.publish(taxon("b", "Second"), retrieved_at=NOW, source_effective_at=NOW)
+    g = catalog.begin_generation(
+        replace(source("Historical direction"), snapshot_at=NOW), imported_at=NOW
+    )
+    catalog.stage(g, [taxon("a", "First", parent_provider_id="b"), taxon("b", "Second")])
+    catalog.validate_generation(g)
+    catalog.promote(g)
+    catalog.publish(
+        taxon("a", "First"),
+        retrieved_at=NOW + timedelta(days=1),
+        source_effective_at=NOW + timedelta(days=1),
+    )
+    identifier = catalog.publish(
+        taxon("b", "Second", parent_provider_id="a"),
+        retrieved_at=NOW + timedelta(days=1),
+        source_effective_at=NOW + timedelta(days=1),
+    )
+    assert [item.scientific_name for item in catalog.resolve(identifier).ancestry] == ["First"]
+
+
+def test_new_reference_publication_must_leave_fallback_graph_acyclic(catalog):
+    catalog.publish(
+        taxon("a", "First", parent_provider_id="b"), retrieved_at=NOW, source_effective_at=NOW
+    )
+    g = catalog.begin_generation(
+        replace(source("New catalog fallback"), snapshot_at=NOW + timedelta(days=1)),
+        imported_at=NOW,
+    )
+    catalog.stage(g, [taxon("a", "First"), taxon("b", "Second", parent_provider_id="a")])
+    with pytest.raises(ValueError, match="cycle"):
+        catalog.validate_generation(g)
+    assert catalog.active_generation() is None
+    assert catalog.search("Second") == ()
+
+
+def test_other_generation_first_publication_is_a_qualified_reconciliation_delta(catalog):
+    target = stage(catalog, "Waiting", [taxon("target", "Waiting reference")])
+    other = stage(catalog, "First publication", [taxon("other", "Other reference")])
+    catalog.promote(other, max_revisions=0)
+    with pytest.raises(ValueError, match="identity bound"):
+        catalog.promote(target, max_revisions=0)
+    catalog.promote(target, max_revisions=1)
+    assert catalog.active_generation() == target
+    assert catalog.search("Other")[0].provider_id == "other"

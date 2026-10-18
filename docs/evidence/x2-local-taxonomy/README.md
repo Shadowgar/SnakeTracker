@@ -116,7 +116,7 @@ promotion failure, rollback/catalog fallback, FK-preserving upgrade, immutable g
 metadata, historical four-profile events, and encrypted ordinary-worker restore of X2 data/search.
 Use [the reproducible synthetic measurement](../../../scripts/qualification/x2_local_taxonomy.py)
 for Pi import, search, promotion, storage/RAM and previous-wheel compatibility evidence.
-The committed [synthetic Pi receipt](pi-synthetic.json) uses **10,001 rows**, retaining the default
+The earlier [synthetic Pi receipt](pi-synthetic.json) uses **10,001 rows**, retaining the default
 10,000 concurrent-delta limit and explicitly budgeting 30 seconds of SQL work. The population
 promoted successfully: import 75.596 seconds, promotion 4.288 seconds including lock/commit I/O,
 warm search median 93.8 ms / p95 110.4 ms, peak RSS 107,456 KiB. An
@@ -192,3 +192,27 @@ snapshot; rollback and cleanup expose that freshest retained live observation. E
 comparisons continue to require content-bound decisions. Conflict-only X2 evidence blocks schema
 downgrade even when no generation or revision exists, preserving schema version, UUIDs and the
 operator's unresolved mapping evidence.
+
+Relationship integrity is checked before live publication and under the generation-promotion writer
+lock. Parent and accepted-name walks follow namespaced identities and permanent UUIDs, so provider
+aliases cannot hide cycles. Each comparison uses a coherent snapshot/overlay/fallback view, including
+retained rollback generations; newer valid reparenting does not combine unselected historical edges.
+Explicit alias mappings also reject cycles hidden beneath newer selected facts. First reference
+publication is a public reconciliation delta, without charging a generation's own population against
+the concurrent-delta cap. All accepted search tokens participate in intersection.
+
+The [broader graph regression run](graph-regressions-before-preflight-fix.log) passed 106 cases and
+identified one premature publication-marker requirement. Removing that requirement preserves the
+existing permanent-identity/catalog-index integrity checks; the previously failing case then
+[passed](graph-preflight.log). Additional [coherent graph-view cases](graph-views.log) and
+[alias/concurrent-cycle cases](graph-aliases.log) passed. The complete unchanged hosted Quality gate
+qualifies the final committed tree.
+
+The [final-source Pi receipt](pi-synthetic-final.json) imports and promotes **10,001 synthetic rows**:
+import 84.719 seconds (30.300 CPU seconds), promotion 5.669 seconds including lock/commit I/O,
+warm search median 84.9 ms / p95 104.3 ms, peak RSS 110,072 KiB. The default 10,000 concurrent-delta
+limit is retained; this capacity measurement explicitly uses a 30-second SQL-work budget. The
+installed X1 binary refuses schema 24 and the database hash remains unchanged. SHA-256 bindings
+cover every application/migration Python source and the measurement script; they identify the
+measured working tree before its final commit. This supersedes earlier receipts for final-source
+performance evidence and remains synthetic development qualification only.
