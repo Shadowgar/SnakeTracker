@@ -1326,7 +1326,8 @@ def test_alias_mapping_checks_retained_relationships_beneath_newer_facts(
             retrieved_at=NOW + timedelta(days=1),
             source_effective_at=NOW + timedelta(days=1),
         )
-    with pytest.raises(ValueError, match="cycle"):
+
+    def qualify_alias():
         catalog.map_identity(
             identifier,
             "fixture",
@@ -1335,10 +1336,20 @@ def test_alias_mapping_checks_retained_relationships_beneath_newer_facts(
             decided_by="Owner",
             reason="Proposed identity alias",
         )
+
+    if state == "hidden_overlay":
+        with pytest.raises(ValueError, match="cycle"):
+            qualify_alias()
+        expected = {"1"}
+    else:
+        # The durable newer observation clears the old fallback edge in every
+        # selectable view; rollback cannot resurrect that obsolete edge.
+        qualify_alias()
+        expected = {"1", "alias"}
     catalog.promote(a)
-    assert [
+    assert {
         reference.provider_id for reference in catalog.resolve(identifier).provider_references
-    ] == ["1"]
+    } == expected
 
 
 def test_mapping_alias_checks_hidden_multi_record_live_chain(catalog):
@@ -1474,3 +1485,37 @@ def test_other_generation_first_publication_is_a_qualified_reconciliation_delta(
     catalog.promote(target, max_revisions=1)
     assert catalog.active_generation() == target
     assert catalog.search("Other")[0].provider_id == "other"
+
+
+def test_alias_mapping_does_not_mix_obsolete_edges_across_coherent_views(catalog):
+    a = stage(
+        catalog,
+        "Historical first direction",
+        [taxon("x", "First", parent_provider_id="y"), taxon("y", "Second")],
+    )
+    catalog.promote(a)
+    b = catalog.begin_generation(
+        replace(source("Historical reverse direction"), snapshot_at=NOW - timedelta(days=5)),
+        imported_at=NOW,
+    )
+    catalog.stage(b, [taxon("x", "First"), taxon("y", "Second", parent_provider_id="x")])
+    catalog.validate_generation(b)
+    catalog.promote(b)
+    first = catalog.publish(taxon("x", "First"), retrieved_at=NOW, source_effective_at=NOW)
+    second = catalog.publish(
+        taxon("y", "Second", parent_provider_id="alias"),
+        retrieved_at=NOW,
+        source_effective_at=NOW,
+    )
+    catalog.map_identity(
+        first,
+        "fixture",
+        "alias",
+        source_url="https://example.test/alias",
+        decided_by="Owner",
+        reason="Qualified alias with acyclic retained views",
+    )
+    for generation in (a, b):
+        catalog.promote(generation)
+        assert [item.taxon_id for item in catalog.resolve(second).ancestry] == [first]
+        assert {r.provider_id for r in catalog.resolve(first).provider_references} == {"x", "alias"}

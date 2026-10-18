@@ -209,10 +209,18 @@ existing permanent-identity/catalog-index integrity checks; the previously faili
 qualifies the final committed tree.
 
 The [final-source Pi receipt](pi-synthetic-final.json) imports and promotes **10,001 synthetic rows**:
-import 84.719 seconds (30.300 CPU seconds), promotion 5.669 seconds including lock/commit I/O,
-warm search median 84.9 ms / p95 104.3 ms, peak RSS 110,072 KiB. The default 10,000 concurrent-delta
+import 79.018 seconds (28.840 CPU seconds), promotion 7.266 seconds including lock/commit I/O,
+warm search median 85.1 ms / p95 101.2 ms, peak RSS 110,072 KiB. The default 10,000 concurrent-delta
 limit is retained; this capacity measurement explicitly uses a 30-second SQL-work budget. The
 installed X1 binary refuses schema 24 and the database hash remains unchanged. SHA-256 bindings
 cover every application/migration Python source and the measurement script; they identify the
 measured working tree before its final commit. This supersedes earlier receipts for final-source
 performance evidence and remains synthetic development qualification only.
+
+[Thirty focused graph/alias/publication cases](coherent-alias-views.log) passed after the final
+alias correction. Explicit mappings validate each coherent generation/overlay/fallback selection
+independently, rather than traversing a union of obsolete edges. Valid historical reparenting remains
+qualifiable; partial live relationships hidden by a newer snapshot still reject alias cycles in
+the rollback view. A durable newer observation that permanently clears an obsolete fallback edge
+does not falsely block an alias. Independent read-only review found no remaining Important issue
+in this correction.

@@ -650,56 +650,15 @@ class LocalTaxonomyCatalog:
             self._validate_relationship_view(connection, fact, generation)
 
     def _validate_identity_alias(
-        self, connection: Connection, identifier: str, provider: str, alias: str
+        self, connection: Connection, identifier: str, provider: str
     ) -> None:
-        # A new mapping gives previously unknown IDs meaning in retained facts.
-        # Inspect qualified history so a rollback cannot introduce an alias cycle.
-        for relationship in ("parent_provider_id", "accepted_provider_id"):
-            seen = {identifier}
-            pending = [identifier]
-            while pending:
-                current = pending.pop()
-                references = (
-                    execute(
-                        connection,
-                        "SELECT DISTINCT related FROM ("
-                        "SELECT json_extract(payload,:path) related FROM taxonomy_overlay "
-                        "WHERE taxon_id=:id AND provider=:provider UNION ALL "
-                        "SELECT json_extract(payload,:path) related FROM taxonomy_publications "
-                        "WHERE taxon_id=:id AND json_extract(payload,'$.provider')=:provider "
-                        "UNION ALL "
-                        "SELECT json_extract(f.payload,:path) related FROM taxonomy_facts f "
-                        "JOIN taxonomy_generation_publications p USING(generation_id) "
-                        "WHERE f.taxon_id=:id AND json_extract(f.payload,'$.provider')=:provider) "
-                        "WHERE related IS NOT NULL LIMIT 129",
-                        path="$." + relationship,
-                        id=current,
-                        provider=provider,
-                    )
-                    .scalars()
-                    .all()
-                )
-                if len(references) > 128:
-                    raise ValueError("Identity mapping relationship references exceed the bound.")
-                for related in references:
-                    if related == alias:
-                        raise ValueError(
-                            "Identity alias would create a retained relationship cycle."
-                        )
-                    target = execute(
-                        connection,
-                        "SELECT taxon_id FROM taxon_provider_mappings "
-                        "WHERE provider=:provider AND provider_id=:pid",
-                        provider=provider,
-                        pid=related,
-                    ).scalar_one_or_none()
-                    if target is not None and target not in seen:
-                        if len(seen) >= 128:
-                            raise ValueError(
-                                "Identity mapping relationship identities exceed the bound."
-                            )
-                        seen.add(target)
-                        pending.append(target)
+        # The new mapping already participates in this transaction. Check each
+        # selectable rollback view separately; obsolete edges cannot coexist with
+        # newer selected facts merely because both remain in durable history.
+        for generation in self._relationship_generations(connection, provider):
+            selected = self._known_provider_fact(connection, identifier, provider, generation)
+            if selected is not None:
+                self._validate_relationship_view(connection, selected, generation)
 
     def publish(
         self,
@@ -923,7 +882,7 @@ class LocalTaxonomyCatalog:
                     url=source_url,
                     now=timestamp(datetime.now(UTC)),
                 )
-                self._validate_identity_alias(connection, str(taxon_id), provider, provider_id)
+                self._validate_identity_alias(connection, str(taxon_id), provider)
                 self._change(connection, str(taxon_id), "mapping_qualified", details)
         if conflict:
             raise TaxonomyConflictError(
