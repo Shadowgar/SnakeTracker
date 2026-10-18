@@ -67,7 +67,7 @@ def test_updates_is_private_and_covers_earlier_history(tmp_path: Path) -> None:
             assert "confirmed live updates" in page.text.lower()
             assert "We don't have a complete, verified list" in page.text
             assert "/static/animal-fallbacks/snake.webp" in page.text
-            assert "href=\"/updates\"" in client.get("/more").text
+            assert 'href="/updates"' in client.get("/more").text
             assert "Website update" not in page.text
 
             ledger = database.parent / "production-release-history.json"
@@ -82,9 +82,7 @@ def test_updates_is_private_and_covers_earlier_history(tmp_path: Path) -> None:
                             "build_sha": "c" * 40,
                             "title": "Confirmed release",
                             "description": "Keeper-facing changes.",
-                            "changes": [
-                                {"kind": "New", "text": "A real, verified deployment."}
-                            ],
+                            "changes": [{"kind": "New", "text": "A real, verified deployment."}],
                         }
                     ]
                 ),

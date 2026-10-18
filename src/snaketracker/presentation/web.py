@@ -2124,9 +2124,7 @@ def create_web_router(
         archive = tuple(
             {
                 "label": month,
-                "entries": tuple(
-                    item for item in milestones[3:] if item["month"] == month
-                ),
+                "entries": tuple(item for item in milestones[3:] if item["month"] == month),
             }
             for month in ("October 2026", "September 2026", "August 2026")
         )
@@ -2139,9 +2137,7 @@ def create_web_router(
                 "history_months": archive,
                 "merge_activity": history["merge_activity"],
                 "history_audited_at": history["audit_date"],
-                "production_updates": confirmed_production_updates(
-                    production_release_history_path
-                ),
+                "production_updates": confirmed_production_updates(production_release_history_path),
             },
         )
 

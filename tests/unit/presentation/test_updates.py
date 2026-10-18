@@ -14,7 +14,27 @@ def test_full_merged_pr_history_is_accounted_for() -> None:
     history = development_history()
     assert len(history["milestones"]) == 16
     assert sorted({pr for item in history["milestones"] for pr in item["prs"]}) == [
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 22, 23
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        20,
+        22,
+        23,
     ]
     assert sum(month["count"] for month in history["merge_activity"]) == 21
     for item in history["milestones"]:
