@@ -340,3 +340,14 @@ passed for mapped/absent identities, with/without older overlays, rollback, clea
 preferred-provider ancestry/search retention. Independent read-only review found no Important
 issue. Graph validation and SQL-work time guards remain enabled; no bound was raised. This path
 also postdates the historical Pi receipt and carries no production-size capacity claim.
+
+[Accepted-name ancestry reproduction](synonym-accepted-ancestry-red.log) confirmed that synonyms
+without their own parent chain lost their configured group. The reader now includes parent
+ancestry for each validated accepted-name target when classifying the qualified iNaturalist
+namespace. Unknown namespaces remain reference-only; contradictory configured groups still
+require reconciliation. The [complete 57-test archive suite](synonym-accepted-ancestry-green.log)
+passed, including two accepted-name hops, explicit synonym-conflict acknowledgment, promotion
+and group-filtered local synonym search. Existing missing-parent, cycle, depth, parser-time,
+archive-size, preferred-name and identity guards remain enabled. The duplicate ZIP warning is
+expected from its rejection fixture. No runtime Animal registration group was added. This path
+also postdates the historical Pi performance receipt.

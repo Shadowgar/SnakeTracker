@@ -243,6 +243,26 @@ def read_archive(
                             ),
                         )
                 database.commit()
+
+                def lineage(identifier: str, record: dict[str, str], relationship: str) -> set[str]:
+                    seen = {identifier}
+                    related = record.get(relationship)
+                    while related:
+                        if related in seen or len(seen) >= 128:
+                            raise ValueError(
+                                "Taxonomy ancestry/accepted identity cycle or depth bound."
+                            )
+                        if time.monotonic() - started > limits.max_seconds:
+                            raise ValueError("Archive exceeds execution time bound.")
+                        seen.add(related)
+                        row = database.execute(
+                            "SELECT payload FROM records WHERE id=?", (related,)
+                        ).fetchone()
+                        if row is None:
+                            raise ValueError("Taxonomy has an absent parent or accepted identity.")
+                        related = json.loads(row[0]).get(relationship)
+                    return seen
+
                 # Validate ancestry before producing rows. No name-based identity inference.
                 for identifier, _parent, payload in database.execute(
                     "SELECT * FROM records ORDER BY id"
@@ -250,28 +270,19 @@ def read_archive(
                     if time.monotonic() - started > limits.max_seconds:
                         raise ValueError("Archive exceeds execution time bound.")
                     record = json.loads(payload)
-                    ancestors = {identifier}
-                    for relationship in ("parentNameUsageID", "acceptedNameUsageID"):
-                        seen = {identifier}
-                        related = record.get(relationship)
-                        while related:
-                            if related in seen or len(seen) >= 128:
-                                raise ValueError(
-                                    "Taxonomy ancestry/accepted identity cycle or depth bound."
-                                )
-                            if time.monotonic() - started > limits.max_seconds:
-                                raise ValueError("Archive exceeds execution time bound.")
-                            seen.add(related)
+                    ancestors = lineage(identifier, record, "parentNameUsageID")
+                    accepted = lineage(identifier, record, "acceptedNameUsageID")
+                    if provider == "inaturalist":
+                        # Synonyms can omit a parent; classify them through every qualified
+                        # accepted-name link as well, rejecting conflicting workflow ancestry.
+                        for accepted_id in sorted(accepted - {identifier}):
                             row = database.execute(
-                                "SELECT payload FROM records WHERE id=?", (related,)
+                                "SELECT payload FROM records WHERE id=?", (accepted_id,)
                             ).fetchone()
-                            if row is None:
-                                raise ValueError(
-                                    "Taxonomy has an absent parent or accepted identity."
-                                )
-                            related = json.loads(row[0]).get(relationship)
-                        if relationship == "parentNameUsageID":
-                            ancestors = seen
+                            assert row is not None  # The accepted lineage was just validated.
+                            ancestors.update(
+                                lineage(accepted_id, json.loads(row[0]), "parentNameUsageID")
+                            )
                     common = tuple(
                         row[0]
                         for row in database.execute(

@@ -603,3 +603,89 @@ def test_multiple_preferred_names_use_stable_order_and_retain_alternatives(tmp_p
     )
     assert records[1].preferred_common_name == "A preferred frog"
     assert records[1].alternative_common_names == ("Z preferred frog", "Earlier alias")
+
+
+def synonym_archive(tmp_path, *, synonym_parent=""):
+    meta = META.replace(
+        "</core>",
+        '<field index="4" term="http://rs.tdwg.org/dwc/terms/acceptedNameUsageID"/>'
+        '<field index="5" term="http://rs.tdwg.org/dwc/terms/taxonomicStatus"/></core>',
+    )
+    return archive(
+        tmp_path,
+        meta=meta,
+        names="",
+        taxa=(
+            "id\tname\tparent\tclass\taccepted\tstatus\n"
+            "85553\tSerpentes\t\tReptilia\t\taccepted\n"
+            "47126\tPlantae\t\t\t\taccepted\n"
+            "9\tPython regius\t85553\tReptilia\t\taccepted\n"
+            f"10\tColuber regius\t{synonym_parent}\tReptilia\t9\tsynonym\n"
+            "11\tHistorical regius\t\tReptilia\t10\tsynonym\n"
+        ),
+    )
+
+
+@pytest.mark.parametrize("provider", ["fixture", "inaturalist"])
+def test_synonym_group_follows_accepted_name_ancestry_for_local_search(tmp_path, provider):
+    from datetime import UTC, datetime
+    from pathlib import Path
+
+    from alembic import command
+    from alembic.config import Config
+
+    from snaketracker.application.local_taxonomy import GenerationSource
+    from snaketracker.infrastructure.database.engine import create_sqlite_engine
+    from snaketracker.infrastructure.taxonomy.catalog import LocalTaxonomyCatalog
+
+    records = tuple(read_archive(synonym_archive(tmp_path), provider=provider))
+    by_id = {record.provider_id: record for record in records}
+    expected = "snake" if provider == "inaturalist" else ""
+    assert all(by_id[identifier].supported_group == expected for identifier in ("9", "10", "11"))
+    root = Path(__file__).parents[3]
+    database = tmp_path / "synonyms.db"
+    config = Config(root / "alembic.ini")
+    config.set_main_option("script_location", str(root / "migrations"))
+    config.set_main_option("sqlalchemy.url", f"sqlite+pysqlite:///{database}")
+    command.upgrade(config, "head")
+    engine = create_sqlite_engine(database, require_local_storage=False)
+    try:
+        catalog = LocalTaxonomyCatalog(engine)
+        now = datetime.now(UTC)
+        generation = catalog.begin_generation(
+            GenerationSource(
+                label="Synthetic accepted ancestry",
+                provider=provider,
+                source_url="https://example.test/archive",
+                retrieved_at=now,
+                snapshot_at=now,
+                checksum="f" * 64,
+                rights="Synthetic fixture",
+            ),
+            imported_at=now,
+        )
+        catalog.stage(generation, records)
+        catalog.validate_generation(generation)
+        for conflict in catalog.conflicts():
+            catalog.resolve_conflict(
+                conflict.conflict_id,
+                decided_by="Owner",
+                reason="Retain synthetic synonym identities without merging",
+            )
+        catalog.promote(generation)
+        matches = catalog.search("Coluber regius", group="snake" if expected else None)
+        assert len(matches) == 1
+        assert matches[0].provider_id == "10"
+        assert matches[0].taxonomic_status == "synonym"
+        assert catalog.search("Historical regius", group="snake" if expected else None)
+        if not expected:
+            assert not catalog.search("Coluber regius", group="snake")
+    finally:
+        engine.dispose()
+
+
+def test_synonym_parent_and_accepted_name_conflicting_groups_require_reconciliation(tmp_path):
+    with pytest.raises(ValueError, match="Conflicting qualified workflow ancestry"):
+        tuple(
+            read_archive(synonym_archive(tmp_path, synonym_parent="47126"), provider="inaturalist")
+        )
