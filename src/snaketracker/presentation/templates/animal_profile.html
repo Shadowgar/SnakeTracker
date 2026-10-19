@@ -46,6 +46,7 @@
         <a class="profile-reference-action" href="/animals/{{ animal.animal_id }}/reference">Guides &amp; Species Reference →</a>
       {% elif linked_taxon %}
         <p class="profile-reference-boundary">Species reference — not your Animal's individual records or care settings.</p>
+        {% if natural_history_versions %}<p class="profile-reference-intro">Natural History is available: learn about this species and its life in the wild.</p>{% endif %}
         <p class="profile-reference-empty">No reviewed captive-care guide is available yet.</p>
         <a class="profile-reference-action" href="/animals/{{ animal.animal_id }}/reference">Guides &amp; Species Reference →</a>
       {% else %}

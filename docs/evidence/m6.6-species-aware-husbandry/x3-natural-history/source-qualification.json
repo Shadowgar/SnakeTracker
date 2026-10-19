@@ -1,0 +1,26 @@
+{
+  "scope": "development qualification only; no production publication",
+  "sources": [
+    {
+      "name": "Wikipedia originating revision",
+      "url": "https://en.wikipedia.org/w/index.php?title=Boa_imperator&oldid=1380867968",
+      "retrieved_at": "2026-10-19T00:37:43.362245+00:00",
+      "response_sha256": "bba8b002386271ec2ec7e8c09e7fbb9bf1eb21cfcb57bb1fdaea7cdde51beddc",
+      "bytes": 176510
+    },
+    {
+      "name": "iNaturalist identity mapping",
+      "url": "https://api.inaturalist.org/v1/taxa/539399",
+      "retrieved_at": "2026-10-19T00:37:43.871250+00:00",
+      "response_sha256": "d169f6d4ee90ae603a3771194574df374a2011fa4fdd6979c3b5e3a2438e1a14",
+      "bytes": 41437
+    }
+  ],
+  "identity": {
+    "provider": "inaturalist",
+    "provider_id": "539399",
+    "scientific_name": "Boa imperator",
+    "common_name": "Central American Boa"
+  },
+  "publication_limit": "Fixture rights_scope=development; production publication requires separate source-rights qualification. No structured conservation/habitat/size claims extracted from prose."
+}

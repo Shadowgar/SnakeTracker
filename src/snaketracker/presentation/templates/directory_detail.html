@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "icons.html" import icon %}
 {% block title %}{{ taxon.display_name }} · Animal & plant directory · Care Keeper{% endblock %}
+{% block page_styles %}<link rel="stylesheet" href="/static/natural-history.css?v=x3-1">{% endblock %}
 {% block content %}
 <section class="directory-detail" aria-labelledby="page-title">
   <a class="back-link" href="/directory?group={{ taxon.supported_group }}">← Directory</a>
@@ -13,10 +14,11 @@
     <div class="directory-hero-media directory-hero-fallback"><span class="taxon-placeholder fallback-{{ taxon.supported_group }}" aria-hidden="true">{{ taxon.display_name[0]|upper }}</span></div>
     {% endif %}
     <div class="directory-hero-content"><p class="page-kicker">{{ taxon.supported_group|capitalize }} reference</p><h1 id="page-title">{{ taxon.display_name }}</h1><p class="scientific-name">{{ taxon.accepted_scientific_name }}{% if taxon.authorship %} {{ taxon.authorship }}{% endif %}</p>{% if reference_taxon %}<span class="status-badge">Species reference</span>{% endif %}{% if taxon.stale %}<span class="status-badge">Saved reference · refresh pending</span>{% endif %}
-      <div class="directory-guide-entry"><div><strong>Care Guide</strong><p>{% if care_guide_available %}Reviewed reference guidance{% else %}No reviewed guidance available{% endif %}</p></div>{% if care_guide_available %}<a class="button-link secondary-link" href="/directory/{{ taxon.taxon_id }}/care-guide">View Care Guide →</a>{% endif %}</div>
+      <div class="directory-guide-entry"><div><strong>Care Guide</strong><p>{% if care_guide_available %}Reviewed reference guidance{% else %}No reviewed captive-care guide is available yet.{% endif %}</p></div>{% if care_guide_available %}<a class="button-link secondary-link" href="/directory/{{ taxon.taxon_id }}/care-guide">View Care Guide →</a>{% endif %}</div>
     </div>
   </header>
   <p class="directory-reference-note">Species reference knowledge is separate from your records and never changes schedules or reminders.</p>
+  <section class="card natural-history-directory" aria-labelledby="natural-history-heading"><p class="page-kicker">Explore the species</p><h2 id="natural-history-heading">Natural History</h2>{% include "natural_history_content.html" %}</section>
   <div class="directory-detail-grid">
     <section class="card"><h2>Classification</h2><dl class="fact-list">{% for label, value in [('Kingdom', taxon.kingdom), ('Phylum / division', taxon.phylum_division), ('Class', taxon.class_name), ('Order', taxon.order_name), ('Family', taxon.family), ('Genus', taxon.genus), ('Species', taxon.species), ('Infra-rank', taxon.infra_rank)] %}{% if value %}<div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>{% endif %}{% endfor %}</dl>{% if not taxon.family and not taxon.order_name %}<p class="muted">Detailed classification is not available from this saved provider result.</p>{% endif %}</section>
     <section class="card"><h2>Names and source</h2>{% if taxon.alternative_common_names %}<h3>Other common names</h3><p>{{ taxon.alternative_common_names|join(', ') }}</p>{% endif %}{% if taxon.synonyms %}<h3>Matched names and synonyms</h3><p>{{ taxon.synonyms|join(', ') }}</p>{% endif %}<p><strong>Source:</strong> <a href="{{ taxon.source_url }}" rel="noopener noreferrer">{{ taxon.provider|capitalize }} record {{ taxon.provider_id }}</a></p><p class="muted">Refreshed {{ taxon.refreshed_at.strftime('%b %-d, %Y') }}. Provider IDs are mappings, not Care Keeper identity.</p></section>

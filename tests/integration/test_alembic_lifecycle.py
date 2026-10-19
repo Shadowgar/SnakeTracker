@@ -36,8 +36,12 @@ from snaketracker.infrastructure.inventory.projections import SQLAlchemyInventor
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 
 ROOT = Path(__file__).parents[2]
-REVISION = "0024_local_taxonomy"
+REVISION = "0025_natural_history"
 PHASE_FIVE_TABLES = {
+    "natural_history_sources",
+    "natural_history_versions",
+    "natural_history_selection",
+    "natural_history_decisions",
     "taxonomy_changes",
     "taxonomy_generations",
     "taxonomy_facts",
