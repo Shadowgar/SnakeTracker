@@ -72,10 +72,12 @@ from snaketracker.application.backups import (
 )
 from snaketracker.application.care_guides import (
     CareGuideReader,
+    ReviewedGuide,
     format_claim_value,
     glance_claims,
     grouped_claims,
     profile_reference_claims,
+    support_state,
 )
 from snaketracker.application.dashboard import DashboardStatisticsService
 from snaketracker.application.enclosures import (
@@ -152,6 +154,7 @@ from snaketracker.application.length_measurements import (
     length_entered_unit,
     parse_length_input,
 )
+from snaketracker.application.natural_history import NaturalHistoryReader, biological_groups
 from snaketracker.application.purchases import (
     AcquireNewInventoryCommand,
     AssignExistingStockCostCommand,
@@ -1176,10 +1179,56 @@ def create_web_router(
     expected_origin: str | None = None,
     directory_service: SpeciesDirectoryService | None = None,
     care_guide_repository: CareGuideReader | None = None,
+    natural_history_repository: NaturalHistoryReader | None = None,
+    natural_history_development: bool = False,
     production_release_history_path: Path | None = None,
 ) -> APIRouter:
     router = APIRouter(include_in_schema=False)
     animal_visual_resolver = AnimalVisualResolver(directory_service)
+
+    def natural_history_context(
+        taxon_id: UUID | None, guide: ReviewedGuide | None = None
+    ) -> dict[str, object]:
+        versions = (
+            natural_history_repository.published(
+                taxon_id, include_development=natural_history_development
+            )
+            if natural_history_repository is not None and taxon_id is not None
+            else ()
+        )
+        groups = biological_groups(versions, guide)
+        combined = {
+            identifier
+            for group in groups
+            for position in group.positions
+            for identifier in position.guide_claim_ids
+        }
+        source_map = (
+            {source.source_id: source for source in guide.sources} if guide is not None else {}
+        )
+        sections = (
+            tuple(
+                (
+                    label,
+                    tuple(
+                        (fact_label, remaining, support_state(remaining, source_map))
+                        for fact_label, claims, _state in facts
+                        if (remaining := tuple(c for c in claims if c.claim_id not in combined))
+                    ),
+                )
+                for label, facts in grouped_claims(guide)
+            )
+            if guide is not None
+            else ()
+        )
+        return {
+            "natural_history_versions": versions,
+            "natural_history_groups": groups,
+            "natural_history_development": natural_history_development,
+            "profile_reference_sections": tuple(
+                (label, facts) for label, facts in sections if facts
+            ),
+        }
 
     def principal_for(request: Request, *, audit_denial: bool = False) -> Principal | None:
         token = request.cookies.get(SESSION_COOKIE)
@@ -1455,6 +1504,10 @@ def create_web_router(
                 profile_reference_claims(profile_reference_guide)
                 if profile_reference_guide is not None
                 else ()
+            ),
+            **natural_history_context(
+                linked_taxon.taxon.taxon_id if linked_taxon is not None else None,
+                profile_reference_guide,
             ),
             "reference_taxon": reference_taxon_available,
             "reference_taxon_available": reference_taxon_available,
@@ -2173,7 +2226,7 @@ def create_web_router(
             return RedirectResponse("/login", status_code=303)
         try:
             taxon = (
-                await run_in_threadpool(directory_service.refresh_detail, UUID(taxon_id))
+                await run_in_threadpool(directory_service.get, UUID(taxon_id))
                 if directory_service is not None
                 else None
             )
@@ -2197,6 +2250,12 @@ def create_web_router(
             principal,
             context={
                 "taxon": taxon,
+                **natural_history_context(
+                    taxon.taxon_id,
+                    care_guide_repository.current(taxon.taxon_id)
+                    if care_guide_repository is not None
+                    else None,
+                ),
                 "reference_taxon": reference_taxon,
                 "care_guide_available": bool(
                     care_guide_repository is not None

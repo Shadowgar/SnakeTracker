@@ -97,6 +97,7 @@ from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
 from snaketracker.infrastructure.taxonomy.care_guides import SQLAlchemyCareGuideRepository
 from snaketracker.infrastructure.taxonomy.catalog import LocalTaxonomyCatalog
 from snaketracker.infrastructure.taxonomy.inaturalist import INaturalistTaxonomyProvider
+from snaketracker.infrastructure.taxonomy.natural_history import NaturalHistoryRepository
 from snaketracker.infrastructure.taxonomy.reference_images import LocalReferenceImageCache
 from snaketracker.infrastructure.taxonomy.reference_providers import (
     GBIFImageProvider,
@@ -362,6 +363,8 @@ def build_application(settings: Settings) -> FastAPI:
                 expected_origin=external_origin,
                 directory_service=directory_service,
                 care_guide_repository=SQLAlchemyCareGuideRepository(engine),
+                natural_history_repository=NaturalHistoryRepository(engine),
+                natural_history_development=settings.environment is Environment.TEST,
                 production_release_history_path=settings.updates_ledger_path,
             )
         )

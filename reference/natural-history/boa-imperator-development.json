@@ -1,0 +1,32 @@
+{
+  "taxon_id": "00000000-0000-0000-0000-000000000001",
+  "origin": "https://en.wikipedia.org/wiki/Boa_imperator",
+  "revision": "1380867968",
+  "revision_url": "https://en.wikipedia.org/w/index.php?title=Boa_imperator&oldid=1380867968",
+  "source_title": "Boa imperator",
+  "attribution": "Wikipedia contributors",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "modifications": "Shortened and paraphrased from the introduction and Behavior section; captive-care material omitted. Adaptation available under CC BY-SA 4.0.",
+  "retrieved_at": "2026-10-18T20:15:00+00:00",
+  "verified_name": "Boa imperator",
+  "identity_provider": "inaturalist",
+  "identity_provider_id": "539399",
+  "identity_evidence": "https://api.inaturalist.org/v1/taxa/539399",
+  "rights_scope": "development",
+  "rights_evidence": "Development example: originating Wikipedia revision inspected, text attribution and CC BY-SA 4.0 notice retained. Production publication requires separate source-rights qualification; no IUCN or iNaturalist prose licensed by this record.",
+  "sections": [
+    {
+      "title": "About this species",
+      "text": "A heavy-bodied, nonvenomous boa that subdues prey by constriction. Its appearance varies between local populations, and it can look similar to Boa constrictor."
+    },
+    {
+      "title": "Where it lives",
+      "text": "Native populations occur from Mexico through Central America into northwestern Colombia, including some coastal islands. This describes the species in the wild, not the origin of an individual animal."
+    },
+    {
+      "title": "In the wild",
+      "text": "Young boas may forage in trees and shrubs. As they become larger and heavier, they spend more time on the ground."
+    }
+  ]
+}

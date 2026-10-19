@@ -1,0 +1,34 @@
+{
+  "viewports": [
+    {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390,
+      "first_story_y": 680.625
+    },
+    {
+      "width": 320,
+      "height": 844,
+      "scrollWidth": 320,
+      "first_story_y": 725.8125
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "scrollWidth": 1440,
+      "first_story_y": 604.921875
+    }
+  ],
+  "external_requests": [],
+  "page_errors": [],
+  "local_boa_photo_loaded": true,
+  "keyboard_source_disclosure": {
+    "Enter": "opened",
+    "Space": "closed"
+  },
+  "reduced_motion": {
+    "animation": "none",
+    "transition": "0s"
+  },
+  "fixture": "Fictional Cedar and keeper in isolated /tmp DB; providers blocked during viewing"
+}

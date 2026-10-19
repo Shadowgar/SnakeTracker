@@ -501,7 +501,7 @@ def test_mapping_conflict_alone_blocks_schema_downgrade_and_preserves_evidence(t
         with engine.connect() as connection:
             assert (
                 connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-                == "0024_local_taxonomy"
+                == "0025_natural_history"
             )
             assert connection.execute(text("SELECT COUNT(*) FROM taxa")).scalar_one() == 2
     finally:

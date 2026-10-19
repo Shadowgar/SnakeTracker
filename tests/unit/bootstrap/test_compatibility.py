@@ -17,7 +17,7 @@ from snaketracker.bootstrap.compatibility import (
     ("metadata", "database_is_empty", "expected_mode"),
     [
         (
-            {"manifest_version": 1, "relational_schema_version": 24},
+            {"manifest_version": 1, "relational_schema_version": 25},
             False,
             CompatibilityMode.NORMAL,
         ),
@@ -34,7 +34,7 @@ from snaketracker.bootstrap.compatibility import (
             CompatibilityMode.RECOVERY_REQUIRED,
         ),
         (
-            {"manifest_version": 1, "relational_schema_version": 25},
+            {"manifest_version": 1, "relational_schema_version": 26},
             False,
             CompatibilityMode.RECOVERY_REQUIRED,
         ),
@@ -74,7 +74,7 @@ def test_known_alembic_revision_is_compatible(tmp_path) -> None:
     try:
         with engine.begin() as connection:
             connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
-            connection.execute(text("INSERT INTO alembic_version VALUES ('0024_local_taxonomy')"))
+            connection.execute(text("INSERT INTO alembic_version VALUES ('0025_natural_history')"))
 
         assert inspect_database_compatibility(engine).mode is CompatibilityMode.NORMAL
     finally:
@@ -186,7 +186,7 @@ def test_unknown_non_household_contract_requires_restricted_recovery(tmp_path) -
     try:
         with engine.begin() as connection:
             connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
-            connection.execute(text("INSERT INTO alembic_version VALUES ('0024_local_taxonomy')"))
+            connection.execute(text("INSERT INTO alembic_version VALUES ('0025_natural_history')"))
             connection.execute(
                 text(
                     "CREATE TABLE domain_events ("
