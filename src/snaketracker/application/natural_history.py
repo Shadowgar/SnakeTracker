@@ -127,12 +127,20 @@ class NaturalHistoryReader(Protocol):
     ) -> tuple[NaturalHistoryVersion, ...]: ...
 
 
+@dataclass(frozen=True, order=True)
+class BiologicalEvidence:
+    origin: str
+    reference: str
+    qualification: str
+
+
 @dataclass(frozen=True)
 class BiologicalPosition:
     fact: BiologicalFact
     origins: tuple[str, ...]
     references: tuple[str, ...]
     guide_claim_ids: tuple[str, ...] = ()
+    evidence: tuple[BiologicalEvidence, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -159,25 +167,28 @@ def guide_digest(guide: ReviewedGuide) -> str:
 
 
 def biological_groups(
-    versions: tuple[NaturalHistoryVersion, ...], guide: ReviewedGuide | None
+    versions: tuple[NaturalHistoryVersion, ...],
+    guide: ReviewedGuide | None,
+    *,
+    retained_guides: tuple[ReviewedGuide, ...] = (),
 ) -> tuple[BiologicalGroup, ...]:
     """Combine equivalent positions without interpreting unknown or captive legacy claims."""
+    guides = {g.version: g for g in retained_guides}
+    if guide is not None:
+        guides[guide.version] = guide
     rows: list[tuple[BiologicalFact, str, str, str | None]] = []
     for version in versions:
         rows.extend((fact, version.origin, version.revision_url, None) for fact in version.claims)
-        if guide is None:
-            continue
         for binding in version.guide_bindings:
-            if binding.guide_version != guide.version or binding.guide_sha256 != guide_digest(
-                guide
-            ):
+            bound_guide = guides.get(binding.guide_version)
+            if bound_guide is None or binding.guide_sha256 != guide_digest(bound_guide):
                 continue
-            claim = next((c for c in guide.claims if c.claim_id == binding.claim_id), None)
+            claim = next((c for c in bound_guide.claims if c.claim_id == binding.claim_id), None)
             # Explicit source-specific classification is required; captive and unknown context
             # always remain in their original guide. No name/keyword inference is permitted.
             if claim is None or claim.context != "wild":
                 continue
-            source = next(s for s in guide.sources if s.source_id == claim.source_id)
+            source = next(s for s in bound_guide.sources if s.source_id == claim.source_id)
             fact = BiologicalFact(
                 **binding.model_dump(include=set(BiologicalContext.model_fields)),
                 value=(
@@ -210,6 +221,9 @@ def biological_groups(
                     tuple(sorted({i[1] for i in items})),
                     tuple(sorted({i[2] for i in items})),
                     tuple(sorted({i[3] for i in items if i[3] is not None})),
+                    tuple(
+                        sorted({BiologicalEvidence(i[1], i[2], i[0].qualification) for i in items})
+                    ),
                 )
                 for items in positions.values()
             ),

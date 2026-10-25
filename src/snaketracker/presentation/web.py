@@ -1196,10 +1196,19 @@ def create_web_router(
             if natural_history_repository is not None and taxon_id is not None
             else ()
         )
-        groups = biological_groups(versions, guide)
+        retained_guides = tuple(
+            historical
+            for number in sorted({b.guide_version for v in versions for b in v.guide_bindings})
+            if care_guide_repository is not None
+            and taxon_id is not None
+            and (historical := care_guide_repository.version(taxon_id, number)) is not None
+        )
+        groups = biological_groups(versions, guide, retained_guides=retained_guides)
+        # Only exact bindings to the currently displayed guide suppress its duplicate rows.
+        # Older retained guides can reuse claim IDs for different claims in newer versions.
         combined = {
             identifier
-            for group in groups
+            for group in biological_groups(versions, guide)
             for position in group.positions
             for identifier in position.guide_claim_ids
         }

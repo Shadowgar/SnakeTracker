@@ -247,4 +247,20 @@ def test_qualified_legacy_biology_displays_once_without_rewriting_full_guide(tmp
         full = client.get("/directory/" + str(identifier) + "/care-guide?version=1")
         assert full.status_code == 200 and "Fictional cloud forest" in full.text
         assert guides.version(identifier, 1) == before
+        # A later immutable guide reuses the claim ID with different content. The bound
+        # version remains readable, and must not suppress the newer unbound claim.
+        newer = guide.model_copy(
+            update={
+                "version": 2,
+                "claims": (claim.model_copy(update={"value_text": "Newer guide habitat"}),),
+            }
+        )
+        guides.import_bundle(GuideBundle(format_version=1, guides=(newer,)))
+        for url in (animal + "/reference", "/directory/" + str(identifier)):
+            updated = client.get(url)
+            assert updated.status_code == 200
+            assert updated.text.count("Fictional cloud forest") == 1
+            if url == animal + "/reference":
+                assert "Newer guide habitat" in updated.text
+        assert guides.version(identifier, 1) == before
     engine.dispose()

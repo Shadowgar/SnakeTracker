@@ -98,3 +98,30 @@ def test_only_exact_qualified_wild_guide_claims_join_natural_history():
             == ()
         )
     assert original.model_dump() != wild.model_dump()
+
+
+def test_equivalent_positions_retain_each_source_qualification():
+    first = version(
+        uuid4(),
+        claims=[
+            dict(**CONTEXT, value="Forest", qualification="First source field study qualification")
+        ],
+    )
+    second = first.model_copy(
+        update={
+            "origin": "https://example.test/second",
+            "revision_url": "https://example.test/second/revision",
+            "claims": (
+                first.claims[0].model_copy(
+                    update={"qualification": "Second source regional survey qualification"}
+                ),
+            ),
+        }
+    )
+    group = biological_groups((first, second), None)[0]
+    assert group.state == "Multiple sources"
+    assert len(group.positions) == 1
+    assert {(e.origin, e.reference, e.qualification) for e in group.positions[0].evidence} == {
+        (first.origin, first.revision_url, first.claims[0].qualification),
+        (second.origin, second.revision_url, second.claims[0].qualification),
+    }

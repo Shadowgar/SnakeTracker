@@ -419,7 +419,7 @@ def test_directory_animal_selection_manual_fallback_and_legacy_link(
         plant_image = client.get(f"/directory/reference-images/{plant.taxon_id}")
         assert plant_image.content == plant_image_content
         assert "Care Guide" in detail.text
-        assert "No reviewed guidance available" in detail.text
+        assert "No reviewed captive-care guide is available yet." in detail.text
         detail_without_image = client.get(f"/directory/{plant_without_image.taxon_id}")
         assert "plant-placeholder" in detail_without_image.text
         missing_plant_image_path = f"/directory/reference-images/{plant_without_image.taxon_id}"
