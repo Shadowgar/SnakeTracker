@@ -80,9 +80,11 @@ class AnimalVisualResolver:
                 alt=f"Profile photo of {animal.name}",
                 kind="personal_photo",
             )
+        reference_name = animal.species
         if self._directory is not None:
             linked = self._directory.linked_for(household_id, animal.animal_id)
             if linked is not None:
+                reference_name = linked.taxon.accepted_scientific_name
                 reference = self._directory.cached_reference_image(linked.taxon.taxon_id)
                 if reference is not None:
                     visual_kind = (
@@ -114,7 +116,7 @@ class AnimalVisualResolver:
                         taxon_id=linked.taxon.taxon_id,
                         provider="care_keeper",
                     )
-        bundled = self._species_references.get(animal.species.casefold())
+        bundled = self._species_references.get(reference_name.casefold())
         if bundled is not None:
             return AnimalVisual(
                 url=(f"/static/species-references/{bundled.filename}?v={STATIC_REFERENCE_VERSION}"),

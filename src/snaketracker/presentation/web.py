@@ -72,6 +72,7 @@ from snaketracker.application.backups import (
 )
 from snaketracker.application.care_guides import (
     CareGuideReader,
+    ReviewedGuide,
     format_claim_value,
     glance_claims,
     grouped_claims,
@@ -152,6 +153,7 @@ from snaketracker.application.length_measurements import (
     length_entered_unit,
     parse_length_input,
 )
+from snaketracker.application.natural_history import NaturalHistoryReader, biological_groups
 from snaketracker.application.purchases import (
     AcquireNewInventoryCommand,
     AssignExistingStockCostCommand,
@@ -1176,10 +1178,62 @@ def create_web_router(
     expected_origin: str | None = None,
     directory_service: SpeciesDirectoryService | None = None,
     care_guide_repository: CareGuideReader | None = None,
+    natural_history_repository: NaturalHistoryReader | None = None,
+    natural_history_development: bool = False,
     production_release_history_path: Path | None = None,
 ) -> APIRouter:
     router = APIRouter(include_in_schema=False)
     animal_visual_resolver = AnimalVisualResolver(directory_service)
+
+    def natural_history_context(
+        taxon_id: UUID | None, guide: ReviewedGuide | None = None
+    ) -> dict[str, object]:
+        versions = (
+            natural_history_repository.published(
+                taxon_id, include_development=natural_history_development
+            )
+            if natural_history_repository is not None and taxon_id is not None
+            else ()
+        )
+        retained_guides = tuple(
+            historical
+            for number in sorted({b.guide_version for v in versions for b in v.guide_bindings})
+            if care_guide_repository is not None
+            and taxon_id is not None
+            and (historical := care_guide_repository.version(taxon_id, number)) is not None
+        )
+        groups = biological_groups(versions, guide, retained_guides=retained_guides)
+        # Only exact bindings to the currently displayed guide suppress its duplicate rows.
+        # Older retained guides can reuse claim IDs for different claims in newer versions.
+        combined = {
+            identifier
+            for group in biological_groups(versions, guide)
+            for position in group.positions
+            for identifier in position.guide_claim_ids
+        }
+        # This transient view is never retained or hashed. Full immutable guide pages
+        # continue using the original payload, including all bound biological claims.
+        display_guide = (
+            guide.model_copy(
+                update={"claims": tuple(c for c in guide.claims if c.claim_id not in combined)}
+            )
+            if guide is not None
+            else None
+        )
+        return {
+            "natural_history_versions": versions,
+            "natural_history_groups": groups,
+            "natural_history_development": natural_history_development,
+            "profile_reference_sections": grouped_claims(display_guide)
+            if display_guide is not None
+            else (),
+            "profile_reference_glance": glance_claims(display_guide)
+            if display_guide is not None
+            else (),
+            "profile_reference_facts": profile_reference_claims(display_guide)
+            if display_guide is not None
+            else (),
+        }
 
     def principal_for(request: Request, *, audit_denial: bool = False) -> Principal | None:
         token = request.cookies.get(SESSION_COOKIE)
@@ -1439,22 +1493,15 @@ def create_web_router(
             "linked_taxon": linked_taxon,
             "care_guide_available": profile_reference_guide is not None,
             "profile_reference_guide": profile_reference_guide,
-            "profile_reference_sections": grouped_claims(profile_reference_guide)
-            if profile_reference_guide is not None
-            else (),
-            "profile_reference_glance": glance_claims(profile_reference_guide)
-            if profile_reference_guide is not None
-            else (),
             "profile_reference_sources": {
                 source.source_id: source for source in profile_reference_guide.sources
             }
             if profile_reference_guide is not None
             else {},
             "directory_available": directory_service is not None,
-            "profile_reference_facts": (
-                profile_reference_claims(profile_reference_guide)
-                if profile_reference_guide is not None
-                else ()
+            **natural_history_context(
+                linked_taxon.taxon.taxon_id if linked_taxon is not None else None,
+                profile_reference_guide,
             ),
             "reference_taxon": reference_taxon_available,
             "reference_taxon_available": reference_taxon_available,
@@ -2173,7 +2220,7 @@ def create_web_router(
             return RedirectResponse("/login", status_code=303)
         try:
             taxon = (
-                await run_in_threadpool(directory_service.refresh_detail, UUID(taxon_id))
+                await run_in_threadpool(directory_service.get, UUID(taxon_id))
                 if directory_service is not None
                 else None
             )
@@ -2197,6 +2244,12 @@ def create_web_router(
             principal,
             context={
                 "taxon": taxon,
+                **natural_history_context(
+                    taxon.taxon_id,
+                    care_guide_repository.current(taxon.taxon_id)
+                    if care_guide_repository is not None
+                    else None,
+                ),
                 "reference_taxon": reference_taxon,
                 "care_guide_available": bool(
                     care_guide_repository is not None

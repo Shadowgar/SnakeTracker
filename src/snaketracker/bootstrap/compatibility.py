@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from collections.abc import Callable, Collection, Mapping
@@ -13,6 +14,7 @@ from types import MappingProxyType
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import SQLAlchemyError
 
+from snaketracker.application.natural_history import NaturalHistoryVersion
 from snaketracker.domains.animals.capabilities import (
     AnimalCapabilityRegistry,
     UnknownCapabilityProfileError,
@@ -28,7 +30,7 @@ from snaketracker.platform.projections.definitions import (
 )
 
 CURRENT_MANIFEST_VERSION = 1
-CURRENT_RELATIONAL_SCHEMA_VERSION = 24
+CURRENT_RELATIONAL_SCHEMA_VERSION = 25
 MINIMUM_RELATIONAL_SCHEMA_VERSION = 0
 MINIMUM_SQLITE_VERSION = (3, 35, 0)
 
@@ -189,6 +191,11 @@ def inspect_database_compatibility(engine: Engine | Connection) -> Compatibility
             CompatibilityMode.RECOVERY_REQUIRED,
             "compatibility_inspection_failed",
             "Stored data could not be inspected safely.",
+        )
+    if revision == "0025_natural_history":
+        return evaluate_compatibility(
+            {"manifest_version": 1, "relational_schema_version": 25},
+            database_is_empty=False,
         )
     if revision == "0024_local_taxonomy":
         return evaluate_compatibility(
@@ -503,6 +510,51 @@ def inspect_projection_compatibility(
     return _report(CompatibilityMode.NORMAL, "compatible", "The application is ready.")
 
 
+def inspect_natural_history(connection: Connection) -> CompatibilityReport:
+    """Validate retained content and publication before mutable startup."""
+    try:
+        for row in connection.exec_driver_sql(
+            "SELECT s.taxon_id,s.origin,v.source_revision,v.content_sha256,v.payload "
+            "FROM natural_history_versions v JOIN natural_history_sources s USING(association_id)"
+        ):
+            taxon, origin, revision, digest, payload = row
+            item = NaturalHistoryVersion.model_validate_json(payload)
+            if (
+                str(item.taxon_id) != taxon
+                or item.origin != origin
+                or item.revision != revision
+                or hashlib.sha256(payload.encode()).hexdigest() != digest
+            ):
+                raise ValueError("Retained content integrity mismatch.")
+        if connection.exec_driver_sql(
+            "SELECT 1 FROM natural_history_decisions d LEFT JOIN natural_history_selection s "
+            "USING(association_id) WHERE s.association_id IS NULL LIMIT 1"
+        ).first():
+            raise ValueError("A publication decision is missing its selection state.")
+        if connection.exec_driver_sql(
+            "SELECT 1 FROM natural_history_selection s LEFT JOIN natural_history_decisions d "
+            "ON d.association_id=s.association_id AND d.revision=s.revision "
+            "WHERE d.decision_id IS NULL OR d.version IS NOT s.version OR s.revision != "
+            "(SELECT max(revision) FROM natural_history_decisions "
+            "WHERE association_id=s.association_id) LIMIT 1"
+        ).first():
+            raise ValueError("Publication and decision history disagree.")
+        if (
+            connection.exec_driver_sql("PRAGMA foreign_key_check(natural_history_versions)").first()
+            or connection.exec_driver_sql(
+                "PRAGMA foreign_key_check(natural_history_selection)"
+            ).first()
+        ):
+            raise ValueError("Broken Natural History reference.")
+    except (ValueError, SQLAlchemyError):
+        return _report(
+            CompatibilityMode.RECOVERY_REQUIRED,
+            "natural_history_incompatible",
+            "Natural History requires compatible storage or operator recovery.",
+        )
+    return _report(CompatibilityMode.NORMAL, "compatible", "The application is ready.")
+
+
 def inspect_local_taxonomy(connection: Connection) -> CompatibilityReport:
     """Fail closed before mutable startup if X2 selection or references are inconsistent."""
     try:
@@ -613,6 +665,7 @@ def inspect_startup_compatibility(
                 lambda connection: inspect_projection_compatibility(connection, registry),
                 *reference_inspections,
                 inspect_local_taxonomy,
+                inspect_natural_history,
             ):
                 result = inspect(connection)
                 if not result.normal_readiness:

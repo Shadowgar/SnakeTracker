@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ animal.name }} · Guides & Species Reference · Care Keeper{% endblock %}
+{% block page_styles %}<link rel="stylesheet" href="/static/natural-history.css?v=x3-1">{% endblock %}
 {% block content %}
 <section class="animal-experience" aria-labelledby="page-title">
   {% include "animal_profile_header.html" %}
@@ -26,12 +27,13 @@
         {% if taxon.alternative_common_names %}<div><dt>Other common names</dt><dd>{{ taxon.alternative_common_names|join(', ') }}</dd></div>{% endif %}
         {% if taxon.synonyms %}<div><dt>Synonyms</dt><dd>{{ taxon.synonyms|join(', ') }}</dd></div>{% endif %}
         </dl>
-        <p class="field-help">Saved species identity and classification. Additional Natural History information is not available on this page yet.</p>
+        <p class="field-help">Saved species identity and classification. Names and classification come from the saved species identity.</p>
       </details>
       {% else %}
       <p>Link a species to see its reference information. Your manual species record remains valid.</p>
       <a class="button-link secondary-link" href="/animals/{{ animal.animal_id }}/species">Link species</a>
       {% endif %}
+      {% include "natural_history_content.html" %}
     </section>
     <section class="profile-reviewed-care" aria-labelledby="reviewed-care-title">
       <h2 id="reviewed-care-title">Reviewed Captive Care</h2>

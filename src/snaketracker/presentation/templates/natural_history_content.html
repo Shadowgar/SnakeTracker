@@ -1,0 +1,35 @@
+<div class="natural-history">
+  <p class="natural-history-boundary">Life in the wild — not care recommendations. Reviewed Captive Care is separate.</p>
+  {% if natural_history_versions %}
+  {% if natural_history_development and natural_history_versions|selectattr('rights_scope', 'equalto', 'development')|list %}<details class="natural-history-preview"><summary>Development preview</summary><p>Source-rights qualification is required before production publication.</p></details>{% endif %}
+  <div class="natural-history-stories">
+  {% for version in natural_history_versions %}
+    {% for section in version.sections %}
+    <article class="natural-history-story">
+      <p class="page-kicker">Natural History</p><h3>{{ section.title }}</h3><p>{{ section.text }}</p>
+      <a class="natural-history-credit" href="{{ version.revision_url }}" target="_blank" rel="noopener noreferrer">{{ version.attribution }} · {{ version.source_title }} ↗</a>
+    </article>
+    {% endfor %}
+  {% endfor %}
+  </div>
+  {% for group in natural_history_groups %}
+  <article class="natural-history-fact">
+    <h3>{{ group.kind|replace('_', ' ')|capitalize }}</h3><span class="guide-state">{{ group.state }}</span>
+    <p class="field-help">Wild · {{ group.context.life_stage }} · {{ group.context.geography }} · {{ group.context.sex }}</p>
+    {% for position in group.positions %}<p><strong>{{ position.fact.value }}{% if position.fact.unit %} {{ position.fact.unit }}{% endif %}</strong></p><p>{{ position.fact.qualifiers }}</p>
+    <details><summary>Evidence for this position</summary>{% for evidence in position.evidence %}<p>{{ evidence.qualification }}</p>{% if evidence.caution %}<p class="guide-caution">{{ evidence.caution }}</p>{% endif %}<p><a href="{{ evidence.reference }}" rel="noopener noreferrer" target="_blank">Original source ↗</a></p>{% endfor %}{% if position.guide_claim_ids %}<p>Also retained in the reviewed guide; the original immutable version remains available.</p>{% endif %}</details>
+    {% endfor %}
+  </article>
+  {% endfor %}
+  <details class="natural-history-sources">
+    <summary>Sources, versions &amp; attribution</summary>
+    {% for version in natural_history_versions %}<article>
+      <h3>{{ version.source_title }}</h3><p>{{ version.attribution }} · <a href="{{ version.license_url }}" target="_blank" rel="noopener noreferrer">{{ version.license }}</a></p>
+      <p><a href="{{ version.revision_url }}" target="_blank" rel="noopener noreferrer">Source revision {{ version.revision }} ↗</a> · Retrieved {{ version.retrieved_at.date().isoformat() }}</p>
+      <p>{{ version.modifications }}</p>
+      <p class="field-help">Description and structured facts are qualified separately. One originating source reached through different services still counts as one source.</p>
+    </article>{% endfor %}
+  </details>
+  {% else %}<p class="profile-reference-empty">Natural History is not available yet. Saved names and classification remain available.</p>{% endif %}
+  <p class="natural-history-unknown">Other biological facts: unavailable unless separately supported and reviewed. No values are inferred from descriptions.</p>
+</div>
