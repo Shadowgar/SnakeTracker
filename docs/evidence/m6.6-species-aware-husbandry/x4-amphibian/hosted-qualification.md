@@ -31,3 +31,30 @@ that fixture without changing application code or weakening the expected refresh
 The follow-up commit changes only tests and evidence. Product source, assets and screenshot
 contents remain identical to the initial candidate. Final-head hosted results are recorded in the
 PR and delivery report, without misreporting this initial failed run as passed.
+
+## Codex live-link finding
+
+The test/evidence follow-up head `e13ba92576fafe88ea5ae219d45e772836055d1b` passed the full
+[Quality run 188](https://github.com/Shadowgar/SnakeTracker/actions/runs/40177541654), Container
+and GitGuardian. Codex then identified a real live-link failure that the prior fixtures missed:
+autocomplete leaves classification and parent fields absent, while detail supplies them. Neither
+response supplies a source clock, so otherwise compatible detail created an unknown-order conflict.
+The Amphibian qualification guard correctly refused to link that conflicted taxon.
+
+The actual provider parsers now exercise search -> detail -> v2 link: red **one failed, two passed**;
+green preserves classification, parent and autocomplete aliases, retains both raw observations,
+and remains readable when provider transport is disabled. Name/rank contradictions still block
+linking without writing a link event. A subsequent partial response cannot erase retained detail.
+
+The narrow catalog fix combines compatible undated observations only for the same iNaturalist
+identity. It requires unchanged scientific name, workflow group, rank, status, source URL and
+accepted identity; conflicting known classification, parent or name values still require decisions.
+Aliases remain bounded to 64 per field. No source clock is inferred from arrival time, and dated
+or foreign-provider comparisons and generation/snapshot conflict rules are unchanged. Raw source
+receipts remain separate from the combined selected overlay. Existing conflicts are not resolved
+automatically. No ordinary read downloads or background enrichment were introduced.
+
+Final focused result: **20 passed in 9.38s** (actual-parser integration plus ancestry/enrichment
+unit checks). Existing source-order, snapshot, undated-disagreement and content-bound-decision
+regressions: **nine passed in 22.08s**. Mypy and Ruff passed. New final-head hosted results and
+Codex disposition are recorded in the PR and delivery report. The UI and screenshots are unchanged.

@@ -80,9 +80,13 @@ PR head. Their results and exact SHA are recorded in the PR and delivery report.
 The [first hosted run](hosted-qualification.md) completed all 1,559 tests: 1,555 passed and four
 pre-X4 expectations failed. Their correction preserves exact five-profile closure, unsupported
 future-group exclusion and rejection of Amphibians encoded as historical registration v2.
-Focused verification passed 16 cases. This follow-up changes tests/evidence only; the application
-source and captured visual candidate are unchanged. Fresh final-head hosted qualification is
-recorded in the PR and delivery report.
+Focused verification passed 16 cases and the next full hosted gate passed. A subsequent Codex
+finding reproduced an autocomplete/detail ordering conflict that prevented normal live Frog
+linking. Compatible partial iNaturalist responses now retain combined detail and aliases without
+inventing source clocks; contradictory facts, dated snapshots and other providers retain existing
+conflict rules. Actual-parser linking, offline reads and rejection cases passed, alongside existing
+ordering regressions. Presentation files and screenshot contents are unchanged. Fresh final-head
+hosted qualification is recorded in the PR and delivery report.
 
 ## Visual evidence
 
