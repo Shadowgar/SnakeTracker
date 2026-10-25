@@ -5,6 +5,7 @@ import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
@@ -180,7 +181,12 @@ def test_boa_offline_local_reference_and_private_access(tmp_path, monkeypatch):
         assert response.status_code == 303 and response.headers["location"] == "/login"
 
 
-def test_qualified_legacy_biology_displays_once_without_rewriting_full_guide(tmp_path):
+@pytest.mark.parametrize(
+    "legacy_value", ["Fictional cloud forest", "x" * 512, "Wild range < 5 > 2"]
+)
+def test_qualified_legacy_biology_displays_once_without_rewriting_full_guide(
+    tmp_path, legacy_value
+):
     from snaketracker.application.care_guides import GuideBundle
     from snaketracker.application.natural_history import GuideBiologyBinding, guide_digest
     from snaketracker.infrastructure.taxonomy.care_guides import SQLAlchemyCareGuideRepository
@@ -193,7 +199,8 @@ def test_qualified_legacy_biology_displays_once_without_rewriting_full_guide(tmp
     claim = original.claims[0].model_copy(
         update={
             "fact_key": "natural_habitat",
-            "value_text": "Fictional cloud forest",
+            "value_text": legacy_value,
+            "caution": "Original warning: comparisons are not captive-care recommendations.",
             "value_number": None,
             "minimum": None,
             "maximum": None,
@@ -238,14 +245,18 @@ def test_qualified_legacy_biology_displays_once_without_rewriting_full_guide(tmp
         reason="Synthetic guide integration",
         development=True,
     )
+    from html import escape
+
+    rendered_value = escape(legacy_value)
     before = guides.version(identifier, 1)
     with TestClient(app) as client:
         animal = setup_animal(client, identifier)
         page = client.get(animal + "/reference")
         assert page.status_code == 200
-        assert page.text.count("Fictional cloud forest") == 1
+        assert page.text.count(rendered_value) == 1
+        assert claim.caution in page.text
         full = client.get("/directory/" + str(identifier) + "/care-guide?version=1")
-        assert full.status_code == 200 and "Fictional cloud forest" in full.text
+        assert full.status_code == 200 and rendered_value in full.text
         assert guides.version(identifier, 1) == before
         # A later immutable guide reuses the claim ID with different content. The bound
         # version remains readable, and must not suppress the newer unbound claim.
@@ -259,7 +270,8 @@ def test_qualified_legacy_biology_displays_once_without_rewriting_full_guide(tmp
         for url in (animal + "/reference", "/directory/" + str(identifier)):
             updated = client.get(url)
             assert updated.status_code == 200
-            assert updated.text.count("Fictional cloud forest") == 1
+            assert updated.text.count(rendered_value) == 1
+            assert claim.caution in updated.text
             if url == animal + "/reference":
                 assert "Newer guide habitat" in updated.text
         assert guides.version(identifier, 1) == before

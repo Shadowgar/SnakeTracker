@@ -13,7 +13,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from snaketracker.application.care_guides import ReviewedGuide
+from snaketracker.application.care_guides import GuideClaim, ReviewedGuide
 
 
 class FrozenModel(BaseModel):
@@ -60,6 +60,20 @@ class BiologicalFact(BiologicalContext):
     value: str = Field(min_length=1, max_length=500)
     unit: str = Field(default="", max_length=32)
     qualification: str = Field(min_length=10, max_length=1500)
+
+
+class BoundGuideFact(BiologicalFact):
+    """Display adapter for already validated legacy text; templates escape it as text."""
+
+    value: str = Field(min_length=1, max_length=512)
+
+    @field_validator("*")
+    @classmethod
+    def plain_text(cls, value: object) -> object:
+        # Existing immutable guides allow comparison signs. Never interpret them as HTML.
+        if isinstance(value, str) and "\x00" in value:
+            raise ValueError("Reference fields cannot contain NUL.")
+        return value
 
 
 class GuideBiologyBinding(BiologicalContext):
@@ -132,6 +146,7 @@ class BiologicalEvidence:
     origin: str
     reference: str
     qualification: str
+    caution: str = ""
 
 
 @dataclass(frozen=True)
@@ -166,6 +181,22 @@ def guide_digest(guide: ReviewedGuide) -> str:
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
+def bound_guide_fact(binding: GuideBiologyBinding, claim: GuideClaim) -> BoundGuideFact:
+    """Use the same validated conversion at retention and presentation boundaries."""
+    return BoundGuideFact(
+        **binding.model_dump(include=set(BiologicalContext.model_fields)),
+        value=(
+            claim.value_text
+            if claim.value_text is not None
+            else f"{claim.value_number:g}"
+            if claim.value_number is not None
+            else f"{claim.minimum:g}-{claim.maximum:g}"
+        ),
+        unit=claim.unit or "",
+        qualification=binding.qualification,
+    )
+
+
 def biological_groups(
     versions: tuple[NaturalHistoryVersion, ...],
     guide: ReviewedGuide | None,
@@ -176,9 +207,11 @@ def biological_groups(
     guides = {g.version: g for g in retained_guides}
     if guide is not None:
         guides[guide.version] = guide
-    rows: list[tuple[BiologicalFact, str, str, str | None]] = []
+    rows: list[tuple[BiologicalFact, str, str, str | None, str]] = []
     for version in versions:
-        rows.extend((fact, version.origin, version.revision_url, None) for fact in version.claims)
+        rows.extend(
+            (fact, version.origin, version.revision_url, None, "") for fact in version.claims
+        )
         for binding in version.guide_bindings:
             bound_guide = guides.get(binding.guide_version)
             if bound_guide is None or binding.guide_sha256 != guide_digest(bound_guide):
@@ -189,28 +222,19 @@ def biological_groups(
             if claim is None or claim.context != "wild":
                 continue
             source = next(s for s in bound_guide.sources if s.source_id == claim.source_id)
-            fact = BiologicalFact(
-                **binding.model_dump(include=set(BiologicalContext.model_fields)),
-                value=(
-                    claim.value_text
-                    if claim.value_text is not None
-                    else f"{claim.value_number:g}"
-                    if claim.value_number is not None
-                    else f"{claim.minimum:g}-{claim.maximum:g}"
-                ),
-                unit=claim.unit or "",
-                qualification=binding.qualification,
+            bound_fact = bound_guide_fact(binding, claim)
+            rows.append(
+                (bound_fact, binding.origin, source.url, claim.claim_id, claim.caution or "")
             )
-            rows.append((fact, binding.origin, source.url, claim.claim_id))
-    groups: dict[str, dict[tuple[str, str], list[tuple[BiologicalFact, str, str, str | None]]]] = (
-        defaultdict(lambda: defaultdict(list))
-    )
+    groups: dict[
+        str, dict[tuple[str, str], list[tuple[BiologicalFact, str, str, str | None, str]]]
+    ] = defaultdict(lambda: defaultdict(list))
     contexts: dict[str, BiologicalContext] = {}
-    for fact, origin, reference, claim_id in rows:
+    for fact, origin, reference, claim_id, caution in rows:
         context = BiologicalContext(**fact.model_dump(include=set(BiologicalContext.model_fields)))
         key = context.model_dump_json()
         contexts[key] = context
-        groups[key][(fact.value, fact.unit)].append((fact, origin, reference, claim_id))
+        groups[key][(fact.value, fact.unit)].append((fact, origin, reference, claim_id, caution))
     return tuple(
         BiologicalGroup(
             contexts[key].kind,
@@ -222,7 +246,12 @@ def biological_groups(
                     tuple(sorted({i[2] for i in items})),
                     tuple(sorted({i[3] for i in items if i[3] is not None})),
                     tuple(
-                        sorted({BiologicalEvidence(i[1], i[2], i[0].qualification) for i in items})
+                        sorted(
+                            {
+                                BiologicalEvidence(i[1], i[2], i[0].qualification, i[4])
+                                for i in items
+                            }
+                        )
                     ),
                 )
                 for items in positions.values()

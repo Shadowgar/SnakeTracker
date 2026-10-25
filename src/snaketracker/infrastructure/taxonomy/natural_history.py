@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.engine import Engine
 
-from snaketracker.application.natural_history import NaturalHistoryVersion
+from snaketracker.application.natural_history import NaturalHistoryVersion, bound_guide_fact
 from snaketracker.infrastructure.taxonomy.catalog import LocalTaxonomyCatalog, execute
 
 
@@ -55,6 +55,7 @@ class NaturalHistoryRepository:
                 source = next(x for x in guide.sources if x.source_id == claim.source_id)
                 if source.url != binding.origin or (claim.qualifier or "") != binding.qualifiers:
                     raise ValueError("Guide binding must preserve original origin and qualifiers.")
+                bound_guide_fact(binding, claim)
             association = execute(
                 c,
                 "SELECT association_id FROM natural_history_sources "

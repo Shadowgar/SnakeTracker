@@ -17,7 +17,7 @@
     <h3>{{ group.kind|replace('_', ' ')|capitalize }}</h3><span class="guide-state">{{ group.state }}</span>
     <p class="field-help">Wild · {{ group.context.life_stage }} · {{ group.context.geography }} · {{ group.context.sex }}</p>
     {% for position in group.positions %}<p><strong>{{ position.fact.value }}{% if position.fact.unit %} {{ position.fact.unit }}{% endif %}</strong></p><p>{{ position.fact.qualifiers }}</p>
-    <details><summary>Evidence for this position</summary>{% for evidence in position.evidence %}<p>{{ evidence.qualification }}</p><p><a href="{{ evidence.reference }}" rel="noopener noreferrer" target="_blank">Original source ↗</a></p>{% endfor %}{% if position.guide_claim_ids %}<p>Also retained in the reviewed guide; the original immutable version remains available.</p>{% endif %}</details>
+    <details><summary>Evidence for this position</summary>{% for evidence in position.evidence %}<p>{{ evidence.qualification }}</p>{% if evidence.caution %}<p class="guide-caution">{{ evidence.caution }}</p>{% endif %}<p><a href="{{ evidence.reference }}" rel="noopener noreferrer" target="_blank">Original source ↗</a></p>{% endfor %}{% if position.guide_claim_ids %}<p>Also retained in the reviewed guide; the original immutable version remains available.</p>{% endif %}</details>
     {% endfor %}
   </article>
   {% endfor %}

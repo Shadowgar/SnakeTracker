@@ -319,6 +319,27 @@ def test_legacy_binding_preserves_life_stage_and_absent_qualifier(catalog):
         )
         with pytest.raises(ValueError, match=message):
             repo.retain(invalid)
+    # Even a retained legacy value must pass the display adapter before publication.
+    invalid_guide = guide.model_copy(
+        update={
+            "version": 2,
+            "claims": (claim.model_copy(update={"value_text": "Invalid\x00legacy text"}),),
+        }
+    )
+    SQLAlchemyCareGuideRepository(catalog.engine).import_bundle(
+        GuideBundle(format_version=1, guides=(invalid_guide,))
+    )
+    invalid_binding = binding.model_copy(
+        update={"guide_version": 2, "guide_sha256": guide_digest(invalid_guide)}
+    )
+    with pytest.raises(ValueError, match="NUL"):
+        repo.retain(
+            version(
+                identifier,
+                revision="invalid-display",
+                guide_bindings=[invalid_binding.model_dump()],
+            )
+        )
     assert repo.versions(identifier) == (valid,)
 
 
