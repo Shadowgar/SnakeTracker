@@ -246,7 +246,7 @@ class AdminReadRepository:
                 id=id,
             ),
             "animals": self.rows(
-                "SELECT a.animal_id,a.name,a.animal_type,a.species,a.status,a.current_enclosure_id,"
+                "SELECT a.animal_id,a.name,a.animal_type,a.capability_profile_version,a.species,a.status,a.current_enclosure_id,"
                 "e.name enclosure_name,"
                 "(SELECT count(*) FROM domain_events d WHERE d.household_id=a.household_id "
                 "AND d.stream_type='animal' AND d.stream_id=a.animal_id) event_count,"

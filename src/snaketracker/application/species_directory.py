@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 
 from snaketracker.application.animals import AnimalCurrentProjection
 from snaketracker.application.local_taxonomy import TaxonomySearchLimitError
-from snaketracker.domains.animals.contracts import AnimalTaxonLinkedV1
+from snaketracker.domains.animals.contracts import AnimalTaxonLinkedV1, AnimalTaxonLinkedV2
 from snaketracker.platform.events.envelope import DomainEvent, EventSubject, event_checksum
 from snaketracker.platform.events.store import (
     AtomicAppendRequest,
@@ -22,7 +22,7 @@ from snaketracker.platform.events.store import (
     canonical_command_hash,
 )
 
-SUPPORTED_GROUPS = frozenset({"snake", "lizard", "spider", "scorpion", "plant"})
+SUPPORTED_GROUPS = frozenset({"snake", "lizard", "spider", "scorpion", "plant", "amphibian"})
 ANIMAL_GROUPS = SUPPORTED_GROUPS - {"plant"}
 REFERENCE_IMAGE_LICENSES = frozenset({"cc0", "cc-by", "cc-by-sa", "cc-by-nc", "cc-by-nc-sa"})
 
@@ -434,11 +434,20 @@ class SpeciesDirectoryService:
             raise DirectoryValidationError("Select a valid Animal species result.")
         if taxon.supported_group != animal.animal_type:
             raise DirectoryValidationError("The selected species does not match this Animal type.")
+        if taxon.supported_group == "amphibian" and (
+            taxon.rank not in {"species", "subspecies"}
+            or taxon.taxonomic_status != "accepted"
+            or taxon.taxonomy_selection_state != "selected"
+        ):
+            raise DirectoryValidationError("Select a qualified Amphibian species result.")
         existing = self.linked_for(command.household_id, command.animal_id)
         if existing is not None and existing.taxon.taxon_id == taxon.taxon_id:
             return existing
         now = datetime.now(UTC)
-        payload = AnimalTaxonLinkedV1(
+        link_contract = (
+            AnimalTaxonLinkedV2 if taxon.supported_group == "amphibian" else AnimalTaxonLinkedV1
+        )
+        payload = link_contract(
             taxon_id=taxon.taxon_id,
             group=taxon.supported_group,
             accepted_scientific_name=taxon.accepted_scientific_name,
@@ -453,7 +462,7 @@ class SpeciesDirectoryService:
             stream_id=command.animal_id,
             stream_version=animal.stream_version + 1,
             event_type="animal.taxon_linked",
-            schema_version=1,
+            schema_version=2 if isinstance(payload, AnimalTaxonLinkedV2) else 1,
             occurred_at=now,
             recorded_at=now,
             actor_user_id=command.actor_user_id,

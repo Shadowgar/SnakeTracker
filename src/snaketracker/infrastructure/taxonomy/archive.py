@@ -349,6 +349,13 @@ def read_archive(
                         if len(groups) > 1:
                             raise ValueError("Conflicting qualified workflow ancestry.")
                         group = groups[0] if groups else ""
+                        # Higher Amphibia ranks remain reference-only; the initial profile
+                        # links qualified species, never a class/order as an individual species.
+                        if group == "amphibian" and record.get("taxonRank", "").lower() not in {
+                            "species",
+                            "subspecies",
+                        }:
+                            group = ""
                     status = record.get("taxonomicStatus", "").strip().lower() or "unknown"
                     candidate = ProviderTaxon(
                         provider,

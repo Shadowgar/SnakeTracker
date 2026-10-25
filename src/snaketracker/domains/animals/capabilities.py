@@ -8,7 +8,11 @@ from dataclasses import dataclass
 from enum import StrEnum
 from types import MappingProxyType
 
-from snaketracker.domains.animals.contracts import AnimalRegisteredV1, AnimalRegisteredV2
+from snaketracker.domains.animals.contracts import (
+    AnimalRegisteredV1,
+    AnimalRegisteredV2,
+    AnimalRegisteredV3,
+)
 
 
 class AnimalType(StrEnum):
@@ -16,6 +20,7 @@ class AnimalType(StrEnum):
     SPIDER = "spider"
     LIZARD = "lizard"
     SCORPION = "scorpion"
+    AMPHIBIAN = "amphibian"
 
 
 class AnimalCapability(StrEnum):
@@ -74,6 +79,7 @@ WORKFLOW_GROUPS = (
     WorkflowGroup("spider", "Spider", 1, "spider"),
     WorkflowGroup("lizard", "Lizard", 2, "lizard"),
     WorkflowGroup("scorpion", "Scorpion", 3, "scorpion"),
+    WorkflowGroup("amphibian", "Amphibian", 4, "amphibian"),
 )
 
 
@@ -214,13 +220,15 @@ class AnimalCapabilityRegistry:
         profile = self.require(identity)
         if not profile.registration_eligible or not self.group(profile.workflow_group).enabled:
             raise ValueError("Animal profile is not eligible for registration.")
-        # New registrations use AnimalRegisteredV2; v1 remains a historical reader only.
+        # Each profile explicitly declares its writable release barrier; v1 is historical only.
         if (
             type(profile.registration_contract_version) is not int
-            or profile.registration_contract_version != 2
+            or profile.registration_contract_version not in (2, 3)
+            or ("animal.registered", profile.registration_contract_version)
+            not in profile.required_event_contracts
         ):
             raise ValueError(
-                "Animal registration metadata does not match the writable v2 contract."
+                "Animal registration metadata does not match the writable registration contract."
             )
         return profile
 
@@ -408,6 +416,30 @@ animal_capability_registry = AnimalCapabilityRegistry(
                 }
             ),
         ),
+        CapabilityProfile(
+            animal_type=AnimalType.AMPHIBIAN,
+            version=1,
+            label="Amphibian",
+            capabilities=_SHARED | frozenset({AnimalCapability.LENGTH}),
+            care_actions=("feeding", "weight", "length"),
+            reminder_kinds=("feeding", "weight", "length", "cleaning", "water_change"),
+            analytics_kinds=frozenset(
+                {
+                    AnimalAnalyticsKind.FEEDING,
+                    AnimalAnalyticsKind.WEIGHT,
+                    AnimalAnalyticsKind.LENGTH,
+                }
+            ),
+            registration_contract_version=3,
+            required_event_contracts=(
+                ("animal.registered", 3),
+                ("animal.taxon_linked", 2),
+                ("animal.length_recorded", 1),
+                ("animal.length_recorded", 2),
+                ("animal.length_corrected", 1),
+                ("animal.length_corrected", 2),
+            ),
+        ),
     )
 )
 
@@ -457,12 +489,20 @@ def legacy_registration_profile() -> CapabilityProfile:
 
 
 def capability_profile_for_registration(
-    registration: AnimalRegisteredV1 | AnimalRegisteredV2,
+    registration: AnimalRegisteredV1 | AnimalRegisteredV2 | AnimalRegisteredV3,
 ) -> CapabilityProfile:
     """Resolve an immutable registration contract to its trusted capability profile."""
 
     if isinstance(registration, AnimalRegisteredV1):
         return legacy_registration_profile()
-    return animal_capability_registry.require_parts(
-        registration.animal_type, registration.capability_profile_version
-    )
+    if isinstance(registration, AnimalRegisteredV3):
+        profile = animal_capability_registry.require(registration.capability_profile)
+        contract_version = 3
+    else:
+        profile = animal_capability_registry.require_parts(
+            registration.animal_type, registration.capability_profile_version
+        )
+        contract_version = 2
+    if ("animal.registered", contract_version) not in profile.required_event_contracts:
+        raise ValueError("Animal profile is not supported by this registration contract.")
+    return profile

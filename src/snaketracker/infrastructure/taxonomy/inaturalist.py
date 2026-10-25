@@ -19,6 +19,7 @@ ANCESTOR_BY_GROUP = {
     "spider": 47118,
     "scorpion": 48894,
     "plant": 47126,
+    "amphibian": 20978,
 }
 IMAGE_LICENSES = frozenset({"cc0", "cc-by", "cc-by-sa", "cc-by-nc", "cc-by-nc-sa"})
 
@@ -125,6 +126,11 @@ def _parse_taxon(raw: object, group: str, ancestor_id: int) -> ProviderTaxon | N
         or ancestor_id not in ancestor_ids
     ):
         return None
+    if group == "amphibian" and (
+        any(type(identifier) is not int or identifier <= 0 for identifier in ancestor_ids)
+        or any(value in ancestor_ids for key, value in ANCESTOR_BY_GROUP.items() if key != group)
+    ):
+        return None
     common = _bounded_string(data.get("preferred_common_name"), 256)
     matched = _bounded_string(data.get("matched_term"), 256)
     synonyms = () if matched is None or matched in {name, common} else (matched,)
@@ -176,6 +182,11 @@ def _parse_detail(raw: object, group: str, ancestor_id: int) -> ProviderTaxon | 
         phylum_division=classification.get("phylum"),
         class_name=classification.get("class"),
         order_name=classification.get("order"),
+        parent_provider_id=(
+            str(raw["parent_id"])
+            if type(raw.get("parent_id")) is int and raw["parent_id"] > 0
+            else base.parent_provider_id
+        ),
         family=classification.get("family"),
     )
 
