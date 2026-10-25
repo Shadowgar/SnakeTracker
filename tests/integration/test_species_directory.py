@@ -762,22 +762,45 @@ def test_live_search_keeps_selected_group_filter_when_discovery_conflicts(tmp_pa
         engine.dispose()
 
 
-@pytest.mark.parametrize("group", ["", "amphibian"])
-def test_reference_only_selected_taxon_skips_unsupported_provider_refresh(
-    tmp_path, monkeypatch, group
+@pytest.mark.parametrize(
+    "group,scientific_name,refresh_enabled",
+    [
+        ("", "Rana temporaria", False),
+        ("fish", "Amphiprion ocellaris", False),
+        ("amphibian", "Rana temporaria", True),
+    ],
+)
+def test_selected_taxon_refreshes_only_enabled_provider_groups(
+    tmp_path, monkeypatch, group, scientific_name, refresh_enabled
 ):
     engine = _database(tmp_path)
     repository = SQLAlchemyTaxonRepository(engine)
+    now = datetime.now(UTC)
+    candidate = ProviderTaxon(
+        "fixture",
+        "1",
+        "https://example.test/1",
+        group,
+        scientific_name,
+        rank="species",
+        source_effective_at=now - timedelta(days=1),
+    )
     record = repository.upsert(
-        ProviderTaxon("fixture", "1", "https://example.test/1", group, "Rana temporaria"),
+        candidate,
         observed_at=datetime.now(UTC),
     )
     provider = FixtureProvider({})
 
-    def unsupported(*args):
-        raise KeyError("Provider has no workflow ancestor for this group")
+    refresh_calls = []
 
-    monkeypatch.setattr(provider, "detail", unsupported)
+    def detail(provider_id, workflow_group):
+        assert refresh_enabled, "Reference-only taxa must not invoke unsupported providers"
+        refresh_calls.append((provider_id, workflow_group))
+        return replace(
+            candidate, preferred_common_name="European Common Frog", source_effective_at=now
+        )
+
+    monkeypatch.setattr(provider, "detail", detail)
     service = SpeciesDirectoryService(
         repository,
         provider,
@@ -788,7 +811,11 @@ def test_reference_only_selected_taxon_skips_unsupported_provider_refresh(
         retained = service.refresh_detail(record.taxon_id)
         assert retained.taxon_id == record.taxon_id
         assert retained.supported_group == group
-        assert retained.accepted_scientific_name == "Rana temporaria"
+        assert retained.accepted_scientific_name == scientific_name
+        assert refresh_calls == ([("1", "amphibian")] if refresh_enabled else [])
+        assert retained.preferred_common_name == (
+            "European Common Frog" if refresh_enabled else None
+        )
     finally:
         engine.dispose()
 

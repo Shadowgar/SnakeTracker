@@ -77,6 +77,13 @@ assertion threshold or coverage gate was weakened. See [local qualification](loc
 Final complete qualification uses the unchanged hosted Quality/Container/security checks on the
 PR head. Their results and exact SHA are recorded in the PR and delivery report.
 
+The [first hosted run](hosted-qualification.md) completed all 1,559 tests: 1,555 passed and four
+pre-X4 expectations failed. Their correction preserves exact five-profile closure, unsupported
+future-group exclusion and rejection of Amphibians encoded as historical registration v2.
+Focused verification passed 16 cases. This follow-up changes tests/evidence only; the application
+source and captured visual candidate are unchanged. Fresh final-head hosted qualification is
+recorded in the PR and delivery report.
+
 ## Visual evidence
 
 | View | 390px | 320px | 1440px |

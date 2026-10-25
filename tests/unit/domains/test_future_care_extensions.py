@@ -136,10 +136,12 @@ def test_future_examples_do_not_leak_into_production_registration():
         "spider.v1",
         "lizard.v1",
         "scorpion.v1",
+        "amphibian.v1",
     )
     assert tuple(group.identity for group in animal_capability_registry.registration_groups) == (
         "snake",
         "spider",
         "lizard",
         "scorpion",
+        "amphibian",
     )
