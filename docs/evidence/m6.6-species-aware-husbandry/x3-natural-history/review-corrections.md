@@ -56,3 +56,20 @@ amd64 and arm64 successfully but failed its unchanged scan on Pillow 12.3.0: 28 
 in the dependency range and lock, following its [upstream release notes](https://pillow.readthedocs.io/en/stable/releasenotes/13.0.0.html).
 The other package locks, base images, scan policy and runtime architecture are unchanged.
 No production environment/package was updated. Fresh hosted checks qualify the amended candidate.
+
+## Consistent summary filtering
+
+Review of `6807b26130135f9d0c1351e7810f958a36b7d012` found that bound biological claims
+could remain in the Animal's care summary even when removed from detailed care sections.
+All care display helpers now consume the same transient filtered guide, recomputing support
+states and summary eligibility. Full immutable-guide pages continue reading the original payload.
+The regression uses a summary-selected key and a second, independently sourced unbound position;
+it checks detailed rendering, overview exclusion, the remaining summary's Single source state,
+original guide preservation, and later guide versions reusing claim IDs.
+
+An initial new test fixture accidentally duplicated a source position and was corrected to use
+a distinct second source. With that valid fixture, all three pre-fix cases reached rendering and
+failed on the stale summary disagreement. After the fix, all seven Natural History unit/web
+checks passed; see [summary-regressions.log](summary-regressions.log). Ruff, formatting, mypy,
+architecture and freeze checks passed. Focused independent review found no remaining substantive
+issues after confirming the corrected fixture. Final exact-head hosted results remain in the PR.

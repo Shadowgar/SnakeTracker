@@ -198,7 +198,7 @@ def test_qualified_legacy_biology_displays_once_without_rewriting_full_guide(
     original = _bundle().guides[0]
     claim = original.claims[0].model_copy(
         update={
-            "fact_key": "natural_habitat",
+            "fact_key": "food_types",
             "value_text": legacy_value,
             "caution": "Original warning: comparisons are not captive-care recommendations.",
             "value_number": None,
@@ -211,11 +211,33 @@ def test_qualified_legacy_biology_displays_once_without_rewriting_full_guide(
             "qualifier": None,
         }
     )
-    guide = original.model_copy(update={"scientific_name": "Boa imperator", "claims": (claim,)})
+    unbound = claim.model_copy(
+        update={
+            "claim_id": "unbound-position",
+            "value_text": "Legacy unbound position",
+            "source_id": "unbound-source",
+        }
+    )
+    guide = original.model_copy(
+        update={
+            "scientific_name": "Boa imperator",
+            "claims": (claim, unbound),
+            "sources": (
+                *original.sources,
+                original.sources[0].model_copy(
+                    update={
+                        "source_id": "unbound-source",
+                        "publisher": "Unbound fixture source",
+                        "url": "https://example.test/unbound",
+                    }
+                ),
+            ),
+        }
+    )
     guides = SQLAlchemyCareGuideRepository(engine)
     guides.import_bundle(GuideBundle(format_version=1, guides=(guide,)))
     binding = GuideBiologyBinding(
-        kind="habitat",
+        kind="diet",
         life_stage="Adult",
         geography="synthetic range",
         sex="unspecified",
@@ -255,6 +277,13 @@ def test_qualified_legacy_biology_displays_once_without_rewriting_full_guide(
         assert page.status_code == 200
         assert page.text.count(rendered_value) == 1
         assert claim.caution in page.text
+        # Summary and detailed rows use the same exact-binding filter and fresh support state.
+        summary = page.text.split('id="profile-glance-title"', 1)[1].split("</dl>", 1)[0]
+        assert "Legacy unbound position" in summary
+        assert "Single source" in summary and "Sources differ" not in summary
+        overview = client.get(animal)
+        assert rendered_value not in overview.text
+        assert "Legacy unbound position" in overview.text
         full = client.get("/directory/" + str(identifier) + "/care-guide?version=1")
         assert full.status_code == 200 and rendered_value in full.text
         assert guides.version(identifier, 1) == before

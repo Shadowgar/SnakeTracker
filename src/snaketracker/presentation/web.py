@@ -77,7 +77,6 @@ from snaketracker.application.care_guides import (
     glance_claims,
     grouped_claims,
     profile_reference_claims,
-    support_state,
 )
 from snaketracker.application.dashboard import DashboardStatisticsService
 from snaketracker.application.enclosures import (
@@ -1212,31 +1211,28 @@ def create_web_router(
             for position in group.positions
             for identifier in position.guide_claim_ids
         }
-        source_map = (
-            {source.source_id: source for source in guide.sources} if guide is not None else {}
-        )
-        sections = (
-            tuple(
-                (
-                    label,
-                    tuple(
-                        (fact_label, remaining, support_state(remaining, source_map))
-                        for fact_label, claims, _state in facts
-                        if (remaining := tuple(c for c in claims if c.claim_id not in combined))
-                    ),
-                )
-                for label, facts in grouped_claims(guide)
+        # This transient view is never retained or hashed. Full immutable guide pages
+        # continue using the original payload, including all bound biological claims.
+        display_guide = (
+            guide.model_copy(
+                update={"claims": tuple(c for c in guide.claims if c.claim_id not in combined)}
             )
             if guide is not None
-            else ()
+            else None
         )
         return {
             "natural_history_versions": versions,
             "natural_history_groups": groups,
             "natural_history_development": natural_history_development,
-            "profile_reference_sections": tuple(
-                (label, facts) for label, facts in sections if facts
-            ),
+            "profile_reference_sections": grouped_claims(display_guide)
+            if display_guide is not None
+            else (),
+            "profile_reference_glance": glance_claims(display_guide)
+            if display_guide is not None
+            else (),
+            "profile_reference_facts": profile_reference_claims(display_guide)
+            if display_guide is not None
+            else (),
         }
 
     def principal_for(request: Request, *, audit_denial: bool = False) -> Principal | None:
@@ -1497,23 +1493,12 @@ def create_web_router(
             "linked_taxon": linked_taxon,
             "care_guide_available": profile_reference_guide is not None,
             "profile_reference_guide": profile_reference_guide,
-            "profile_reference_sections": grouped_claims(profile_reference_guide)
-            if profile_reference_guide is not None
-            else (),
-            "profile_reference_glance": glance_claims(profile_reference_guide)
-            if profile_reference_guide is not None
-            else (),
             "profile_reference_sources": {
                 source.source_id: source for source in profile_reference_guide.sources
             }
             if profile_reference_guide is not None
             else {},
             "directory_available": directory_service is not None,
-            "profile_reference_facts": (
-                profile_reference_claims(profile_reference_guide)
-                if profile_reference_guide is not None
-                else ()
-            ),
             **natural_history_context(
                 linked_taxon.taxon.taxon_id if linked_taxon is not None else None,
                 profile_reference_guide,
