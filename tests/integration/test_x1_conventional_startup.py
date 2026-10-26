@@ -28,17 +28,19 @@ def isolate_startup_logging(monkeypatch):
 
 @pytest.mark.parametrize("entrypoint", ["web", "worker"])
 @pytest.mark.parametrize(
-    "payload",
+    "payload,expected",
     [
-        '{"animal_type":"snake","capability_profile_version":99}',
-        '{"animal_type":"amphibian","capability_profile_version":1}',
-        '{"animal_type":"snake","capability_profile_version":true}',
-        "[]",
-        "{broken",
+        ('{"animal_type":"snake","capability_profile_version":99}', "unsupported identity"),
+        ('{"animal_type":"fish","capability_profile_version":1}', "unsupported identity"),
+        # X4 knows amphibian.v1, but its registration must use v3 rather than historical v2.
+        ('{"animal_type":"amphibian","capability_profile_version":1}', "invalid event payload"),
+        ('{"animal_type":"snake","capability_profile_version":true}', "invalid event payload"),
+        ("[]", "invalid event payload"),
+        ("{broken", "invalid event payload"),
     ],
 )
 def test_incompatible_identity_is_rejected_before_sqlite_profile_mutation(
-    tmp_path, entrypoint, payload, capsys
+    tmp_path, entrypoint, payload, expected, capsys
 ):
     try:
         identity = json.loads(payload)
@@ -89,11 +91,6 @@ def test_incompatible_identity_is_rejected_before_sqlite_profile_mutation(
             run_worker(settings, threading.Event(), poll_interval=0.001) == EXIT_RECOVERY_REQUIRED
         )
     diagnostic = capsys.readouterr().err
-    expected = (
-        "unsupported identity"
-        if isinstance(identity, dict) and type(identity.get("capability_profile_version")) is int
-        else "invalid event payload"
-    )
     assert expected in diagnostic
     assert "animal.registered v2" in diagnostic
     assert "Private fixture name" not in diagnostic

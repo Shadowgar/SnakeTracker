@@ -1,0 +1,135 @@
+{
+  "use": "Development identity/ancestry facts only; no descriptions, Care Guides or production import/publication rights inferred.",
+  "sources": [
+    {
+      "label": "amphibia",
+      "sha256": "9e9d4481994948f1705c4ca8c7088cee0329d441eb306219302a792e17db9aab",
+      "retrieved_at": "2026-10-25T07:08:02.394084+00:00",
+      "identities": [
+        {
+          "id": 20978,
+          "name": "Amphibia",
+          "rank": "class",
+          "ancestor_ids": [
+            48460,
+            1,
+            2,
+            355675
+          ]
+        }
+      ],
+      "source_url": "https://api.inaturalist.org/v1/taxa/20978"
+    },
+    {
+      "label": "anura",
+      "sha256": "8b9866a170c9579ee32c22a3f63a1f82f087f1a2f10d92f2e7ddedfa1653331b",
+      "retrieved_at": "2026-10-25T07:08:03.126092+00:00",
+      "identities": [
+        {
+          "id": 20979,
+          "name": "Anura",
+          "rank": "order",
+          "ancestor_ids": [
+            48460,
+            1,
+            2,
+            355675,
+            20978
+          ]
+        }
+      ],
+      "source_url": "https://api.inaturalist.org/v1/taxa/20979"
+    },
+    {
+      "label": "frog",
+      "sha256": "f494fd6dbfe4d7a65c34b21643cde71017af47b32f80a29d1fecb77a33868ec6",
+      "retrieved_at": "2026-10-25T07:08:03.520097+00:00",
+      "identities": [
+        {
+          "id": 25591,
+          "name": "Rana temporaria",
+          "rank": "species",
+          "ancestor_ids": [
+            48460,
+            1,
+            2,
+            355675,
+            20978,
+            20979,
+            25473,
+            25474,
+            25591
+          ]
+        },
+        {
+          "id": 1688750,
+          "name": "Rana parvipalmata",
+          "rank": "species",
+          "ancestor_ids": [
+            48460,
+            1,
+            2,
+            355675,
+            20978,
+            20979,
+            25473,
+            25474,
+            1688750
+          ]
+        },
+        {
+          "id": 25676,
+          "name": "Rana dybowskii",
+          "rank": "species",
+          "ancestor_ids": [
+            48460,
+            1,
+            2,
+            355675,
+            20978,
+            20979,
+            25473,
+            25474,
+            25676
+          ]
+        }
+      ],
+      "source_url": "https://api.inaturalist.org/v1/taxa/autocomplete?q=Rana%20temporaria&per_page=3"
+    },
+    {
+      "label": "preview_species_detail",
+      "source_url": "https://api.inaturalist.org/v1/taxa/25591",
+      "sha256": "ac604c2982361a39195175725569e3f0241f19df09fbb8cb493b8caab67cc2b3",
+      "retrieved_at": "2026-10-25T07:34:32.677013+00:00",
+      "identities": [
+        {
+          "id": 25591,
+          "name": "Rana temporaria",
+          "rank": "species",
+          "ancestor_ids": [
+            48460,
+            1,
+            2,
+            355675,
+            20978,
+            20979,
+            25473,
+            25474
+          ]
+        }
+      ]
+    }
+  ],
+  "qualified_mapping": {
+    "provider": "inaturalist",
+    "amphibia_ancestor": 20978,
+    "anura_ancestor": 20979,
+    "preview_species": 25591,
+    "preview_name": "Rana temporaria"
+  },
+  "urls": [
+    "https://api.inaturalist.org/v1/taxa/20978",
+    "https://api.inaturalist.org/v1/taxa/20979",
+    "https://api.inaturalist.org/v1/taxa/25591"
+  ]
+}

@@ -13,12 +13,13 @@ from snaketracker.domains.animals.capabilities import (
 )
 
 
-def test_production_registry_contains_the_four_trusted_versioned_profiles() -> None:
+def test_production_registry_contains_the_five_trusted_versioned_profiles() -> None:
     assert animal_capability_registry.identities == (
         "snake.v1",
         "spider.v1",
         "lizard.v1",
         "scorpion.v1",
+        "amphibian.v1",
     )
 
     snake = animal_capability_registry.require("snake.v1")

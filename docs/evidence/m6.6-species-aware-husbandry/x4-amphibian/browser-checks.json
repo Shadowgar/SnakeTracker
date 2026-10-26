@@ -1,0 +1,165 @@
+{
+  "viewports": [
+    {
+      "width": 390,
+      "height": 844,
+      "pages": [
+        {
+          "page": "add-animal",
+          "status": 200,
+          "scrollWidth": 390,
+          "visible_broken_images": []
+        },
+        {
+          "page": "frog-profile",
+          "status": 200,
+          "scrollWidth": 390,
+          "visible_broken_images": []
+        },
+        {
+          "page": "feeding-history",
+          "status": 200,
+          "scrollWidth": 390,
+          "visible_broken_images": []
+        },
+        {
+          "page": "measurement-history",
+          "status": 200,
+          "scrollWidth": 390,
+          "visible_broken_images": []
+        },
+        {
+          "page": "frog-care",
+          "status": 200,
+          "scrollWidth": 390,
+          "visible_broken_images": []
+        },
+        {
+          "page": "species-reference",
+          "status": 200,
+          "scrollWidth": 390,
+          "visible_broken_images": []
+        },
+        {
+          "page": "mixed-animals",
+          "status": 200,
+          "scrollWidth": 390,
+          "visible_broken_images": []
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "height": 844,
+      "pages": [
+        {
+          "page": "add-animal",
+          "status": 200,
+          "scrollWidth": 320,
+          "visible_broken_images": []
+        },
+        {
+          "page": "frog-profile",
+          "status": 200,
+          "scrollWidth": 320,
+          "visible_broken_images": []
+        },
+        {
+          "page": "feeding-history",
+          "status": 200,
+          "scrollWidth": 320,
+          "visible_broken_images": []
+        },
+        {
+          "page": "measurement-history",
+          "status": 200,
+          "scrollWidth": 320,
+          "visible_broken_images": []
+        },
+        {
+          "page": "frog-care",
+          "status": 200,
+          "scrollWidth": 320,
+          "visible_broken_images": []
+        },
+        {
+          "page": "species-reference",
+          "status": 200,
+          "scrollWidth": 320,
+          "visible_broken_images": []
+        },
+        {
+          "page": "mixed-animals",
+          "status": 200,
+          "scrollWidth": 320,
+          "visible_broken_images": []
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "pages": [
+        {
+          "page": "add-animal",
+          "status": 200,
+          "scrollWidth": 1440,
+          "visible_broken_images": []
+        },
+        {
+          "page": "frog-profile",
+          "status": 200,
+          "scrollWidth": 1440,
+          "visible_broken_images": []
+        },
+        {
+          "page": "feeding-history",
+          "status": 200,
+          "scrollWidth": 1440,
+          "visible_broken_images": []
+        },
+        {
+          "page": "measurement-history",
+          "status": 200,
+          "scrollWidth": 1440,
+          "visible_broken_images": []
+        },
+        {
+          "page": "frog-care",
+          "status": 200,
+          "scrollWidth": 1440,
+          "visible_broken_images": []
+        },
+        {
+          "page": "species-reference",
+          "status": 200,
+          "scrollWidth": 1440,
+          "visible_broken_images": []
+        },
+        {
+          "page": "mixed-animals",
+          "status": 200,
+          "scrollWidth": 1440,
+          "visible_broken_images": []
+        }
+      ]
+    }
+  ],
+  "keyboard": {
+    "native_group_selection": "amphibian",
+    "next_focus": "name input",
+    "focus_outline": "solid"
+  },
+  "primary_touch_targets": {
+    "min_width": 76.71875,
+    "min_height": 55.75,
+    "checked_at_width": 390
+  },
+  "reduced_motion": {
+    "animation": "none",
+    "transition": "1e-05s"
+  },
+  "providers": "disabled in isolated preview during normal viewing",
+  "reference": "Rana temporaria; Amphibia; no reviewed captive-care guide",
+  "capture_notes": "Images decoded before final collection captures; hidden source-less upload preview excluded. Earlier navigation waits and corrected due-reminder failure are in local-qualification.md."
+}

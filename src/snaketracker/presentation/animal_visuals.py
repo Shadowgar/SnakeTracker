@@ -17,7 +17,7 @@ from snaketracker.domains.animals.capabilities import (
     animal_capability_registry,
 )
 
-FALLBACK_ASSET_VERSION = "m66-a-phase2-visual-rebuild"
+FALLBACK_ASSET_VERSION = "x4-amphibian-v1"
 SEEDED_DEMO_SOURCE = "Fictional M6 demo collection"
 STATIC_REFERENCE_VERSION = "m66-a-phase2-visual-rebuild"
 
@@ -46,6 +46,28 @@ class AnimalVisual:
     @property
     def is_species_reference(self) -> bool:
         return self.kind in {"species_photo", "species_illustration"}
+
+
+def profile_fallback_visual(
+    animal_type: str, version: int = 1, *, name: str | None = None
+) -> AnimalVisual:
+    """Use the registered profile's group, or an explicitly neutral placeholder."""
+    asset = profile_fallback_asset(animal_type, version)
+    if asset == "unknown.svg":
+        alt = "Animal illustration"
+        kind = "animal_fallback"
+    else:
+        profile = animal_capability_registry.require_parts(animal_type, version)
+        group = animal_capability_registry.group(profile.workflow_group)
+        alt = f"{group.label} group illustration"
+        kind = "group_fallback"
+    if name is not None:
+        alt = f"{alt} for {name}"
+    return AnimalVisual(
+        url=f"/static/animal-fallbacks/{asset}?v={FALLBACK_ASSET_VERSION}",
+        alt=alt,
+        kind=kind,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,17 +150,10 @@ class AnimalVisualResolver:
                 source_page_url=bundled.source_page_url,
                 provider=bundled.provider,
             )
-        asset = profile_fallback_asset(
-            animal.animal_type, getattr(animal, "capability_profile_version", 1)
-        )
-        return AnimalVisual(
-            url=f"/static/animal-fallbacks/{asset}?v={FALLBACK_ASSET_VERSION}",
-            alt=(
-                f"Animal illustration for {animal.name}"
-                if asset == "unknown.svg"
-                else f"{animal.type_label} group illustration for {animal.name}"
-            ),
-            kind="group_fallback",
+        return profile_fallback_visual(
+            animal.animal_type,
+            getattr(animal, "capability_profile_version", 1),
+            name=animal.name,
         )
 
     def resolve_all(

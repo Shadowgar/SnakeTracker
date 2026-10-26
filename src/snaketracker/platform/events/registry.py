@@ -11,6 +11,7 @@ from uuid import UUID
 from snaketracker.domains.animals.capabilities import (
     UnknownCapabilityProfileError,
     animal_capability_registry,
+    capability_profile_for_registration,
 )
 from snaketracker.domains.animals.contracts import (
     ANIMAL_STATUSES,
@@ -35,10 +36,12 @@ from snaketracker.domains.animals.contracts import (
     AnimalReferenceImagePreferenceChangedV1,
     AnimalRegisteredV1,
     AnimalRegisteredV2,
+    AnimalRegisteredV3,
     AnimalShedCorrectedV1,
     AnimalShedRecordedV1,
     AnimalStatusChangedV1,
     AnimalTaxonLinkedV1,
+    AnimalTaxonLinkedV2,
     AnimalWeightCorrectedV1,
     AnimalWeightCorrectedV2,
     AnimalWeightRecordedV1,
@@ -380,13 +383,60 @@ def _deserialize_animal_registered_v2(data: Mapping[str, object]) -> EventPayloa
         raise ValueError("Stored animal registration v2 payload is invalid.")
     try:
         parsed_animal_id = UUID(animal_id)
-        animal_capability_registry.require_parts(animal_type, profile_version)
+        profile = animal_capability_registry.require_parts(animal_type, profile_version)
+        if ("animal.registered", 2) not in profile.required_event_contracts:
+            raise ValueError("Profile requires a newer registration contract.")
     except (ValueError, UnknownCapabilityProfileError) as error:
         raise ValueError("Stored animal registration v2 payload is invalid.") from error
     return AnimalRegisteredV2(
         animal_id=parsed_animal_id,
         animal_type=animal_type,
         capability_profile_version=profile_version,
+        name=cast(str, data["name"]),
+        species=cast(str, data["species"]),
+        morph=cast(str | None, data["morph"]),
+        genetics=cast(str | None, data["genetics"]),
+        sex=cast(str | None, data["sex"]),
+        birth_hatch_date=cast(str | None, data["birth_hatch_date"]),
+        acquisition_date=cast(str | None, data["acquisition_date"]),
+        breeder_source=cast(str | None, data["breeder_source"]),
+        status=data["status"],
+        notes=cast(str | None, data["notes"]),
+    )
+
+
+def _deserialize_animal_registered_v3(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalRegisteredV3, data)
+    animal_id = data["animal_id"]
+    identity = data["capability_profile"]
+    required_text = ("name", "species", "status")
+    optional_text = (
+        "morph",
+        "genetics",
+        "sex",
+        "birth_hatch_date",
+        "acquisition_date",
+        "breeder_source",
+        "notes",
+    )
+    if (
+        not isinstance(animal_id, str)
+        or not isinstance(identity, str)
+        or any(not isinstance(data[name], str) for name in required_text)
+        or any(data[name] is not None and not isinstance(data[name], str) for name in optional_text)
+        or data["status"] not in ANIMAL_STATUSES
+    ):
+        raise ValueError("Stored animal registration v3 payload is invalid.")
+    try:
+        parsed_animal_id = UUID(animal_id)
+        profile = animal_capability_registry.require(identity)
+        if ("animal.registered", 3) not in profile.required_event_contracts:
+            raise ValueError("Profile requires a newer registration contract.")
+    except (ValueError, UnknownCapabilityProfileError) as error:
+        raise ValueError("Stored animal registration v3 payload is invalid.") from error
+    return AnimalRegisteredV3(
+        animal_id=parsed_animal_id,
+        capability_profile=identity,
         name=cast(str, data["name"]),
         species=cast(str, data["species"]),
         morph=cast(str | None, data["morph"]),
@@ -465,6 +515,34 @@ def _deserialize_animal_taxon_linked(data: Mapping[str, object]) -> EventPayload
     )
 
 
+def _deserialize_animal_taxon_linked_v2(data: Mapping[str, object]) -> EventPayload:
+    _require_exact_fields(AnimalTaxonLinkedV2, data)
+    group = data["group"]
+    scientific_name = data["accepted_scientific_name"]
+    common_name = data["preferred_common_name"]
+    provider = data["provider"]
+    provider_id = data["provider_id"]
+    if (
+        group not in {"snake", "lizard", "spider", "scorpion", "amphibian"}
+        or not isinstance(scientific_name, str)
+        or not scientific_name.strip()
+        or (common_name is not None and not isinstance(common_name, str))
+        or not isinstance(provider, str)
+        or not provider.strip()
+        or not isinstance(provider_id, str)
+        or not provider_id.strip()
+    ):
+        raise ValueError("Stored Animal taxon link payload is invalid.")
+    return AnimalTaxonLinkedV2(
+        taxon_id=_uuid_field(data, "taxon_id", "Animal taxon link"),
+        group=group,
+        accepted_scientific_name=scientific_name,
+        preferred_common_name=common_name,
+        provider=provider,
+        provider_id=provider_id,
+    )
+
+
 def _deserialize_animal_photo_selected(data: Mapping[str, object]) -> EventPayload:
     _require_exact_fields(AnimalPhotoSelectedV1, data)
     return AnimalPhotoSelectedV1(
@@ -493,8 +571,19 @@ def _registration_v2_identities(data: Mapping[str, object]) -> tuple[str, ...]:
     return (f"{payload.animal_type}.v{payload.capability_profile_version}",)
 
 
+def _registration_v3_identities(data: Mapping[str, object]) -> tuple[str, ...]:
+    payload = cast(AnimalRegisteredV3, _deserialize_animal_registered_v3(data))
+    return (capability_profile_for_registration(payload).identity,)
+
+
 def _taxon_link_v1_identities(data: Mapping[str, object]) -> tuple[str, ...]:
     payload = cast(AnimalTaxonLinkedV1, _deserialize_animal_taxon_linked(data))
+    animal_capability_registry.group(payload.group)
+    return (f"workflow:{payload.group}",)
+
+
+def _taxon_link_v2_identities(data: Mapping[str, object]) -> tuple[str, ...]:
+    payload = cast(AnimalTaxonLinkedV2, _deserialize_animal_taxon_linked_v2(data))
     animal_capability_registry.group(payload.group)
     return (f"workflow:{payload.group}",)
 
@@ -516,6 +605,15 @@ ANIMAL_PROFILE_CONTRACTS = (
         payload_type=AnimalRegisteredV2,
         deserialize_payload=_deserialize_animal_registered_v2,
         required_identity_extractor=_registration_v2_identities,
+        subject_requirements=(SubjectRequirement("animal", "primary"),),
+    ),
+    EventContractRegistration(
+        event_type="animal.registered",
+        schema_version=3,
+        owner="animals",
+        payload_type=AnimalRegisteredV3,
+        deserialize_payload=_deserialize_animal_registered_v3,
+        required_identity_extractor=_registration_v3_identities,
         subject_requirements=(SubjectRequirement("animal", "primary"),),
     ),
     EventContractRegistration(
@@ -557,6 +655,15 @@ ANIMAL_PROFILE_CONTRACTS = (
         payload_type=AnimalTaxonLinkedV1,
         deserialize_payload=_deserialize_animal_taxon_linked,
         required_identity_extractor=_taxon_link_v1_identities,
+        subject_requirements=(SubjectRequirement("animal", "primary"),),
+    ),
+    EventContractRegistration(
+        event_type="animal.taxon_linked",
+        schema_version=2,
+        owner="animals",
+        payload_type=AnimalTaxonLinkedV2,
+        deserialize_payload=_deserialize_animal_taxon_linked_v2,
+        required_identity_extractor=_taxon_link_v2_identities,
         subject_requirements=(SubjectRequirement("animal", "primary"),),
     ),
 )

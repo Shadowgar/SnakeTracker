@@ -7337,7 +7337,12 @@ def _agenda_rows(
                 anchor = "cleaning" if item.reminder_type == "cleaning" else "water-change"
                 action_url = f"/enclosures/{item.subject_id}?return_to=today#{anchor}"
                 action_label = CARE_ACTION_LABELS[item.reminder_type]
-        grouped[item.status].append(
+        # Persisted ReminderFact uses "due", while live agenda items use calendar
+        # buckets. Both must follow the keeper's local date without changing the fact.
+        due_date = item.due_at.astimezone(timezone).date()
+        today = now.astimezone(timezone).date()
+        bucket = "overdue" if due_date < today else "due_today" if due_date == today else "upcoming"
+        grouped[bucket].append(
             {
                 "item": item,
                 "title": CARE_SCHEDULE_CAPABILITIES.get(

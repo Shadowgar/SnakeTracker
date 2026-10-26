@@ -36,7 +36,7 @@ def test_visual_resolver_prioritizes_personal_photo_and_resolves_all() -> None:
     assert visuals[with_photo.animal_id].kind == "personal_photo"
     assert visuals[with_photo.animal_id].url == f"/attachments/{photo_id}"
     assert visuals[fallback.animal_id].kind == "group_fallback"
-    assert "/lizard.webp?v=m66-a-phase2-visual-rebuild" in visuals[fallback.animal_id].url
+    assert "/lizard.webp?v=x4-amphibian-v1" in visuals[fallback.animal_id].url
 
 
 def test_visual_resolver_does_not_mistake_seeded_demo_art_for_keeper_photo() -> None:
@@ -132,8 +132,8 @@ def test_visual_resolver_uses_species_illustration_then_safe_group_fallback(
     unknown = animal_visuals.AnimalVisualResolver(unlinked).resolve(
         uuid4(), _animal(animal_type="unknown")
     )
-    assert unknown.kind == "group_fallback"
-    assert unknown.url == ("/static/animal-fallbacks/unknown.svg?v=m66-a-phase2-visual-rebuild")
+    assert unknown.kind == "animal_fallback"
+    assert unknown.url == ("/static/animal-fallbacks/unknown.svg?v=x4-amphibian-v1")
     assert "Snake" not in unknown.alt
 
 

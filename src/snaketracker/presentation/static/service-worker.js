@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "snaketracker-shell-";
-const ASSET_VERSION = "m66b-reference-density-v1";
+const ASSET_VERSION = "x4-amphibian-v1";
 const CACHE = `${CACHE_PREFIX}${ASSET_VERSION}`;
 const SHELL = [
   `/static/app.css?v=${ASSET_VERSION}`,
@@ -14,6 +14,8 @@ const SHELL = [
   `/static/animal-fallbacks/lizard.webp?v=${ASSET_VERSION}`,
   `/static/animal-fallbacks/spider.webp?v=${ASSET_VERSION}`,
   `/static/animal-fallbacks/scorpion.webp?v=${ASSET_VERSION}`,
+  `/static/animal-fallbacks/amphibian.webp?v=${ASSET_VERSION}`,
+  `/static/animal-fallbacks/unknown.svg?v=${ASSET_VERSION}`,
   "/static/favicon.svg",
   "/static/offline.html",
 ];

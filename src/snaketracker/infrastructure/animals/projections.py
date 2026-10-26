@@ -17,6 +17,7 @@ from snaketracker.domains.animals.contracts import (
     AnimalReferenceImagePreferenceChangedV1,
     AnimalRegisteredV1,
     AnimalRegisteredV2,
+    AnimalRegisteredV3,
     AnimalStatusChangedV1,
 )
 from snaketracker.platform.events.envelope import DomainEvent
@@ -34,7 +35,9 @@ class SQLAlchemyAnimalCurrentProjection:
             if event.stream_type != "animal":
                 continue
             if event.event_type == "animal.registered":
-                registered = cast(AnimalRegisteredV1 | AnimalRegisteredV2, event.payload)
+                registered = cast(
+                    AnimalRegisteredV1 | AnimalRegisteredV2 | AnimalRegisteredV3, event.payload
+                )
                 capability_profile = capability_profile_for_registration(registered)
                 connection.execute(
                     text(

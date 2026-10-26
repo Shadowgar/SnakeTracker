@@ -30,6 +30,7 @@ from snaketracker.domains.animals.contracts import (
     AnimalProfileCorrectedV1,
     AnimalRegisteredV1,
     AnimalRegisteredV2,
+    AnimalRegisteredV3,
     AnimalShedCorrectedV1,
     AnimalShedRecordedV1,
     AnimalStatusChangedV1,
@@ -128,7 +129,7 @@ def present_care_event(
     payload = event.payload
     title = event.title
     technical_facts: tuple[tuple[str, str], ...] = ()
-    if isinstance(payload, AnimalRegisteredV1 | AnimalRegisteredV2):
+    if isinstance(payload, AnimalRegisteredV1 | AnimalRegisteredV2 | AnimalRegisteredV3):
         description = f"{payload.name} was added as {payload.species}."
     elif isinstance(payload, AnimalProfileCorrectedV1):
         description = f"Profile details now identify this animal as {payload.name}."

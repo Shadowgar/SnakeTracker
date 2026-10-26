@@ -41,12 +41,13 @@ def test_read_support_and_group_order_are_independent_of_registration_policy():
         ("spider", "Spider"),
         ("lizard", "Lizard"),
         ("scorpion", "Scorpion"),
+        ("amphibian", "Amphibian"),
     ]
     for group in groups:
         profile = animal_capability_registry.registration_profile(group.identity)
         assert profile.identity == f"{group.identity}.v1"
         assert group.visual_fallback == group.identity
-        assert profile.registration_contract_version == 2
+        assert profile.registration_contract_version == (3 if group.identity == "amphibian" else 2)
 
 
 def test_add_animal_exposes_one_group_choice_after_default_change(monkeypatch):
@@ -110,24 +111,37 @@ def test_release_manifest_exposes_profiles_defaults_and_version_specific_extract
     from snaketracker.bootstrap import compatibility
 
     manifest = compatibility.supported_profile_release_manifest()
-    assert manifest["readable_profiles"] == ("snake.v1", "spider.v1", "lizard.v1", "scorpion.v1")
+    assert manifest["readable_profiles"] == (
+        "snake.v1",
+        "spider.v1",
+        "lizard.v1",
+        "scorpion.v1",
+        "amphibian.v1",
+    )
     assert manifest["registration_eligible_profiles"] == manifest["readable_profiles"]
     assert manifest["workflow_defaults"] == {
         "snake": "snake.v1",
         "spider": "spider.v1",
         "lizard": "lizard.v1",
         "scorpion": "scorpion.v1",
+        "amphibian": "amphibian.v1",
     }
-    assert manifest["registration_writes"] == dict.fromkeys(
-        manifest["readable_profiles"], ("animal.registered", 2)
-    )
+    assert manifest["registration_writes"] == {
+        "snake.v1": ("animal.registered", 2),
+        "spider.v1": ("animal.registered", 2),
+        "lizard.v1": ("animal.registered", 2),
+        "scorpion.v1": ("animal.registered", 2),
+        "amphibian.v1": ("animal.registered", 3),
+    }
     assert manifest["required_identity_contracts"] == (
         ("animal.registered", 1),
         ("animal.registered", 2),
+        ("animal.registered", 3),
         ("animal.taxon_linked", 1),
+        ("animal.taxon_linked", 2),
     )
-    assert ("animal.registered", 3) not in manifest["readable_event_contracts"]
-    assert ("animal.taxon_linked", 2) not in manifest["readable_event_contracts"]
+    assert ("animal.registered", 3) in manifest["readable_event_contracts"]
+    assert ("animal.taxon_linked", 2) in manifest["readable_event_contracts"]
 
 
 @pytest.mark.parametrize("contract_version", [1, 3, 0, -1, True, 2.0])

@@ -45,6 +45,24 @@ class AnimalRegisteredV2:
 
 
 @dataclass(frozen=True, slots=True)
+class AnimalRegisteredV3:
+    """Registration with an explicit identity and a release compatibility barrier."""
+
+    animal_id: UUID
+    capability_profile: str
+    name: str
+    species: str
+    morph: str | None
+    genetics: str | None
+    sex: str | None
+    birth_hatch_date: str | None
+    acquisition_date: str | None
+    breeder_source: str | None
+    status: str
+    notes: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class AnimalProfileCorrectedV1:
     """Latest approved profile facts without rewriting the registration event."""
 
@@ -62,6 +80,18 @@ class AnimalProfileCorrectedV1:
 @dataclass(frozen=True, slots=True)
 class AnimalTaxonLinkedV1:
     """Keeper-confirmed link to a Care Keeper-owned global taxon identity."""
+
+    taxon_id: UUID
+    group: str
+    accepted_scientific_name: str
+    preferred_common_name: str | None
+    provider: str
+    provider_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class AnimalTaxonLinkedV2:
+    """Keeper-confirmed taxon link supporting qualified expanded workflow groups."""
 
     taxon_id: UUID
     group: str

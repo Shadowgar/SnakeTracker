@@ -248,6 +248,7 @@ button.secondary:hover, .secondary-link:hover { border-color: var(--color-primar
 .fallback-spider { background: radial-gradient(circle at 28% 30%, rgba(243,189,91,.24), transparent 34%), linear-gradient(145deg, #332819, #17131f); }
 .fallback-lizard { background: radial-gradient(circle at 72% 75%, rgba(117,185,255,.24), transparent 35%), linear-gradient(145deg, #172a35, #17131f); }
 .fallback-scorpion { background: radial-gradient(circle at 30% 70%, rgba(255,125,139,.22), transparent 35%), linear-gradient(145deg, #332027, #17131f); }
+.fallback-amphibian { background: radial-gradient(circle at 68% 28%, rgba(159,210,103,.26), transparent 35%), linear-gradient(145deg, #253321, #171b20); }
 .fallback-animal, .fallback-enclosure { background: radial-gradient(circle at 68% 28%, rgba(167,139,250,.25), transparent 35%), linear-gradient(145deg, #272039, #17131f); }
 .animal-card-copy { display: grid; min-width: 0; gap: .08rem; }
 .animal-card-copy > span { overflow-wrap: anywhere; color: var(--color-text-muted); font-size: var(--text-sm); }

@@ -82,3 +82,60 @@ def test_agenda_row_derives_source_copy_from_a_persisted_reminder_fact() -> None
 
     assert row["last_context"] == "Last feeding Aug 21"
     assert row["action_url"] == f"/animals/{animal_id}/feedings/new?return_to=animal"
+
+
+def test_persisted_due_fact_uses_household_calendar_bucket_for_frog_and_snake():
+    from snaketracker.application.reminders import ReminderFact
+    from snaketracker.domains.animals.capabilities import animal_capability_registry
+
+    now = datetime(2026, 10, 25, 4, 30, tzinfo=UTC)
+    cases = (
+        (datetime(2026, 10, 25, 3, 30, tzinfo=UTC), "overdue"),
+        (datetime(2026, 10, 25, 5, 30, tzinfo=UTC), "due_today"),
+        (datetime(2026, 10, 26, 4, 30, tzinfo=UTC), "upcoming"),
+    )
+    for group in ("amphibian", "snake"):
+        animal_id = uuid4()
+        animal = SimpleNamespace(
+            animal_id=animal_id,
+            name="Keeper animal",
+            animal_type=group,
+            current_enclosure_id=None,
+            photo_attachment_version_id=None,
+            care_action_keys=animal_capability_registry.registration_profile(group).care_actions,
+        )
+        for due_at, bucket in cases:
+            fact = ReminderFact(
+                fact_id=uuid4(),
+                household_id=uuid4(),
+                rule_id=uuid4(),
+                occurrence_key="fixture",
+                rule_stream_version=1,
+                reminder_type="feeding",
+                subject_type="animal",
+                subject_id=animal_id,
+                schedule_kind="event_relative",
+                interval_days=1,
+                source_event_id=uuid4(),
+                source_event_type="animal.feeding_recorded",
+                source_occurred_at=datetime(2026, 10, 24, tzinfo=UTC),
+                due_at=due_at,
+                status="due",
+                explanation="Keeper-chosen interval",
+                calculated_at=now,
+            )
+            rows = web._agenda_rows(
+                (fact,),
+                animals=(animal,),
+                enclosures=(),
+                timezone=ZoneInfo("America/New_York"),
+                now=now,
+                return_context="animal",
+            )
+            assert len(rows[bucket]) == 1
+            assert sum(map(len, rows.values())) == 1
+            assert (
+                rows[bucket][0]["action_url"]
+                == f"/animals/{animal_id}/feedings/new?return_to=animal"
+            )
+            assert rows[bucket][0]["item"] is fact

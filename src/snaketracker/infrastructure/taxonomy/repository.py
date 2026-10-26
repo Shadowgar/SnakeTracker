@@ -19,7 +19,7 @@ from snaketracker.application.species_directory import (
     ReferenceImageCandidate,
     TaxonRecord,
 )
-from snaketracker.domains.animals.contracts import AnimalTaxonLinkedV1
+from snaketracker.domains.animals.contracts import AnimalTaxonLinkedV1, AnimalTaxonLinkedV2
 from snaketracker.infrastructure.taxonomy.catalog import LocalTaxonomyCatalog
 from snaketracker.platform.events.envelope import DomainEvent
 
@@ -244,7 +244,7 @@ class SQLAlchemyTaxonRepository:
         for event in events:
             if event.event_type != "animal.taxon_linked":
                 continue
-            payload = cast(AnimalTaxonLinkedV1, event.payload)
+            payload = cast(AnimalTaxonLinkedV1 | AnimalTaxonLinkedV2, event.payload)
             connection.execute(
                 text(
                     "INSERT INTO animal_taxon_current "

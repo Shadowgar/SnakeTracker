@@ -113,6 +113,44 @@ def _facts_differ(left: dict[str, Any], right: dict[str, Any]) -> bool:
     return any(left.get(field) != right.get(field) for field in fields)
 
 
+def _unordered_live_enrichment(
+    payload: str,
+    effective: str | None,
+    prior: dict[str, Any],
+    prior_effective: str | None,
+) -> str | None:
+    """Combine partial iNaturalist responses without asserting temporal precedence."""
+    incoming = json.loads(payload)
+    if effective or prior_effective or incoming.get("provider") != "inaturalist":
+        return None
+    # A rename, reclassification, replacement or different identity needs an explicit decision.
+    for field in (
+        "provider",
+        "provider_id",
+        "source_url",
+        "accepted_scientific_name",
+        "supported_group",
+        "rank",
+        "taxonomic_status",
+        "accepted_provider_id",
+    ):
+        if prior.get(field) != incoming.get(field):
+            return None
+    for field in FACT_FIELDS:
+        old, new = prior.get(field), incoming.get(field)
+        if field in {"synonyms", "alternative_common_names"}:
+            if not isinstance(old, (list, tuple)) or not isinstance(new, (list, tuple)):
+                return None
+            incoming[field] = list(dict.fromkeys((*old, *new)))
+            if len(incoming[field]) > 64:
+                return None
+        elif old is not None and new is not None and old != new:
+            return None
+        elif new is None:
+            incoming[field] = old
+    return json.dumps(incoming, sort_keys=True)
+
+
 def validate_generation_source(source: GenerationSource) -> None:
     if (
         not source.label.strip()
@@ -753,14 +791,22 @@ class LocalTaxonomyCatalog:
         )
         keep_old = False
         if old:
-            keep_old = self._retain_observation(
-                connection,
-                identifier,
-                payload,
-                effective_text,
-                json.loads(old["payload"]),
-                old["source_effective_at"],
+            # The receipt above retains the raw response; selection can combine compatible detail.
+            prior = json.loads(old["payload"])
+            enriched = _unordered_live_enrichment(
+                payload, effective_text, prior, old["source_effective_at"]
             )
+            if enriched is not None:
+                payload = enriched
+            else:
+                keep_old = self._retain_observation(
+                    connection,
+                    identifier,
+                    payload,
+                    effective_text,
+                    prior,
+                    old["source_effective_at"],
+                )
         if (
             previous is not None
             and previous[0]["provider"] == candidate.provider
@@ -772,17 +818,23 @@ class LocalTaxonomyCatalog:
                 and previous[0]["source_effective_at"] > effective_text
             )
         ):
-            keep_old = (
-                self._retain_observation(
-                    connection,
-                    identifier,
-                    payload,
-                    effective_text,
-                    previous[0],
-                    previous[0]["source_effective_at"],
-                )
-                or keep_old
+            enriched = _unordered_live_enrichment(
+                payload, effective_text, previous[0], previous[0]["source_effective_at"]
             )
+            if enriched is not None:
+                payload = enriched
+            else:
+                keep_old = (
+                    self._retain_observation(
+                        connection,
+                        identifier,
+                        payload,
+                        effective_text,
+                        previous[0],
+                        previous[0]["source_effective_at"],
+                    )
+                    or keep_old
+                )
         if not keep_old:
             execute(
                 connection,

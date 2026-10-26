@@ -443,6 +443,12 @@ def inspect_required_profile_identities(engine: Engine | Connection) -> Compatib
                     profile_version = payload.get("capability_profile_version")
                     if event_type == "animal.registered" and version == 1:
                         identity = "snake.v1"
+                    elif event_type == "animal.registered" and version == 3:
+                        explicit = payload.get("capability_profile")
+                        if isinstance(explicit, str) and re.fullmatch(
+                            r"[a-z][a-z0-9_]{0,31}\.v[1-9][0-9]{0,18}", explicit
+                        ):
+                            identity = explicit
                     elif isinstance(group, str) and re.fullmatch(r"[a-z][a-z0-9_]{0,31}", group):
                         identity = (
                             f"{group}.v{profile_version}"
