@@ -13,6 +13,11 @@ ENV SNAKETRACKER_BUILD_GIT_SHA=${SNAKETRACKER_BUILD_GIT_SHA}
 LABEL org.opencontainers.image.revision=${SNAKETRACKER_BUILD_GIT_SHA}
 RUN apt-get update \
     && apt-get upgrade --yes \
+    && for package in libssl3 openssl; do \
+        installed_version="$(dpkg-query -W -f='${Version}' "$package")" \
+        && dpkg --compare-versions "$installed_version" ge '3.0.22-1~deb12u2' \
+        || exit 1; \
+    done \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid $SNAKETRACKER_UID snaketracker \
     && useradd --uid $SNAKETRACKER_UID --gid $SNAKETRACKER_UID --create-home --shell /usr/sbin/nologin snaketracker
@@ -28,7 +33,9 @@ COPY alembic.ini ./
 COPY migrations ./migrations
 COPY deploy/docker/entrypoint.sh /usr/local/bin/snaketracker-entrypoint
 RUN chmod 0555 /usr/local/bin/snaketracker-entrypoint \
-    && chown -R snaketracker:snaketracker /app
+    && chown -R snaketracker:snaketracker /app \
+    && dpkg --print-architecture \
+    && dpkg-query -W -f='${binary:Package}=${Version}\n' libssl3 openssl
 
 USER snaketracker
 ENTRYPOINT ["/usr/local/bin/snaketracker-entrypoint"]
