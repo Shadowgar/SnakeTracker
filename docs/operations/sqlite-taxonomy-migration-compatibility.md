@@ -9,6 +9,8 @@ expression indexes. Migration 0025 introduces no JSON schema expressions.
 Provider identity lookups use the existing unique provider mapping index and
 the `(generation_id,taxon_id)` facts primary key. Reverse lookups retain
 `ix_taxonomy_fact_taxon`; local name search uses the existing FTS5 index.
+Care Guide import still evaluates exact-name JSON predicates across overlays and
+the active generation; include this administrative path in performance qualification.
 Ordinary JSON queries remain supported. No table, payload, permanent UUID,
 mapping, immutable reference, search content or connection security setting changes.
 

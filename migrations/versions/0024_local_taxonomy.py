@@ -64,7 +64,8 @@ def upgrade() -> None:
     )
     # JSON functions are not innocuous schema functions on SQLite 3.40.1 with
     # trusted_schema=OFF. Provider lookups use taxon_provider_mappings and the
-    # facts primary key; names use taxonomy_search (FTS5), not JSON indexes.
+    # facts primary key; interactive name search uses taxonomy_search (FTS5).
+    # Care Guide import checks JSON names in queries, not schema expressions.
     op.execute("CREATE INDEX ix_taxonomy_fact_taxon ON taxonomy_facts(taxon_id,generation_id)")
     op.execute(
         "CREATE TABLE taxonomy_overlay (taxon_id TEXT NOT NULL REFERENCES taxa(taxon_id), "
