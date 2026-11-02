@@ -65,12 +65,12 @@ def main() -> None:
     readonly = create_readonly_sqlite_engine(args.database)
     try:
         with readonly.connect() as c:
-            if (
-                c.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one()
-                != "0025_natural_history"
-            ):
+            if c.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one() not in {
+                "0025_natural_history",
+                "0026_amphibian_care_guides",
+            }:
                 parser.error(
-                    "Natural History schema 0025 is required; this command never migrates."
+                    "Natural History schema 0025 or 0026 is required; this command never migrates."
                 )
     finally:
         readonly.dispose()

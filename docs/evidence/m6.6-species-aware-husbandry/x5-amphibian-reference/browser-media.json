@@ -1,0 +1,28 @@
+[
+  {
+    "scientific_name": "Pelodryas caerulea",
+    "provider": "inaturalist",
+    "provider_record_id": "756278755",
+    "download_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/756278755/large.jpg",
+    "source_page_url": "https://www.inaturalist.org/observations/411132736",
+    "creator": "L. Goslett",
+    "attribution": "(c) L. Goslett, some rights reserved (CC BY)",
+    "license_code": "cc-by",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "retrieved_at": "2026-11-02T00:00:00Z",
+    "local_file": "photo-1633145.jpg"
+  },
+  {
+    "scientific_name": "Ceratophrys cranwelli",
+    "provider": "inaturalist",
+    "provider_record_id": "756854670",
+    "download_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/756854670/large.jpg",
+    "source_page_url": "https://www.inaturalist.org/observations/411419035",
+    "creator": "dante borzone",
+    "attribution": "(c) dante borzone, some rights reserved (CC BY)",
+    "license_code": "cc-by",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "retrieved_at": "2026-11-02T00:00:00Z",
+    "local_file": "photo-22844.jpg"
+  }
+]

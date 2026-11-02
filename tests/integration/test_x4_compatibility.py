@@ -315,6 +315,9 @@ def test_actual_previous_release_rejects_v3_before_mutable_startup(
         closing(sqlite3.connect(copied)) as destination,
     ):
         source.backup(destination)
+    # Keep the X4 event-barrier test on its original schema; X5 separately
+    # qualifies the newer schema barrier with the actual pre-X5 binary.
+    command.downgrade(config_for(copied), "0025_natural_history")
     before_bytes = copied.read_bytes()
     before_tables = table_hashes(copied)
     before_media = {
@@ -372,7 +375,7 @@ def test_encrypted_backup_restore_retains_v1_v2_v3_events_sources_and_media(
     ).run_once(now=datetime.now(UTC))
     assert run is not None and run.status == "completed"
     verification = pipeline.verify(run)
-    assert verification.database_schema_revision == "0025_natural_history"
+    assert verification.database_schema_revision == "0026_amphibian_care_guides"
     assert verification.attachment_count == 1
     assert {("animal.registered", v) for v in (1, 2, 3)} <= set(verification.event_contracts)
     assert {("animal.taxon_linked", v) for v in (1, 2)} <= set(verification.event_contracts)

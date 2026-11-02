@@ -3,7 +3,7 @@
   <h3 id="profile-glance-title">At a glance</h3>
   <dl class="profile-reference-grid">
     {% for label, claims, state in reference_glance %}
-    <div class="profile-reference-fact"><dt>{{ label }}</dt><dd><strong>{% if state == 'Sources differ' %}See separate positions{% else %}{{ format_claim_value(claims[0]) }}{% endif %}</strong><span class="guide-state {% if state == 'Sources differ' %}guide-state-differ{% elif state == 'Corroborated' %}guide-state-corroborated{% else %}guide-state-single{% endif %}">{{ state }}</span></dd></div>
+    <div class="profile-reference-fact"><dt>{{ label }}</dt><dd><strong>{% if state == 'Sources differ' %}See separate positions{% else %}{{ format_claim_value(claims[0]) }}{% endif %}</strong>{% if profile_reference_guide and profile_reference_guide.biological_group == 'amphibian' %}<small>{{ claims[0].context }}{% if claims[0].qualifier %} · {{ claims[0].qualifier }}{% endif %}</small>{% endif %}<span class="guide-state {% if state == 'Sources differ' %}guide-state-differ{% elif state == 'Corroborated' %}guide-state-corroborated{% else %}guide-state-single{% endif %}">{{ state }}</span></dd></div>
     {% endfor %}
   </dl>
 </section>

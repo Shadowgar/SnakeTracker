@@ -20,6 +20,7 @@ class GuideGroup(StrEnum):
     SPIDER = "spider"
     SCORPION = "scorpion"
     PLANT = "plant"
+    AMPHIBIAN = "amphibian"
 
 
 class GuideSection(StrEnum):
@@ -319,6 +320,15 @@ def glance_claims(
             "food_types",
             "uvb",
         ),
+        GuideGroup.AMPHIBIAN: (
+            "basking_temperature",
+            "ambient_temperature",
+            "warm_side_temperature",
+            "cool_side_temperature",
+            "ambient_humidity",
+            "habitat_structure",
+            "food_types",
+        ),
         GuideGroup.SPIDER: ("activity_pattern", "prey_types", "female_lifespan"),
         GuideGroup.SCORPION: ("activity_pattern", "adult_length", "prey_types"),
         GuideGroup.PLANT: (
@@ -358,6 +368,15 @@ def profile_reference_claims(
             "food_types",
             "uvb",
             "heat_burns",
+        ),
+        GuideGroup.AMPHIBIAN: (
+            "basking_temperature",
+            "ambient_temperature",
+            "warm_side_temperature",
+            "cool_side_temperature",
+            "ambient_humidity",
+            "habitat_structure",
+            "food_types",
         ),
         GuideGroup.SPIDER: (
             "activity_pattern",
