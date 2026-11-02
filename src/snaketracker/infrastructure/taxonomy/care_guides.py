@@ -48,7 +48,8 @@ class SQLAlchemyCareGuideRepository:
                 key = (guide.biological_group.value, guide.scientific_name)
                 if key in taxon_ids:
                     continue
-                # Indexed candidate lookup covers fallback, overlay and active generation names.
+                # Scalar taxon/generation keys narrow candidates. JSON name predicates
+                # stay in queries: schema expression indexes are unsafe on SQLite 3.40.1.
                 candidates = connection.execute(
                     text(
                         "WITH candidates AS (SELECT taxon_id FROM taxa "
