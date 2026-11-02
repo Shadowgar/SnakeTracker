@@ -62,26 +62,15 @@ def upgrade() -> None:
         "CREATE TABLE taxonomy_generation_publications (generation_id TEXT PRIMARY KEY, "
         "provenance TEXT NOT NULL)"
     )
-    op.execute(
-        "CREATE INDEX ix_taxonomy_fact_provider ON taxonomy_facts "
-        "(generation_id,json_extract(payload,'$.provider_id'))"
-    )
+    # JSON functions are not innocuous schema functions on SQLite 3.40.1 with
+    # trusted_schema=OFF. Provider lookups use taxon_provider_mappings and the
+    # facts primary key; names use taxonomy_search (FTS5), not JSON indexes.
     op.execute("CREATE INDEX ix_taxonomy_fact_taxon ON taxonomy_facts(taxon_id,generation_id)")
     op.execute(
         "CREATE TABLE taxonomy_overlay (taxon_id TEXT NOT NULL REFERENCES taxa(taxon_id), "
         "provider TEXT NOT NULL, payload TEXT NOT NULL, retrieved_at TEXT NOT NULL, "
         "source_effective_at TEXT, revision INTEGER NOT NULL REFERENCES "
         "taxonomy_changes(revision), PRIMARY KEY(taxon_id,provider))"
-    )
-    op.execute(
-        "CREATE INDEX ix_taxonomy_overlay_name ON taxonomy_overlay "
-        "(json_extract(payload,'$.accepted_scientific_name'),"
-        "json_extract(payload,'$.supported_group'))"
-    )
-    op.execute(
-        "CREATE INDEX ix_taxonomy_fact_name ON taxonomy_facts "
-        "(generation_id,json_extract(payload,'$.accepted_scientific_name'),"
-        "json_extract(payload,'$.supported_group'))"
     )
     op.execute(
         "CREATE TABLE taxonomy_selection (singleton INTEGER PRIMARY KEY CHECK(singleton=1), "

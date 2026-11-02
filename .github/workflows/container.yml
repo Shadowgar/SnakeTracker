@@ -39,6 +39,13 @@ jobs:
           context: .
           load: true
           tags: snaketracker:ci
+      - name: Qualify hardened taxonomy migrations in the actual runtime
+        run: |
+          docker run --rm --network none --read-only \
+            --tmpfs /tmp:size=128m,mode=1777 \
+            --mount "type=bind,source=$PWD,target=/qualification,readonly" \
+            --entrypoint python snaketracker:ci \
+            /qualification/scripts/qualification/sqlite_taxonomy_upgrade.py
       - name: Scan image for fixed high-severity vulnerabilities
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
