@@ -14,6 +14,7 @@ from snaketracker.application.enclosures import (
     EnclosureProfile,
 )
 from snaketracker.domains.enclosures.contracts import (
+    EnclosureBioactiveChangedV1,
     EnclosurePlantAddedV1,
     EnclosurePlantProfileChangedV1,
     EnclosurePlantRemovedV1,
@@ -54,6 +55,21 @@ class SQLAlchemyEnclosureCurrentProjection:
                         "updated_at": event.recorded_at.isoformat(timespec="microseconds"),
                     },
                 )
+                continue
+            if event.event_type == "enclosure.bioactive_changed":
+                mode = cast(EnclosureBioactiveChangedV1, event.payload)
+                connection.execute(
+                    text(
+                        "UPDATE enclosure_current SET bioactive=:bioactive "
+                        "WHERE household_id=:household_id AND enclosure_id=:enclosure_id"
+                    ),
+                    {
+                        "bioactive": int(mode.bioactive),
+                        "household_id": str(event.household_id),
+                        "enclosure_id": str(event.stream_id),
+                    },
+                )
+                _advance_enclosure(connection, event)
                 continue
             if event.event_type == "enclosure.profile_changed":
                 changed = cast(EnclosureProfileChangedV1, event.payload)
@@ -145,6 +161,17 @@ class SQLAlchemyEnclosureCurrentProjection:
                         "stream_version": event.stream_version,
                         "event_id": str(event.event_id),
                         "updated_at": event.recorded_at.isoformat(timespec="microseconds"),
+                    },
+                )
+                # Facts are disposable projections; retained rules and care history stay intact.
+                connection.execute(
+                    text(
+                        "DELETE FROM reminder_facts WHERE household_id=:household_id "
+                        "AND subject_type='enclosure-plant' AND subject_id=:plant_id"
+                    ),
+                    {
+                        "household_id": str(event.household_id),
+                        "plant_id": str(removed.enclosure_plant_id),
                     },
                 )
                 _advance_enclosure(connection, event)
@@ -288,6 +315,7 @@ def _profile(row: RowMapping) -> EnclosureProfile:
         notes=str(row["notes"]) if row["notes"] is not None else None,
         status=str(row["status"]),
         stream_version=int(row["stream_version"]),
+        bioactive=bool(row["bioactive"]),
     )
 
 

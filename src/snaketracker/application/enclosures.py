@@ -14,17 +14,20 @@ from snaketracker.domains.animals.capabilities import (
 )
 from snaketracker.domains.enclosures.contracts import (
     ENCLOSURE_STATUSES,
+    EnclosureBioactiveChangedV1,
     EnclosureCleaningRecordedV1,
     EnclosureMistingRecordedV1,
     EnclosurePlantAddedV1,
     EnclosurePlantProfileChangedV1,
     EnclosurePlantRemovedV1,
+    EnclosurePlantWateringCorrectedV1,
+    EnclosurePlantWateringRecordedV1,
     EnclosureProfileChangedV1,
     EnclosureRegisteredV1,
     EnclosureStatusChangedV1,
     EnclosureWaterChangeRecordedV1,
 )
-from snaketracker.platform.events.control_contracts import EventVoidedV1
+from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
 from snaketracker.platform.events.corrections import (
     CorrectionAction,
     effective_event_root,
@@ -53,6 +56,8 @@ DELETABLE_ENCLOSURE_CARE_EVENT_TYPES = frozenset(
         "enclosure.cleaning_recorded",
         "enclosure.water_change_recorded",
         "enclosure.misting_recorded",
+        "enclosure.plant_watering_recorded",
+        "enclosure.plant_watering_corrected",
     }
 )
 
@@ -82,6 +87,7 @@ class EnclosureProfile:
     notes: str | None
     status: str
     stream_version: int
+    bioactive: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -285,6 +291,42 @@ class RemoveEnclosurePlantCommand:
     reason: str | None
 
 
+@dataclass(frozen=True, slots=True)
+class ChangeEnclosureBioactiveCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    enclosure_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    bioactive: bool
+
+
+@dataclass(frozen=True, slots=True)
+class RecordPlantWateringCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    enclosure_id: UUID
+    enclosure_plant_id: UUID
+    correlation_id: UUID
+    idempotency_key: str
+    occurred_at: datetime
+    notes: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class ControlEnclosureCareCommand:
+    household_id: UUID
+    actor_user_id: UUID
+    actor_role: str
+    enclosure_id: UUID
+    target_event_id: UUID
+    idempotency_key: str
+    action: str
+    reason: str
+    occurred_at: datetime | None = None
+    notes: str | None = None
+
+
 class EnclosureService:
     def __init__(
         self,
@@ -347,6 +389,175 @@ class EnclosureService:
         if profile is None:
             raise RuntimeError("Enclosure registration did not project current state.")
         return EnclosureRegistrationResult(persisted_id, profile)
+
+    def change_bioactive(self, command: ChangeEnclosureBioactiveCommand) -> DomainEvent:
+        if type(command.bioactive) is not bool:
+            raise EnclosureValidationError("Choose bioactive or non-bioactive mode.")
+        return self._append_state_event(
+            household_id=command.household_id,
+            actor_user_id=command.actor_user_id,
+            enclosure_id=command.enclosure_id,
+            correlation_id=command.correlation_id,
+            idempotency_key=command.idempotency_key,
+            event_type="enclosure.bioactive_changed",
+            title="Enclosure mode changed",
+            payload=EnclosureBioactiveChangedV1(command.bioactive),
+            notes=None,
+            scope="enclosures.change_bioactive",
+            command={"enclosure_id": str(command.enclosure_id), "bioactive": command.bioactive},
+        )
+
+    def record_plant_watering(self, command: RecordPlantWateringCommand) -> DomainEvent:
+        completed = self._event_store.stored_idempotency_response(
+            command.household_id,
+            command.actor_user_id,
+            "enclosures.record_plant_watering",
+            command.idempotency_key,
+            canonical_command_hash(
+                {
+                    "enclosure_id": str(command.enclosure_id),
+                    "enclosure_plant_id": str(command.enclosure_plant_id),
+                    "occurred_at": command.occurred_at.isoformat(),
+                    "notes": _optional_text(command.notes, "maintenance notes"),
+                }
+            ),
+        )
+        if completed is not None:
+            return next(
+                event
+                for event in self.care_history(command.household_id, command.enclosure_id)
+                if str(event.event_id) == completed["event_id"]
+            )
+        self._active_plant(command.household_id, command.enclosure_id, command.enclosure_plant_id)
+        return self._record_maintenance(
+            command=command,
+            event_type="enclosure.plant_watering_recorded",
+            title="Plant watering recorded",
+            payload=EnclosurePlantWateringRecordedV1(command.enclosure_plant_id),
+            scope="enclosures.record_plant_watering",
+            related_subjects=(
+                EventSubject("enclosure-plant", command.enclosure_plant_id, "related", 1),
+            ),
+        )
+
+    def care_history(self, household_id: UUID, enclosure_id: UUID) -> tuple[DomainEvent, ...]:
+        """Immutable enclosure history including controls, for keeper audit and reinstatement."""
+        return self._event_store.load_stream(StreamKey(household_id, "enclosure", enclosure_id))
+
+    def control_care_record(self, command: ControlEnclosureCareCommand) -> DomainEvent:
+        key = StreamKey(command.household_id, "enclosure", command.enclosure_id)
+        existing = self._event_store.load_stream(key)
+        target = next((e for e in existing if e.event_id == command.target_event_id), None)
+        if target is None or target.event_type not in DELETABLE_ENCLOSURE_CARE_EVENT_TYPES:
+            raise EnclosureValidationError("Enclosure care record was not found.")
+        action = CorrectionAction(command.action)
+        reason = _required_text(command.reason, "correction reason", maximum_length=2000)
+        command_data: dict[str, object] = {
+            "target_event_id": str(target.event_id),
+            "action": command.action,
+            "reason": reason,
+            "occurred_at": command.occurred_at.isoformat() if command.occurred_at else None,
+            "notes": command.notes,
+        }
+        scope = "enclosures.control_care"
+        completed = self._event_store.stored_idempotency_response(
+            command.household_id,
+            command.actor_user_id,
+            scope,
+            command.idempotency_key,
+            canonical_command_hash(command_data),
+        )
+        if command.actor_role != "owner":
+            raise EnclosureValidationError("Only the owner may correct enclosure care.")
+        if completed:
+            return next(e for e in existing if str(e.event_id) == completed["event_id"])
+        now = datetime.now(UTC)
+        causation_id = target.event_id
+        occurred_at = now
+        if action is CorrectionAction.CORRECT:
+            if not isinstance(
+                target.payload, EnclosurePlantWateringRecordedV1 | EnclosurePlantWateringCorrectedV1
+            ):
+                raise EnclosureValidationError(
+                    "Only plant watering supports replacement corrections."
+                )
+            if target not in evaluate_effective_events(existing):
+                raise EnclosureValidationError("This care record changed. Review current history.")
+            if command.occurred_at is None:
+                raise EnclosureValidationError("A corrected watering date is required.")
+            occurred_at = command.occurred_at
+            payload: EventPayload = EnclosurePlantWateringCorrectedV1(
+                target.event_id,
+                target.payload.enclosure_plant_id,
+                reason,
+            )
+            event_type = "enclosure.plant_watering_corrected"
+        elif action is CorrectionAction.VOID:
+            payload = EventVoidedV1(target.event_id, reason)
+            event_type = "event.voided"
+        else:
+            controls = [
+                e
+                for e in existing
+                if isinstance(e.payload, EventVoidedV1)
+                and e.payload.target_event_id == target.event_id
+            ]
+            if not controls:
+                raise EnclosureValidationError("This record has no void to reinstate.")
+            causation_id = controls[-1].event_id
+            payload = EventReinstatedV1(target.event_id, reason)
+            event_type = "event.reinstated"
+        event = _event(
+            key=key,
+            event_id=uuid4(),
+            stream_version=len(existing) + 1,
+            event_type=event_type,
+            occurred_at=occurred_at,
+            recorded_at=now,
+            actor_user_id=command.actor_user_id,
+            correlation_id=target.correlation_id,
+            causation_id=causation_id,
+            idempotency_key=command.idempotency_key,
+            title={
+                "correct": "Plant watering corrected",
+                "void": "Care record voided",
+                "reinstate": "Care record reinstated",
+            }[command.action],
+            payload=payload,
+            notes=_optional_text(command.notes, "care notes"),
+            related_subjects=tuple(s for s in target.subjects if s.relationship != "primary"),
+        )
+        validate_correction(
+            action,
+            target,
+            event,
+            production_event_registry.registration(
+                target.event_type, target.schema_version
+            ).correction,
+            command.actor_role,
+            existing,
+        )
+        result = self._event_store.append_many(
+            AtomicAppendRequest(
+                streams=(StreamAppend(key, len(existing), (event,)),),
+                idempotency=_idempotency(
+                    household_id=command.household_id,
+                    actor_user_id=command.actor_user_id,
+                    operation_scope=scope,
+                    idempotency_key=command.idempotency_key,
+                    correlation_id=target.correlation_id,
+                    stored_response={"event_id": str(event.event_id)},
+                    command=command_data,
+                    recorded_at=now,
+                ),
+                synchronous_projections=(self._projection,),
+            )
+        )
+        return next(
+            e
+            for e in self._event_store.load_stream(key)
+            if str(e.event_id) == result.stored_response["event_id"]
+        )
 
     def record_cleaning(self, command: RecordCleaningCommand) -> DomainEvent:
         return self._record_maintenance(
@@ -698,7 +909,10 @@ class EnclosureService:
     def _record_maintenance(
         self,
         *,
-        command: RecordCleaningCommand | RecordWaterChangeCommand | RecordMistingCommand,
+        command: RecordCleaningCommand
+        | RecordWaterChangeCommand
+        | RecordMistingCommand
+        | RecordPlantWateringCommand,
         event_type: str,
         title: str,
         payload: EventPayload,
@@ -737,6 +951,14 @@ class EnclosureService:
                     correlation_id=command.correlation_id,
                     stored_response={"event_id": str(event.event_id)},
                     command={
+                        **(
+                            {
+                                "enclosure_id": str(command.enclosure_id),
+                                "enclosure_plant_id": str(command.enclosure_plant_id),
+                            }
+                            if isinstance(command, RecordPlantWateringCommand)
+                            else {}
+                        ),
                         "occurred_at": command.occurred_at.isoformat(),
                         "notes": event.notes,
                         **(

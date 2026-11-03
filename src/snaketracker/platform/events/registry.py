@@ -50,11 +50,14 @@ from snaketracker.domains.animals.contracts import (
 from snaketracker.domains.animals.measurements import validate_length_tuple
 from snaketracker.domains.enclosures.contracts import (
     ENCLOSURE_STATUSES,
+    EnclosureBioactiveChangedV1,
     EnclosureCleaningRecordedV1,
     EnclosureMistingRecordedV1,
     EnclosurePlantAddedV1,
     EnclosurePlantProfileChangedV1,
     EnclosurePlantRemovedV1,
+    EnclosurePlantWateringCorrectedV1,
+    EnclosurePlantWateringRecordedV1,
     EnclosureProfileChangedV1,
     EnclosureRegisteredV1,
     EnclosureStatusChangedV1,
@@ -1387,7 +1390,69 @@ def _deserialize_enclosure_plant_removed(data: Mapping[str, object]) -> EventPay
     return EnclosurePlantRemovedV1(plant_id, reason)
 
 
+def _deserialize_bioactive(data: Mapping[str, object]) -> EventPayload:
+    value = data.get("bioactive")
+    if type(value) is not bool:
+        raise ValueError("Stored enclosure mode must be boolean.")
+    return EnclosureBioactiveChangedV1(value)
+
+
+def _deserialize_plant_watering(data: Mapping[str, object]) -> EventPayload:
+    return EnclosurePlantWateringRecordedV1(_uuid_field(data, "enclosure_plant_id", "watering"))
+
+
+def _deserialize_plant_watering_corrected(data: Mapping[str, object]) -> EventPayload:
+    reason = data.get("reason")
+    if not isinstance(reason, str) or not reason.strip():
+        raise ValueError("Watering correction requires a reason.")
+    return EnclosurePlantWateringCorrectedV1(
+        _uuid_field(data, "target_event_id", "watering correction"),
+        _uuid_field(data, "enclosure_plant_id", "watering correction"),
+        reason,
+    )
+
+
 ENCLOSURE_CONTRACTS = (
+    EventContractRegistration(
+        event_type="enclosure.bioactive_changed",
+        schema_version=1,
+        owner="enclosures",
+        payload_type=EnclosureBioactiveChangedV1,
+        deserialize_payload=_deserialize_bioactive,
+        subject_requirements=(SubjectRequirement("enclosure", "primary"),),
+    ),
+    *(
+        EventContractRegistration(
+            event_type=event_type,
+            schema_version=1,
+            owner="enclosures.plants",
+            payload_type=payload_type,
+            deserialize_payload=deserializer,
+            subject_requirements=(
+                SubjectRequirement("enclosure", "primary"),
+                SubjectRequirement("enclosure-plant", "related"),
+            ),
+            correction=CorrectionCapabilities(
+                correctable=True,
+                voidable=True,
+                reinstatable=True,
+                required_role="owner",
+                correction_event_types=("enclosure.plant_watering_corrected",),
+            ),
+        )
+        for event_type, payload_type, deserializer in (
+            (
+                "enclosure.plant_watering_recorded",
+                EnclosurePlantWateringRecordedV1,
+                _deserialize_plant_watering,
+            ),
+            (
+                "enclosure.plant_watering_corrected",
+                EnclosurePlantWateringCorrectedV1,
+                _deserialize_plant_watering_corrected,
+            ),
+        )
+    ),
     EventContractRegistration(
         event_type="enclosure.registered",
         schema_version=1,

@@ -67,7 +67,7 @@ def test_encrypted_backup_recovery_preserves_guides_and_populated_household(
         lease_duration=timedelta(minutes=5),
     ).run_once(now=datetime.now(UTC))
     assert run is not None and run.status == "completed"
-    assert pipeline.verify(run).database_schema_revision == "0026_amphibian_care_guides"
+    assert pipeline.verify(run).database_schema_revision == "0027_bioactive_plant_care"
     restored = pipeline.rehearse_restore(run, tmp_path / "isolated-restore")
     before, after = table_hashes(database), table_hashes(restored.database_path)
     # Backup job bookkeeping occurs after the point-in-time capture.

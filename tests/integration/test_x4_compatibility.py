@@ -375,7 +375,7 @@ def test_encrypted_backup_restore_retains_v1_v2_v3_events_sources_and_media(
     ).run_once(now=datetime.now(UTC))
     assert run is not None and run.status == "completed"
     verification = pipeline.verify(run)
-    assert verification.database_schema_revision == "0026_amphibian_care_guides"
+    assert verification.database_schema_revision == "0027_bioactive_plant_care"
     assert verification.attachment_count == 1
     assert {("animal.registered", v) for v in (1, 2, 3)} <= set(verification.event_contracts)
     assert {("animal.taxon_linked", v) for v in (1, 2)} <= set(verification.event_contracts)

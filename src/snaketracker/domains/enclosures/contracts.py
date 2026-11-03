@@ -74,3 +74,20 @@ class EnclosurePlantProfileChangedV1:
 class EnclosurePlantRemovedV1:
     enclosure_plant_id: UUID
     reason: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class EnclosureBioactiveChangedV1:
+    bioactive: bool
+
+
+@dataclass(frozen=True, slots=True)
+class EnclosurePlantWateringRecordedV1:
+    enclosure_plant_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class EnclosurePlantWateringCorrectedV1:
+    target_event_id: UUID
+    enclosure_plant_id: UUID
+    reason: str
