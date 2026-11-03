@@ -55,6 +55,9 @@ def _preview(client, enclosure, plant, interval=3, due=None):
         params=params,
         data={
             "csrf_token": _csrf(page.text),
+            "edit_token": html.unescape(
+                re.search(r'name="edit_token" value="([^"]+)"', page.text)[1]
+            ),
             "interval_days": str(interval),
             "first_due_at": due
             or (datetime.now(UTC) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M"),
@@ -190,7 +193,8 @@ def test_preview_stale_history_cross_plant_csrf_role_and_removed_guards(tmp_path
         )
 
 
-def test_native_preview_retains_precise_existing_dst_fold_and_edit_choices(tmp_path):
+@pytest.mark.parametrize("microsecond", [123456, 123000])
+def test_native_preview_retains_precise_existing_dst_fold_and_edit_choices(tmp_path, microsecond):
     from uuid import UUID
 
     from snaketracker.application.reminders import CreateReminderRuleCommand, ReminderRuleService
@@ -207,7 +211,7 @@ def test_native_preview_retains_precise_existing_dst_fold_and_edit_choices(tmp_p
             ).one()
         projection = SQLAlchemyReminderProjection(engine)
         rules = ReminderRuleService(SQLAlchemyEventStore(engine), projection)
-        original_due = datetime(2026, 11, 1, 6, 30, 47, 123456, tzinfo=UTC)
+        original_due = datetime(2026, 11, 1, 6, 30, 47, microsecond, tzinfo=UTC)
         original = rules.create(
             CreateReminderRuleCommand(
                 UUID(household),
@@ -229,7 +233,7 @@ def test_native_preview_retains_precise_existing_dst_fold_and_edit_choices(tmp_p
         params = {"plant_id": fern.rsplit("/", 1)[1]}
         edit = client.get(path, params=params)
         wall = re.search(r'name="first_due_at"[^>]*value="([^"]+)"', edit.text)[1]
-        assert wall == "2026-11-01T01:30:47.123456"
+        assert wall == "2026-11-01T01:30:47.123"
         target, query, fields, preview = _preview(client, enclosure, fern, 9, wall)
         assert "Fixed anchor:" in preview.text
         assert "replaces the fixed anchor policy" in preview.text
@@ -243,6 +247,26 @@ def test_native_preview_retains_precise_existing_dst_fold_and_edit_choices(tmp_p
             'name="interval_days" type="number" min="1" max="3650" value="9"' in edited_again.text
         )
         assert f'value="{wall}"' in edited_again.text
+        reviewed_again = client.post(
+            path + "/preview",
+            params=params,
+            data={
+                "csrf_token": _csrf(edited_again.text),
+                "edit_token": html.unescape(
+                    re.search(r'name="edit_token" value="([^"]+)"', edited_again.text)[1]
+                ),
+                "interval_days": "9",
+                "enabled": "true",
+                "first_due_at": wall,
+            },
+        )
+        assert reviewed_again.status_code == 200, reviewed_again.text
+        fields = {
+            "csrf_token": _csrf(reviewed_again.text),
+            "preview_token": html.unescape(
+                re.search(r'name="preview_token" value="([^"]+)"', reviewed_again.text)[1]
+            ),
+        }
         confirmed = client.post(target, params=query, data=fields, follow_redirects=False)
         assert confirmed.status_code == 303, confirmed.text
         current = projection.rule_for(UUID(household), original.rule_id)
@@ -250,9 +274,12 @@ def test_native_preview_retains_precise_existing_dst_fold_and_edit_choices(tmp_p
         assert current.interval_days == 9 and current.schedule_kind == "event_relative"
 
 
-@pytest.mark.parametrize("timezone,hour", [("UTC", 12), ("America/New_York", 6)])
+@pytest.mark.parametrize(
+    "timezone,hour,microsecond",
+    [("UTC", 12, 123456), ("America/New_York", 6, 123456), ("UTC", 12, 123000)],
+)
 def test_notes_only_watering_correction_preserves_instant_and_override_consumption(
-    tmp_path, timezone, hour
+    tmp_path, timezone, hour, microsecond
 ):
     from uuid import UUID
 
@@ -285,7 +312,7 @@ def test_notes_only_watering_correction_preserves_instant_and_override_consumpti
             ReminderRuleService(store, projection),
             ReminderFactService(store, projection),
         )
-        original_time = datetime(2026, 11, 1, hour, 30, 37, 123456, tzinfo=UTC)
+        original_time = datetime(2026, 11, 1, hour, 30, 37, microsecond, tzinfo=UTC)
         record = service.record_plant_watering(
             RecordPlantWateringCommand(
                 household,
@@ -318,7 +345,7 @@ def test_notes_only_watering_correction_preserves_instant_and_override_consumpti
         assert before_due == original_time + timedelta(days=3)
         page = client.get(enclosure + "/care-history")
         wall = re.search(r'name="occurred_at"[^>]*value="([^"]+)"', page.text)[1]
-        assert wall.endswith(":37.123456")
+        assert wall.endswith(":37.123")
         corrected = client.post(
             enclosure + "/care-history/" + str(record.event_id),
             data={

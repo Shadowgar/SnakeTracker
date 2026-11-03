@@ -5192,11 +5192,9 @@ def create_web_router(
                 rows.append(
                     {
                         "event": event,
-                        "occurred_wall": event.occurred_at.astimezone(
-                            ZoneInfo(principal.household_timezone)
-                        )
-                        .replace(tzinfo=None)
-                        .isoformat(),
+                        "occurred_wall": _form_datetime_value(
+                            event.occurred_at, principal.household_timezone
+                        ),
                         "subject_name": (related_plant.label or related_plant.species_display)
                         if related_plant
                         else enclosure.name,
@@ -5380,8 +5378,10 @@ def create_web_router(
                     token, session=request.cookies[SESSION_COOKIE], now=datetime.now(UTC)
                 )
                 if (
-                    retained["binding"] != context["binding"]
+                    retained.get("purpose") != "enclosure-confirm"
+                    or retained["binding"] != context["binding"]
                     or retained["reminder_type"] != reminder_type
+                    or retained["rule"] != smart_care_rule_binding(rule)
                 ):
                     raise FormValidationError("This preview context changed. Review setup again.")
                 interval, enabled = retained["interval_days"], retained["enabled"]
@@ -5390,18 +5390,34 @@ def create_web_router(
                     if retained["first_due_at"]
                     else None
                 )
+            edit_token = care_preview_signer.sign(
+                {
+                    "purpose": "enclosure-edit",
+                    "binding": context["binding"],
+                    "rule": smart_care_rule_binding(rule),
+                    "reminder_type": reminder_type,
+                    "first_due_at": due.isoformat() if due else None,
+                },
+                session=request.cookies[SESSION_COOKIE],
+                now=datetime.now(UTC),
+            )
             context.update(
                 {
+                    "edit_token": edit_token,
                     "interval_days": interval,
                     "enabled": enabled,
-                    "first_due_at": due.astimezone(ZoneInfo(principal.household_timezone))
-                    .replace(tzinfo=None)
-                    .isoformat()
+                    "first_due_at": _form_datetime_value(due, principal.household_timezone)
                     if due
                     else "",
                 }
             )
-        except (ValueError, ExpectedVersionConflictError, IdempotencyConflictError) as error:
+        except (
+            ValueError,
+            KeyError,
+            TypeError,
+            ExpectedVersionConflictError,
+            IdempotencyConflictError,
+        ) as error:
             return enclosure_care_error(request, principal, error)
         return protected_page(request, "enclosure_schedule.html", principal, context=context)
 
@@ -5419,6 +5435,8 @@ def create_web_router(
         if "reminder.manage" not in principal.capabilities:
             return _access_denied(request, "Care setup access denied")
         try:
+            history_keys = (StreamKey(principal.household_id, "enclosure", UUID(enclosure_id)),)
+            read_streams = reminder_fact_service.capture_history_expectations(history_keys)
             context = enclosure_schedule_context(principal, enclosure_id, reminder_type, plant_id)
             rule = context["rule"]
             enabled = str(form.get("enabled", "")) == "true"
@@ -5426,27 +5444,43 @@ def create_web_router(
             if not 1 <= interval <= 3650:
                 raise FormValidationError("Enter a whole-day interval from 1 to 3650.")
             raw_due = str(form.get("first_due_at", "")).strip()
-            due = None
-            if raw_due:
-                # An unchanged local wall time retains its exact stored instant and DST fold.
-                # Compare before timezone validation, which rejects newly entered ambiguous times.
-                original = rule.override_due_at if rule else None
-                original_wall = (
-                    original.astimezone(ZoneInfo(principal.household_timezone)).replace(tzinfo=None)
-                    if original
+            retained_due = rule.override_due_at if rule else None
+            if edit_token := str(form.get("edit_token", "")):
+                retained = care_preview_signer.verify(
+                    edit_token, session=request.cookies[SESSION_COOKIE], now=datetime.now(UTC)
+                )
+                if (
+                    retained.get("purpose") != "enclosure-edit"
+                    or retained["binding"] != context["binding"]
+                    or retained["rule"] != smart_care_rule_binding(rule)
+                    or retained["reminder_type"] != reminder_type
+                ):
+                    raise FormValidationError("This edit context changed. Review setup again.")
+                retained_due = (
+                    datetime.fromisoformat(retained["first_due_at"])
+                    if retained["first_due_at"]
                     else None
                 )
-                due = (
-                    original
-                    if datetime.fromisoformat(raw_due) == original_wall
-                    else (_form_datetime(raw_due, principal.household_timezone))
-                )
+            due = (
+                _form_datetime(raw_due, principal.household_timezone, retained_instant=retained_due)
+                if raw_due
+                else None
+            )
             if enabled and due is None:
                 raise FormValidationError(
                     "Choose the first due date before previewing this schedule."
                 )
             payload = {
                 "binding": context["binding"],
+                "purpose": "enclosure-confirm",
+                "read_streams": [
+                    {
+                        "stream_type": item.key.stream_type,
+                        "stream_id": str(item.key.stream_id),
+                        "expected_version": item.expected_version,
+                    }
+                    for item in read_streams
+                ],
                 "rule": smart_care_rule_binding(rule),
                 "reminder_type": reminder_type,
                 "interval_days": interval,
@@ -5471,12 +5505,23 @@ def create_web_router(
                     payload["first_due_at"],
                     enabled,
                     payload["channel"],
+                    read_streams=read_streams,
                 )
             )
+            if reminder_fact_service.capture_history_expectations(history_keys) != read_streams:
+                raise FormValidationError(
+                    "Enclosure care changed while preparing the preview. Review again."
+                )
             token = care_preview_signer.sign(
                 payload, session=request.cookies[SESSION_COOKIE], now=datetime.now(UTC)
             )
-        except (ValueError, ExpectedVersionConflictError, IdempotencyConflictError) as error:
+        except (
+            ValueError,
+            KeyError,
+            TypeError,
+            ExpectedVersionConflictError,
+            IdempotencyConflictError,
+        ) as error:
             return enclosure_care_error(request, principal, error)
         return protected_page(
             request,
@@ -5511,6 +5556,8 @@ def create_web_router(
                 session=request.cookies[SESSION_COOKIE],
                 now=datetime.now(UTC),
             )
+            if payload.get("purpose") != "enclosure-confirm":
+                raise FormValidationError("Review the schedule preview before confirming.")
             context = enclosure_schedule_context(
                 principal, enclosure_id, reminder_type, plant_id, allow_removed=True
             )
@@ -5519,6 +5566,17 @@ def create_web_router(
                 for key in ("purpose", "actor", "household", "enclosure", "plant_id")
             ):
                 raise FormValidationError("The enclosure or plant changed. Review setup again.")
+            read_streams = tuple(
+                StreamExpectation(
+                    StreamKey(principal.household_id, item["stream_type"], UUID(item["stream_id"])),
+                    item["expected_version"],
+                )
+                for item in payload["read_streams"]
+            )
+            if len(read_streams) != 1 or read_streams[0].key != StreamKey(
+                principal.household_id, "enclosure", UUID(enclosure_id)
+            ):
+                raise FormValidationError("This preview lacks its enclosure history expectation.")
             command = SaveSubjectScheduleCommand(
                 principal.household_id,
                 principal.user_id,
@@ -5532,6 +5590,7 @@ def create_web_router(
                 payload["first_due_at"],
                 payload["enabled"],
                 payload["channel"],
+                read_streams=read_streams,
             )
             if reminder_rule_service.completed_subject_schedule(command) is None:
                 if payload["binding"] != context["binding"]:
@@ -5550,6 +5609,7 @@ def create_web_router(
         except (
             ValueError,
             KeyError,
+            TypeError,
             ExpectedVersionConflictError,
             IdempotencyConflictError,
         ) as error:

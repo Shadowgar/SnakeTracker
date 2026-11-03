@@ -4,7 +4,7 @@
 {% block content %}<section class="form-page smart-care-page"><h1>{{ title }} schedule</h1><p class="lede">{{ plant.label or plant.species_display if plant else enclosure.name }}{% if plant %} · {{ enclosure.name }}{% endif %}</p>
 <p>This is your manually chosen schedule. Confirming changes only this care task. An explicit first due date starts the schedule; subsequent matching care records determine the next due date.</p>
 {% if rule %}<p>Current schedule: every {{ rule.interval_days }} days · {{ 'Enabled' if rule.enabled else 'Disabled' }}.</p>{% endif %}
-<form class="card form-stack" method="post" action="{{ path }}/preview{{ query }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+<form class="card form-stack" method="post" action="{{ path }}/preview{{ query }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="edit_token" value="{{ edit_token }}">
 <label>Interval in days<input name="interval_days" type="number" min="1" max="3650" value="{{ interval_days }}" required></label>
 <label>First due / one-time override ({{ principal.household_timezone }})<input name="first_due_at" type="datetime-local" step="any" value="{{ first_due_at }}"></label>
 <label class="checkbox-label"><input name="enabled" type="checkbox" value="true" {% if enabled %}checked{% endif %}> Enable schedule</label><button>Preview schedule</button></form><a href="/enclosures/{{ enclosure.enclosure_id }}">Back to enclosure</a></section>{% endblock %}
