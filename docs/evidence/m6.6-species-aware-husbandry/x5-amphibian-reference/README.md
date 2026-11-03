@@ -30,6 +30,10 @@ unpublished draft, not a release entry.
 
 ## Qualification
 
+The original qualification and screenshots in this section belong to revision
+`382d9ccce245a5692b7907a0cbac06000a8f19be`. They are retained unchanged. Fresh evidence
+for the bounded mobile follow-up is recorded under [Mobile completion](#mobile-completion).
+
 | Acceptance evidence | Result |
 | --- | --- |
 | `AT-AMPHREF-01`: bundle validation, selectors, idempotent imports, changed-version rejection, exact/missing/ambiguous/genus/inactive/wrong-class rejection | Passed in focused X5 suite |
@@ -99,6 +103,54 @@ manifest; ordinary serving blocks socket connections. Run the browser script wit
 The browser script uses same-origin axe injection under the application's normal CSP,
 checks WCAG A/AA including text contrast, horizontal overflow, native disclosure
 Enter/Space behavior, Overview/reference navigation and external request counts.
+
+## Mobile completion
+
+The 2026-11-03 follow-up places Reviewed Captive Care before the empty Natural History
+section at widths up to 800px, only for linked Amphibians with a reviewed guide and no
+Natural History content. The identity/photo, visible care precautions, separate Natural
+History unavailable state, sources and review dates remain. Desktop section order and
+the no-guide experience are unchanged. The applicability introduction explains
+post-metamorphic as care for frogs after the tadpole stage; source claims are unchanged.
+
+Fresh focused validation:
+
+- `TMPDIR=/dev/shm/carekeeper-x5-mobile-tests uv run pytest -q tests/integration/test_x5_amphibian_guides.py tests/integration/test_natural_history_web.py tests/integration/test_care_guides.py`
+  — **21 passed**; one pre-existing Starlette TestClient deprecation warning. Coverage
+  includes Amphibians with retained Natural History, no-guide and unlinked Animals,
+  visible cautions, source dates, offline rendering and unchanged non-session data.
+- The new rendering test and browser position assertion each failed on the original
+  presentation, then passed after the bounded template/CSS change.
+- `uv run ruff check tests/integration/test_x5_amphibian_guides.py`,
+  `uv run ruff format --check tests/integration/test_x5_amphibian_guides.py`,
+  `node --check scripts/qualification/x5_browser_review.js`, and `git diff --check`
+  passed.
+- Documentation links passed across 265 files; the architecture freeze check passed
+  for HEAD, index and working tree.
+- [Fresh browser results](mobile-completion/browser-results.json): all nine
+  species/viewport combinations passed at 320×844, 390×844 and 1440×900. Checks cover
+  section positions, loaded photographs, precautions outside disclosures, source/review
+  dates, keyboard disclosure behavior, navigation, no horizontal overflow, and zero
+  automated WCAG A/AA violations, external requests or page errors. These are Chromium
+  checks, not a manual screen-reader or physical-device certification. CSS changes
+  visual section order on mobile; the existing document/keyboard section order remains.
+
+Six representative captures were added; the original captures above were not replaced:
+
+| Case | Current captures |
+| --- | --- |
+| White's tree frog, 390×844 | [Initial view](mobile-completion/pelodryas-390x844-initial-view.png) · [Full page](mobile-completion/pelodryas-390x844-full-page.png) |
+| Cranwell's horned frog, 320×844 | [Initial view](mobile-completion/ceratophrys-320x844-initial-view.png) |
+| No reviewed guide, 390×844 | [Initial view](mobile-completion/rana-390x844-initial-view.png) |
+| White's tree frog, 1440×900 | [Initial view](mobile-completion/pelodryas-1440x900-initial-view.png) · [Full page](mobile-completion/pelodryas-1440x900-full-page.png) |
+
+The disposable fixture used `/tmp/carekeeper-x5-browser-mobile-completion`, port 8115
+and the already reviewed photos in `/tmp/carekeeper-x5-research`. Run the existing
+browser script with `X5_CAPTURE_SET=mobile-completion` to save only this representative
+capture set while retaining all nine viewport/species checks. All testing used
+fictional data. Source research, reviewed bundles, migration, immutable history and
+production were unchanged; their unaffected original evidence is reused, not claimed
+as newly rerun.
 
 ## Review and publication boundary
 

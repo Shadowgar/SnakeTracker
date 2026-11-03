@@ -185,7 +185,11 @@ def test_reference_view_is_offline_and_keeps_context_cautions_and_no_guide(tmp_p
             assert "Reviewed Captive Care" in page.text
             if name == "Rana temporaria":
                 assert "No reviewed captive-care guide is available yet." in page.text
+                assert "animal-reference-care-first" not in page.text
             else:
+                assert "animal-reference-care-first" in page.text
+                assert "Captive care for frogs after the tadpole stage" in page.text
+                assert "Natural History is not available yet." in page.text
                 assert 'class="profile-reference-cautions"' in page.text
                 assert "2026-11-02" in page.text
                 assert "No reviewed tadpole or breeding guidance" in page.text
@@ -234,7 +238,10 @@ def test_uvb_positions_and_critical_heat_controls_are_not_hidden():
     assert "thermometer" in heat.caution.lower()
 
 
-def test_natural_history_remains_available_without_guide_and_manual_animal_stays_valid(tmp_path):
+@pytest.mark.parametrize("species", ["Rana temporaria", "Pelodryas caerulea"])
+def test_natural_history_remains_available_with_or_without_guide_and_manual_animal_stays_valid(
+    tmp_path, species
+):
     from uuid import UUID
 
     from snaketracker.infrastructure.taxonomy.natural_history import NaturalHistoryRepository
@@ -248,7 +255,7 @@ def test_natural_history_remains_available_without_guide_and_manual_animal_stays
         with engine.connect() as c:
             identifier = UUID(
                 c.exec_driver_sql(
-                    "SELECT taxon_id FROM taxa WHERE accepted_scientific_name='Rana temporaria'"
+                    "SELECT taxon_id FROM taxa WHERE accepted_scientific_name=?", (species,)
                 ).scalar_one()
             )
         item = version(
@@ -258,9 +265,9 @@ def test_natural_history_remains_available_without_guide_and_manual_animal_stays
             revision_url="https://example.test/frog-history?revision=fixture-1",
             source_title="Synthetic Natural History qualification fixture",
             attribution="Care Keeper test fixture",
-            verified_name="Rana temporaria",
+            verified_name=species,
             identity_provider="fixture",
-            identity_provider_id="Rana temporaria",
+            identity_provider_id=species,
             identity_evidence="https://example.test/qualified-frog",
             sections=[{"title": "About this species", "text": "Synthetic local reference text."}],
         )
@@ -274,11 +281,16 @@ def test_natural_history_remains_available_without_guide_and_manual_animal_stays
             reason="Isolated fictional fixture",
             development=True,
         )
-        page = client.get(paths["Rana temporaria"] + "/reference")
+        page = client.get(paths[species] + "/reference")
         assert "Synthetic local reference text." in page.text
-        assert "No reviewed captive-care guide is available yet." in page.text
+        assert "animal-reference-care-first" not in page.text
+        if species == "Rana temporaria":
+            assert "No reviewed captive-care guide is available yet." in page.text
+        else:
+            assert 'class="profile-reference-cautions"' in page.text
         manual = _register(client, "Unlinked", "amphibian", "Pelodryas caerulea")
         page = client.get(manual + "/reference")
         assert "Your manual species record remains valid." in page.text
         assert "Choose a linked species to check for a reviewed captive-care guide." in page.text
         assert "profile-reference-cautions" not in page.text
+        assert "animal-reference-care-first" not in page.text

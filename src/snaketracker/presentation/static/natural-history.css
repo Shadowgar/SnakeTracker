@@ -25,6 +25,9 @@
   .animal-reference-content > .section-heading .page-kicker,
   .animal-reference-content > .section-heading .profile-reference-boundary { display: none; }
   .animal-reference-content > .section-heading h2 { font-size: 1rem; }
+  .animal-reference-care-first > .profile-reviewed-care { order: 1; }
+  .animal-reference-care-first > .profile-species-overview { order: 2; }
+  .animal-reference-care-first > .profile-source-overview { order: 3; }
 }
 
 /* Sourced frog care: context and safety remain visible outside disclosures. */

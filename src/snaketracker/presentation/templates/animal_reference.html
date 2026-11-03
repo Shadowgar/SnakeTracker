@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block title %}{{ animal.name }} · Guides & Species Reference · Care Keeper{% endblock %}
-{% block page_styles %}<link rel="stylesheet" href="/static/natural-history.css?v=x5-1">{% endblock %}
+{% block page_styles %}<link rel="stylesheet" href="/static/natural-history.css?v=x5-2">{% endblock %}
 {% block content %}
 <section class="animal-experience" aria-labelledby="page-title">
   {% include "animal_profile_header.html" %}
-  <div class="animal-reference-content">
+  <div class="animal-reference-content{% if linked_taxon and profile_reference_guide and profile_reference_guide.biological_group == 'amphibian' and not natural_history_versions %} animal-reference-care-first{% endif %}">
     <div class="section-heading">
       <div><p class="page-kicker">Species reference</p><h2>Guides &amp; Species Reference</h2></div>
       <p class="profile-reference-boundary">Linked species reference — separate from {{ animal.name }}'s individual records or care settings.</p>
@@ -41,7 +41,7 @@
       <p class="profile-reference-intro">Reviewed reference guidance for {{ linked_taxon.taxon.accepted_scientific_name }}. {% if profile_reference_guide.biological_group == 'amphibian' %}Explore care information with sources and review dates.{% else %}This guide retains its sourced care and life-history facts.{% endif %}</p>
       <p class="guide-review-line"><span class="guide-state guide-state-reviewed">Reviewed</span><span>Version {{ profile_reference_guide.version }} · <time datetime="{{ profile_reference_guide.reviewed_at.date().isoformat() }}">{{ profile_reference_guide.reviewed_at.date().isoformat() }}</time></span></p>
       {% if profile_reference_guide.biological_group == 'amphibian' %}
-      <p class="field-help">Post-metamorphic captive care. No reviewed tadpole or breeding guidance is available in this guide. Life-stage labels describe source scope, not your Animal.</p>
+      <p class="field-help">Captive care for frogs after the tadpole stage (post-metamorphic). No reviewed tadpole or breeding guidance is available in this guide. Life-stage labels describe source scope, not your Animal.</p>
       {% endif %}
       {% include "profile_reference_content.html" %}
       {% elif linked_taxon %}
