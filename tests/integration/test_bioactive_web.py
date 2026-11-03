@@ -187,3 +187,63 @@ def test_preview_stale_history_cross_plant_csrf_role_and_removed_guards(tmp_path
             client.get(enclosure + "/care-history?plant_id=" + fern.rsplit("/", 1)[1]).status_code
             == 200
         )
+
+
+def test_native_preview_retains_precise_existing_dst_fold_and_edit_choices(tmp_path):
+    from uuid import UUID
+
+    from snaketracker.application.reminders import CreateReminderRuleCommand, ReminderRuleService
+    from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
+    from snaketracker.infrastructure.reminders.projections import SQLAlchemyReminderProjection
+
+    with _client(tmp_path) as client:
+        enclosure, (fern, _) = _seed(client)
+        engine = client.app.state.database_engine
+        with engine.begin() as c:
+            c.execute(text("UPDATE household_summaries SET timezone='America/New_York'"))
+            household, actor = c.execute(
+                text("SELECT household_id,user_id FROM authorization_memberships")
+            ).one()
+        projection = SQLAlchemyReminderProjection(engine)
+        rules = ReminderRuleService(SQLAlchemyEventStore(engine), projection)
+        original_due = datetime(2026, 11, 1, 6, 30, 47, 123456, tzinfo=UTC)
+        original = rules.create(
+            CreateReminderRuleCommand(
+                UUID(household),
+                UUID(actor),
+                uuid4(),
+                "precise-existing-schedule",
+                "enclosure-plant",
+                UUID(fern.rsplit("/", 1)[1]),
+                "plant_watering",
+                "fixed_interval",
+                5,
+                "2026-10-01T12:00:00+00:00",
+                original_due.isoformat(),
+                True,
+                "local",
+            )
+        )
+        path = enclosure + "/care-schedule/plant_watering"
+        params = {"plant_id": fern.rsplit("/", 1)[1]}
+        edit = client.get(path, params=params)
+        wall = re.search(r'name="first_due_at"[^>]*value="([^"]+)"', edit.text)[1]
+        assert wall == "2026-11-01T01:30:47.123456"
+        target, query, fields, preview = _preview(client, enclosure, fern, 9, wall)
+        assert "Fixed anchor:" in preview.text
+        assert "replaces the fixed anchor policy" in preview.text
+        assert "Existing one-time due date:" in preview.text
+        assert "Every 5 days" in preview.text
+        assert "Every 9 days" in preview.text
+        back = html.unescape(re.search(r'href="([^"]+)">Change choices', preview.text)[1])
+        edited_again = client.get(back)
+        assert edited_again.status_code == 200, edited_again.text
+        assert (
+            'name="interval_days" type="number" min="1" max="3650" value="9"' in edited_again.text
+        )
+        assert f'value="{wall}"' in edited_again.text
+        confirmed = client.post(target, params=query, data=fields, follow_redirects=False)
+        assert confirmed.status_code == 303, confirmed.text
+        current = projection.rule_for(UUID(household), original.rule_id)
+        assert current.override_due_at == original_due
+        assert current.interval_days == 9 and current.schedule_kind == "event_relative"

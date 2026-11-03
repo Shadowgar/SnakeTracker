@@ -5303,6 +5303,36 @@ def create_web_router(
             return _access_denied(request, "Care setup access denied")
         try:
             context = enclosure_schedule_context(principal, enclosure_id, reminder_type, plant_id)
+            rule = context["rule"]
+            interval = rule.interval_days if rule else ""
+            due = rule.override_due_at if rule else None
+            enabled = rule.enabled if rule else True
+            if token := request.query_params.get("preview_token"):
+                retained = care_preview_signer.verify(
+                    token, session=request.cookies[SESSION_COOKIE], now=datetime.now(UTC)
+                )
+                if (
+                    retained["binding"] != context["binding"]
+                    or retained["reminder_type"] != reminder_type
+                ):
+                    raise FormValidationError("This preview context changed. Review setup again.")
+                interval, enabled = retained["interval_days"], retained["enabled"]
+                due = (
+                    datetime.fromisoformat(retained["first_due_at"])
+                    if retained["first_due_at"]
+                    else None
+                )
+            context.update(
+                {
+                    "interval_days": interval,
+                    "enabled": enabled,
+                    "first_due_at": due.astimezone(ZoneInfo(principal.household_timezone))
+                    .replace(tzinfo=None)
+                    .isoformat()
+                    if due
+                    else "",
+                }
+            )
         except (ValueError, ExpectedVersionConflictError, IdempotencyConflictError) as error:
             return enclosure_care_error(request, principal, error)
         return protected_page(request, "enclosure_schedule.html", principal, context=context)
@@ -5327,8 +5357,22 @@ def create_web_router(
             interval = _required_int(form.get("interval_days", ""), "interval")
             if not 1 <= interval <= 3650:
                 raise FormValidationError("Enter a whole-day interval from 1 to 3650.")
-            raw_due = str(form.get("first_due_at", ""))
-            due = _form_datetime(raw_due, principal.household_timezone) if raw_due else None
+            raw_due = str(form.get("first_due_at", "")).strip()
+            due = None
+            if raw_due:
+                # An unchanged local wall time retains its exact stored instant and DST fold.
+                # Compare before timezone validation, which rejects newly entered ambiguous times.
+                original = rule.override_due_at if rule else None
+                original_wall = (
+                    original.astimezone(ZoneInfo(principal.household_timezone)).replace(tzinfo=None)
+                    if original
+                    else None
+                )
+                due = (
+                    original
+                    if datetime.fromisoformat(raw_due) == original_wall
+                    else (_form_datetime(raw_due, principal.household_timezone))
+                )
             if enabled and due is None:
                 raise FormValidationError(
                     "Choose the first due date before previewing this schedule."
