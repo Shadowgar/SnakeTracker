@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Smart care setup · {{ animal.name }} · Care Keeper{% endblock %}
+{% block page_styles %}<link rel="stylesheet" href="/static/smart-care.css?v=1">{% endblock %}
 {% block content %}
-<section class="animal-experience" aria-labelledby="page-title">
+<section class="animal-experience smart-care-page" aria-labelledby="page-title">
   {% include "animal_profile_header.html" %}
   <header class="animal-section-heading"><div><p class="eyebrow">Optional care setup</p><h2>Smart care setup</h2><p class="lede">Review a source, choose what applies to {{ animal.name }}, and adjust the schedule before confirming.</p></div><a href="/animals/{{ animal.animal_id }}/care">Back to Care</a></header>
   {% if notice %}<p class="alert" role="status">{{ notice }} No schedules were changed.</p>{% endif %}
@@ -17,11 +18,12 @@
       <a class="button-link secondary-link" href="/animals/{{ animal.animal_id }}/smart-care/feeding/edit?choice={{ option.claim.claim_id }}">Review {{ option.claim.life_stage|lower }} suggestion · {{ option.source.publisher }}</a>
       <form method="post" action="/animals/{{ animal.animal_id }}/smart-care/decision" class="form-actions">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="choice" value="{{ option.claim.claim_id }}"><input type="hidden" name="dismissed" value="{{ dismissed }}">
         <button class="secondary-button" name="decision" value="skip">Skip for now</button><button class="secondary-button" name="decision" value="decline">Decline suggestion</button>
       </form>
     </article>
     {% endfor %}
-    {% else %}<p>No sufficiently supported feeding interval is available for this Animal’s exact linked species and care profile. Use a keeper-entered schedule below. Natural History and similar species are not used to set care.</p>{% endif %}
+    {% elif has_guidance %}<p>All suggestions have been set aside for this visit. <a href="/animals/{{ animal.animal_id }}/smart-care">Review them again</a>, or use manual setup.</p>{% else %}<p>No sufficiently supported feeding interval is available for this Animal’s exact linked species and care profile. Use a keeper-entered schedule below. Natural History and similar species are not used to set care.</p>{% endif %}
     {% if profile_reference_guide and linked_taxon %}<a href="/animals/{{ animal.animal_id }}/reference">Read the full care guide and cautions</a>{% endif %}
   </section>
   <section class="care-schedule-section" aria-labelledby="manual-title">

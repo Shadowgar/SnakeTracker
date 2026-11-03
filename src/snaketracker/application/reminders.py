@@ -137,6 +137,13 @@ class ReminderAgendaItem:
     explanation: str
 
 
+@dataclass(frozen=True, slots=True)
+class ScheduleDuePreview:
+    due_at: datetime
+    explanation: str
+    source_event_id: UUID | None
+
+
 class ReminderProjection(SynchronousProjection, Protocol):
     def rule_for(self, household_id: UUID, rule_id: UUID) -> ReminderRuleCurrent | None: ...
 
@@ -637,9 +644,11 @@ class ReminderFactService:
         self._event_store = event_store
         self._projection = projection
 
-    def preview_subject_schedule(self, command: SaveSubjectScheduleCommand) -> datetime | None:
-        """Calculate the reviewed due date using the same effective history as live agenda."""
-        _, kind, interval, _anchor, override, channel = _validated_schedule(
+    def preview_subject_schedule(
+        self, command: SaveSubjectScheduleCommand
+    ) -> ScheduleDuePreview | None:
+        """Calculate a proposed event-relative schedule without materializing a rule or fact."""
+        reminder_type, kind, interval, _, override, channel = _validated_schedule(
             command.reminder_type,
             command.subject_type,
             "event_relative",
@@ -650,23 +659,26 @@ class ReminderFactService:
         )
         if not command.enabled:
             return None
-        rule = ReminderRuleCurrent(
+        transient = ReminderRuleCurrent(
             command.household_id,
             UUID(int=0),
             command.subject_type,
             command.subject_id,
-            command.reminder_type,
+            reminder_type,
             kind,
             interval,
             None,
-            datetime.fromisoformat(override) if override else None,
-            True,
+            datetime.fromisoformat(override) if override is not None else None,
+            command.enabled,
             channel,
             command.expected_stream_version,
             UUID(int=0),
         )
-        calculation = self._calculation(rule)
-        return calculation[0] if calculation is not None else None
+        calculation = self._calculation(transient)
+        if calculation is None:
+            return None
+        due_at, explanation, source = calculation
+        return ScheduleDuePreview(due_at, explanation, source.event_id if source else None)
 
     def recalculate_rule(
         self, household_id: UUID, rule_id: UUID, *, now: datetime

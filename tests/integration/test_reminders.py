@@ -1007,6 +1007,50 @@ def test_subject_schedule_exact_retry_precedes_stale_version_check(tmp_path: Pat
         engine.dispose()
 
 
+def test_schedule_preview_uses_effective_history_without_writing(tmp_path: Path) -> None:
+    engine, owner, animals, _, animal_id, _, _, facts, projection = _setup(tmp_path)
+    try:
+        accepted = animals.record_feeding(
+            RecordFeedingCommand(
+                owner.household_id,
+                owner.user_id,
+                animal_id,
+                uuid4(),
+                "preview-history",
+                datetime(2026, 11, 2, 12, tzinfo=UTC),
+                "mouse",
+                "small",
+                None,
+                "frozen_thawed",
+                1,
+                "accepted",
+                None,
+            )
+        )
+        proposal = SaveSubjectScheduleCommand(
+            owner.household_id,
+            owner.user_id,
+            uuid4(),
+            "proposed",
+            0,
+            "animal",
+            animal_id,
+            "feeding",
+            3,
+            "2026-11-01T12:00:00+00:00",
+            True,
+        )
+        preview = facts.preview_subject_schedule(proposal)
+        assert preview is not None
+        assert preview.due_at == datetime(2026, 11, 5, 12, tzinfo=UTC)
+        assert preview.source_event_id == accepted.event.event_id
+        assert preview.explanation == "3 days after last accepted feeding"
+        assert projection.rules_for(owner.household_id) == ()
+        assert projection.facts_for(owner.household_id) == ()
+    finally:
+        engine.dispose()
+
+
 def test_agenda_preview_includes_upcoming_effective_care_without_delivery_fact(
     tmp_path: Path,
 ) -> None:

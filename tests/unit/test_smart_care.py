@@ -35,6 +35,41 @@ def test_ranges_and_unknown_species_require_keeper_entry():
     assert feeding_options(None, animal_group="snake", scientific_name=None) == ()
 
 
+def test_two_pages_from_one_publisher_do_not_corroborate():
+    guide = load_bundle(ROOT / "reference/care-guides/reviewed-amphibians-v1.json").guides[0]
+    sources = tuple(
+        source.model_copy(update={"publisher": "One Publisher"}) for source in guide.sources
+    )
+    guide = guide.model_copy(update={"sources": sources})
+    options = feeding_options(
+        guide, animal_group="amphibian", scientific_name=guide.scientific_name
+    )
+    assert all(
+        option.support == "Single source"
+        for option in options
+        if option.claim.life_stage == "Juvenile"
+    )
+
+
+def test_different_captive_context_does_not_corroborate():
+    guide = load_bundle(ROOT / "reference/care-guides/reviewed-amphibians-v1.json").guides[0]
+    claims = tuple(
+        claim.model_copy(update={"context": "Captive breeding"})
+        if claim.source_id == "nsw-water"
+        else claim
+        for claim in guide.claims
+    )
+    guide = guide.model_copy(update={"claims": claims})
+    options = feeding_options(
+        guide, animal_group="amphibian", scientific_name=guide.scientific_name
+    )
+    assert all(
+        option.support == "Single source"
+        for option in options
+        if option.claim.life_stage == "Juvenile"
+    )
+
+
 @pytest.mark.parametrize("value", [0, 0.5, 1.5])
 def test_non_whole_day_values_are_never_rounded(value):
     guide = load_bundle(ROOT / "reference/care-guides/reviewed-amphibians-v1.json").guides[0]
@@ -67,3 +102,22 @@ def test_insufficient_applicability_is_manual_only(changes):
         feeding_options(guide, animal_group="amphibian", scientific_name=guide.scientific_name)
         == ()
     )
+
+
+def test_signed_preview_expires_and_cannot_move_between_sessions():
+    from datetime import UTC, datetime, timedelta
+
+    from snaketracker.application.smart_care import CarePreviewSigner, PreviewValidationError
+
+    signer = CarePreviewSigner(b"test-runtime-secret")
+    now = datetime(2026, 11, 3, tzinfo=UTC)
+    token = signer.sign({"choice": "manual"}, session="keeper-session", now=now)
+    assert signer.verify(token, session="keeper-session", now=now) == {"choice": "manual"}
+    for value, session, instant in (
+        (token, "other-session", now),
+        (token + "x", "keeper-session", now),
+        (token, "keeper-session", now + timedelta(hours=1)),
+        ("malformed", "keeper-session", now),
+    ):
+        with pytest.raises(PreviewValidationError):
+            signer.verify(value, session=session, now=instant)

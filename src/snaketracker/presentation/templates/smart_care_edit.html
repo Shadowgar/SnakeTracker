@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Review {{ schedule.title|lower }} · {{ animal.name }} · Care Keeper{% endblock %}
+{% block page_styles %}<link rel="stylesheet" href="/static/smart-care.css?v=1">{% endblock %}
 {% block content %}
-<section class="animal-experience" aria-labelledby="page-title">
+<section class="animal-experience smart-care-page" aria-labelledby="page-title">
   {% include "animal_profile_header.html" %}
   <section class="form-page focused-animal-form">
     <header><p class="eyebrow">Smart care · review and adjust</p><h2>{{ schedule.title }} for {{ animal.name }}</h2></header>
@@ -10,7 +11,7 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="choice" value="{{ choice }}">
       {% if option %}<label class="checkbox-label"><input type="checkbox" name="applicability" value="true" required> I choose this source and confirm its {{ option.claim.life_stage|lower }} life stage and captive-care context apply to {{ animal.name }}.</label>{% endif %}
       <label>Interval in whole days <input name="interval_days" type="number" inputmode="numeric" min="1" max="3650" step="1" value="{{ interval_days if interval_days is not none else '' }}" required><small>You can edit this value. An edited interval is your choice.</small></label>
-      <label>First / next due date <input name="first_due_at" type="datetime-local" value="{{ first_due_at }}" required><small>{{ principal.household_timezone }}. Existing one-time due dates are retained here; edit only if you want to change them.</small></label>
+      <label>First / next due date <input name="first_due_at" type="datetime-local" step="any" value="{{ first_due_at }}" required><small>{{ principal.household_timezone }}. Existing one-time due dates are retained here; edit only if you want to change them.</small></label>
       <p>Care recorded on or after this date starts the recurring interval. {% if schedule.reminder_type == 'feeding' %}Only accepted feeding resets the due date. Refused or regurgitated feeding does not.{% else %}The next due date follows {{ schedule.source_label }}.{% endif %}</p>
       {% if existing %}<p>Your existing schedule stays in place until you confirm the exact change on the next screen.</p>{% endif %}
       {% if schedule.enclosure_name %}<p>This schedule belongs to {{ schedule.enclosure_name }} and is shared by its occupants.</p>{% endif %}
