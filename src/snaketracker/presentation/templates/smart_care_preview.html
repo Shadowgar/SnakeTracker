@@ -10,13 +10,13 @@
     <article class="card form-stack">
       <h3>Current schedule</h3>
       {% if existing %}<p>{{ 'Enabled' if existing.enabled else 'Disabled' }} · Every {{ existing.interval_days }} days · {{ 'Fixed interval' if existing.schedule_kind == 'fixed_interval' else 'After qualifying care' }} · {{ existing.channel }}</p>
-      {% if existing.anchor_at %}<p>Fixed anchor: {{ existing.anchor_at.astimezone(household_zone).strftime('%b %-d, %Y at %H:%M') }} {{ principal.household_timezone }}</p>{% endif %}
-      <p>Existing one-time due date: {% if existing.override_due_at %}{{ existing.override_due_at.astimezone(household_zone).strftime('%b %-d, %Y at %H:%M') }} {{ principal.household_timezone }}{% else %}None{% endif %}.</p>
+      {% if existing.anchor_at %}<p>Fixed anchor: {{ format_due_time(existing.anchor_at, principal.household_timezone) }} {{ principal.household_timezone }}</p>{% endif %}
+      <p>Existing one-time due date: {% if existing.override_due_at %}{{ format_due_time(existing.override_due_at, principal.household_timezone) }} {{ principal.household_timezone }}{% else %}None{% endif %}.</p>
       {% else %}<p>No existing schedule.</p>{% endif %}
       <h3>{{ 'Change to' if existing else 'Create' }}</h3>
       <p><strong>Enabled · Every {{ interval_days }} day{{ 's' if interval_days != 1 else '' }}</strong> after {{ schedule.source_label }} · {{ channel }}</p>
-      <p><strong>First / next due: {{ first_due_at.astimezone(household_zone).strftime('%b %-d, %Y at %H:%M') }} {{ principal.household_timezone }}</strong></p>
-      {% if calculated_due %}<p><strong>Calculated next due: {{ calculated_due.due_at.astimezone(household_zone).strftime('%b %-d, %Y at %H:%M') }} {{ principal.household_timezone }}</strong><br>{{ calculated_due.explanation }}.</p>{% if calculated_due.due_at != first_due_at %}<p>The one-time date is already consumed by qualifying care. The calculated next due date uses that care record and your selected interval.</p>{% endif %}{% endif %}
+      <p><strong>First / next due: {{ format_due_time(first_due_at, principal.household_timezone) }} {{ principal.household_timezone }}</strong></p>
+      {% if calculated_due %}<p><strong>Calculated next due: {{ format_due_time(calculated_due.due_at, principal.household_timezone) }} {{ principal.household_timezone }}</strong><br>{{ calculated_due.explanation }}.</p>{% if calculated_due.due_at != first_due_at %}<p>The one-time date is already consumed by qualifying care. The calculated next due date uses that care record and your selected interval.</p>{% endif %}{% endif %}
       <p>{{ 'Source interval, explicitly selected by you.' if option and option.interval_days == interval_days else 'Keeper-selected interval. This value is your choice, not a source recommendation.' }}</p>
       <p>This one-time due date applies until qualifying care occurs on or after it. Later due dates follow the interval above. Corrections and voided records affect due dates. {% if schedule.reminder_type == 'feeding' %}Refused or regurgitated feeding does not reset the schedule.{% endif %}</p>
       {% if existing and existing.schedule_kind == 'fixed_interval' %}<p class="alert">Confirmation replaces the fixed anchor policy with a schedule based on recorded care.</p>{% endif %}
