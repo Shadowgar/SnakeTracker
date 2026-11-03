@@ -1,0 +1,73 @@
+{
+  "screenshots": [
+    "setup-390.png",
+    "edit-390.png",
+    "confirm-390.png",
+    "care-after-feeding-390.png",
+    "setup-1440.png",
+    "manual-fallback-320.png"
+  ],
+  "checks": [
+    {
+      "name": "setup-390",
+      "url": "http://127.0.0.1:8122/animals/a2c7c0a4-0630-4dad-82fa-62c56eac6bd9/smart-care",
+      "width": {
+        "viewport": 390,
+        "scroll": 390
+      },
+      "violations": []
+    },
+    {
+      "name": "edit-390",
+      "url": "http://127.0.0.1:8122/animals/a2c7c0a4-0630-4dad-82fa-62c56eac6bd9/smart-care/feeding/edit?choice=rvc-white-2024-feeding_interval-juvenile",
+      "width": {
+        "viewport": 390,
+        "scroll": 390
+      },
+      "violations": []
+    },
+    {
+      "name": "confirm-390",
+      "url": "http://127.0.0.1:8122/animals/a2c7c0a4-0630-4dad-82fa-62c56eac6bd9/smart-care/feeding/preview",
+      "width": {
+        "viewport": 390,
+        "scroll": 390
+      },
+      "violations": []
+    },
+    {
+      "name": "care-after-feeding-390",
+      "url": "http://127.0.0.1:8122/animals/a2c7c0a4-0630-4dad-82fa-62c56eac6bd9/care",
+      "width": {
+        "viewport": 390,
+        "scroll": 390
+      },
+      "violations": []
+    },
+    {
+      "name": "confirmed-feeding-completes-and-advances",
+      "status": "passed"
+    },
+    {
+      "name": "setup-1440",
+      "url": "http://127.0.0.1:8122/animals/a2c7c0a4-0630-4dad-82fa-62c56eac6bd9/smart-care",
+      "width": {
+        "viewport": 1440,
+        "scroll": 1440
+      },
+      "violations": []
+    },
+    {
+      "name": "manual-fallback-320",
+      "url": "http://127.0.0.1:8122/animals/6fc30327-5140-4d56-a90a-a48edfd502f1/smart-care",
+      "width": {
+        "viewport": 320,
+        "scroll": 320
+      },
+      "violations": []
+    }
+  ],
+  "externalRequests": [],
+  "errors": [],
+  "status": "passed"
+}
