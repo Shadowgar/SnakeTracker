@@ -1,0 +1,63 @@
+{
+  "sourceBase": "72824161f561f53aee1db9a017b329d2883fe2fb",
+  "sourcePatchSha256": "a2798010c40e219bd7baa6a23cc054290880c266e770dfa7d56870226a78f51b",
+  "workingTreePatchSha256": "ea57ca576aeae3e1b982a28bc536cf1ee866a4fe058dfbd61974f0a82cc09f30",
+  "checks": [
+    {
+      "name": "active-roster-390",
+      "url": "http://127.0.0.1:8129/enclosures/876458c5-1cc3-47f0-af18-da5c338080ee",
+      "width": {
+        "viewport": 390,
+        "scroll": 390
+      },
+      "violations": []
+    },
+    {
+      "name": "removed-roster-390",
+      "url": "http://127.0.0.1:8129/enclosures/876458c5-1cc3-47f0-af18-da5c338080ee?plants=removed#plants-title",
+      "width": {
+        "viewport": 390,
+        "scroll": 390
+      },
+      "violations": []
+    },
+    {
+      "name": "removed-roster-320",
+      "url": "http://127.0.0.1:8129/enclosures/876458c5-1cc3-47f0-af18-da5c338080ee?plants=removed#plants-title",
+      "width": {
+        "viewport": 320,
+        "scroll": 320
+      },
+      "violations": []
+    },
+    {
+      "name": "removed-detail-390",
+      "url": "http://127.0.0.1:8129/enclosures/876458c5-1cc3-47f0-af18-da5c338080ee/plants/31b0e02d-ae6d-46d7-bb21-ea466fb9123c",
+      "width": {
+        "viewport": 390,
+        "scroll": 390
+      },
+      "violations": []
+    },
+    {
+      "name": "removed-history-390",
+      "url": "http://127.0.0.1:8129/enclosures/876458c5-1cc3-47f0-af18-da5c338080ee/care-history?plant_id=31b0e02d-ae6d-46d7-bb21-ea466fb9123c",
+      "width": {
+        "viewport": 390,
+        "scroll": 390
+      },
+      "violations": []
+    }
+  ],
+  "externalRequests": [],
+  "pageErrors": [],
+  "screenshots": [
+    "removed-roster-390.png"
+  ],
+  "browserVersion": "145.0.7632.0",
+  "readJourneyBusinessSnapshot": {
+    "before": "a6f652caa629cd8ce827f4e7f797c19877d4d5b6c13fa296217a3d100ae81b25",
+    "after": "a6f652caa629cd8ce827f4e7f797c19877d4d5b6c13fa296217a3d100ae81b25"
+  },
+  "status": "passed"
+}

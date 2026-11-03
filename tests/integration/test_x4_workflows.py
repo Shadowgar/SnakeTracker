@@ -264,9 +264,88 @@ def test_frog_enclosure_move_care_and_reminders_keep_environment_ownership(keepe
     for event_type in ("enclosure.cleaning_recorded", "enclosure.water_change_recorded"):
         assert len(events(keeper, stream=current, event_type=event_type)) == 1
         assert events(keeper, stream=frog, event_type=event_type) == []
-    assert "Current habitat" in keeper.get("/reminders").text
-    assert "Current habitat" in keeper.get("/calendar").text
-    assert "Fern" in keeper.get("/home").text
+    # Event-relative rules without a first due date need their own care observation.
+    # The three Animal rules exist, but only enclosure maintenance is scheduled yet.
+    assert all(payload["anchor_at"] is None for payload in payloads)
+    assert all(payload["override_due_at"] is None for payload in payloads)
+    expected_tasks = {
+        "cleaning": ("Enclosure cleaning", "enclosure", current, "Current habitat", "Clean"),
+        "water_change": ("Water change", "enclosure", current, "Current habitat", "Change water"),
+    }
+    source_events = {
+        kind: events(keeper, stream=current, event_type=f"enclosure.{kind}_recorded")[0].event_id
+        for kind in expected_tasks
+    }
+
+    def assert_agenda_ownership():
+        for path in ("/home", "/calendar", "/reminders"):
+            page = keeper.get(path)
+            assert page.status_code == 200
+            rows = [row for _key, _label, group in page.context["agenda_groups"] for row in group]
+            assert len(rows) == len(expected_tasks)
+            assert {row["item"].reminder_type for row in rows} == set(expected_tasks)
+            for row in rows:
+                kind = row["item"].reminder_type
+                title, subject_type, subject_url, name, action = expected_tasks[kind]
+                assert row["item"].subject_type == subject_type
+                assert str(row["item"].subject_id) == subject_url.rsplit("/", 1)[-1]
+                assert str(row["item"].source_event_id) == source_events[kind]
+                assert (row["title"], row["subject_name"], row["subject_url"]) == (
+                    title,
+                    name,
+                    subject_url,
+                )
+                if subject_type == "enclosure":
+                    anchor = "cleaning" if kind == "cleaning" else "water-change"
+                    record_url = f"{current}?return_to=today#{anchor}"
+                    schedule_url = f"{current}/care-schedule/{kind}"
+                else:
+                    route = {"feeding": "feedings", "weight": "weights", "length": "lengths"}[kind]
+                    record_url = f"{frog}/{route}/new?return_to=today"
+                    schedule_url = f"{frog}/care"
+                assert (row["action_label"], row["action_url"], row["schedule_url"]) == (
+                    action,
+                    record_url,
+                    schedule_url,
+                )
+                if path == "/reminders":
+                    assert f'href="{subject_url}">{name}</a>' in page.text
+                    assert f"<h3>{title}</h3>" in page.text
+                    assert f'href="{schedule_url}">Edit schedule</a>' in page.text
+                else:
+                    assert (
+                        f'href="{record_url}" aria-label="{action} {name} · {title}"' in page.text
+                    )
+                    assert f'href="{subject_url}">View profile</a>' in page.text
+
+    assert_agenda_ownership()
+    create_observed_cricket_stock(keeper)
+    record_observed_feeding(keeper, frog, outcome="accepted", key="x4-owned-feeding")
+    submit_observation(keeper, frog, "weights", {"weight_grams": "12.375"}, key="x4-owned-weight")
+    submit_observation(
+        keeper,
+        frog,
+        "lengths",
+        {"length_value": "4.85", "length_unit": "cm"},
+        key="x4-owned-length",
+    )
+    expected_tasks.update(
+        {
+            "feeding": ("Feeding", "animal", frog, "Fern", "Feed"),
+            "weight": ("Weight check", "animal", frog, "Fern", "Weigh"),
+            "length": ("Length check", "animal", frog, "Fern", "Measure"),
+        }
+    )
+    source_events.update(
+        {
+            kind: events(keeper, stream=frog, event_type=f"animal.{kind}_recorded")[0].event_id
+            for kind in ("feeding", "weight", "length")
+        }
+    )
+    assert_agenda_ownership()
+    # Moving the Animal again must not transfer the maintenance tasks or their record links.
+    _assign(keeper, frog, old, "x4-leave-maintained-enclosure")
+    assert_agenda_ownership()
 
 
 def test_frog_excluded_direct_posts_and_unsupported_reminders_do_not_write_facts(keeper):

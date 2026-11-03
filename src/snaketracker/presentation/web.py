@@ -5061,9 +5061,12 @@ def create_web_router(
                 status_code=404,
             )
         assert enclosure_uuid is not None
+        show_removed_plants = request.query_params.get("plants") == "removed"
         plants = enclosure_service.plants(
-            principal.household_id, enclosure_uuid, include_removed=True
+            principal.household_id, enclosure_uuid, include_removed=show_removed_plants
         )
+        if show_removed_plants:
+            plants = tuple(plant for plant in plants if plant.status == "removed")
         plant_reference_taxa = await run_in_threadpool(available_plant_reference_taxa, plants)
         return protected_page(
             request,
@@ -5073,6 +5076,7 @@ def create_web_router(
                 "enclosure": profile,
                 "occupants": enclosure_service.occupants(principal.household_id, enclosure_uuid),
                 "plants": plants,
+                "show_removed_plants": show_removed_plants,
                 "plant_reference_taxa": plant_reference_taxa,
                 "enclosure_statuses": tuple(sorted(ENCLOSURE_STATUSES)),
             },

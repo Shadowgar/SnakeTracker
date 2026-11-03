@@ -186,11 +186,62 @@ def test_preview_stale_history_cross_plant_csrf_role_and_removed_guards(tmp_path
         )
         assert removed.status_code == 200, removed.text
         assert client.post(path, params=params, data=fields).status_code == 422
-        assert "future watering tasks" in client.get(fern).text
-        assert (
-            client.get(enclosure + "/care-history?plant_id=" + fern.rsplit("/", 1)[1]).status_code
-            == 200
+
+        def business_snapshot():
+            with engine.connect() as connection:
+                return {
+                    table: sorted(
+                        connection.exec_driver_sql(f'SELECT * FROM "{table}"').all(), key=repr
+                    )
+                    for table in (
+                        "domain_events",
+                        "event_streams",
+                        "event_subjects",
+                        "idempotency_operations",
+                        "enclosure_current",
+                        "enclosure_plant_current",
+                        "reminder_rule_current",
+                        "reminder_facts",
+                        "outbox_items",
+                        "jobs",
+                        "notification_intents",
+                    )
+                }
+
+        before_reads = business_snapshot()
+        roster = client.get(enclosure)
+        assert roster.status_code == 200, roster.text
+        assert f'href="{fern}"' not in roster.text
+        assert f'href="{orchid}"' in roster.text
+        removed_link = html.unescape(
+            re.search(r'href="([^"]+)">Removed plants</a>', roster.text)[1]
         )
+        removed_roster = client.get(removed_link)
+        assert removed_roster.status_code == 200, removed_roster.text
+        assert f'href="{fern}"' in removed_roster.text
+        assert f'href="{orchid}"' not in removed_roster.text
+        assert "Removed · history retained" in removed_roster.text
+        assert "Future watering tasks and notifications are stopped" in removed_roster.text
+        detail = client.get(fern)
+        assert detail.status_code == 200, detail.text
+        assert "future watering tasks" in detail.text
+        assert "Watering history" in detail.text
+        history_link = html.unescape(
+            re.search(r'href="([^"]+)">Review, correct or void watering history</a>', detail.text)[
+                1
+            ]
+        )
+        history = client.get(history_link)
+        assert history.status_code == 200, history.text
+        assert "Plant watering" in history.text
+        active_link = html.unescape(
+            re.search(r'href="([^"]+)">Active plants</a>', removed_roster.text)[1]
+        )
+        active_roster = client.get(active_link)
+        assert active_roster.status_code == 200, active_roster.text
+        assert f'href="{fern}"' not in active_roster.text
+        assert f'href="{orchid}"' in active_roster.text
+        assert business_snapshot() == before_reads
 
 
 @pytest.mark.parametrize("microsecond", [123456, 123000])
