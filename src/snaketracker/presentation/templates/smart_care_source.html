@@ -1,0 +1,4 @@
+<p>{{ option.claim.context }} · {{ option.claim.scope }}</p>
+{% if option.claim.qualifier %}<p>{{ option.claim.qualifier }}</p>{% endif %}
+{% if option.claim.caution %}<p class="alert">{{ option.claim.caution }}</p>{% endif %}
+<p><a href="{{ option.source.url }}" rel="noopener noreferrer">{{ option.source.publisher }} · {{ option.source.title }}</a><br><small>Reviewed {{ option.source.reviewed_at.strftime('%b %-d, %Y') }} · Retrieved {{ option.source.retrieved_at.strftime('%b %-d, %Y') }}</small></p>

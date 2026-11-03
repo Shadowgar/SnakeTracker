@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Confirm {{ schedule.title|lower }} · {{ animal.name }} · Care Keeper{% endblock %}
+{% block page_styles %}<link rel="stylesheet" href="/static/smart-care.css?v=1">{% endblock %}
+{% block content %}
+<section class="animal-experience smart-care-page" aria-labelledby="page-title">
+  {% include "animal_profile_header.html" %}
+  <section class="form-page focused-animal-form">
+    <header><p class="eyebrow">Smart care · final review</p><h2>Confirm {{ schedule.title|lower }} schedule</h2><p class="lede">{{ animal.name }}{% if schedule.enclosure_name %} · enclosure {{ schedule.enclosure_name }} (shared by its occupants){% endif %}</p></header>
+    {% if option %}<article class="card form-stack"><h3>Chosen source: {{ option.claim.life_stage }} · {{ format_claim_value(option.claim) }}</h3><p>{{ option.support }} · guide version {{ profile_reference_guide.version }}</p>{% include "smart_care_source.html" %}</article>{% endif %}
+    <article class="card form-stack">
+      <h3>Current schedule</h3>
+      {% if existing %}<p>{{ 'Enabled' if existing.enabled else 'Disabled' }} · Every {{ existing.interval_days }} days · {{ 'Fixed interval' if existing.schedule_kind == 'fixed_interval' else 'After qualifying care' }} · {{ existing.channel }}</p>
+      {% if existing.anchor_at %}<p>Fixed anchor: {{ format_due_time(existing.anchor_at, principal.household_timezone) }} {{ principal.household_timezone }}</p>{% endif %}
+      <p>Existing one-time due date: {% if existing.override_due_at %}{{ format_due_time(existing.override_due_at, principal.household_timezone) }} {{ principal.household_timezone }}{% else %}None{% endif %}.</p>
+      {% else %}<p>No existing schedule.</p>{% endif %}
+      <h3>{{ 'Change to' if existing else 'Create' }}</h3>
+      <p><strong>Enabled · Every {{ interval_days }} day{{ 's' if interval_days != 1 else '' }}</strong> after {{ schedule.source_label }} · {{ channel }}</p>
+      <p><strong>First / next due: {{ format_due_time(first_due_at, principal.household_timezone) }} {{ principal.household_timezone }}</strong></p>
+      {% if calculated_due %}<p><strong>Calculated next due: {{ format_due_time(calculated_due.due_at, principal.household_timezone) }} {{ principal.household_timezone }}</strong><br>{{ calculated_due.explanation }}.</p>{% if calculated_due.due_at != first_due_at %}<p>The one-time date is already consumed by qualifying care. The calculated next due date uses that care record and your selected interval.</p>{% endif %}{% endif %}
+      <p>{{ 'Source interval, explicitly selected by you.' if option and option.interval_days == interval_days else 'Keeper-selected interval. This value is your choice, not a source recommendation.' }}</p>
+      <p>This one-time due date applies until qualifying care occurs on or after it. Later due dates follow the interval above. Corrections and voided records affect due dates. {% if schedule.reminder_type == 'feeding' %}Refused or regurgitated feeding does not reset the schedule.{% endif %}</p>
+      {% if existing and existing.schedule_kind == 'fixed_interval' %}<p class="alert">Confirmation replaces the fixed anchor policy with a schedule based on recorded care.</p>{% endif %}
+      <p>Only this {{ schedule.title|lower }} schedule will be {{ 'changed' if existing else 'created' }}. It will appear in Care, Today, Calendar and reminders.</p>
+    </article>
+    <form method="post" action="/animals/{{ animal.animal_id }}/smart-care/confirm" class="card form-stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="preview_token" value="{{ preview_token }}">
+      <div class="form-actions"><a href="/animals/{{ animal.animal_id }}/smart-care/{{ schedule.reminder_type }}/edit?choice={{ choice }}&amp;preview_token={{ preview_token|urlencode }}">Edit again</a><button type="submit">Confirm {{ 'schedule change' if existing else 'and create schedule' }}</button></div>
+      <a href="/animals/{{ animal.animal_id }}/smart-care">Skip for now</a>
+    </form>
+  </section>
+</section>
+{% endblock %}

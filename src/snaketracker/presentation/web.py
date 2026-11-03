@@ -9,7 +9,7 @@ import secrets
 from calendar import Calendar
 from collections.abc import Callable, Mapping
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -188,6 +188,7 @@ from snaketracker.application.search import (
     SearchUnavailableError,
     SearchValidationError,
 )
+from snaketracker.application.smart_care import CarePreviewSigner, feeding_options
 from snaketracker.application.species_directory import (
     REFERENCE_IMAGE_LICENSES,
     SUPPORTED_GROUPS,
@@ -238,7 +239,12 @@ from snaketracker.platform.events.control_contracts import EventReinstatedV1, Ev
 from snaketracker.platform.events.corrections import effective_event_root, evaluate_effective_events
 from snaketracker.platform.events.envelope import DomainEvent
 from snaketracker.platform.events.registry import production_event_registry
-from snaketracker.platform.events.store import ExpectedVersionConflictError
+from snaketracker.platform.events.store import (
+    ExpectedVersionConflictError,
+    IdempotencyConflictError,
+    StreamExpectation,
+    StreamKey,
+)
 from snaketracker.platform.events.validation import household_local_to_utc
 from snaketracker.platform.jobs.models import JobRecord
 from snaketracker.platform.notifications.service import NotificationIntentService
@@ -379,14 +385,50 @@ def _analytics_insights(analytics: AnimalAnalytics) -> tuple[AnalyticsInsightVie
     return tuple(insights)
 
 
-def _form_datetime(value: object, household_timezone: str) -> datetime:
+def _form_datetime(
+    value: object, household_timezone: str, *, retained_instant: datetime | None = None
+) -> datetime:
     try:
         parsed = datetime.fromisoformat(str(value))
     except ValueError as error:
         raise FormValidationError("Enter a valid date and time.") from error
     if parsed.tzinfo is None:
+        retained_local = (
+            retained_instant.astimezone(ZoneInfo(household_timezone)).replace(tzinfo=None)
+            if retained_instant is not None and retained_instant.tzinfo is not None
+            else None
+        )
+        if (
+            retained_instant is not None
+            and retained_local is not None
+            and parsed
+            in (
+                retained_local,
+                retained_local.replace(microsecond=(retained_local.microsecond // 1000) * 1000),
+            )
+        ):
+            return retained_instant.astimezone(UTC)
         return household_local_to_utc(parsed, household_timezone)
     return parsed.astimezone(UTC)
+
+
+def _form_datetime_value(value: datetime, household_timezone: str) -> str:
+    """HTML datetime-local accepts at most millisecond precision; retain exact values separately."""
+    local = value.astimezone(ZoneInfo(household_timezone)).replace(tzinfo=None)
+    return local.isoformat(timespec="milliseconds" if local.microsecond else "seconds")
+
+
+def _smart_care_time_label(value: datetime, household_timezone: str) -> str:
+    local = value.astimezone(ZoneInfo(household_timezone))
+    label = local.strftime("%b %-d, %Y at %H:%M")
+    if local.second or local.microsecond:
+        label += local.strftime(":%S")
+        if local.microsecond:
+            label += f".{local.microsecond:06d}".rstrip("0")
+    if local.replace(fold=0).utcoffset() != local.replace(fold=1).utcoffset():
+        offset = local.strftime("%z")
+        label += f" (UTC{offset[:3]}:{offset[3:]})"
+    return label
 
 
 def _optional_form_date(value: object, label: str) -> date | None:
@@ -1181,8 +1223,10 @@ def create_web_router(
     natural_history_repository: NaturalHistoryReader | None = None,
     natural_history_development: bool = False,
     production_release_history_path: Path | None = None,
+    care_preview_secret: bytes | None = None,
 ) -> APIRouter:
     router = APIRouter(include_in_schema=False)
+    care_preview_signer = CarePreviewSigner(care_preview_secret or secrets.token_bytes(32))
     animal_visual_resolver = AnimalVisualResolver(directory_service)
 
     def natural_history_context(
@@ -1412,7 +1456,7 @@ def create_web_router(
             related_subjects.add(("enclosure", current_enclosure.enclosure_id))
         related_facts = tuple(
             fact
-            for fact in reminder_projection.facts_for(principal.household_id)
+            for fact in reminder_fact_service.agenda_for(principal.household_id, now=now)
             if (fact.subject_type, fact.subject_id) in related_subjects
             and fact.reminder_type in animal.reminder_kinds
         )
@@ -5676,6 +5720,427 @@ def create_web_router(
             },
         )
 
+    def smart_care_context(
+        principal: Principal, animal_id: str, *, capture_history: bool = False
+    ) -> dict[str, Any]:
+        animal_uuid = UUID(animal_id)
+        expectations = (
+            reminder_fact_service.capture_history_expectations(
+                (StreamKey(principal.household_id, "animal", animal_uuid),)
+            )
+            if capture_history
+            else ()
+        )
+        animal = animal_service.profile_for(principal.household_id, animal_uuid)
+        if animal is None:
+            raise FormValidationError("Animal not found in this household.")
+        if capture_history and animal.current_enclosure_id is not None:
+            expectations += reminder_fact_service.capture_history_expectations(
+                (StreamKey(principal.household_id, "enclosure", animal.current_enclosure_id),)
+            )
+        context = animal_experience_context(principal, animal)
+        context["history_expectations"] = expectations
+        linked = context["linked_taxon"]
+        guide = context["profile_reference_guide"]
+        qualified = (
+            linked is not None
+            and linked.taxon.supported_group == animal.animal_type
+            and linked.taxon.rank in {"species", "subspecies"}
+            and linked.taxon.taxonomic_status == "accepted"
+            and linked.taxon.taxonomy_selection_state == "selected"
+        )
+        context.update(
+            {
+                "active_section": "care",
+                "options": feeding_options(
+                    guide,
+                    animal_group=animal.animal_type,
+                    scientific_name=linked.taxon.accepted_scientific_name if linked else None,
+                )
+                if qualified and "feeding" in animal.reminder_kinds
+                else (),
+                "format_claim_value": format_claim_value,
+                "format_due_time": _smart_care_time_label,
+            }
+        )
+        context["has_guidance"] = bool(context["options"])
+        context["dismissed"] = ""
+        return context
+
+    def smart_care_selection(
+        principal: Principal, context: dict[str, Any], reminder_type: str, choice: str
+    ) -> dict[str, Any]:
+        animal = context["animal"]
+        schedule = next(
+            (
+                row
+                for row in context["care_schedules"]
+                if row["reminder_type"] == reminder_type and row["available"]
+            ),
+            None,
+        )
+        if schedule is None:
+            raise FormValidationError("This care schedule is unavailable for this Animal.")
+        option = next(
+            (
+                item
+                for item in context["options"]
+                if reminder_type == "feeding" and item.claim.claim_id == choice
+            ),
+            None,
+        )
+        if choice != "manual" and option is None:
+            raise FormValidationError("Choose a current reviewed source or manual setup.")
+        _, subject_type, _ = CARE_SCHEDULE_CAPABILITIES[reminder_type]
+        subject_id = animal.animal_id if subject_type == "animal" else animal.current_enclosure_id
+        rules = tuple(
+            rule
+            for rule in reminder_projection.rules_for(principal.household_id)
+            if rule.subject_type == subject_type
+            and rule.subject_id == subject_id
+            and rule.reminder_type == reminder_type
+        )
+        if len(rules) > 1:
+            raise FormValidationError(
+                "This care has duplicate reminder rules. Manage them in Reminders before setup."
+            )
+        return {
+            "schedule": schedule,
+            "option": option,
+            "choice": choice,
+            "existing": rules[0] if rules else None,
+            "subject_type": subject_type,
+            "subject_id": subject_id,
+        }
+
+    def smart_care_binding(principal: Principal, context: dict[str, Any]) -> dict[str, Any]:
+        animal, linked, guide = (
+            context["animal"],
+            context["linked_taxon"],
+            context["profile_reference_guide"],
+        )
+        return {
+            "household": str(principal.household_id),
+            "actor": str(principal.user_id),
+            "animal": str(animal.animal_id),
+            "profile": animal.capability_profile_identity,
+            "capabilities": list(animal.reminder_kinds),
+            "enclosure": str(animal.current_enclosure_id) if animal.current_enclosure_id else None,
+            "taxon": str(linked.taxon.taxon_id) if linked else None,
+            "taxon_link": str(linked.link_event_id) if linked else None,
+            "taxon_name": linked.taxon.accepted_scientific_name if linked else None,
+            "taxon_group": linked.taxon.supported_group if linked else None,
+            "taxon_status": linked.taxon.taxonomic_status if linked else None,
+            "taxon_rank": linked.taxon.rank if linked else None,
+            "taxon_selection": linked.taxon.taxonomy_selection_state if linked else None,
+            "guide": hashlib.sha256(guide.model_dump_json().encode()).hexdigest()
+            if guide
+            else None,
+            "timezone": principal.household_timezone,
+        }
+
+    def smart_care_rule_binding(rule: ReminderRuleCurrent | None) -> str:
+        return json.dumps(asdict(rule) if rule is not None else None, sort_keys=True, default=str)
+
+    def smart_care_token(request: Request, token: str, purpose: str) -> dict[str, Any]:
+        payload = care_preview_signer.verify(
+            token, session=request.cookies[SESSION_COOKIE], now=datetime.now(UTC)
+        )
+        if payload.get("purpose") != purpose:
+            raise FormValidationError("This care setup token is not valid for this step.")
+        return payload
+
+    def smart_care_command(
+        principal: Principal, selected: dict[str, Any], payload: dict[str, Any]
+    ) -> SaveSubjectScheduleCommand:
+        return SaveSubjectScheduleCommand(
+            principal.household_id,
+            principal.user_id,
+            UUID(payload["correlation_id"]),
+            payload["idempotency_key"],
+            payload["expected_version"],
+            selected["subject_type"],
+            selected["subject_id"],
+            payload["reminder_type"],
+            payload["interval_days"],
+            payload["first_due_at"],
+            True,
+            payload["channel"],
+            tuple(
+                StreamExpectation(
+                    StreamKey(
+                        principal.household_id, guard["stream_type"], UUID(guard["stream_id"])
+                    ),
+                    guard["expected_version"],
+                )
+                for guard in payload.get("read_streams", [])
+            ),
+        )
+
+    def smart_care_due_binding(command: SaveSubjectScheduleCommand) -> str:
+        preview = reminder_fact_service.preview_subject_schedule(command)
+        return json.dumps(asdict(preview) if preview else None, sort_keys=True, default=str)
+
+    def smart_care_error(request: Request, principal: Principal, error: Exception) -> Response:
+        return protected_page(
+            request,
+            "error.html",
+            principal,
+            status_code=422,
+            context={
+                "title": "Care setup needs review",
+                "message": str(error),
+                "secondary_href": "/reminders",
+                "secondary_label": "Manage reminders",
+            },
+        )
+
+    @router.get("/animals/{animal_id}/smart-care", response_class=HTMLResponse)
+    async def smart_care_overview(request: Request, animal_id: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if "reminder.manage" not in principal.capabilities:
+            return _access_denied(request, "Care setup access denied")
+        try:
+            context = smart_care_context(principal, animal_id)
+        except ValueError:
+            return _not_found(request, "Animal not found")
+        return protected_page(request, "smart_care.html", principal, context=context)
+
+    @router.post("/animals/{animal_id}/smart-care/decision", response_class=HTMLResponse)
+    async def smart_care_decision(request: Request, animal_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "reminder.manage" not in principal.capabilities:
+            return _access_denied(request, "Care setup access denied")
+        try:
+            context = smart_care_context(principal, animal_id)
+            decision = str(form.get("decision", ""))
+            if decision not in {"skip", "decline"}:
+                raise FormValidationError("Choose skip or decline.")
+            choices = {option.claim.claim_id for option in context["options"]}
+            choice = str(form.get("choice", ""))
+            dismissed = set(filter(None, str(form.get("dismissed", "")).split(",")))
+            if choice not in choices or not dismissed.issubset(choices):
+                raise FormValidationError("Choose a current suggestion to skip or decline.")
+            dismissed.add(choice)
+            context["options"] = tuple(
+                option for option in context["options"] if option.claim.claim_id not in dismissed
+            )
+            context["dismissed"] = ",".join(sorted(dismissed))
+        except ValueError as error:
+            return smart_care_error(request, principal, error)
+        return protected_page(
+            request,
+            "smart_care.html",
+            principal,
+            context={
+                **context,
+                "notice": (
+                    "Suggestion skipped for this visit."
+                    if decision == "skip"
+                    else "Suggestion declined for this visit."
+                )
+                + " Revisiting setup restores these suggestions.",
+            },
+        )
+
+    @router.get("/animals/{animal_id}/smart-care/{reminder_type}/edit", response_class=HTMLResponse)
+    async def smart_care_edit(request: Request, animal_id: str, reminder_type: str) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if "reminder.manage" not in principal.capabilities:
+            return _access_denied(request, "Care setup access denied")
+        try:
+            context = smart_care_context(principal, animal_id)
+            selected = smart_care_selection(
+                principal, context, reminder_type, request.query_params.get("choice", "manual")
+            )
+            option, existing = selected["option"], selected["existing"]
+            interval = (
+                option.interval_days if option else existing.interval_days if existing else ""
+            )
+            first_due = existing.override_due_at if existing else None
+            if token := request.query_params.get("preview_token"):
+                retained = smart_care_token(request, token, "confirm")
+                if (
+                    retained["binding"] != smart_care_binding(principal, context)
+                    or retained["choice"] != selected["choice"]
+                    or retained["reminder_type"] != reminder_type
+                ):
+                    raise FormValidationError("This preview context changed. Review setup again.")
+                interval = retained["interval_days"]
+                first_due = datetime.fromisoformat(retained["first_due_at"])
+            edit_token = care_preview_signer.sign(
+                {
+                    "purpose": "edit",
+                    "binding": smart_care_binding(principal, context),
+                    "rule": smart_care_rule_binding(existing),
+                    "choice": selected["choice"],
+                    "reminder_type": reminder_type,
+                    "first_due_at": first_due.isoformat() if first_due else None,
+                },
+                session=request.cookies[SESSION_COOKIE],
+                now=datetime.now(UTC),
+            )
+        except ValueError as error:
+            return smart_care_error(request, principal, error)
+        return protected_page(
+            request,
+            "smart_care_edit.html",
+            principal,
+            context={
+                **context,
+                **selected,
+                "interval_days": interval,
+                "edit_token": edit_token,
+                "first_due_at": (
+                    _form_datetime_value(first_due, principal.household_timezone)
+                    if first_due
+                    else ""
+                ),
+            },
+        )
+
+    @router.post(
+        "/animals/{animal_id}/smart-care/{reminder_type}/preview", response_class=HTMLResponse
+    )
+    async def smart_care_preview(request: Request, animal_id: str, reminder_type: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "reminder.manage" not in principal.capabilities:
+            return _access_denied(request, "Care setup access denied")
+        try:
+            context = smart_care_context(principal, animal_id, capture_history=True)
+            selected = smart_care_selection(
+                principal, context, reminder_type, str(form.get("choice", ""))
+            )
+            if selected["option"] and str(form.get("applicability", "")) != "true":
+                raise FormValidationError("Confirm that the source's life stage and context apply.")
+            interval = _required_int(form.get("interval_days", ""), "interval")
+            if not 1 <= interval <= 3650:
+                raise FormValidationError("Enter a whole-day interval from 1 to 3650.")
+            raw_due = str(form.get("first_due_at", "")).strip()
+            if not raw_due:
+                raise FormValidationError(
+                    "Choose the first due date before previewing this schedule."
+                )
+            existing = selected["existing"]
+            retained_due = None
+            if edit_token := str(form.get("edit_token", "")):
+                retained = smart_care_token(request, edit_token, "edit")
+                if (
+                    retained["binding"] != smart_care_binding(principal, context)
+                    or retained["rule"] != smart_care_rule_binding(existing)
+                    or retained["choice"] != selected["choice"]
+                    or retained["reminder_type"] != reminder_type
+                ):
+                    raise FormValidationError("This edit context changed. Review setup again.")
+                if retained["first_due_at"] is not None:
+                    retained_due = datetime.fromisoformat(retained["first_due_at"])
+            # An unchanged wall time retains its signed instant, including a DST fold.
+            # Only new/edited values pass through ambiguous-local-time validation.
+            due = _form_datetime(
+                raw_due, principal.household_timezone, retained_instant=retained_due
+            )
+            payload = {
+                "purpose": "confirm",
+                "binding": smart_care_binding(principal, context),
+                "rule": smart_care_rule_binding(existing),
+                "choice": selected["choice"],
+                "reminder_type": reminder_type,
+                "interval_days": interval,
+                "first_due_at": due.isoformat(),
+                "expected_version": existing.stream_version if existing else 0,
+                "channel": existing.channel if existing else "local",
+                "idempotency_key": str(uuid4()),
+                "correlation_id": str(uuid4()),
+                "read_streams": [
+                    {
+                        "stream_type": guard.key.stream_type,
+                        "stream_id": str(guard.key.stream_id),
+                        "expected_version": guard.expected_version,
+                    }
+                    for guard in context["history_expectations"]
+                ],
+            }
+            command = smart_care_command(principal, selected, payload)
+            calculated = reminder_fact_service.preview_subject_schedule(command)
+            if command.read_streams != reminder_fact_service.capture_history_expectations(
+                tuple(guard.key for guard in command.read_streams)
+            ):
+                raise FormValidationError(
+                    "Care history changed during preview. Review setup again."
+                )
+            payload["due_binding"] = json.dumps(
+                asdict(calculated) if calculated else None, sort_keys=True, default=str
+            )
+            token = care_preview_signer.sign(
+                payload, session=request.cookies[SESSION_COOKIE], now=datetime.now(UTC)
+            )
+        except ValueError as error:
+            return smart_care_error(request, principal, error)
+        return protected_page(
+            request,
+            "smart_care_preview.html",
+            principal,
+            context={
+                **context,
+                **selected,
+                "preview_token": token,
+                "interval_days": interval,
+                "first_due_at": due,
+                "calculated_due": calculated,
+                "channel": payload["channel"],
+            },
+        )
+
+    @router.post("/animals/{animal_id}/smart-care/confirm", response_class=HTMLResponse)
+    async def smart_care_confirm(request: Request, animal_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "reminder.manage" not in principal.capabilities:
+            return _access_denied(request, "Care setup access denied")
+        try:
+            payload = smart_care_token(request, str(form.get("preview_token", "")), "confirm")
+            context = smart_care_context(principal, animal_id)
+            if payload["binding"] != smart_care_binding(principal, context):
+                raise FormValidationError(
+                    "The Animal, enclosure, source or household context changed. "
+                    "Review setup again."
+                )
+            selected = smart_care_selection(
+                principal, context, payload["reminder_type"], payload["choice"]
+            )
+            command = smart_care_command(principal, selected, payload)
+            # Recognize the retained confirmation before checking its pre-write rule version.
+            if reminder_rule_service.completed_subject_schedule(command) is None:
+                if payload["rule"] != smart_care_rule_binding(selected["existing"]):
+                    raise FormValidationError(
+                        "This schedule changed. Review the current schedule again."
+                    )
+                if payload["due_binding"] != smart_care_due_binding(command):
+                    raise FormValidationError(
+                        "Care history changed the next due date. Review the schedule again."
+                    )
+                reminder_rule_service.save_subject_schedule(command)
+        except (
+            ValueError,
+            KeyError,
+            ExpectedVersionConflictError,
+            IdempotencyConflictError,
+        ) as error:
+            return smart_care_error(request, principal, error)
+        return RedirectResponse(f"/animals/{animal_id}/care", status_code=303)
+
     @router.get(
         "/animals/{animal_id}/care-schedule/{reminder_type}/edit",
         response_class=HTMLResponse,
@@ -5791,7 +6256,7 @@ def create_web_router(
                     enabled,
                 )
             )
-        except (ReminderValidationError, FormValidationError, ValueError) as error:
+        except (ValueError, ExpectedVersionConflictError, IdempotencyConflictError) as error:
             try:
                 animal = animal_service.profile_for(principal.household_id, UUID(animal_id))
             except ValueError:

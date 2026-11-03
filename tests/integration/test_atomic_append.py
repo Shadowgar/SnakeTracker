@@ -389,3 +389,95 @@ def test_concurrent_equivalent_commands_commit_one_logical_result(tmp_path: Path
             assert json.loads(stored) == {"accepted": True}
     finally:
         engine.dispose()
+
+
+def test_atomic_read_guard_rejects_stale_history_without_any_append_side_effect(tmp_path):
+    from snaketracker.platform.events.store import ExpectedVersionConflictError, StreamExpectation
+
+    store, engine, bootstrap = store_with_household(tmp_path)
+    try:
+        key = StreamKey(bootstrap.household_id, "household", bootstrap.household_id)
+        request = replace(request_for(bootstrap), read_streams=(StreamExpectation(key, 1),))
+        tables = ("domain_events", "event_streams", "outbox_items", "idempotency_operations")
+        with engine.connect() as connection:
+            before = {
+                table: connection.execute(text(f"SELECT count(*) FROM {table}")).scalar_one()
+                for table in tables
+            }
+        with pytest.raises(ExpectedVersionConflictError):
+            store.append_many(request)
+        with engine.connect() as connection:
+            assert {
+                table: connection.execute(text(f"SELECT count(*) FROM {table}")).scalar_one()
+                for table in tables
+            } == before
+    finally:
+        engine.dispose()
+
+
+def test_completed_append_replays_before_mutable_read_guards(tmp_path):
+    from snaketracker.platform.events.store import StreamExpectation
+
+    store, engine, bootstrap = store_with_household(tmp_path)
+    try:
+        key = StreamKey(bootstrap.household_id, "household", bootstrap.household_id)
+        request = replace(request_for(bootstrap), read_streams=(StreamExpectation(key, 2),))
+        first = store.append_many(request)
+        assert store.load_stream(key)[-1].stream_version == 3
+        assert store.append_many(request) == first
+    finally:
+        engine.dispose()
+
+
+def test_guard_only_receipt_does_not_append_events_and_can_replay_after_history_changes(tmp_path):
+    from snaketracker.platform.events.store import StreamExpectation
+
+    store, engine, bootstrap = store_with_household(tmp_path)
+    try:
+        base = request_for(bootstrap)
+        key = StreamKey(bootstrap.household_id, "household", bootstrap.household_id)
+        request = replace(base, streams=(), outbox=(), read_streams=(StreamExpectation(key, 2),))
+        first = store.append_many(request)
+        assert first.event_ids == ()
+        assert first.stream_versions == ()
+        assert store.load_stream(key)[-1].stream_version == 2
+        event = next(append.events[0] for append in base.streams if append.key == key)
+        store.append(key, expected_version=2, events=(event,))
+        assert store.append_many(request) == first
+        with engine.connect() as connection:
+            assert connection.execute(text("SELECT count(*) FROM domain_events")).scalar_one() == 3
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize(
+    "case", ["foreign", "duplicate", "negative", "empty", "outbox", "projection"]
+)
+def test_invalid_read_guards_and_guard_only_side_effects_reject(tmp_path, case):
+    from snaketracker.platform.events.store import StreamExpectation
+
+    store, engine, bootstrap = store_with_household(tmp_path)
+    try:
+        key = StreamKey(bootstrap.household_id, "household", bootstrap.household_id)
+        guards = (StreamExpectation(key, 2),)
+        if case == "foreign":
+            guards = (StreamExpectation(replace(key, household_id=uuid4()), 2),)
+        elif case == "duplicate":
+            guards = (*guards, *guards)
+        elif case == "negative":
+            guards = (StreamExpectation(key, -1),)
+        elif case == "empty":
+            guards = ()
+        base = request_for(bootstrap)
+        request = replace(
+            base,
+            streams=(),
+            read_streams=guards,
+            outbox=base.outbox if case == "outbox" else (),
+            synchronous_projections=(FailingProjection(),) if case == "projection" else (),
+        )
+        with pytest.raises(ValueError):
+            store.append_many(request)
+        assert store.load_stream(key)[-1].stream_version == 2
+    finally:
+        engine.dispose()
