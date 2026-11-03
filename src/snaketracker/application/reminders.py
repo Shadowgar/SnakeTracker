@@ -58,6 +58,7 @@ from snaketracker.platform.events.store import (
     EventStore,
     IdempotencyContext,
     StreamAppend,
+    StreamExpectation,
     StreamKey,
     SynchronousProjection,
     canonical_command_hash,
@@ -229,6 +230,7 @@ class SaveSubjectScheduleCommand:
     override_due_at: str | None
     enabled: bool
     channel: str = "local"
+    read_streams: tuple[StreamExpectation, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -445,6 +447,8 @@ class ReminderRuleService:
             enabled=command.enabled,
             channel=channel,
         ):
+            if command.read_streams:
+                return self._complete_guarded_unchanged_schedule(command, current)
             return current
 
         rule_id = (
@@ -525,6 +529,36 @@ class ReminderRuleService:
                     now,
                 ),
                 synchronous_projections=(self._projection,),
+                read_streams=command.read_streams,
+            )
+        )
+        return self._result(
+            command.household_id,
+            _stored_uuid(result.stored_response, "rule_id"),
+            _stored_uuid(result.stored_response, "event_id"),
+        ).current
+
+    def _complete_guarded_unchanged_schedule(
+        self, command: SaveSubjectScheduleCommand, current: ReminderRuleCurrent
+    ) -> ReminderRuleCurrent:
+        key = StreamKey(command.household_id, "reminder-rule", current.rule_id)
+        guards = command.read_streams
+        if not any(guard.key == key for guard in guards):
+            guards = (*guards, StreamExpectation(key, current.stream_version))
+        result = self._event_store.append_many(
+            AtomicAppendRequest(
+                streams=(),
+                read_streams=guards,
+                idempotency=_idempotency(
+                    command.household_id,
+                    command.actor_user_id,
+                    "reminders.save_subject_schedule",
+                    command.idempotency_key,
+                    self.correlation_id_for(command.household_id, current.rule_id),
+                    {"rule_id": str(current.rule_id), "event_id": str(current.last_event_id)},
+                    _command_fields(command),
+                    datetime.now(UTC),
+                ),
             )
         )
         return self._result(
@@ -643,6 +677,16 @@ class ReminderFactService:
     def __init__(self, event_store: EventStore, projection: ReminderProjection) -> None:
         self._event_store = event_store
         self._projection = projection
+
+    def capture_history_expectations(
+        self, keys: tuple[StreamKey, ...]
+    ) -> tuple[StreamExpectation, ...]:
+        """Capture heads before deriving a preview; pass them unchanged to its command."""
+        expectations = []
+        for key in sorted(set(keys)):
+            events = self._event_store.load_stream(key)
+            expectations.append(StreamExpectation(key, events[-1].stream_version if events else 0))
+        return tuple(expectations)
 
     def preview_subject_schedule(
         self, command: SaveSubjectScheduleCommand
@@ -1018,10 +1062,22 @@ def _command_fields(
         | SaveSubjectScheduleCommand
     ),
 ) -> dict[str, object]:
-    return {
+    fields = {
         key: str(value) if isinstance(value, UUID) else value
         for key, value in asdict(command).items()
+        if key != "read_streams"
     }
+    if isinstance(command, SaveSubjectScheduleCommand) and command.read_streams:
+        fields["read_streams"] = [
+            {
+                "household_id": str(guard.key.household_id),
+                "stream_type": guard.key.stream_type,
+                "stream_id": str(guard.key.stream_id),
+                "expected_version": guard.expected_version,
+            }
+            for guard in sorted(command.read_streams, key=lambda item: item.key)
+        ]
+    return fields
 
 
 def _optional_instant(value: str | None, label: str) -> str | None:

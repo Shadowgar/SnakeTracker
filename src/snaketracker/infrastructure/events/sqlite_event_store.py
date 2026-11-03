@@ -266,8 +266,19 @@ class SQLAlchemyEventStore:
                 ),
             )
         )
-        if not ordered or len({item.key for item in ordered}) != len(ordered):
+        if (not ordered and not request.read_streams) or len({item.key for item in ordered}) != len(
+            ordered
+        ):
             raise ValueError("Atomic append requires unique stream expectations.")
+        if not ordered and (request.outbox or request.synchronous_projections):
+            raise ValueError("Guard-only appends cannot request outbox or projection writes.")
+        if len({item.key for item in request.read_streams}) != len(request.read_streams):
+            raise ValueError("Atomic read expectations must be unique.")
+        if any(
+            item.key.household_id != context.household_id or item.expected_version < 0
+            for item in request.read_streams
+        ):
+            raise ValueError("Atomic read expectations must be household scoped and nonnegative.")
         if any(item.key.household_id != request.idempotency.household_id for item in ordered):
             raise ValueError("Atomic append streams must share the idempotency household.")
         if any(
@@ -287,6 +298,10 @@ class SQLAlchemyEventStore:
                 if existing is not None:
                     connection.rollback()
                     return existing
+                for expectation in request.read_streams:
+                    self._assert_expected_version(
+                        connection, expectation.key, expectation.expected_version
+                    )
                 for item in ordered:
                     self._assert_expected_version(connection, item.key, item.expected_version)
                     self._ensure_stream(connection, item.key, item.events[0])

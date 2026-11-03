@@ -33,6 +33,12 @@ class StreamAppend:
 
 
 @dataclass(frozen=True, slots=True)
+class StreamExpectation:
+    key: StreamKey
+    expected_version: int
+
+
+@dataclass(frozen=True, slots=True)
 class OutboxHandoff:
     outbox_id: UUID
     household_id: UUID
@@ -74,6 +80,7 @@ class AtomicAppendRequest:
     idempotency: IdempotencyContext
     outbox: tuple[OutboxHandoff, ...] = ()
     synchronous_projections: tuple[SynchronousProjection, ...] = ()
+    read_streams: tuple[StreamExpectation, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
