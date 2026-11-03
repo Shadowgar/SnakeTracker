@@ -37,6 +37,8 @@ from snaketracker.domains.animals.contracts import (
 from snaketracker.domains.enclosures.contracts import (
     EnclosureCleaningRecordedV1,
     EnclosureMistingRecordedV1,
+    EnclosurePlantWateringCorrectedV1,
+    EnclosurePlantWateringRecordedV1,
     EnclosureWaterChangeRecordedV1,
 )
 from snaketracker.domains.reminders.contracts import (
@@ -72,6 +74,7 @@ REMINDER_SUBJECTS: dict[str, str] = {
     "cleaning": "enclosure",
     "water_change": "enclosure",
     "misting": "enclosure",
+    "plant_watering": "enclosure-plant",
 }
 REMINDER_FACT_NAMESPACE = UUID("0dfcdb6a-4a34-58ab-a0f0-ce8714678656")
 PROFILE_SCHEDULE_NAMESPACE = UUID("66570757-b1e8-58d5-98c2-b6f4f48a99b8")
@@ -152,6 +155,8 @@ class ReminderProjection(SynchronousProjection, Protocol):
     def facts_for(self, household_id: UUID) -> tuple[ReminderFact, ...]: ...
 
     def subject_exists(self, household_id: UUID, subject_type: str, subject_id: UUID) -> bool: ...
+
+    def plant_enclosure(self, household_id: UUID, plant_id: UUID) -> UUID | None: ...
 
     def animal_capability_profile(self, household_id: UUID, animal_id: UUID) -> str | None: ...
 
@@ -322,6 +327,10 @@ class ReminderRuleService:
         current = self._projection.rule_for(command.household_id, command.rule_id)
         if current is None:
             raise ReminderValidationError("Reminder rule does not exist in this household.")
+        if current.subject_type == "enclosure-plant" and not self._projection.subject_exists(
+            command.household_id, current.subject_type, current.subject_id
+        ):
+            raise ReminderValidationError("Active enclosure plant was not found.")
         validated = _validated_schedule(
             command.reminder_type,
             current.subject_type,
@@ -692,6 +701,8 @@ class ReminderFactService:
             command.override_due_at,
             command.channel,
         )
+        if not command.enabled:
+            return None
         transient = ReminderRuleCurrent(
             command.household_id,
             UUID(int=0),
@@ -821,6 +832,10 @@ class ReminderFactService:
     def _calculation(
         self, rule: ReminderRuleCurrent
     ) -> tuple[datetime, str, DomainEvent | None] | None:
+        if rule.subject_type == "enclosure-plant" and not self._projection.subject_exists(
+            rule.household_id, rule.subject_type, rule.subject_id
+        ):
+            return None
         source = self._latest_source(rule)
         if rule.override_due_at is not None and (
             source is None or source.occurred_at < rule.override_due_at
@@ -860,12 +875,25 @@ class ReminderFactService:
 
     def _latest_source(self, rule: ReminderRuleCurrent) -> DomainEvent | None:
         stream_type = "animal" if rule.subject_type == "animal" else "enclosure"
+        stream_id = (
+            self._projection.plant_enclosure(rule.household_id, rule.subject_id)
+            if rule.subject_type == "enclosure-plant"
+            else rule.subject_id
+        )
+        if stream_id is None:
+            return None
         events = evaluate_effective_events(
-            self._event_store.load_stream(
-                StreamKey(rule.household_id, stream_type, rule.subject_id)
+            self._event_store.load_stream(StreamKey(rule.household_id, stream_type, stream_id))
+        )
+        eligible = tuple(
+            event
+            for event in events
+            if _qualifies(rule.reminder_type, event)
+            and (
+                rule.subject_type != "enclosure-plant"
+                or getattr(event.payload, "enclosure_plant_id", None) == rule.subject_id
             )
         )
-        eligible = tuple(event for event in events if _qualifies(rule.reminder_type, event))
         return max(
             eligible,
             key=lambda event: (event.occurred_at, event.stream_version),
@@ -919,6 +947,12 @@ def _qualifies(reminder_type: str, event: DomainEvent) -> bool:
                 | AnimalMoltRecordedV2
                 | AnimalMoltCorrectedV1
                 | AnimalMoltCorrectedV2,
+            )
+        )
+        or (
+            reminder_type == "plant_watering"
+            and isinstance(
+                payload, EnclosurePlantWateringRecordedV1 | EnclosurePlantWateringCorrectedV1
             )
         )
         or (reminder_type == "cleaning" and isinstance(payload, EnclosureCleaningRecordedV1))

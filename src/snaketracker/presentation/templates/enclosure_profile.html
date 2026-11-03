@@ -7,7 +7,7 @@
     <div>
       <p class="page-kicker">Enclosure profile</p>
       <h1 id="page-title">{{ enclosure.name }}</h1>
-      <p class="lede">{{ enclosure.enclosure_type|capitalize }} · {{ enclosure.status|capitalize }}{% if enclosure.notes %} · {{ enclosure.notes }}{% endif %}</p>
+      <p class="lede">{{ enclosure.enclosure_type|capitalize }} · {{ enclosure.status|capitalize }} · {{ "Bioactive" if enclosure.bioactive else "Non-bioactive" }}{% if enclosure.notes %} · {{ enclosure.notes }}{% endif %}</p>
     </div>
     <div class="profile-actions"><a class="button-link secondary-link" href="/enclosures/{{ enclosure.enclosure_id }}/edit">Edit enclosure</a><a class="button-link secondary-link" href="/enclosures">Enclosures</a><a class="button-link secondary-link" href="/home">Animals</a></div>
   </header>
@@ -21,13 +21,22 @@
     {% else %}<p class="muted">No animals are assigned here.</p>{% endif %}
   </section>
   <section class="card" aria-labelledby="plants-title">
-    <div class="section-heading"><div><p class="page-kicker">Living collection</p><h2 id="plants-title">Plants</h2></div><a class="button-link secondary-link" href="/enclosures/{{ enclosure.enclosure_id }}/plants/new">Add plant</a></div>
+    <div class="section-heading"><div><p class="page-kicker">{{ "Retained history" if show_removed_plants else "Living collection" }}</p><h2 id="plants-title">{{ "Removed plants" if show_removed_plants else "Plants" }}</h2></div><a class="button-link secondary-link" href="/enclosures/{{ enclosure.enclosure_id }}/plants/new">Add plant</a></div>
+    {% if show_removed_plants %}<p>Removed plants keep their history. Future watering tasks and notifications are stopped.</p><p><a href="/enclosures/{{ enclosure.enclosure_id }}#plants-title">Active plants</a></p>{% else %}<p><a href="/enclosures/{{ enclosure.enclosure_id }}?plants=removed#plants-title">Removed plants</a></p>{% endif %}
     {% if plants %}
     <ul class="record-list">
-      {% for plant in plants %}{% set reference_taxon = plant_reference_taxa.get(plant.taxon_id) if plant.taxon_id else none %}<li><a class="plant-roster-link" href="/enclosures/{{ enclosure.enclosure_id }}/plants/{{ plant.enclosure_plant_id }}"><span class="plant-roster-media">{% if reference_taxon %}<img src="/directory/reference-images/{{ reference_taxon.taxon_id }}" alt="">{% else %}<span class="plant-placeholder" aria-hidden="true">{{ icon('plant') }}</span>{% endif %}</span><span class="plant-roster-copy"><strong>{{ plant.label or plant.species_display }}</strong><span>{% if plant.confirmed_scientific_name %}<i>{{ plant.confirmed_scientific_name }}</i>{% else %}{{ plant.species_display }}{% endif %}</span></span>{% if plant.quantity > 1 %}<span class="plant-roster-quantity">Qty {{ plant.quantity }}</span>{% endif %}</a></li>{% endfor %}
+      {% for plant in plants %}{% set reference_taxon = plant_reference_taxa.get(plant.taxon_id) if plant.taxon_id else none %}<li><a class="plant-roster-link" href="/enclosures/{{ enclosure.enclosure_id }}/plants/{{ plant.enclosure_plant_id }}"><span class="plant-roster-media">{% if reference_taxon %}<img src="/directory/reference-images/{{ reference_taxon.taxon_id }}" alt="">{% else %}<span class="plant-placeholder" aria-hidden="true">{{ icon('plant') }}</span>{% endif %}</span><span class="plant-roster-copy"><strong>{{ plant.label or plant.species_display }}</strong>{% if plant.status == "removed" %}<span>Removed · history retained</span>{% endif %}<span>{% if plant.confirmed_scientific_name %}<i>{{ plant.confirmed_scientific_name }}</i>{% else %}{{ plant.species_display }}{% endif %}</span></span>{% if plant.quantity > 1 %}<span class="plant-roster-quantity">Qty {{ plant.quantity }}</span>{% endif %}</a></li>{% endfor %}
     </ul>
-    {% else %}<div class="empty-state"><h3>No plants added</h3><p>Add plants that physically live in this enclosure. Watering and plant-care reminders will arrive in a later milestone.</p><a href="/enclosures/{{ enclosure.enclosure_id }}/plants/new">Add plant</a></div>{% endif %}
+    {% elif show_removed_plants %}<div class="empty-state"><h3>No removed plants</h3><p>Plants removed from this enclosure will appear here with their retained history.</p></div>
+    {% else %}<div class="empty-state"><h3>No plants added</h3><p>Add plants that physically live in this enclosure. Set a separate watering schedule on each plant after adding it.</p><a href="/enclosures/{{ enclosure.enclosure_id }}/plants/new">Add plant</a></div>{% endif %}
   </section>
+  <section class="card form-stack"><h2>Enclosure mode</h2><p>Bioactive is an enclosure setting. Plants, maintenance history and keeper schedules stay here when animals move. Bioactive enclosures still need appropriate cleaning.</p>
+    <form method="post" action="/enclosures/{{ enclosure.enclosure_id }}/mode" class="form-stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}-mode">
+      <label>Mode<select name="bioactive"><option value="false" {% if not enclosure.bioactive %}selected{% endif %}>Non-bioactive</option><option value="true" {% if enclosure.bioactive %}selected{% endif %}>Bioactive</option></select></label><button>Save mode</button>
+    </form>
+  </section>
+  <section class="card"><h2>Maintenance schedules and history</h2><p>Cleaning, water changes and each plant's watering have independent records and schedules. Changing mode keeps your choices.</p><div class="form-actions"><a href="/enclosures/{{ enclosure.enclosure_id }}/care-schedule/cleaning">Cleaning schedule</a><a href="/enclosures/{{ enclosure.enclosure_id }}/care-schedule/water_change">Water-change schedule</a><a href="/enclosures/{{ enclosure.enclosure_id }}/care-history">Maintenance history</a></div></section>
   <section class="care-grid" aria-label="Enclosure care records">
     <form id="cleaning" class="card form-stack" method="post" action="/enclosures/{{ enclosure.enclosure_id }}/cleanings">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

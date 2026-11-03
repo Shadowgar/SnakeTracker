@@ -157,6 +157,8 @@ class SQLAlchemyReminderProjection:
         return tuple(_fact(row) for row in rows)
 
     def subject_exists(self, household_id: UUID, subject_type: str, subject_id: UUID) -> bool:
+        if subject_type == "enclosure-plant":
+            return self.plant_enclosure(household_id, subject_id) is not None
         table_and_id = {
             "animal": ("animal_current", "animal_id"),
             "enclosure": ("enclosure_current", "enclosure_id"),
@@ -173,6 +175,18 @@ class SQLAlchemyReminderProjection:
                 {"household_id": str(household_id), "subject_id": str(subject_id)},
             ).scalar_one_or_none()
         return exists is not None
+
+    def plant_enclosure(self, household_id: UUID, plant_id: UUID) -> UUID | None:
+        with self._engine.connect() as connection:
+            value = connection.execute(
+                text(
+                    "SELECT enclosure_id FROM enclosure_plant_current "
+                    "WHERE household_id=:household_id AND enclosure_plant_id=:plant_id "
+                    "AND status='active'"
+                ),
+                {"household_id": str(household_id), "plant_id": str(plant_id)},
+            ).scalar_one_or_none()
+        return UUID(str(value)) if value is not None else None
 
     def animal_capability_profile(self, household_id: UUID, animal_id: UUID) -> str | None:
         with self._engine.connect() as connection:

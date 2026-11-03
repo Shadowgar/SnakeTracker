@@ -18,7 +18,20 @@
     <div><dt>Directory identity</dt><dd>{% if plant.taxon_id %}<a href="/directory/{{ plant.taxon_id }}">View plant in directory</a>{% else %}Keeper-entered plant{% endif %}</dd></div>
     <div><dt>Notes</dt><dd>{{ plant.notes or 'None' }}</dd></div>
   </dl>
-  {% if plant.taxon_id and care_guide_available %}<section class="card"><h2>Plant reference</h2><p>Reviewed plant guidance is separate from this plant's keeper-entered state.</p><a href="/directory/{{ plant.taxon_id }}/care-guide">Read plant Care Guide</a></section>{% elif plant.taxon_id %}<section class="card"><h2>Plant reference</h2><p>No reviewed guidance available.</p></section>{% endif %}
+  {% if plant.taxon_id and care_guide_available %}<section class="card"><h2>Plant reference</h2><p>Pot-grown guidance does not establish an enclosure watering interval or safety for your animals. Your watering schedule is a separate keeper choice.</p><a href="/directory/{{ plant.taxon_id }}/care-guide">Read plant Care Guide</a></section>{% elif plant.taxon_id %}<section class="card"><h2>Plant reference</h2><p>No reviewed guidance available.</p></section>{% endif %}
+  <section class="card" id="history"><h2>Plant watering</h2>
+    {% if plant.status == 'active' %}
+    <p>{% if watering_rule and watering_rule.enabled %}Every {{ watering_rule.interval_days }} days.{% else %}No watering schedule enabled.{% endif %} {% if watering_due %}Next due {{ watering_due.due_at.astimezone(household_zone).strftime('%b %-d, %Y · %-I:%M %p') }}.{% endif %}</p>
+    <p>Set this plant's interval and first due date to suit its needs. Plants with different needs should be separate entries. Manual setup is available without reviewed guidance.</p>
+    <a class="button-link secondary-link" href="/enclosures/{{ enclosure.enclosure_id }}/care-schedule/plant_watering?plant_id={{ plant.enclosure_plant_id }}">Set watering schedule</a>
+    <form id="watering" class="form-stack" method="post" action="/enclosures/{{ enclosure.enclosure_id }}/plants/{{ plant.enclosure_plant_id }}/waterings">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}-watering"><input type="hidden" name="return_to" value="{{ request.query_params.get('return_to', '') }}">
+      <h3>Record watering</h3><label>When ({{ principal.household_timezone }})<input type="datetime-local" name="occurred_at" required></label><label>Notes<textarea name="notes" rows="2"></textarea></label><button>Save watering</button>
+    </form>
+    {% else %}<p>This plant was removed. Its history remains available; future watering tasks and notifications are stopped.</p>{% endif %}
+    <h3>Watering history</h3><ul class="record-list">{% for event in watering_history|reverse %}<li><strong>{{ event.occurred_at.astimezone(household_zone).strftime('%b %-d, %Y · %-I:%M %p') }}</strong> {{ event.notes or 'Watered' }}</li>{% else %}<li>No watering recorded.</li>{% endfor %}</ul>
+    <a href="/enclosures/{{ enclosure.enclosure_id }}/care-history?plant_id={{ plant.enclosure_plant_id }}">Review, correct or void watering history</a>
+  </section>
   <div class="form-actions"><a href="/enclosures/{{ enclosure.enclosure_id }}">Back to enclosure</a>{% if plant.status == 'active' %}<a class="button-link secondary-link" href="/enclosures/{{ enclosure.enclosure_id }}/plants/{{ plant.enclosure_plant_id }}/edit">Edit plant</a><a class="button-link danger-link" href="/enclosures/{{ enclosure.enclosure_id }}/plants/{{ plant.enclosure_plant_id }}/remove">Remove plant</a>{% endif %}</div>
 </section>
 {% endblock %}

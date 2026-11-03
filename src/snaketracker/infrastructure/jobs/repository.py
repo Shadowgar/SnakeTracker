@@ -26,6 +26,24 @@ class SQLAlchemyJobRepository:
     def __init__(self, engine: Engine) -> None:
         self._engine = engine
 
+    def notification_subject_active(self, job: JobRecord) -> bool:
+        if job.payload.get("subject_type") != "enclosure-plant":
+            return True
+        with self._engine.connect() as connection:
+            return (
+                connection.execute(
+                    text(
+                        "SELECT 1 FROM enclosure_plant_current WHERE household_id=:household_id "
+                        "AND enclosure_plant_id=:plant_id AND status='active'"
+                    ),
+                    {
+                        "household_id": job.payload.get("household_id"),
+                        "plant_id": job.payload.get("subject_id"),
+                    },
+                ).first()
+                is not None
+            )
+
     def handoff_pending(self, *, now: datetime, limit: int) -> tuple[JobRecord, ...]:
         handoff_at = _utc(now)
         created: list[JobRecord] = []

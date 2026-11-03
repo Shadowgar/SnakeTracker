@@ -1,0 +1,20 @@
+{
+  "sourceRevision": "fd7819601a28172a085dfdff82fa69f3a9b6ca49",
+  "checks": [
+    {
+      "name": "smart-care-actual-input-and-edit-again-preserve-microseconds",
+      "status": "passed"
+    },
+    {
+      "name": "plant-schedule-actual-input-and-change-choices-preserve-microseconds",
+      "status": "passed"
+    },
+    {
+      "name": "notes-only-watering-actual-input-preserves-microseconds",
+      "status": "passed"
+    }
+  ],
+  "externalRequests": [],
+  "errors": [],
+  "status": "passed"
+}

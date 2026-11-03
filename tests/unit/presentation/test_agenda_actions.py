@@ -139,3 +139,44 @@ def test_persisted_due_fact_uses_household_calendar_bucket_for_frog_and_snake():
                 == f"/animals/{animal_id}/feedings/new?return_to=animal"
             )
             assert rows[bucket][0]["item"] is fact
+
+
+def test_plant_and_cleaning_agenda_keep_their_own_subject_with_an_animal_present():
+    enclosure_id, plant_id, animal_id = uuid4(), uuid4(), uuid4()
+    plant = SimpleNamespace(
+        enclosure_plant_id=plant_id,
+        enclosure_id=enclosure_id,
+        label="Fern",
+        species_display="Manual plant",
+        status="active",
+    )
+    animal = SimpleNamespace(animal_id=animal_id, current_enclosure_id=enclosure_id, name="Frog")
+    enclosure = SimpleNamespace(enclosure_id=enclosure_id, name="Fern house")
+    now = datetime.now(UTC)
+    items = tuple(
+        SimpleNamespace(
+            subject_type=kind,
+            subject_id=identifier,
+            reminder_type=reminder,
+            due_at=now,
+            source_occurred_at=None,
+            explanation="Manual",
+        )
+        for kind, identifier, reminder in (
+            ("enclosure-plant", plant_id, "plant_watering"),
+            ("enclosure", enclosure_id, "cleaning"),
+        )
+    )
+    rows = web._agenda_rows(
+        items,
+        animals=(animal,),
+        enclosures=(enclosure,),
+        plants=(plant,),
+        timezone=ZoneInfo("UTC"),
+        now=now,
+    )["due_today"]
+    assert rows[0]["subject_name"] == "Fern"
+    assert rows[0]["location_name"] == "Fern house"
+    assert rows[0]["action_url"].startswith(f"/enclosures/{enclosure_id}/plants/{plant_id}")
+    assert rows[1]["subject_name"] == "Fern house"
+    assert rows[1]["schedule_url"] == f"/enclosures/{enclosure_id}/care-schedule/cleaning"

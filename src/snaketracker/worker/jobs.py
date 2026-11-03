@@ -57,6 +57,13 @@ class NotificationJobWorker:
                 else None
             )
             if operation is None:
+                if not self._repository.notification_subject_active(job):
+                    return self._repository.dead_letter(
+                        job.job_id,
+                        token,
+                        safe_error="Delivery suppressed: enclosure plant was removed.",
+                        now=now,
+                    )
                 operation = self._provider.deliver(
                     job.payload,
                     job.idempotency_key,

@@ -84,12 +84,15 @@ from snaketracker.application.enclosures import (
     DELETABLE_ENCLOSURE_CARE_EVENT_TYPES,
     ENCLOSURE_TYPE_OPTIONS,
     AddEnclosurePlantCommand,
+    ChangeEnclosureBioactiveCommand,
     ChangeEnclosureStatusCommand,
+    ControlEnclosureCareCommand,
     DeleteEnclosureCareRecordCommand,
     EnclosureService,
     EnclosureValidationError,
     RecordCleaningCommand,
     RecordMistingCommand,
+    RecordPlantWateringCommand,
     RecordWaterChangeCommand,
     RegisterEnclosureCommand,
     RemoveEnclosurePlantCommand,
@@ -294,6 +297,7 @@ CARE_SCHEDULE_CAPABILITIES: dict[str, tuple[str, str, str]] = {
     "misting": ("Misting / watering", "enclosure", "last misting"),
     "cleaning": ("Enclosure cleaning", "enclosure", "last qualifying cleaning"),
     "water_change": ("Water change", "enclosure", "last water change"),
+    "plant_watering": ("Plant watering", "enclosure-plant", "last plant watering"),
 }
 
 RECENT_CARE_EVENT_TYPES = frozenset(
@@ -1464,6 +1468,11 @@ def create_web_router(
             tuple(sorted(related_facts, key=lambda fact: fact.due_at)),
             animals=animals,
             enclosures=enclosures,
+            plants=tuple(
+                p
+                for e in enclosures
+                for p in enclosure_service.plants(principal.household_id, e.enclosure_id)
+            ),
             timezone=ZoneInfo(principal.household_timezone),
             now=now,
             return_context="animal",
@@ -2101,6 +2110,11 @@ def create_web_router(
             reminder_items,
             animals=animals,
             enclosures=enclosures,
+            plants=tuple(
+                p
+                for e in enclosures
+                for p in enclosure_service.plants(principal.household_id, e.enclosure_id)
+            ),
             timezone=household_zone,
             now=now,
             animal_visuals=animal_visuals,
@@ -2464,6 +2478,11 @@ def create_web_router(
             reminder_items,
             animals=animals,
             enclosures=enclosures,
+            plants=tuple(
+                p
+                for e in enclosures
+                for p in enclosure_service.plants(principal.household_id, e.enclosure_id)
+            ),
             timezone=household_zone,
             now=now,
             animal_visuals=animal_visuals,
@@ -4796,6 +4815,11 @@ def create_web_router(
             reminder_fact_service.agenda_for(principal.household_id, now=now),
             animals=animals,
             enclosures=enclosures,
+            plants=tuple(
+                p
+                for e in enclosures
+                for p in enclosure_service.plants(principal.household_id, e.enclosure_id)
+            ),
             timezone=ZoneInfo(principal.household_timezone),
             now=now,
         )
@@ -5037,7 +5061,12 @@ def create_web_router(
                 status_code=404,
             )
         assert enclosure_uuid is not None
-        plants = enclosure_service.plants(principal.household_id, enclosure_uuid)
+        show_removed_plants = request.query_params.get("plants") == "removed"
+        plants = enclosure_service.plants(
+            principal.household_id, enclosure_uuid, include_removed=show_removed_plants
+        )
+        if show_removed_plants:
+            plants = tuple(plant for plant in plants if plant.status == "removed")
         plant_reference_taxa = await run_in_threadpool(available_plant_reference_taxa, plants)
         return protected_page(
             request,
@@ -5047,9 +5076,553 @@ def create_web_router(
                 "enclosure": profile,
                 "occupants": enclosure_service.occupants(principal.household_id, enclosure_uuid),
                 "plants": plants,
+                "show_removed_plants": show_removed_plants,
                 "plant_reference_taxa": plant_reference_taxa,
                 "enclosure_statuses": tuple(sorted(ENCLOSURE_STATUSES)),
             },
+        )
+
+    def enclosure_care_error(request: Request, principal: Principal, error: Exception) -> Response:
+        return protected_page(
+            request,
+            "error.html",
+            principal,
+            status_code=422,
+            context={"title": "Care could not be saved", "message": str(error)},
+        )
+
+    @router.post("/enclosures/{enclosure_id}/mode", response_class=HTMLResponse)
+    async def enclosure_mode(request: Request, enclosure_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "household.manage" not in principal.capabilities:
+            return _access_denied(request, "Enclosure management access denied")
+        try:
+            mode = str(form.get("bioactive", ""))
+            if mode not in {"true", "false"}:
+                raise FormValidationError("Choose an enclosure mode.")
+            enclosure_service.change_bioactive(
+                ChangeEnclosureBioactiveCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    UUID(enclosure_id),
+                    uuid4(),
+                    _form_idempotency_key(form),
+                    mode == "true",
+                )
+            )
+        except (ValueError, ExpectedVersionConflictError, IdempotencyConflictError) as error:
+            return enclosure_care_error(request, principal, error)
+        return RedirectResponse(f"/enclosures/{enclosure_id}", status_code=303)
+
+    @router.post(
+        "/enclosures/{enclosure_id}/plants/{plant_id}/waterings", response_class=HTMLResponse
+    )
+    async def plant_watering(request: Request, enclosure_id: str, plant_id: str) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if principal.role not in {"owner", "administrator", "caretaker"}:
+            return _access_denied(request, "Plant care access denied")
+        try:
+            enclosure_service.record_plant_watering(
+                RecordPlantWateringCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    UUID(enclosure_id),
+                    UUID(plant_id),
+                    uuid4(),
+                    _form_idempotency_key(form),
+                    _form_datetime(form.get("occurred_at", ""), principal.household_timezone),
+                    str(form.get("notes", "")),
+                )
+            )
+            reminder_fact_service.recalculate_subject(
+                principal.household_id, "enclosure-plant", UUID(plant_id), now=datetime.now(UTC)
+            )
+        except (ValueError, ExpectedVersionConflictError, IdempotencyConflictError) as error:
+            return enclosure_care_error(request, principal, error)
+        return RedirectResponse(
+            "/home"
+            if str(form.get("return_to", "")) == "today"
+            else f"/enclosures/{enclosure_id}/plants/{plant_id}#history",
+            status_code=303,
+        )
+
+    @router.get("/enclosures/{enclosure_id}/care-history", response_class=HTMLResponse)
+    async def enclosure_care_history(
+        request: Request, enclosure_id: str, plant_id: str = ""
+    ) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        try:
+            enclosure = enclosure_service.profile_for(principal.household_id, UUID(enclosure_id))
+            if enclosure is None:
+                return _not_found(request, "Enclosure not found")
+            events = enclosure_service.care_history(principal.household_id, enclosure.enclosure_id)
+            effective = enclosure_service.effective_history(
+                principal.household_id, enclosure.enclosure_id
+            )
+            effective_ids = {e.event_id for e in effective}
+            voided = set()
+            for event in events:
+                if event.event_type == "event.voided":
+                    voided.add(getattr(event.payload, "target_event_id", None))
+                elif event.event_type == "event.reinstated":
+                    voided.discard(getattr(event.payload, "target_event_id", None))
+            plants_by_id = {
+                plant.enclosure_plant_id: plant
+                for plant in enclosure_service.plants(
+                    principal.household_id, enclosure.enclosure_id, include_removed=True
+                )
+            }
+            rows = []
+            for event in reversed(events):
+                if event.event_type not in DELETABLE_ENCLOSURE_CARE_EVENT_TYPES:
+                    continue
+                if plant_id and str(getattr(event.payload, "enclosure_plant_id", "")) != plant_id:
+                    continue
+                related_plant_id = getattr(event.payload, "enclosure_plant_id", None)
+                related_plant = (
+                    plants_by_id.get(related_plant_id)
+                    if isinstance(related_plant_id, UUID)
+                    else None
+                )
+                root = effective_event_root(events, event.event_id)
+                rows.append(
+                    {
+                        "event": event,
+                        "occurred_wall": _form_datetime_value(
+                            event.occurred_at, principal.household_timezone
+                        ),
+                        "subject_name": (related_plant.label or related_plant.species_display)
+                        if related_plant
+                        else enclosure.name,
+                        "state": "voided"
+                        if event.event_id in voided
+                        else "effective"
+                        if event.event_id in effective_ids
+                        else "replaced",
+                        "void_target": root.event_id if root else event.event_id,
+                        "can_correct": event.event_type.startswith("enclosure.plant_watering"),
+                    }
+                )
+        except ValueError:
+            return _not_found(request, "Enclosure not found")
+        return protected_page(
+            request,
+            "enclosure_care_history.html",
+            principal,
+            context={
+                "enclosure": enclosure,
+                "rows": rows,
+                "plant_id": plant_id,
+                "format_due_time": _smart_care_time_label,
+            },
+        )
+
+    @router.post("/enclosures/{enclosure_id}/care-history/{event_id}", response_class=HTMLResponse)
+    async def enclosure_care_control(
+        request: Request, enclosure_id: str, event_id: str
+    ) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if principal.role != "owner":
+            return _access_denied(request, "Only the owner may correct care history")
+        try:
+            raw_date = str(form.get("occurred_at", ""))
+            target = next(
+                (
+                    event
+                    for event in enclosure_service.care_history(
+                        principal.household_id, UUID(enclosure_id)
+                    )
+                    if event.event_id == UUID(event_id)
+                ),
+                None,
+            )
+            occurred_at = (
+                _form_datetime(
+                    raw_date,
+                    principal.household_timezone,
+                    retained_instant=target.occurred_at if target else None,
+                )
+                if raw_date
+                else None
+            )
+            event = enclosure_service.control_care_record(
+                ControlEnclosureCareCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    principal.role,
+                    UUID(enclosure_id),
+                    UUID(event_id),
+                    _form_idempotency_key(form),
+                    str(form.get("action", "")),
+                    str(form.get("reason", "")),
+                    occurred_at,
+                    str(form.get("notes", "")),
+                )
+            )
+            for subject in event.subjects:
+                if subject.subject_type in {"enclosure", "enclosure-plant"}:
+                    reminder_fact_service.recalculate_subject(
+                        principal.household_id,
+                        subject.subject_type,
+                        subject.subject_id,
+                        now=datetime.now(UTC),
+                    )
+        except (ValueError, ExpectedVersionConflictError, IdempotencyConflictError) as error:
+            return enclosure_care_error(request, principal, error)
+        return RedirectResponse(f"/enclosures/{enclosure_id}/care-history", status_code=303)
+
+    def enclosure_schedule_context(
+        principal: Principal,
+        enclosure_id: str,
+        reminder_type: str,
+        plant_id: str,
+        *,
+        allow_removed: bool = False,
+    ) -> dict[str, Any]:
+        enclosure = enclosure_service.profile_for(principal.household_id, UUID(enclosure_id))
+        if enclosure is None or reminder_type not in {"cleaning", "water_change", "plant_watering"}:
+            raise FormValidationError("Enclosure care schedule was not found.")
+        plant = None
+        if reminder_type == "plant_watering":
+            plant = enclosure_service.plant_for(
+                principal.household_id, enclosure.enclosure_id, UUID(plant_id)
+            )
+            if plant is None or (plant.status != "active" and not allow_removed):
+                raise FormValidationError("Active enclosure plant was not found.")
+        elif plant_id:
+            raise FormValidationError("Enclosure maintenance cannot target a plant.")
+        subject_type = "enclosure-plant" if plant else "enclosure"
+        subject_id = plant.enclosure_plant_id if plant else enclosure.enclosure_id
+        rule = _subject_schedule_rule(
+            reminder_projection, principal.household_id, subject_type, subject_id, reminder_type
+        )
+        history_type = {
+            "cleaning": "enclosure.cleaning_recorded",
+            "water_change": "enclosure.water_change_recorded",
+            "plant_watering": "enclosure.plant_watering_recorded",
+        }[reminder_type]
+        history = tuple(
+            event
+            for event in enclosure_service.effective_history(
+                principal.household_id, enclosure.enclosure_id
+            )
+            if (
+                event.event_type == history_type
+                or (
+                    reminder_type == "plant_watering"
+                    and event.event_type == "enclosure.plant_watering_corrected"
+                )
+            )
+            and (
+                plant is None
+                or getattr(event.payload, "enclosure_plant_id", None) == plant.enclosure_plant_id
+            )
+        )
+        path = f"/enclosures/{enclosure_id}/care-schedule/{reminder_type}"
+        query = f"?plant_id={plant_id}" if plant else ""
+        return {
+            "enclosure": enclosure,
+            "plant": plant,
+            "subject_type": subject_type,
+            "subject_id": subject_id,
+            "rule": rule,
+            "reminder_type": reminder_type,
+            "title": CARE_SCHEDULE_CAPABILITIES[reminder_type][0],
+            "format_due_time": _smart_care_time_label,
+            "path": path,
+            "query": query,
+            "binding": {
+                "purpose": "enclosure-care",
+                "history": hashlib.sha256(
+                    json.dumps(
+                        [[str(event.event_id), event.occurred_at.isoformat()] for event in history]
+                    ).encode()
+                ).hexdigest(),
+                "actor": str(principal.user_id),
+                "household": str(principal.household_id),
+                "enclosure": str(enclosure.enclosure_id),
+                "enclosure_name": enclosure.name,
+                "enclosure_status": enclosure.status,
+                "plant_id": plant_id,
+                "plant_version": plant.stream_version if plant else None,
+                "timezone": principal.household_timezone,
+            },
+        }
+
+    @router.get(
+        "/enclosures/{enclosure_id}/care-schedule/{reminder_type}", response_class=HTMLResponse
+    )
+    async def enclosure_schedule_edit(
+        request: Request, enclosure_id: str, reminder_type: str, plant_id: str = ""
+    ) -> Response:
+        principal = principal_for(request, audit_denial=True)
+        if principal is None:
+            return RedirectResponse("/login", status_code=303)
+        if "reminder.manage" not in principal.capabilities:
+            return _access_denied(request, "Care setup access denied")
+        try:
+            context = enclosure_schedule_context(principal, enclosure_id, reminder_type, plant_id)
+            rule = context["rule"]
+            interval = rule.interval_days if rule else ""
+            due = rule.override_due_at if rule else None
+            enabled = rule.enabled if rule else True
+            if token := request.query_params.get("preview_token"):
+                retained = care_preview_signer.verify(
+                    token, session=request.cookies[SESSION_COOKIE], now=datetime.now(UTC)
+                )
+                if (
+                    retained.get("purpose") != "enclosure-confirm"
+                    or retained["binding"] != context["binding"]
+                    or retained["reminder_type"] != reminder_type
+                    or retained["rule"] != smart_care_rule_binding(rule)
+                ):
+                    raise FormValidationError("This preview context changed. Review setup again.")
+                interval, enabled = retained["interval_days"], retained["enabled"]
+                due = (
+                    datetime.fromisoformat(retained["first_due_at"])
+                    if retained["first_due_at"]
+                    else None
+                )
+            edit_token = care_preview_signer.sign(
+                {
+                    "purpose": "enclosure-edit",
+                    "binding": context["binding"],
+                    "rule": smart_care_rule_binding(rule),
+                    "reminder_type": reminder_type,
+                    "first_due_at": due.isoformat() if due else None,
+                },
+                session=request.cookies[SESSION_COOKIE],
+                now=datetime.now(UTC),
+            )
+            context.update(
+                {
+                    "edit_token": edit_token,
+                    "interval_days": interval,
+                    "enabled": enabled,
+                    "first_due_at": _form_datetime_value(due, principal.household_timezone)
+                    if due
+                    else "",
+                }
+            )
+        except (
+            ValueError,
+            KeyError,
+            TypeError,
+            ExpectedVersionConflictError,
+            IdempotencyConflictError,
+        ) as error:
+            return enclosure_care_error(request, principal, error)
+        return protected_page(request, "enclosure_schedule.html", principal, context=context)
+
+    @router.post(
+        "/enclosures/{enclosure_id}/care-schedule/{reminder_type}/preview",
+        response_class=HTMLResponse,
+    )
+    async def enclosure_schedule_preview(
+        request: Request, enclosure_id: str, reminder_type: str, plant_id: str = ""
+    ) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "reminder.manage" not in principal.capabilities:
+            return _access_denied(request, "Care setup access denied")
+        try:
+            history_keys = (StreamKey(principal.household_id, "enclosure", UUID(enclosure_id)),)
+            read_streams = reminder_fact_service.capture_history_expectations(history_keys)
+            context = enclosure_schedule_context(principal, enclosure_id, reminder_type, plant_id)
+            rule = context["rule"]
+            enabled = str(form.get("enabled", "")) == "true"
+            interval = _required_int(form.get("interval_days", ""), "interval")
+            if not 1 <= interval <= 3650:
+                raise FormValidationError("Enter a whole-day interval from 1 to 3650.")
+            raw_due = str(form.get("first_due_at", "")).strip()
+            retained_due = rule.override_due_at if rule else None
+            if edit_token := str(form.get("edit_token", "")):
+                retained = care_preview_signer.verify(
+                    edit_token, session=request.cookies[SESSION_COOKIE], now=datetime.now(UTC)
+                )
+                if (
+                    retained.get("purpose") != "enclosure-edit"
+                    or retained["binding"] != context["binding"]
+                    or retained["rule"] != smart_care_rule_binding(rule)
+                    or retained["reminder_type"] != reminder_type
+                ):
+                    raise FormValidationError("This edit context changed. Review setup again.")
+                retained_due = (
+                    datetime.fromisoformat(retained["first_due_at"])
+                    if retained["first_due_at"]
+                    else None
+                )
+            due = (
+                _form_datetime(raw_due, principal.household_timezone, retained_instant=retained_due)
+                if raw_due
+                else None
+            )
+            if enabled and due is None:
+                raise FormValidationError(
+                    "Choose the first due date before previewing this schedule."
+                )
+            payload = {
+                "binding": context["binding"],
+                "purpose": "enclosure-confirm",
+                "read_streams": [
+                    {
+                        "stream_type": item.key.stream_type,
+                        "stream_id": str(item.key.stream_id),
+                        "expected_version": item.expected_version,
+                    }
+                    for item in read_streams
+                ],
+                "rule": smart_care_rule_binding(rule),
+                "reminder_type": reminder_type,
+                "interval_days": interval,
+                "enabled": enabled,
+                "first_due_at": due.isoformat() if due else None,
+                "expected_version": rule.stream_version if rule else 0,
+                "channel": rule.channel if rule else "local",
+                "idempotency_key": str(uuid4()),
+                "correlation_id": str(uuid4()),
+            }
+            effective_due = reminder_fact_service.preview_subject_schedule(
+                SaveSubjectScheduleCommand(
+                    principal.household_id,
+                    principal.user_id,
+                    UUID(payload["correlation_id"]),
+                    payload["idempotency_key"],
+                    payload["expected_version"],
+                    context["subject_type"],
+                    context["subject_id"],
+                    reminder_type,
+                    interval,
+                    payload["first_due_at"],
+                    enabled,
+                    payload["channel"],
+                    read_streams=read_streams,
+                )
+            )
+            if reminder_fact_service.capture_history_expectations(history_keys) != read_streams:
+                raise FormValidationError(
+                    "Enclosure care changed while preparing the preview. Review again."
+                )
+            token = care_preview_signer.sign(
+                payload, session=request.cookies[SESSION_COOKIE], now=datetime.now(UTC)
+            )
+        except (
+            ValueError,
+            KeyError,
+            TypeError,
+            ExpectedVersionConflictError,
+            IdempotencyConflictError,
+        ) as error:
+            return enclosure_care_error(request, principal, error)
+        return protected_page(
+            request,
+            "enclosure_schedule_preview.html",
+            principal,
+            context={
+                **context,
+                "preview_token": token,
+                "interval_days": interval,
+                "first_due_at": due,
+                "effective_due": effective_due.due_at if effective_due else None,
+                "enabled": enabled,
+            },
+        )
+
+    @router.post(
+        "/enclosures/{enclosure_id}/care-schedule/{reminder_type}/confirm",
+        response_class=HTMLResponse,
+    )
+    async def enclosure_schedule_confirm(
+        request: Request, enclosure_id: str, reminder_type: str, plant_id: str = ""
+    ) -> Response:
+        principal, form, rejection = await protected_form(request)
+        if rejection is not None:
+            return rejection
+        assert principal is not None and form is not None
+        if "reminder.manage" not in principal.capabilities:
+            return _access_denied(request, "Care setup access denied")
+        try:
+            payload = care_preview_signer.verify(
+                str(form.get("preview_token", "")),
+                session=request.cookies[SESSION_COOKIE],
+                now=datetime.now(UTC),
+            )
+            if payload.get("purpose") != "enclosure-confirm":
+                raise FormValidationError("Review the schedule preview before confirming.")
+            context = enclosure_schedule_context(
+                principal, enclosure_id, reminder_type, plant_id, allow_removed=True
+            )
+            if payload["reminder_type"] != reminder_type or any(
+                payload["binding"][key] != context["binding"][key]
+                for key in ("purpose", "actor", "household", "enclosure", "plant_id")
+            ):
+                raise FormValidationError("The enclosure or plant changed. Review setup again.")
+            read_streams = tuple(
+                StreamExpectation(
+                    StreamKey(principal.household_id, item["stream_type"], UUID(item["stream_id"])),
+                    item["expected_version"],
+                )
+                for item in payload["read_streams"]
+            )
+            if len(read_streams) != 1 or read_streams[0].key != StreamKey(
+                principal.household_id, "enclosure", UUID(enclosure_id)
+            ):
+                raise FormValidationError("This preview lacks its enclosure history expectation.")
+            command = SaveSubjectScheduleCommand(
+                principal.household_id,
+                principal.user_id,
+                UUID(payload["correlation_id"]),
+                payload["idempotency_key"],
+                payload["expected_version"],
+                context["subject_type"],
+                context["subject_id"],
+                reminder_type,
+                payload["interval_days"],
+                payload["first_due_at"],
+                payload["enabled"],
+                payload["channel"],
+                read_streams=read_streams,
+            )
+            if reminder_rule_service.completed_subject_schedule(command) is None:
+                if payload["binding"] != context["binding"]:
+                    raise FormValidationError("The enclosure or plant changed. Review setup again.")
+                if payload["rule"] != smart_care_rule_binding(context["rule"]):
+                    raise FormValidationError(
+                        "This schedule changed. Review the current schedule again."
+                    )
+                reminder_rule_service.save_subject_schedule(command)
+            reminder_fact_service.recalculate_subject(
+                principal.household_id,
+                context["subject_type"],
+                context["subject_id"],
+                now=datetime.now(UTC),
+            )
+        except (
+            ValueError,
+            KeyError,
+            TypeError,
+            ExpectedVersionConflictError,
+            IdempotencyConflictError,
+        ) as error:
+            return enclosure_care_error(request, principal, error)
+        return RedirectResponse(
+            f"/enclosures/{enclosure_id}/plants/{plant_id}"
+            if plant_id
+            else f"/enclosures/{enclosure_id}",
+            status_code=303,
         )
 
     @router.get("/enclosures/{enclosure_id}/edit", response_class=HTMLResponse)
@@ -5149,6 +5722,8 @@ def create_web_router(
             return rejection
         assert principal is not None
         assert form is not None
+        if "household.manage" not in principal.capabilities:
+            return _access_denied(request, "Plant management access denied")
         values = {
             name: str(form.get(name, "")).strip()
             for name in ("taxon_id", "manual_species", "label", "quantity", "date_added", "notes")
@@ -5226,6 +5801,32 @@ def create_web_router(
                 "enclosure": enclosure,
                 "plant": plant,
                 "reference_taxon": reference_taxon,
+                "watering_rule": _subject_schedule_rule(
+                    reminder_projection,
+                    principal.household_id,
+                    "enclosure-plant",
+                    plant.enclosure_plant_id,
+                    "plant_watering",
+                ),
+                "watering_due": next(
+                    (
+                        item
+                        for item in reminder_fact_service.agenda_for(
+                            principal.household_id, now=datetime.now(UTC)
+                        )
+                        if item.subject_type == "enclosure-plant"
+                        and item.subject_id == plant.enclosure_plant_id
+                    ),
+                    None,
+                ),
+                "watering_history": tuple(
+                    e
+                    for e in enclosure_service.effective_history(
+                        principal.household_id, enclosure_uuid
+                    )
+                    if getattr(e.payload, "enclosure_plant_id", None) == plant.enclosure_plant_id
+                    and e.event_type in DELETABLE_ENCLOSURE_CARE_EVENT_TYPES
+                ),
                 "care_guide_available": bool(
                     plant.taxon_id is not None
                     and care_guide_repository is not None
@@ -5272,6 +5873,8 @@ def create_web_router(
             return rejection
         assert principal is not None
         assert form is not None
+        if "household.manage" not in principal.capabilities:
+            return _access_denied(request, "Plant management access denied")
         values = {
             name: str(form.get(name, "")).strip()
             for name in ("taxon_id", "manual_species", "label", "quantity", "date_added", "notes")
@@ -5360,6 +5963,8 @@ def create_web_router(
             return rejection
         assert principal is not None
         assert form is not None
+        if "household.manage" not in principal.capabilities:
+            return _access_denied(request, "Plant management access denied")
         try:
             enclosure_service.remove_plant(
                 RemoveEnclosurePlantCommand(
@@ -7736,9 +8341,11 @@ def _agenda_rows(
     now: datetime,
     return_context: str = "today",
     animal_visuals: dict[UUID, AnimalVisual] | None = None,
+    plants: tuple[Any, ...] = (),
 ) -> dict[str, tuple[dict[str, Any], ...]]:
     animal_by_id = {animal.animal_id: animal for animal in animals}
     enclosure_by_id = {enclosure.enclosure_id: enclosure for enclosure in enclosures}
+    plant_by_id = {plant.enclosure_plant_id: plant for plant in plants}
     occupants: dict[UUID, list[Any]] = {}
     for animal in animals:
         if animal.current_enclosure_id is not None:
@@ -7776,10 +8383,25 @@ def _agenda_rows(
                 title, _description, route = CARE_FORM_DETAILS[item.reminder_type]
                 action_url = f"{subject_url}/{route}/new?return_to={return_context}"
                 action_label = CARE_ACTION_LABELS.get(item.reminder_type, title)
+        elif item.subject_type == "enclosure-plant":
+            plant = plant_by_id.get(item.subject_id)
+            if plant is None or plant.status != "active":
+                continue
+            enclosure = enclosure_by_id.get(plant.enclosure_id)
+            subject_name = plant.label or plant.species_display
+            subject_url = f"/enclosures/{plant.enclosure_id}/plants/{plant.enclosure_plant_id}"
+            location_name = enclosure.name if enclosure else "Enclosure"
+            photo_fallback_key = "plant"
+            action_url = f"{subject_url}?return_to={return_context}#watering"
+            action_label = "Water plant"
+            schedule_url = (
+                f"/enclosures/{plant.enclosure_id}/care-schedule/plant_watering"
+                f"?plant_id={plant.enclosure_plant_id}"
+            )
         else:
             enclosure = enclosure_by_id.get(item.subject_id)
             enclosure_occupants = occupants.get(item.subject_id, [])
-            if len(enclosure_occupants) == 1:
+            if len(enclosure_occupants) == 1 and item.reminder_type == "misting":
                 animal = enclosure_occupants[0]
                 subject_name = animal.name
                 subject_url = f"/animals/{animal.animal_id}"
@@ -7800,7 +8422,8 @@ def _agenda_rows(
                     action_label = CARE_ACTION_LABELS["misting"]
             elif item.reminder_type in {"cleaning", "water_change"}:
                 anchor = "cleaning" if item.reminder_type == "cleaning" else "water-change"
-                action_url = f"/enclosures/{item.subject_id}?return_to=today#{anchor}"
+                schedule_url = f"/enclosures/{item.subject_id}/care-schedule/{item.reminder_type}"
+                action_url = f"/enclosures/{item.subject_id}?return_to={return_context}#{anchor}"
                 action_label = CARE_ACTION_LABELS[item.reminder_type]
         # Persisted ReminderFact uses "due", while live agenda items use calendar
         # buckets. Both must follow the keeper's local date without changing the fact.
@@ -7985,7 +8608,42 @@ def _completed_care_rows(
                 "occurred_label": occurred.strftime("%b %-d · %-I:%M %p"),
             }
         )
-    return tuple(rows)
+    for enclosure in enclosures:
+        plant_events = tuple(
+            event
+            for event in enclosure_service.effective_history(household_id, enclosure.enclosure_id)
+            if event.event_type
+            in {"enclosure.plant_watering_recorded", "enclosure.plant_watering_corrected"}
+        )
+        if not plant_events:
+            continue
+        plant_by_id = {
+            plant.enclosure_plant_id: plant
+            for plant in enclosure_service.plants(
+                household_id, enclosure.enclosure_id, include_removed=True
+            )
+        }
+        for event in plant_events:
+            plant_id = getattr(event.payload, "enclosure_plant_id", None)
+            plant = plant_by_id.get(plant_id) if isinstance(plant_id, UUID) else None
+            if plant is None:
+                continue
+            url = f"/enclosures/{enclosure.enclosure_id}/plants/{plant.enclosure_plant_id}"
+            occurred = event.occurred_at.astimezone(timezone)
+            rows.append(
+                {
+                    "event": event,
+                    "title": "Plant watering",
+                    "description": event.notes or "Watered",
+                    "subject_name": f"{plant.label or plant.species_display} · {enclosure.name}",
+                    "subject_url": url,
+                    "calendar_url": url + "#history",
+                    "photo_attachment_version_id": None,
+                    "local_date": occurred.date(),
+                    "occurred_label": occurred.strftime("%b %-d · %-I:%M %p"),
+                }
+            )
+    return tuple(sorted(rows, key=lambda row: row["event"].occurred_at, reverse=True))
 
 
 def _month_date(value: str, fallback: date) -> date:

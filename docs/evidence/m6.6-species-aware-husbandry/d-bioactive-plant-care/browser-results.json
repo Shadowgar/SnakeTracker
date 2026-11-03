@@ -1,0 +1,84 @@
+{
+  "sourceRevision": "4fd8829f33af2a90a4783ad91b316b85b2376219",
+  "screenshots": [
+    "plant-schedule-390.png",
+    "plant-confirm-390.png",
+    "bioactive-enclosure-390.png",
+    "plant-after-watering-390.png",
+    "enclosure-after-move-1440.png",
+    "maintenance-history-1440.png",
+    "independent-plant-320.png"
+  ],
+  "checks": [
+    {
+      "name": "plant-schedule-390",
+      "url": "http://127.0.0.1:8123/enclosures/10498df4-1af1-4693-b4bb-89b31ff7953f/care-schedule/plant_watering?plant_id=759b95f5-7db5-41f2-bbef-e2fac8d95092",
+      "width": {
+        "viewport": 390,
+        "scroll": 390
+      },
+      "violations": []
+    },
+    {
+      "name": "plant-confirm-390",
+      "url": "http://127.0.0.1:8123/enclosures/10498df4-1af1-4693-b4bb-89b31ff7953f/care-schedule/plant_watering/preview?plant_id=759b95f5-7db5-41f2-bbef-e2fac8d95092",
+      "width": {
+        "viewport": 390,
+        "scroll": 390
+      },
+      "violations": []
+    },
+    {
+      "name": "bioactive-enclosure-390",
+      "url": "http://127.0.0.1:8123/enclosures/10498df4-1af1-4693-b4bb-89b31ff7953f",
+      "width": {
+        "viewport": 390,
+        "scroll": 390
+      },
+      "violations": []
+    },
+    {
+      "name": "plant-after-watering-390",
+      "url": "http://127.0.0.1:8123/enclosures/10498df4-1af1-4693-b4bb-89b31ff7953f/plants/759b95f5-7db5-41f2-bbef-e2fac8d95092#history",
+      "width": {
+        "viewport": 390,
+        "scroll": 390
+      },
+      "violations": []
+    },
+    {
+      "name": "enclosure-after-move-1440",
+      "url": "http://127.0.0.1:8123/enclosures/10498df4-1af1-4693-b4bb-89b31ff7953f",
+      "width": {
+        "viewport": 1440,
+        "scroll": 1440
+      },
+      "violations": []
+    },
+    {
+      "name": "maintenance-history-1440",
+      "url": "http://127.0.0.1:8123/enclosures/10498df4-1af1-4693-b4bb-89b31ff7953f/care-history",
+      "width": {
+        "viewport": 1440,
+        "scroll": 1440
+      },
+      "violations": []
+    },
+    {
+      "name": "independent-plant-320",
+      "url": "http://127.0.0.1:8123/enclosures/10498df4-1af1-4693-b4bb-89b31ff7953f/plants/04c374cb-c4cb-4cdc-a2a9-a2b8001e56d7",
+      "width": {
+        "viewport": 320,
+        "scroll": 320
+      },
+      "violations": []
+    },
+    {
+      "name": "independent-plant-schedules-record-correct-and-animal-move",
+      "status": "passed"
+    }
+  ],
+  "externalRequests": [],
+  "errors": [],
+  "status": "passed"
+}

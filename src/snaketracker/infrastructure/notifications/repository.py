@@ -57,6 +57,21 @@ class SQLAlchemyNotificationIntentRepository:
                     raise NotificationIntentValidationError(
                         "Reminder fact does not exist in this household."
                     )
+                if (
+                    fact["subject_type"] == "enclosure-plant"
+                    and connection.execute(
+                        text(
+                            "SELECT 1 FROM enclosure_plant_current "
+                            "WHERE household_id=:household_id "
+                            "AND enclosure_plant_id=:plant_id AND status='active'"
+                        ),
+                        {"household_id": str(household_id), "plant_id": fact["subject_id"]},
+                    ).first()
+                    is None
+                ):
+                    raise NotificationIntentValidationError(
+                        "The reminder plant is no longer active."
+                    )
                 recipient = connection.execute(
                     text(
                         "SELECT 1 FROM authorization_memberships "

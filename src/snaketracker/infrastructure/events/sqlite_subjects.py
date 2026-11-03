@@ -89,6 +89,28 @@ class SQLAlchemySubjectReferenceValidator:
                         },
                     ).scalar_one_or_none()
             elif subject.subject_type == "enclosure-plant":
+                if event.stream_type == "reminder-rule":
+                    exists = connection.execute(
+                        text(
+                            "SELECT 1 FROM enclosure_plant_current "
+                            "WHERE household_id=:household_id "
+                            "AND enclosure_plant_id=:subject_id "
+                            "AND (status='active' OR :is_disable=1)"
+                        ),
+                        {
+                            "household_id": str(event.household_id),
+                            "subject_id": str(subject.subject_id),
+                            "is_disable": int(event.event_type == "reminder.rule_disabled"),
+                        },
+                    ).scalar_one_or_none()
+                    if exists is None:
+                        raise EventValidationError(
+                            "Active reminder plant does not exist in this household."
+                        )
+                    continue
+                payload_plant = getattr(event.payload, "enclosure_plant_id", subject.subject_id)
+                if payload_plant != subject.subject_id:
+                    raise EventValidationError("Plant payload and related subject must agree.")
                 if (
                     isinstance(event.payload, EnclosurePlantAddedV1)
                     and event.payload.enclosure_plant_id == subject.subject_id
@@ -99,12 +121,16 @@ class SQLAlchemySubjectReferenceValidator:
                         text(
                             "SELECT 1 FROM enclosure_plant_current "
                             "WHERE household_id=:household_id AND enclosure_id=:enclosure_id "
-                            "AND enclosure_plant_id=:subject_id"
+                            "AND enclosure_plant_id=:subject_id "
+                            "AND (status='active' OR :requires_active=0)"
                         ),
                         {
                             "subject_id": str(subject.subject_id),
                             "household_id": str(event.household_id),
                             "enclosure_id": str(event.stream_id),
+                            "requires_active": int(
+                                event.event_type == "enclosure.plant_watering_recorded"
+                            ),
                         },
                     ).scalar_one_or_none()
             elif subject.subject_type == "inventory_item":
