@@ -25,4 +25,22 @@
   .animal-reference-content > .section-heading .page-kicker,
   .animal-reference-content > .section-heading .profile-reference-boundary { display: none; }
   .animal-reference-content > .section-heading h2 { font-size: 1rem; }
+  .animal-reference-care-first > .profile-reviewed-care { order: 1; }
+  .animal-reference-care-first > .profile-species-overview { order: 2; }
+  .animal-reference-care-first > .profile-source-overview { order: 3; }
 }
+
+/* Sourced frog care: context and safety remain visible outside disclosures. */
+.profile-reference-cautions {
+  border-left: 3px solid #b59aff;
+  background: #211d2b;
+  padding: 1rem 1.2rem;
+  border-radius: .65rem;
+  margin-block: 1rem;
+  color: #eee9f5;
+}
+.profile-reference-cautions h3 { margin-top: 0; }
+.profile-reference-cautions ul { padding-left: 1.1rem; margin-bottom: 0; }
+.profile-reference-cautions li + li { margin-top: .5rem; }
+.profile-reference-cautions a { color: #d0bfff; font-size: .8rem; }
+.profile-reference-fact small { display: block; color: #c9c3d1; line-height: 1.5; }

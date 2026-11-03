@@ -1,0 +1,129 @@
+{
+  "viewports": [
+    {
+      "species": "Pelodryas caerulea",
+      "width": 390,
+      "height": 844,
+      "widthInfo": {
+        "viewport": 390,
+        "scroll": 390
+      },
+      "keyboard": true,
+      "violations": []
+    },
+    {
+      "species": "Ceratophrys cranwelli",
+      "width": 390,
+      "height": 844,
+      "widthInfo": {
+        "viewport": 390,
+        "scroll": 390
+      },
+      "keyboard": true,
+      "violations": []
+    },
+    {
+      "species": "Rana temporaria",
+      "width": 390,
+      "height": 844,
+      "widthInfo": {
+        "viewport": 390,
+        "scroll": 390
+      },
+      "keyboard": false,
+      "violations": []
+    },
+    {
+      "species": "Pelodryas caerulea",
+      "width": 320,
+      "height": 844,
+      "widthInfo": {
+        "viewport": 320,
+        "scroll": 320
+      },
+      "keyboard": true,
+      "violations": []
+    },
+    {
+      "species": "Ceratophrys cranwelli",
+      "width": 320,
+      "height": 844,
+      "widthInfo": {
+        "viewport": 320,
+        "scroll": 320
+      },
+      "keyboard": true,
+      "violations": []
+    },
+    {
+      "species": "Rana temporaria",
+      "width": 320,
+      "height": 844,
+      "widthInfo": {
+        "viewport": 320,
+        "scroll": 320
+      },
+      "keyboard": false,
+      "violations": []
+    },
+    {
+      "species": "Pelodryas caerulea",
+      "width": 1440,
+      "height": 900,
+      "widthInfo": {
+        "viewport": 1440,
+        "scroll": 1440
+      },
+      "keyboard": true,
+      "violations": []
+    },
+    {
+      "species": "Ceratophrys cranwelli",
+      "width": 1440,
+      "height": 900,
+      "widthInfo": {
+        "viewport": 1440,
+        "scroll": 1440
+      },
+      "keyboard": true,
+      "violations": []
+    },
+    {
+      "species": "Rana temporaria",
+      "width": 1440,
+      "height": 900,
+      "widthInfo": {
+        "viewport": 1440,
+        "scroll": 1440
+      },
+      "keyboard": false,
+      "violations": []
+    }
+  ],
+  "externalRequests": [],
+  "errors": [],
+  "screenshots": [
+    "pelodryas-390x844-full-page.png",
+    "pelodryas-390x844-care-summary.png",
+    "pelodryas-390x844-expanded-sources.png",
+    "ceratophrys-390x844-full-page.png",
+    "ceratophrys-390x844-care-summary.png",
+    "ceratophrys-390x844-expanded-sources.png",
+    "rana-390x844-full-page.png",
+    "pelodryas-320x844-full-page.png",
+    "pelodryas-320x844-care-summary.png",
+    "pelodryas-320x844-expanded-sources.png",
+    "ceratophrys-320x844-full-page.png",
+    "ceratophrys-320x844-care-summary.png",
+    "ceratophrys-320x844-expanded-sources.png",
+    "rana-320x844-full-page.png",
+    "pelodryas-1440x900-full-page.png",
+    "pelodryas-1440x900-care-summary.png",
+    "pelodryas-1440x900-expanded-sources.png",
+    "ceratophrys-1440x900-full-page.png",
+    "ceratophrys-1440x900-care-summary.png",
+    "ceratophrys-1440x900-expanded-sources.png",
+    "rana-1440x900-full-page.png"
+  ],
+  "status": "passed"
+}

@@ -10,12 +10,28 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine
 
-from snaketracker.application.care_guides import GuideBundle, ReviewedGuide
+from snaketracker.application.care_guides import GuideBundle, GuideGroup, ReviewedGuide
+from snaketracker.application.local_taxonomy import TaxonomySummary
 from snaketracker.infrastructure.taxonomy.catalog import LocalTaxonomyCatalog
 
 
 class CareGuideImportError(ValueError):
     """The reviewed bundle cannot be safely promoted as a whole."""
+
+
+def _qualified_amphibian(taxon: TaxonomySummary) -> bool:
+    classification = dict(taxon.classification)
+    return (
+        taxon.taxonomic_status == "accepted"
+        and taxon.selection_state == "selected"
+        and classification.get("rank") == "species"
+        and (
+            classification.get("class_name") == "Amphibia"
+            or any(a.rank == "class" and a.scientific_name == "Amphibia" for a in taxon.ancestry)
+        )
+        and bool(taxon.provider_references)
+        and all(r.qualification_state == "qualified" for r in taxon.provider_references)
+    )
 
 
 def _payload(guide: ReviewedGuide) -> tuple[str, str]:
@@ -70,17 +86,29 @@ class SQLAlchemyCareGuideRepository:
                 for identifier in candidates:
                     selected = catalog.resolve_on(connection, UUID(identifier))
                     if selected is not None:
-                        if selected.workflow_group == key[0] and selected.scientific_name == key[1]:
+                        if (
+                            selected.workflow_group == key[0]
+                            and selected.scientific_name == key[1]
+                            and (
+                                guide.biological_group != GuideGroup.AMPHIBIAN
+                                or _qualified_amphibian(selected)
+                            )
+                        ):
                             rows.append(identifier)
-                    elif connection.execute(
-                        text(
-                            "SELECT 1 FROM taxa t JOIN taxonomy_publications p USING(taxon_id) "
-                            "WHERE t.taxon_id=:id AND p.payload IS NULL AND supported_group=:group "
-                            "AND accepted_scientific_name=:name AND NOT EXISTS "
-                            "(SELECT 1 FROM taxon_provider_mappings m WHERE m.taxon_id=t.taxon_id)"
-                        ),
-                        {"id": identifier, "group": key[0], "name": key[1]},
-                    ).first():
+                    elif (
+                        guide.biological_group != GuideGroup.AMPHIBIAN
+                        and connection.execute(
+                            text(
+                                "SELECT 1 FROM taxa t JOIN taxonomy_publications p USING(taxon_id) "
+                                "WHERE t.taxon_id=:id AND p.payload IS NULL "
+                                "AND supported_group=:group "
+                                "AND accepted_scientific_name=:name AND NOT EXISTS "
+                                "(SELECT 1 FROM taxon_provider_mappings m "
+                                "WHERE m.taxon_id=t.taxon_id)"
+                            ),
+                            {"id": identifier, "group": key[0], "name": key[1]},
+                        ).first()
+                    ):
                         # Legacy locally qualified taxa can have no external provider mapping.
                         rows.append(identifier)
                 if len(rows) != 1:

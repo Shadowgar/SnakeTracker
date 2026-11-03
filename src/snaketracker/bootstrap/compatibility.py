@@ -30,7 +30,7 @@ from snaketracker.platform.projections.definitions import (
 )
 
 CURRENT_MANIFEST_VERSION = 1
-CURRENT_RELATIONAL_SCHEMA_VERSION = 25
+CURRENT_RELATIONAL_SCHEMA_VERSION = 26
 MINIMUM_RELATIONAL_SCHEMA_VERSION = 0
 MINIMUM_SQLITE_VERSION = (3, 35, 0)
 
@@ -191,6 +191,11 @@ def inspect_database_compatibility(engine: Engine | Connection) -> Compatibility
             CompatibilityMode.RECOVERY_REQUIRED,
             "compatibility_inspection_failed",
             "Stored data could not be inspected safely.",
+        )
+    if revision == "0026_amphibian_care_guides":
+        return evaluate_compatibility(
+            {"manifest_version": 1, "relational_schema_version": 26},
+            database_is_empty=False,
         )
     if revision == "0025_natural_history":
         return evaluate_compatibility(
