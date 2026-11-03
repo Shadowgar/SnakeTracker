@@ -5,6 +5,7 @@ import re
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
+import pytest
 from sqlalchemy import text
 
 from tests.browser.test_multispecies_workflow import _client, _csrf, _setup
@@ -247,3 +248,107 @@ def test_native_preview_retains_precise_existing_dst_fold_and_edit_choices(tmp_p
         current = projection.rule_for(UUID(household), original.rule_id)
         assert current.override_due_at == original_due
         assert current.interval_days == 9 and current.schedule_kind == "event_relative"
+
+
+@pytest.mark.parametrize("timezone,hour", [("UTC", 12), ("America/New_York", 6)])
+def test_notes_only_watering_correction_preserves_instant_and_override_consumption(
+    tmp_path, timezone, hour
+):
+    from uuid import UUID
+
+    from snaketracker.application.enclosures import EnclosureService, RecordPlantWateringCommand
+    from snaketracker.application.reminders import (
+        ReminderFactService,
+        ReminderRuleService,
+        SaveSubjectScheduleCommand,
+    )
+    from snaketracker.infrastructure.enclosures.projections import (
+        SQLAlchemyEnclosureCurrentProjection,
+    )
+    from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
+    from snaketracker.infrastructure.reminders.projections import SQLAlchemyReminderProjection
+
+    with _client(tmp_path) as client:
+        enclosure, (fern, _) = _seed(client)
+        engine = client.app.state.database_engine
+        with engine.begin() as c:
+            c.execute(text("UPDATE household_summaries SET timezone=:zone"), {"zone": timezone})
+            household, actor = c.execute(
+                text("SELECT household_id,user_id FROM authorization_memberships")
+            ).one()
+        household, actor = UUID(household), UUID(actor)
+        enclosure_id, plant_id = UUID(enclosure.rsplit("/", 1)[1]), UUID(fern.rsplit("/", 1)[1])
+        store = SQLAlchemyEventStore(engine)
+        service = EnclosureService(store, SQLAlchemyEnclosureCurrentProjection(engine))
+        projection = SQLAlchemyReminderProjection(engine)
+        rules, facts = (
+            ReminderRuleService(store, projection),
+            ReminderFactService(store, projection),
+        )
+        original_time = datetime(2026, 11, 1, hour, 30, 37, 123456, tzinfo=UTC)
+        record = service.record_plant_watering(
+            RecordPlantWateringCommand(
+                household,
+                actor,
+                enclosure_id,
+                plant_id,
+                uuid4(),
+                "precise-watering",
+                original_time,
+                "Before notes",
+            )
+        )
+        # The original record has consumed this override; truncating to the minute would undo that.
+        rules.save_subject_schedule(
+            SaveSubjectScheduleCommand(
+                household,
+                actor,
+                uuid4(),
+                "correction-boundary-schedule",
+                0,
+                "enclosure-plant",
+                plant_id,
+                "plant_watering",
+                3,
+                original_time.replace(second=20, microsecond=0).isoformat(),
+                True,
+            )
+        )
+        before_due = facts.agenda_for(household, now=datetime.now(UTC))[0].due_at
+        assert before_due == original_time + timedelta(days=3)
+        page = client.get(enclosure + "/care-history")
+        wall = re.search(r'name="occurred_at"[^>]*value="([^"]+)"', page.text)[1]
+        assert wall.endswith(":37.123456")
+        corrected = client.post(
+            enclosure + "/care-history/" + str(record.event_id),
+            data={
+                "csrf_token": _csrf(page.text),
+                "idempotency_key": "notes-only-correction",
+                "action": "correct",
+                "occurred_at": wall,
+                "notes": "Notes corrected only",
+                "reason": "Correct wording",
+            },
+        )
+        assert corrected.status_code == 200, corrected.text
+        effective = next(
+            event
+            for event in service.effective_history(household, enclosure_id)
+            if event.event_type == "enclosure.plant_watering_corrected"
+        )
+        assert effective.occurred_at == original_time
+        assert effective.notes == "Notes corrected only"
+        assert facts.agenda_for(household, now=datetime.now(UTC))[0].due_at == before_due
+        if timezone == "America/New_York":
+            assert "(UTC-05:00)" in corrected.text
+            rejected = client.post(
+                enclosure + "/care-history/" + str(effective.event_id),
+                data={
+                    "csrf_token": _csrf(corrected.text),
+                    "idempotency_key": "new-ambiguous-correction",
+                    "action": "correct",
+                    "occurred_at": "2026-11-01T01:31:00",
+                    "reason": "New date",
+                },
+            )
+            assert rejected.status_code == 422

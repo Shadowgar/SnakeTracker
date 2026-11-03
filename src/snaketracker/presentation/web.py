@@ -5176,6 +5176,11 @@ def create_web_router(
                 rows.append(
                     {
                         "event": event,
+                        "occurred_wall": event.occurred_at.astimezone(
+                            ZoneInfo(principal.household_timezone)
+                        )
+                        .replace(tzinfo=None)
+                        .isoformat(),
                         "subject_name": (related_plant.label or related_plant.species_display)
                         if related_plant
                         else enclosure.name,
@@ -5194,7 +5199,12 @@ def create_web_router(
             request,
             "enclosure_care_history.html",
             principal,
-            context={"enclosure": enclosure, "rows": rows, "plant_id": plant_id},
+            context={
+                "enclosure": enclosure,
+                "rows": rows,
+                "plant_id": plant_id,
+                "format_due_time": _smart_care_time_label,
+            },
         )
 
     @router.post("/enclosures/{enclosure_id}/care-history/{event_id}", response_class=HTMLResponse)
@@ -5209,6 +5219,25 @@ def create_web_router(
             return _access_denied(request, "Only the owner may correct care history")
         try:
             raw_date = str(form.get("occurred_at", ""))
+            target = next(
+                (
+                    event
+                    for event in enclosure_service.care_history(
+                        principal.household_id, UUID(enclosure_id)
+                    )
+                    if event.event_id == UUID(event_id)
+                ),
+                None,
+            )
+            occurred_at = (
+                _form_datetime(
+                    raw_date,
+                    principal.household_timezone,
+                    retained_instant=target.occurred_at if target else None,
+                )
+                if raw_date
+                else None
+            )
             event = enclosure_service.control_care_record(
                 ControlEnclosureCareCommand(
                     principal.household_id,
@@ -5219,7 +5248,7 @@ def create_web_router(
                     _form_idempotency_key(form),
                     str(form.get("action", "")),
                     str(form.get("reason", "")),
-                    _form_datetime(raw_date, principal.household_timezone) if raw_date else None,
+                    occurred_at,
                     str(form.get("notes", "")),
                 )
             )
@@ -5292,6 +5321,7 @@ def create_web_router(
             "rule": rule,
             "reminder_type": reminder_type,
             "title": CARE_SCHEDULE_CAPABILITIES[reminder_type][0],
+            "format_due_time": _smart_care_time_label,
             "path": path,
             "query": query,
             "binding": {
