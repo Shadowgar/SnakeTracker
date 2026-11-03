@@ -239,7 +239,10 @@ from snaketracker.platform.events.control_contracts import EventReinstatedV1, Ev
 from snaketracker.platform.events.corrections import effective_event_root, evaluate_effective_events
 from snaketracker.platform.events.envelope import DomainEvent
 from snaketracker.platform.events.registry import production_event_registry
-from snaketracker.platform.events.store import ExpectedVersionConflictError
+from snaketracker.platform.events.store import (
+    ExpectedVersionConflictError,
+    IdempotencyConflictError,
+)
 from snaketracker.platform.events.validation import household_local_to_utc
 from snaketracker.platform.jobs.models import JobRecord
 from snaketracker.platform.notifications.service import NotificationIntentService
@@ -5686,6 +5689,13 @@ def create_web_router(
         context = animal_experience_context(principal, animal)
         linked = context["linked_taxon"]
         guide = context["profile_reference_guide"]
+        qualified = (
+            linked is not None
+            and linked.taxon.supported_group == animal.animal_type
+            and linked.taxon.rank in {"species", "subspecies"}
+            and linked.taxon.taxonomic_status == "accepted"
+            and linked.taxon.taxonomy_selection_state == "selected"
+        )
         context.update(
             {
                 "active_section": "care",
@@ -5694,11 +5704,13 @@ def create_web_router(
                     animal_group=animal.animal_type,
                     scientific_name=linked.taxon.accepted_scientific_name if linked else None,
                 )
-                if "feeding" in animal.reminder_kinds
+                if qualified and "feeding" in animal.reminder_kinds
                 else (),
                 "format_claim_value": format_claim_value,
             }
         )
+        context["has_guidance"] = bool(context["options"])
+        context["dismissed"] = ""
         return context
 
     def smart_care_selection(
@@ -5765,6 +5777,8 @@ def create_web_router(
             "taxon_name": linked.taxon.accepted_scientific_name if linked else None,
             "taxon_group": linked.taxon.supported_group if linked else None,
             "taxon_status": linked.taxon.taxonomic_status if linked else None,
+            "taxon_rank": linked.taxon.rank if linked else None,
+            "taxon_selection": linked.taxon.taxonomy_selection_state if linked else None,
             "guide": hashlib.sha256(guide.model_dump_json().encode()).hexdigest()
             if guide
             else None,
@@ -5773,6 +5787,28 @@ def create_web_router(
 
     def smart_care_rule_binding(rule: ReminderRuleCurrent | None) -> str:
         return json.dumps(asdict(rule) if rule is not None else None, sort_keys=True, default=str)
+
+    def smart_care_command(
+        principal: Principal, selected: dict[str, Any], payload: dict[str, Any]
+    ) -> SaveSubjectScheduleCommand:
+        return SaveSubjectScheduleCommand(
+            principal.household_id,
+            principal.user_id,
+            UUID(payload["correlation_id"]),
+            payload["idempotency_key"],
+            payload["expected_version"],
+            selected["subject_type"],
+            selected["subject_id"],
+            payload["reminder_type"],
+            payload["interval_days"],
+            payload["first_due_at"],
+            True,
+            payload["channel"],
+        )
+
+    def smart_care_due_binding(command: SaveSubjectScheduleCommand) -> str:
+        preview = reminder_fact_service.preview_subject_schedule(command)
+        return json.dumps(asdict(preview) if preview else None, sort_keys=True, default=str)
 
     def smart_care_error(request: Request, principal: Principal, error: Exception) -> Response:
         return protected_page(
@@ -5783,6 +5819,8 @@ def create_web_router(
             context={
                 "title": "Care setup needs review",
                 "message": str(error),
+                "secondary_href": "/reminders",
+                "secondary_label": "Manage reminders",
             },
         )
 
@@ -5812,6 +5850,16 @@ def create_web_router(
             decision = str(form.get("decision", ""))
             if decision not in {"skip", "decline"}:
                 raise FormValidationError("Choose skip or decline.")
+            choices = {option.claim.claim_id for option in context["options"]}
+            choice = str(form.get("choice", ""))
+            dismissed = set(filter(None, str(form.get("dismissed", "")).split(",")))
+            if choice not in choices or not dismissed.issubset(choices):
+                raise FormValidationError("Choose a current suggestion to skip or decline.")
+            dismissed.add(choice)
+            context["options"] = tuple(
+                option for option in context["options"] if option.claim.claim_id not in dismissed
+            )
+            context["dismissed"] = ",".join(sorted(dismissed))
         except ValueError as error:
             return smart_care_error(request, principal, error)
         return protected_page(
@@ -5820,9 +5868,12 @@ def create_web_router(
             principal,
             context={
                 **context,
-                "notice": "Suggestion skipped."
-                if decision == "skip"
-                else "Suggestion declined for this visit. You can review it again later.",
+                "notice": (
+                    "Suggestion skipped for this visit."
+                    if decision == "skip"
+                    else "Suggestion declined for this visit."
+                )
+                + " Revisiting setup restores these suggestions.",
             },
         )
 
@@ -5838,9 +5889,25 @@ def create_web_router(
             selected = smart_care_selection(
                 principal, context, reminder_type, request.query_params.get("choice", "manual")
             )
+            option, existing = selected["option"], selected["existing"]
+            interval = (
+                option.interval_days if option else existing.interval_days if existing else ""
+            )
+            first_due = existing.override_due_at if existing else None
+            if token := request.query_params.get("preview_token"):
+                retained = care_preview_signer.verify(
+                    token, session=request.cookies[SESSION_COOKIE], now=datetime.now(UTC)
+                )
+                if (
+                    retained["binding"] != smart_care_binding(principal, context)
+                    or retained["choice"] != selected["choice"]
+                    or retained["reminder_type"] != reminder_type
+                ):
+                    raise FormValidationError("This preview context changed. Review setup again.")
+                interval = retained["interval_days"]
+                first_due = datetime.fromisoformat(retained["first_due_at"])
         except ValueError as error:
             return smart_care_error(request, principal, error)
-        option, existing = selected["option"], selected["existing"]
         return protected_page(
             request,
             "smart_care_edit.html",
@@ -5848,12 +5915,14 @@ def create_web_router(
             context={
                 **context,
                 **selected,
-                "interval_days": option.interval_days
-                if option
-                else existing.interval_days
-                if existing
-                else "",
-                "first_due_at": selected["schedule"]["override_due_at"],
+                "interval_days": interval,
+                "first_due_at": (
+                    first_due.astimezone(ZoneInfo(principal.household_timezone))
+                    .replace(tzinfo=None)
+                    .isoformat()
+                    if first_due
+                    else ""
+                ),
             },
         )
 
@@ -5896,6 +5965,11 @@ def create_web_router(
                 "idempotency_key": str(uuid4()),
                 "correlation_id": str(uuid4()),
             }
+            command = smart_care_command(principal, selected, payload)
+            calculated = reminder_fact_service.preview_subject_schedule(command)
+            payload["due_binding"] = json.dumps(
+                asdict(calculated) if calculated else None, sort_keys=True, default=str
+            )
             token = care_preview_signer.sign(
                 payload, session=request.cookies[SESSION_COOKIE], now=datetime.now(UTC)
             )
@@ -5911,6 +5985,7 @@ def create_web_router(
                 "preview_token": token,
                 "interval_days": interval,
                 "first_due_at": due,
+                "calculated_due": calculated,
                 "channel": payload["channel"],
             },
         )
@@ -5938,28 +6013,24 @@ def create_web_router(
             selected = smart_care_selection(
                 principal, context, payload["reminder_type"], payload["choice"]
             )
-            command = SaveSubjectScheduleCommand(
-                principal.household_id,
-                principal.user_id,
-                UUID(payload["correlation_id"]),
-                payload["idempotency_key"],
-                payload["expected_version"],
-                selected["subject_type"],
-                selected["subject_id"],
-                payload["reminder_type"],
-                payload["interval_days"],
-                payload["first_due_at"],
-                True,
-                payload["channel"],
-            )
+            command = smart_care_command(principal, selected, payload)
             # Recognize the retained confirmation before checking its pre-write rule version.
             if reminder_rule_service.completed_subject_schedule(command) is None:
                 if payload["rule"] != smart_care_rule_binding(selected["existing"]):
                     raise FormValidationError(
                         "This schedule changed. Review the current schedule again."
                     )
+                if payload["due_binding"] != smart_care_due_binding(command):
+                    raise FormValidationError(
+                        "Care history changed the next due date. Review the schedule again."
+                    )
                 reminder_rule_service.save_subject_schedule(command)
-        except (ValueError, KeyError) as error:
+        except (
+            ValueError,
+            KeyError,
+            ExpectedVersionConflictError,
+            IdempotencyConflictError,
+        ) as error:
             return smart_care_error(request, principal, error)
         return RedirectResponse(f"/animals/{animal_id}/care", status_code=303)
 
@@ -6078,7 +6149,7 @@ def create_web_router(
                     enabled,
                 )
             )
-        except (ReminderValidationError, FormValidationError, ValueError) as error:
+        except (ValueError, ExpectedVersionConflictError, IdempotencyConflictError) as error:
             try:
                 animal = animal_service.profile_for(principal.household_id, UUID(animal_id))
             except ValueError:

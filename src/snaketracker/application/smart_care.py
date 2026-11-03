@@ -10,7 +10,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from snaketracker.application.care_guides import GuideClaim, GuideSource, ReviewedGuide
+from snaketracker.application.care_guides import (
+    GuideClaim,
+    GuideSource,
+    ReviewedGuide,
+    support_state,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,15 +52,12 @@ def feeding_options(
     sources = {source.source_id: source for source in guide.sources}
     options = []
     for claim in claims:
-        peers = tuple(c for c in claims if c.life_stage == claim.life_stage)
-        positions = {(c.value_number, c.minimum, c.maximum, c.unit, c.value_text) for c in peers}
-        support = (
-            "Sources differ"
-            if len(positions) > 1
-            else "Corroborated"
-            if len({c.source_id for c in peers}) > 1
-            else "Single reviewed source"
+        peers = tuple(
+            c
+            for c in claims
+            if (c.life_stage, c.context, c.scope) == (claim.life_stage, claim.context, claim.scope)
         )
+        support = support_state(peers, sources)
         value = claim.value_number
         interval = (
             int(value)

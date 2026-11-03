@@ -134,6 +134,13 @@ class ReminderAgendaItem:
     explanation: str
 
 
+@dataclass(frozen=True, slots=True)
+class ScheduleDuePreview:
+    due_at: datetime
+    explanation: str
+    source_event_id: UUID | None
+
+
 class ReminderProjection(SynchronousProjection, Protocol):
     def rule_for(self, household_id: UUID, rule_id: UUID) -> ReminderRuleCurrent | None: ...
 
@@ -627,6 +634,40 @@ class ReminderFactService:
     def __init__(self, event_store: EventStore, projection: ReminderProjection) -> None:
         self._event_store = event_store
         self._projection = projection
+
+    def preview_subject_schedule(
+        self, command: SaveSubjectScheduleCommand
+    ) -> ScheduleDuePreview | None:
+        """Calculate a proposed event-relative schedule without materializing a rule or fact."""
+        reminder_type, kind, interval, _, override, channel = _validated_schedule(
+            command.reminder_type,
+            command.subject_type,
+            "event_relative",
+            command.interval_days,
+            None,
+            command.override_due_at,
+            command.channel,
+        )
+        transient = ReminderRuleCurrent(
+            command.household_id,
+            UUID(int=0),
+            command.subject_type,
+            command.subject_id,
+            reminder_type,
+            kind,
+            interval,
+            None,
+            datetime.fromisoformat(override) if override is not None else None,
+            command.enabled,
+            channel,
+            command.expected_stream_version,
+            UUID(int=0),
+        )
+        calculation = self._calculation(transient)
+        if calculation is None:
+            return None
+        due_at, explanation, source = calculation
+        return ScheduleDuePreview(due_at, explanation, source.event_id if source else None)
 
     def recalculate_rule(
         self, household_id: UUID, rule_id: UUID, *, now: datetime

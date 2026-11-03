@@ -1,0 +1,16 @@
+/* Keep source context and applicability controls within narrow care setup forms. */
+.smart-care-page,
+.smart-care-page .form-page,
+.smart-care-page .form-stack {
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+}
+.smart-care-page .checkbox-label {
+  width: auto;
+  align-items: flex-start;
+}
+.smart-care-page .checkbox-label input { flex: 0 0 1.15rem; }
+.smart-care-page .form-actions { flex-wrap: wrap; }
+.smart-care-page p,
+.smart-care-page a { overflow-wrap: anywhere; }
+.smart-care-page .card :is(p, h3) { margin: 0; }
