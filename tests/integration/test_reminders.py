@@ -977,6 +977,36 @@ def test_profile_schedule_save_reuses_one_logical_rule_and_disables_it(tmp_path:
         engine.dispose()
 
 
+def test_subject_schedule_exact_retry_precedes_stale_version_check(tmp_path: Path) -> None:
+    from snaketracker.platform.events.store import IdempotencyConflictError
+
+    engine, owner, _, _, animal_id, _, rules, _, projection = _setup(tmp_path)
+    try:
+        command = SaveSubjectScheduleCommand(
+            owner.household_id,
+            owner.user_id,
+            uuid4(),
+            "confirmed-schedule",
+            0,
+            "animal",
+            animal_id,
+            "feeding",
+            7,
+            "2026-11-03T12:00:00+00:00",
+            True,
+        )
+        first = rules.save_subject_schedule(command)
+        assert first is not None
+        assert rules.save_subject_schedule(command) == first
+        assert len(projection.rules_for(owner.household_id)) == 1
+        assert first.stream_version == 1
+        with pytest.raises(IdempotencyConflictError):
+            rules.save_subject_schedule(replace(command, interval_days=8))
+        assert projection.rules_for(owner.household_id) == (first,)
+    finally:
+        engine.dispose()
+
+
 def test_agenda_preview_includes_upcoming_effective_care_without_delivery_fact(
     tmp_path: Path,
 ) -> None:

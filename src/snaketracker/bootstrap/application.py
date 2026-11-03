@@ -366,6 +366,7 @@ def build_application(settings: Settings) -> FastAPI:
                 natural_history_repository=NaturalHistoryRepository(engine),
                 natural_history_development=settings.environment is Environment.TEST,
                 production_release_history_path=settings.updates_ledger_path,
+                care_preview_secret=secret,
             )
         )
         app.include_router(

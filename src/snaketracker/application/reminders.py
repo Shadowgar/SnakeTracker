@@ -356,10 +356,32 @@ class ReminderRuleService:
             notes=reason,
         )
 
+    def completed_subject_schedule(
+        self, command: SaveSubjectScheduleCommand
+    ) -> ReminderRuleCurrent | None:
+        """Recognize an exact completed command before consulting mutable schedule state."""
+        stored = self._event_store.stored_idempotency_response(
+            command.household_id,
+            command.actor_user_id,
+            "reminders.save_subject_schedule",
+            command.idempotency_key,
+            canonical_command_hash(_command_fields(command)),
+        )
+        if stored is None:
+            return None
+        return self._result(
+            command.household_id,
+            _stored_uuid(stored, "rule_id"),
+            _stored_uuid(stored, "event_id"),
+        ).current
+
     def save_subject_schedule(
         self, command: SaveSubjectScheduleCommand
     ) -> ReminderRuleCurrent | None:
         """Create, update, enable, or disable one logical subject-care schedule."""
+        completed = self.completed_subject_schedule(command)
+        if completed is not None:
+            return completed
         validated = _validated_schedule(
             command.reminder_type,
             command.subject_type,
