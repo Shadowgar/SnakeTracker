@@ -387,14 +387,36 @@ def _analytics_insights(analytics: AnimalAnalytics) -> tuple[AnalyticsInsightVie
     return tuple(insights)
 
 
-def _form_datetime(value: object, household_timezone: str) -> datetime:
+def _form_datetime(
+    value: object, household_timezone: str, *, retained_instant: datetime | None = None
+) -> datetime:
     try:
         parsed = datetime.fromisoformat(str(value))
     except ValueError as error:
         raise FormValidationError("Enter a valid date and time.") from error
     if parsed.tzinfo is None:
+        if (
+            retained_instant is not None
+            and retained_instant.tzinfo is not None
+            and parsed
+            == retained_instant.astimezone(ZoneInfo(household_timezone)).replace(tzinfo=None)
+        ):
+            return retained_instant.astimezone(UTC)
         return household_local_to_utc(parsed, household_timezone)
     return parsed.astimezone(UTC)
+
+
+def _smart_care_time_label(value: datetime, household_timezone: str) -> str:
+    local = value.astimezone(ZoneInfo(household_timezone))
+    label = local.strftime("%b %-d, %Y at %H:%M")
+    if local.second or local.microsecond:
+        label += local.strftime(":%S")
+        if local.microsecond:
+            label += f".{local.microsecond:06d}".rstrip("0")
+    if local.replace(fold=0).utcoffset() != local.replace(fold=1).utcoffset():
+        offset = local.strftime("%z")
+        label += f" (UTC{offset[:3]}:{offset[3:]})"
+    return label
 
 
 def _optional_form_date(value: object, label: str) -> date | None:
@@ -6218,6 +6240,7 @@ def create_web_router(
                 if qualified and "feeding" in animal.reminder_kinds
                 else (),
                 "format_claim_value": format_claim_value,
+                "format_due_time": _smart_care_time_label,
             }
         )
         context["has_guidance"] = bool(context["options"])
@@ -6417,6 +6440,17 @@ def create_web_router(
                     raise FormValidationError("This preview context changed. Review setup again.")
                 interval = retained["interval_days"]
                 first_due = datetime.fromisoformat(retained["first_due_at"])
+            edit_token = care_preview_signer.sign(
+                {
+                    "binding": smart_care_binding(principal, context),
+                    "rule": smart_care_rule_binding(existing),
+                    "choice": selected["choice"],
+                    "reminder_type": reminder_type,
+                    "first_due_at": first_due.isoformat() if first_due else None,
+                },
+                session=request.cookies[SESSION_COOKIE],
+                now=datetime.now(UTC),
+            )
         except ValueError as error:
             return smart_care_error(request, principal, error)
         return protected_page(
@@ -6427,6 +6461,7 @@ def create_web_router(
                 **context,
                 **selected,
                 "interval_days": interval,
+                "edit_token": edit_token,
                 "first_due_at": (
                     first_due.astimezone(ZoneInfo(principal.household_timezone))
                     .replace(tzinfo=None)
@@ -6462,8 +6497,26 @@ def create_web_router(
                 raise FormValidationError(
                     "Choose the first due date before previewing this schedule."
                 )
-            due = _form_datetime(raw_due, principal.household_timezone)
             existing = selected["existing"]
+            retained_due = None
+            if edit_token := str(form.get("edit_token", "")):
+                retained = care_preview_signer.verify(
+                    edit_token, session=request.cookies[SESSION_COOKIE], now=datetime.now(UTC)
+                )
+                if (
+                    retained["binding"] != smart_care_binding(principal, context)
+                    or retained["rule"] != smart_care_rule_binding(existing)
+                    or retained["choice"] != selected["choice"]
+                    or retained["reminder_type"] != reminder_type
+                ):
+                    raise FormValidationError("This edit context changed. Review setup again.")
+                if retained["first_due_at"] is not None:
+                    retained_due = datetime.fromisoformat(retained["first_due_at"])
+            # An unchanged wall time retains its signed instant, including a DST fold.
+            # Only new/edited values pass through ambiguous-local-time validation.
+            due = _form_datetime(
+                raw_due, principal.household_timezone, retained_instant=retained_due
+            )
             payload = {
                 "binding": smart_care_binding(principal, context),
                 "rule": smart_care_rule_binding(existing),

@@ -44,8 +44,13 @@ def _preview(client, animal, *, choice="manual", interval="3", first_due=None):
             "interval_days": interval,
             "first_due_at": first_due or datetime.now(UTC).strftime("%Y-%m-%dT%H:%M"),
             "applicability": "true",
+            "edit_token": _edit_token(edit),
         },
     )
+
+
+def _edit_token(page):
+    return html.unescape(re.search(r'name="edit_token" value="([^"]+)"', page.text)[1])
 
 
 def test_review_preview_and_decisions_do_not_write_then_confirm_is_retry_safe(tmp_path):
@@ -401,6 +406,133 @@ def test_editing_a_preview_retains_the_keepers_interval_and_due_date(tmp_path):
         assert edit.status_code == 200
         assert re.search(r'name="interval_days"[^>]*value="13"', edit.text)
         assert re.search(r'name="first_due_at"[^>]*value="2026-11-07T13:15', edit.text)
+
+
+@pytest.mark.parametrize("origin", ["existing", "preview"])
+@pytest.mark.parametrize("offset", ["-04:00", "-05:00"])
+def test_unchanged_fall_back_due_keeps_exact_instant_through_edit(tmp_path, origin, offset):
+    with _client(tmp_path) as client:
+        _setup(client)
+        animal = seed_reference_animals(client)["Pelodryas caerulea"]
+        with client.app.state.database_engine.begin() as connection:
+            connection.execute(text("UPDATE household_summaries SET timezone='America/New_York'"))
+        exact_due = "2026-11-01T01:30:37.123456" + offset
+        if origin == "existing":
+            form = client.get("/reminders/new")
+            created = client.post(
+                "/reminders",
+                data={
+                    "csrf_token": _csrf(form.text),
+                    "idempotency_key": "fall-back-existing",
+                    "subject": "animal:" + animal.rsplit("/", 1)[1],
+                    "reminder_type": "feeding",
+                    "schedule_kind": "event_relative",
+                    "interval_days": "9",
+                    "override_due_at": exact_due,
+                    "channel": "local",
+                },
+                follow_redirects=False,
+            )
+            assert created.status_code == 303
+            edit = client.get(f"{animal}/smart-care/feeding/edit?choice=manual")
+        else:
+            preview = _preview(client, animal, first_due=exact_due)
+            assert preview.status_code == 200
+            href = html.unescape(re.search(r'<a href="([^"]+)">Edit again</a>', preview.text)[1])
+            edit = client.get(href)
+        wall_due = re.search(r'name="first_due_at"[^>]*value="([^"]+)"', edit.text)[1]
+        assert wall_due == "2026-11-01T01:30:37.123456"
+        fields = {
+            "csrf_token": _csrf(edit.text),
+            "choice": "manual",
+            "interval_days": "4",
+            "first_due_at": wall_due,
+        }
+        fields["edit_token"] = _edit_token(edit)
+        before = _count(client)
+        reviewed = client.post(f"{animal}/smart-care/feeding/preview", data=fields)
+        assert reviewed.status_code == 200, reviewed.text
+        assert f"UTC{offset}" in reviewed.text
+        assert _count(client) == before
+        changed = client.post(
+            f"{animal}/smart-care/feeding/preview",
+            data={
+                **fields,
+                "first_due_at": "2026-11-01T01:45:37.123456",
+            },
+        )
+        assert changed.status_code == 422
+        assert "ambiguous" in changed.text.lower()
+        unbound = client.post(
+            f"{animal}/smart-care/feeding/preview",
+            data={key: value for key, value in fields.items() if key != "edit_token"},
+        )
+        assert unbound.status_code == 422
+        assert _count(client) == before
+        assert _confirm(client, animal, reviewed).status_code == 303
+        with client.app.state.database_engine.connect() as connection:
+            rule = connection.execute(text("SELECT * FROM reminder_rule_current")).mappings().one()
+            assert datetime.fromisoformat(rule["override_due_at"]) == datetime.fromisoformat(
+                exact_due
+            )
+            assert rule["interval_days"] == 4
+
+
+def test_final_preview_distinguishes_exact_existing_and_proposed_times(tmp_path):
+    with _client(tmp_path) as client:
+        _setup(client)
+        animal = seed_reference_animals(client)["Pelodryas caerulea"]
+        form = client.get("/reminders/new")
+        created = client.post(
+            "/reminders",
+            data={
+                "csrf_token": _csrf(form.text),
+                "idempotency_key": "precise-display",
+                "subject": "animal:" + animal.rsplit("/", 1)[1],
+                "reminder_type": "feeding",
+                "schedule_kind": "fixed_interval",
+                "interval_days": "9",
+                "anchor_at": "2026-11-07T12:00:36.123456",
+                "override_due_at": "2026-11-07T12:00:37.123456",
+                "channel": "local",
+            },
+            follow_redirects=False,
+        )
+        assert created.status_code == 303
+        before = _count(client)
+        preview = _preview(client, animal, first_due="2026-11-07T12:00:38.123456")
+        assert preview.status_code == 200
+        assert "12:00:36.123456" in preview.text
+        assert "12:00:37.123456" in preview.text
+        assert preview.text.count("12:00:38.123456") == 2
+        assert _count(client) == before
+
+
+@pytest.mark.parametrize("change", ["token", "rule"])
+def test_due_retention_rejects_tampered_or_stale_edit_context(tmp_path, change):
+    with _client(tmp_path) as client:
+        _setup(client)
+        animal = seed_reference_animals(client)["Pelodryas caerulea"]
+        edit = client.get(f"{animal}/smart-care/feeding/edit?choice=manual")
+        token = _edit_token(edit)
+        if change == "token":
+            token += "x"
+        else:
+            preview = _preview(client, animal, interval="7")
+            assert _confirm(client, animal, preview).status_code == 303
+        before = _count(client)
+        response = client.post(
+            f"{animal}/smart-care/feeding/preview",
+            data={
+                "csrf_token": _csrf(edit.text),
+                "edit_token": token,
+                "choice": "manual",
+                "interval_days": "4",
+                "first_due_at": "2026-11-07T12:00",
+            },
+        )
+        assert response.status_code == 422
+        assert _count(client) == before
 
 
 @pytest.mark.parametrize("change", ["taxon", "profile", "enclosure", "history"])
