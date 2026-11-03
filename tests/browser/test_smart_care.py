@@ -53,6 +53,139 @@ def _edit_token(page):
     return html.unescape(re.search(r'name="edit_token" value="([^"]+)"', page.text)[1])
 
 
+def _record_real_feeding(client, animal, key):
+    from uuid import UUID, uuid4
+
+    from snaketracker.application.animals import AnimalService, RecordFeedingCommand
+    from snaketracker.infrastructure.animals.projections import SQLAlchemyAnimalCurrentProjection
+    from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
+
+    engine = client.app.state.database_engine
+    with engine.connect() as connection:
+        household, actor = connection.execute(
+            text("SELECT household_id,user_id FROM authorization_memberships WHERE role='owner'")
+        ).one()
+    return AnimalService(
+        SQLAlchemyEventStore(engine), SQLAlchemyAnimalCurrentProjection(engine)
+    ).record_feeding(
+        RecordFeedingCommand(
+            UUID(household),
+            UUID(actor),
+            UUID(animal.rsplit("/", 1)[1]),
+            uuid4(),
+            key,
+            datetime.now(UTC),
+            "mouse",
+            "small",
+            None,
+            "frozen_thawed",
+            1,
+            "accepted",
+            None,
+        )
+    )
+
+
+def test_signed_edit_token_is_rejected_as_an_edit_again_preview(tmp_path):
+    with _client(tmp_path) as client:
+        _setup(client)
+        animal = seed_reference_animals(client)["Pelodryas caerulea"]
+        edit = client.get(f"{animal}/smart-care/feeding/edit?choice=manual")
+        before = _count(client)
+        wrong_step = client.get(
+            f"{animal}/smart-care/feeding/edit",
+            params={
+                "choice": "manual",
+                "preview_token": _edit_token(edit),
+            },
+        )
+        assert wrong_step.status_code == 422
+        assert _count(client) == before
+
+
+@pytest.mark.parametrize("unchanged_existing", [False, True])
+def test_care_committed_between_confirmation_validation_and_append_rejects_schedule(
+    tmp_path, monkeypatch, unchanged_existing
+):
+    from snaketracker.infrastructure.events.sqlite_event_store import SQLAlchemyEventStore
+
+    with _client(tmp_path) as client:
+        _setup(client)
+        animal = seed_reference_animals(client)["Pelodryas caerulea"]
+        preview = _preview(client, animal, first_due="2026-11-01T12:00")
+        assert preview.status_code == 200
+        if unchanged_existing:
+            assert _confirm(client, animal, preview).status_code == 303
+            preview = _preview(client, animal, first_due="2026-11-01T12:00")
+        original = SQLAlchemyEventStore.append_many
+        injected = False
+
+        def interleave(store, request):
+            nonlocal injected
+            if (
+                request.idempotency.operation_scope == "reminders.save_subject_schedule"
+                and not injected
+            ):
+                injected = True
+                _record_real_feeding(client, animal, "between-confirm-and-append")
+            return original(store, request)
+
+        monkeypatch.setattr(SQLAlchemyEventStore, "append_many", interleave)
+        response = _confirm(client, animal, preview)
+        assert injected
+        assert response.status_code == 422
+        with client.app.state.database_engine.connect() as connection:
+            assert connection.execute(
+                text("SELECT count(*) FROM reminder_rule_current")
+            ).scalar_one() == int(unchanged_existing)
+            assert connection.execute(
+                text(
+                    "SELECT count(*) FROM idempotency_operations "
+                    "WHERE operation_scope='reminders.save_subject_schedule'"
+                )
+            ).scalar_one() == int(unchanged_existing)
+            assert (
+                connection.execute(
+                    text(
+                        "SELECT count(*) FROM domain_events "
+                        "WHERE event_type='animal.feeding_recorded'"
+                    )
+                ).scalar_one()
+                == 1
+            )
+
+
+def test_history_changed_during_preview_requires_a_new_review(tmp_path, monkeypatch):
+    from snaketracker.application.reminders import ReminderFactService
+
+    with _client(tmp_path) as client:
+        _setup(client)
+        animal = seed_reference_animals(client)["Pelodryas caerulea"]
+        original = ReminderFactService.preview_subject_schedule
+
+        def interleave(facts, command):
+            result = original(facts, command)
+            _record_real_feeding(client, animal, "during-preview")
+            return result
+
+        monkeypatch.setattr(ReminderFactService, "preview_subject_schedule", interleave)
+        response = _preview(client, animal, first_due="2026-11-01T12:00")
+        assert response.status_code == 422
+        assert 'name="preview_token"' not in response.text
+
+
+def test_completed_confirmation_replays_after_later_qualifying_care(tmp_path):
+    with _client(tmp_path) as client:
+        _setup(client)
+        animal = seed_reference_animals(client)["Pelodryas caerulea"]
+        preview = _preview(client, animal, first_due="2026-11-01T12:00")
+        assert _confirm(client, animal, preview).status_code == 303
+        _record_real_feeding(client, animal, "after-confirmed-receipt")
+        before = _count(client)
+        assert _confirm(client, animal, preview).status_code == 303
+        assert _count(client) == before
+
+
 def test_review_preview_and_decisions_do_not_write_then_confirm_is_retry_safe(tmp_path):
     with _client(tmp_path) as client:
         _setup(client)
@@ -334,7 +467,7 @@ def test_existing_disabled_fixed_schedule_and_precise_override_survive_until_con
         before = _count(client)
         edit = client.get(f"{animal}/smart-care/feeding/edit?choice=manual")
         value = re.search(r'name="first_due_at"[^>]*value="([^"]+)"', edit.text)[1]
-        assert datetime.fromisoformat(value).replace(tzinfo=UTC) == due
+        assert datetime.fromisoformat(value).replace(tzinfo=UTC) == due.replace(microsecond=123000)
         preview = _preview(client, animal, interval="4", first_due=value)
         assert "Disabled" in preview.text
         assert "Every 9 days" in preview.text
@@ -441,7 +574,7 @@ def test_unchanged_fall_back_due_keeps_exact_instant_through_edit(tmp_path, orig
             href = html.unescape(re.search(r'<a href="([^"]+)">Edit again</a>', preview.text)[1])
             edit = client.get(href)
         wall_due = re.search(r'name="first_due_at"[^>]*value="([^"]+)"', edit.text)[1]
-        assert wall_due == "2026-11-01T01:30:37.123456"
+        assert wall_due == "2026-11-01T01:30:37.123"
         fields = {
             "csrf_token": _csrf(edit.text),
             "choice": "manual",

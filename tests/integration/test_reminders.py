@@ -1007,6 +1007,98 @@ def test_subject_schedule_exact_retry_precedes_stale_version_check(tmp_path: Pat
         engine.dispose()
 
 
+def test_guarded_unchanged_schedule_retains_receipt_and_legacy_hash_after_later_care(tmp_path):
+    from sqlalchemy import text
+
+    from snaketracker.platform.events.store import StreamKey, canonical_command_hash
+
+    engine, owner, animals, _, animal_id, _, rules, facts, projection = _setup(tmp_path)
+    try:
+        command = SaveSubjectScheduleCommand(
+            owner.household_id,
+            owner.user_id,
+            uuid4(),
+            "legacy-unguarded-command",
+            0,
+            "animal",
+            animal_id,
+            "feeding",
+            7,
+            "2026-11-01T12:00:00+00:00",
+            True,
+        )
+        first = rules.save_subject_schedule(command)
+        assert first is not None
+        with engine.connect() as connection:
+            original_hash = connection.execute(
+                text("SELECT command_hash FROM idempotency_operations WHERE idempotency_key=:key"),
+                {"key": command.idempotency_key},
+            ).scalar_one()
+        assert original_hash == canonical_command_hash(
+            {
+                "household_id": str(owner.household_id),
+                "actor_user_id": str(owner.user_id),
+                "correlation_id": str(command.correlation_id),
+                "idempotency_key": command.idempotency_key,
+                "expected_stream_version": 0,
+                "subject_type": "animal",
+                "subject_id": str(animal_id),
+                "reminder_type": "feeding",
+                "interval_days": 7,
+                "override_due_at": "2026-11-01T12:00:00+00:00",
+                "enabled": True,
+                "channel": "local",
+            }
+        )
+        guards = facts.capture_history_expectations(
+            (StreamKey(owner.household_id, "animal", animal_id),)
+        )
+        guarded = replace(
+            command,
+            idempotency_key="guarded-unchanged",
+            expected_stream_version=1,
+            read_streams=guards,
+        )
+        assert rules.save_subject_schedule(guarded) == first
+        with engine.connect() as connection:
+            assert (
+                connection.execute(
+                    text("SELECT count(*) FROM domain_events WHERE stream_type='reminder-rule'")
+                ).scalar_one()
+                == 1
+            )
+            assert (
+                connection.execute(
+                    text(
+                        "SELECT count(*) FROM idempotency_operations "
+                        "WHERE idempotency_key='guarded-unchanged'"
+                    )
+                ).scalar_one()
+                == 1
+            )
+        animals.record_feeding(
+            RecordFeedingCommand(
+                owner.household_id,
+                owner.user_id,
+                animal_id,
+                uuid4(),
+                "later-care-after-noop",
+                datetime(2026, 11, 3, tzinfo=UTC),
+                "mouse",
+                "small",
+                None,
+                "frozen_thawed",
+                1,
+                "accepted",
+                None,
+            )
+        )
+        assert rules.save_subject_schedule(guarded) == first
+        assert projection.rules_for(owner.household_id) == (first,)
+    finally:
+        engine.dispose()
+
+
 def test_schedule_preview_uses_effective_history_without_writing(tmp_path: Path) -> None:
     engine, owner, animals, _, animal_id, _, _, facts, projection = _setup(tmp_path)
     try:

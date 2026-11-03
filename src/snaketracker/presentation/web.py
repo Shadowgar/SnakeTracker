@@ -242,6 +242,8 @@ from snaketracker.platform.events.registry import production_event_registry
 from snaketracker.platform.events.store import (
     ExpectedVersionConflictError,
     IdempotencyConflictError,
+    StreamExpectation,
+    StreamKey,
 )
 from snaketracker.platform.events.validation import household_local_to_utc
 from snaketracker.platform.jobs.models import JobRecord
@@ -391,15 +393,29 @@ def _form_datetime(
     except ValueError as error:
         raise FormValidationError("Enter a valid date and time.") from error
     if parsed.tzinfo is None:
+        retained_local = (
+            retained_instant.astimezone(ZoneInfo(household_timezone)).replace(tzinfo=None)
+            if retained_instant is not None and retained_instant.tzinfo is not None
+            else None
+        )
         if (
             retained_instant is not None
-            and retained_instant.tzinfo is not None
+            and retained_local is not None
             and parsed
-            == retained_instant.astimezone(ZoneInfo(household_timezone)).replace(tzinfo=None)
+            in (
+                retained_local,
+                retained_local.replace(microsecond=(retained_local.microsecond // 1000) * 1000),
+            )
         ):
             return retained_instant.astimezone(UTC)
         return household_local_to_utc(parsed, household_timezone)
     return parsed.astimezone(UTC)
+
+
+def _form_datetime_value(value: datetime, household_timezone: str) -> str:
+    """HTML datetime-local accepts at most millisecond precision; retain exact values separately."""
+    local = value.astimezone(ZoneInfo(household_timezone)).replace(tzinfo=None)
+    return local.isoformat(timespec="milliseconds" if local.microsecond else "seconds")
 
 
 def _smart_care_time_label(value: datetime, household_timezone: str) -> str:
@@ -5704,11 +5720,26 @@ def create_web_router(
             },
         )
 
-    def smart_care_context(principal: Principal, animal_id: str) -> dict[str, Any]:
-        animal = animal_service.profile_for(principal.household_id, UUID(animal_id))
+    def smart_care_context(
+        principal: Principal, animal_id: str, *, capture_history: bool = False
+    ) -> dict[str, Any]:
+        animal_uuid = UUID(animal_id)
+        expectations = (
+            reminder_fact_service.capture_history_expectations(
+                (StreamKey(principal.household_id, "animal", animal_uuid),)
+            )
+            if capture_history
+            else ()
+        )
+        animal = animal_service.profile_for(principal.household_id, animal_uuid)
         if animal is None:
             raise FormValidationError("Animal not found in this household.")
+        if capture_history and animal.current_enclosure_id is not None:
+            expectations += reminder_fact_service.capture_history_expectations(
+                (StreamKey(principal.household_id, "enclosure", animal.current_enclosure_id),)
+            )
         context = animal_experience_context(principal, animal)
+        context["history_expectations"] = expectations
         linked = context["linked_taxon"]
         guide = context["profile_reference_guide"]
         qualified = (
@@ -5811,6 +5842,14 @@ def create_web_router(
     def smart_care_rule_binding(rule: ReminderRuleCurrent | None) -> str:
         return json.dumps(asdict(rule) if rule is not None else None, sort_keys=True, default=str)
 
+    def smart_care_token(request: Request, token: str, purpose: str) -> dict[str, Any]:
+        payload = care_preview_signer.verify(
+            token, session=request.cookies[SESSION_COOKIE], now=datetime.now(UTC)
+        )
+        if payload.get("purpose") != purpose:
+            raise FormValidationError("This care setup token is not valid for this step.")
+        return payload
+
     def smart_care_command(
         principal: Principal, selected: dict[str, Any], payload: dict[str, Any]
     ) -> SaveSubjectScheduleCommand:
@@ -5827,6 +5866,15 @@ def create_web_router(
             payload["first_due_at"],
             True,
             payload["channel"],
+            tuple(
+                StreamExpectation(
+                    StreamKey(
+                        principal.household_id, guard["stream_type"], UUID(guard["stream_id"])
+                    ),
+                    guard["expected_version"],
+                )
+                for guard in payload.get("read_streams", [])
+            ),
         )
 
     def smart_care_due_binding(command: SaveSubjectScheduleCommand) -> str:
@@ -5918,9 +5966,7 @@ def create_web_router(
             )
             first_due = existing.override_due_at if existing else None
             if token := request.query_params.get("preview_token"):
-                retained = care_preview_signer.verify(
-                    token, session=request.cookies[SESSION_COOKIE], now=datetime.now(UTC)
-                )
+                retained = smart_care_token(request, token, "confirm")
                 if (
                     retained["binding"] != smart_care_binding(principal, context)
                     or retained["choice"] != selected["choice"]
@@ -5931,6 +5977,7 @@ def create_web_router(
                 first_due = datetime.fromisoformat(retained["first_due_at"])
             edit_token = care_preview_signer.sign(
                 {
+                    "purpose": "edit",
                     "binding": smart_care_binding(principal, context),
                     "rule": smart_care_rule_binding(existing),
                     "choice": selected["choice"],
@@ -5952,9 +5999,7 @@ def create_web_router(
                 "interval_days": interval,
                 "edit_token": edit_token,
                 "first_due_at": (
-                    first_due.astimezone(ZoneInfo(principal.household_timezone))
-                    .replace(tzinfo=None)
-                    .isoformat()
+                    _form_datetime_value(first_due, principal.household_timezone)
                     if first_due
                     else ""
                 ),
@@ -5972,7 +6017,7 @@ def create_web_router(
         if "reminder.manage" not in principal.capabilities:
             return _access_denied(request, "Care setup access denied")
         try:
-            context = smart_care_context(principal, animal_id)
+            context = smart_care_context(principal, animal_id, capture_history=True)
             selected = smart_care_selection(
                 principal, context, reminder_type, str(form.get("choice", ""))
             )
@@ -5989,9 +6034,7 @@ def create_web_router(
             existing = selected["existing"]
             retained_due = None
             if edit_token := str(form.get("edit_token", "")):
-                retained = care_preview_signer.verify(
-                    edit_token, session=request.cookies[SESSION_COOKIE], now=datetime.now(UTC)
-                )
+                retained = smart_care_token(request, edit_token, "edit")
                 if (
                     retained["binding"] != smart_care_binding(principal, context)
                     or retained["rule"] != smart_care_rule_binding(existing)
@@ -6007,6 +6050,7 @@ def create_web_router(
                 raw_due, principal.household_timezone, retained_instant=retained_due
             )
             payload = {
+                "purpose": "confirm",
                 "binding": smart_care_binding(principal, context),
                 "rule": smart_care_rule_binding(existing),
                 "choice": selected["choice"],
@@ -6017,9 +6061,23 @@ def create_web_router(
                 "channel": existing.channel if existing else "local",
                 "idempotency_key": str(uuid4()),
                 "correlation_id": str(uuid4()),
+                "read_streams": [
+                    {
+                        "stream_type": guard.key.stream_type,
+                        "stream_id": str(guard.key.stream_id),
+                        "expected_version": guard.expected_version,
+                    }
+                    for guard in context["history_expectations"]
+                ],
             }
             command = smart_care_command(principal, selected, payload)
             calculated = reminder_fact_service.preview_subject_schedule(command)
+            if command.read_streams != reminder_fact_service.capture_history_expectations(
+                tuple(guard.key for guard in command.read_streams)
+            ):
+                raise FormValidationError(
+                    "Care history changed during preview. Review setup again."
+                )
             payload["due_binding"] = json.dumps(
                 asdict(calculated) if calculated else None, sort_keys=True, default=str
             )
@@ -6052,11 +6110,7 @@ def create_web_router(
         if "reminder.manage" not in principal.capabilities:
             return _access_denied(request, "Care setup access denied")
         try:
-            payload = care_preview_signer.verify(
-                str(form.get("preview_token", "")),
-                session=request.cookies[SESSION_COOKIE],
-                now=datetime.now(UTC),
-            )
+            payload = smart_care_token(request, str(form.get("preview_token", "")), "confirm")
             context = smart_care_context(principal, animal_id)
             if payload["binding"] != smart_care_binding(principal, context):
                 raise FormValidationError(
