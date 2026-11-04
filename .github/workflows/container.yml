@@ -53,3 +53,62 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"
+
+  arm64-release:
+    name: ARM64 release qualification
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 40
+    env:
+      # PR qualification must describe the proposed source, not GitHub's merge commit.
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      TRIVY_IMAGE: aquasec/trivy@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
+    steps:
+      - name: Check out exact release source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+      - name: Check isolated runner capacity
+        run: |
+          mkdir -p output/arm64-release
+          python3 scripts/qualification/arm64_release.py preflight
+      - name: Configure Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Build deployable ARM64 candidate
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          platforms: linux/arm64
+          load: true
+          push: false
+          tags: snaketracker:release-${{ env.SOURCE_SHA }}
+          build-args: |
+            SNAKETRACKER_UID=1001
+            SNAKETRACKER_BUILD_GIT_SHA=${{ env.SOURCE_SHA }}
+      - name: Verify actual installed source and migration runtime
+        run: python3 scripts/qualification/arm64_release.py qualify
+      - name: Scan actual ARM64 image with a fresh trusted database
+        timeout-minutes: 20
+        run: python3 scripts/qualification/arm64_release.py scan
+      - name: Retain deployable image bytes
+        run: |
+          mkdir -p output/arm64-image
+          docker image save "$(cat output/arm64-release/image.id)" \
+            | gzip -1 > output/arm64-image/image.tar.gz
+          python3 scripts/qualification/arm64_release.py archive
+      - name: Upload qualified deployable image
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: arm64-release-image-${{ env.SOURCE_SHA }}
+          path: output/arm64-image
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 90
+      - name: Retain ARM64 qualification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: arm64-release-evidence-${{ env.SOURCE_SHA }}
+          path: output/arm64-release
+          if-no-files-found: error
+          retention-days: 90

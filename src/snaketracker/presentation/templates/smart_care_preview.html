@@ -6,6 +6,7 @@
   {% include "animal_profile_header.html" %}
   <section class="form-page focused-animal-form">
     <header><p class="eyebrow">Smart care · final review</p><h2>Confirm {{ schedule.title|lower }} schedule</h2><p class="lede">{{ animal.name }}{% if schedule.enclosure_name %} · enclosure {{ schedule.enclosure_name }} (shared by its occupants){% endif %}</p></header>
+    {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
     {% if option %}<article class="card form-stack"><h3>Chosen source: {{ option.claim.life_stage }} · {{ format_claim_value(option.claim) }}</h3><p>{{ option.support }} · guide version {{ profile_reference_guide.version }}</p>{% include "smart_care_source.html" %}</article>{% endif %}
     <article class="card form-stack">
       <h3>Current schedule</h3>

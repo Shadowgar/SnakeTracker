@@ -53,7 +53,7 @@ def _edit_token(page):
     return html.unescape(re.search(r'name="edit_token" value="([^"]+)"', page.text)[1])
 
 
-def _record_real_feeding(client, animal, key):
+def _record_real_feeding(client, animal, key, *, outcome="accepted"):
     from uuid import UUID, uuid4
 
     from snaketracker.application.animals import AnimalService, RecordFeedingCommand
@@ -80,7 +80,7 @@ def _record_real_feeding(client, animal, key):
             None,
             "frozen_thawed",
             1,
-            "accepted",
+            outcome,
             None,
         )
     )
