@@ -1309,9 +1309,12 @@ def create_web_router(
         *,
         status_code: int = 200,
         context: dict[str, Any] | None = None,
+        issued_session: IssuedSession | None = None,
     ) -> HTMLResponse:
-        csrf_token = request.cookies.get(CSRF_COOKIE)
-        issued = None
+        csrf_token = (
+            issued_session.csrf_token if issued_session else request.cookies.get(CSRF_COOKIE)
+        )
+        issued = issued_session
         if csrf_token is None:
             token = request.cookies.get(SESSION_COOKIE)
             if token is None:
@@ -1381,6 +1384,7 @@ def create_web_router(
         max_fields: int = 1000,
         max_part_size: int = 1024 * 1024,
         parse_error_message: str = "The submitted form could not be processed. Try again.",
+        retain_rejected_values: bool = False,
     ) -> tuple[Principal | None, Any | None, Response | None]:
         if not _form_request_valid(request, expected_origin):
             return (
@@ -1423,8 +1427,8 @@ def create_web_router(
         submitted = str(form.get("csrf_token", ""))
         if token is None or not identity_service.verify_csrf(token, submitted):
             return (
-                None,
-                None,
+                principal if retain_rejected_values else None,
+                form if retain_rejected_values else None,
                 templates.TemplateResponse(
                     request,
                     "error.html",
@@ -1460,7 +1464,9 @@ def create_web_router(
             related_subjects.add(("enclosure", current_enclosure.enclosure_id))
         related_facts = tuple(
             fact
-            for fact in reminder_fact_service.agenda_for(principal.household_id, now=now)
+            for fact in reminder_fact_service.agenda_for(
+                principal.household_id, now=now, subjects=related_subjects
+            )
             if (fact.subject_type, fact.subject_id) in related_subjects
             and fact.reminder_type in animal.reminder_kinds
         )
@@ -6486,6 +6492,71 @@ def create_web_router(
         preview = reminder_fact_service.preview_subject_schedule(command)
         return json.dumps(asdict(preview) if preview else None, sort_keys=True, default=str)
 
+    def smart_care_page(
+        request: Request,
+        principal: Principal,
+        template: str,
+        *,
+        context: dict[str, Any],
+        payload: dict[str, Any],
+        token_field: str,
+        status_code: int = 200,
+    ) -> HTMLResponse:
+        # Recover before signing: the browser's cookies and the form's step token
+        # must refer to the same session. Incoming tokens are verified beforehand.
+        session = request.cookies[SESSION_COOKIE]
+        csrf = request.cookies.get(CSRF_COOKIE)
+        issued = None
+        if csrf is None or not identity_service.verify_csrf(session, csrf):
+            client_ip, user_agent = _client_context(request)
+            issued = identity_service.rotate_session(
+                session, client_ip=client_ip, user_agent=user_agent, correlation_id=uuid4()
+            )
+            session = issued.token
+        return protected_page(
+            request,
+            template,
+            principal,
+            status_code=status_code,
+            context={
+                **context,
+                token_field: care_preview_signer.sign(
+                    payload, session=session, now=datetime.now(UTC)
+                ),
+            },
+            issued_session=issued,
+        )
+
+    def smart_care_edit_page(
+        request: Request,
+        principal: Principal,
+        context: dict[str, Any],
+        selected: dict[str, Any],
+        payload: dict[str, Any],
+        *,
+        interval: Any,
+        first_due: str,
+        applicability: bool = False,
+        error: str | None = None,
+        status_code: int = 200,
+    ) -> HTMLResponse:
+        return smart_care_page(
+            request,
+            principal,
+            "smart_care_edit.html",
+            context={
+                **context,
+                **selected,
+                "interval_days": interval,
+                "first_due_at": first_due,
+                "applicability": applicability,
+                "error": error,
+            },
+            payload=payload,
+            token_field="edit_token",
+            status_code=status_code,
+        )
+
     def smart_care_error(request: Request, principal: Principal, error: Exception) -> Response:
         return protected_page(
             request,
@@ -6580,43 +6651,35 @@ def create_web_router(
                     raise FormValidationError("This preview context changed. Review setup again.")
                 interval = retained["interval_days"]
                 first_due = datetime.fromisoformat(retained["first_due_at"])
-            edit_token = care_preview_signer.sign(
-                {
-                    "purpose": "edit",
-                    "binding": smart_care_binding(principal, context),
-                    "rule": smart_care_rule_binding(existing),
-                    "choice": selected["choice"],
-                    "reminder_type": reminder_type,
-                    "first_due_at": first_due.isoformat() if first_due else None,
-                },
-                session=request.cookies[SESSION_COOKIE],
-                now=datetime.now(UTC),
-            )
+            payload = {
+                "purpose": "edit",
+                "binding": smart_care_binding(principal, context),
+                "rule": smart_care_rule_binding(existing),
+                "choice": selected["choice"],
+                "reminder_type": reminder_type,
+                "first_due_at": first_due.isoformat() if first_due else None,
+            }
         except ValueError as error:
             return smart_care_error(request, principal, error)
-        return protected_page(
+        return smart_care_edit_page(
             request,
-            "smart_care_edit.html",
             principal,
-            context={
-                **context,
-                **selected,
-                "interval_days": interval,
-                "edit_token": edit_token,
-                "first_due_at": (
-                    _form_datetime_value(first_due, principal.household_timezone)
-                    if first_due
-                    else ""
-                ),
-            },
+            context,
+            selected,
+            payload,
+            interval=interval,
+            first_due=_form_datetime_value(first_due, principal.household_timezone)
+            if first_due
+            else "",
+            applicability=bool(request.query_params.get("preview_token")),
         )
 
     @router.post(
         "/animals/{animal_id}/smart-care/{reminder_type}/preview", response_class=HTMLResponse
     )
     async def smart_care_preview(request: Request, animal_id: str, reminder_type: str) -> Response:
-        principal, form, rejection = await protected_form(request)
-        if rejection is not None:
+        principal, form, rejection = await protected_form(request, retain_rejected_values=True)
+        if rejection is not None and (principal is None or form is None):
             return rejection
         assert principal is not None and form is not None
         if "reminder.manage" not in principal.capabilities:
@@ -6626,6 +6689,47 @@ def create_web_router(
             selected = smart_care_selection(
                 principal, context, reminder_type, str(form.get("choice", ""))
             )
+            existing = selected["existing"]
+            retained = smart_care_token(request, str(form.get("edit_token", "")), "edit")
+            if (
+                retained["binding"] != smart_care_binding(principal, context)
+                or retained["choice"] != selected["choice"]
+                or retained["reminder_type"] != reminder_type
+            ):
+                raise FormValidationError("This edit context changed. Review setup again.")
+        except ValueError as error:
+            return (
+                rejection if rejection is not None else smart_care_error(request, principal, error)
+            )
+
+        def retain_edit(message: str, status: int) -> HTMLResponse:
+            return smart_care_edit_page(
+                request,
+                principal,
+                context,
+                selected,
+                retained,
+                interval=str(form.get("interval_days", "")),
+                first_due=str(form.get("first_due_at", "")),
+                applicability=str(form.get("applicability", "")) == "true",
+                error=message,
+                status_code=status,
+            )
+
+        if retained["rule"] != smart_care_rule_binding(existing):
+            retained = {**retained, "rule": smart_care_rule_binding(existing)}
+            return retain_edit(
+                "This schedule changed. Your values are retained; "
+                "review them and preview the current schedule again.",
+                403 if rejection is not None else 422,
+            )
+        if rejection is not None:
+            return retain_edit(
+                "Your submission could not be verified. Your choices are retained; "
+                "review them and select Preview schedule again.",
+                403,
+            )
+        try:
             if selected["option"] and str(form.get("applicability", "")) != "true":
                 raise FormValidationError("Confirm that the source's life stage and context apply.")
             interval = _required_int(form.get("interval_days", ""), "interval")
@@ -6636,19 +6740,11 @@ def create_web_router(
                 raise FormValidationError(
                     "Choose the first due date before previewing this schedule."
                 )
-            existing = selected["existing"]
-            retained_due = None
-            if edit_token := str(form.get("edit_token", "")):
-                retained = smart_care_token(request, edit_token, "edit")
-                if (
-                    retained["binding"] != smart_care_binding(principal, context)
-                    or retained["rule"] != smart_care_rule_binding(existing)
-                    or retained["choice"] != selected["choice"]
-                    or retained["reminder_type"] != reminder_type
-                ):
-                    raise FormValidationError("This edit context changed. Review setup again.")
-                if retained["first_due_at"] is not None:
-                    retained_due = datetime.fromisoformat(retained["first_due_at"])
+            retained_due = (
+                datetime.fromisoformat(retained["first_due_at"])
+                if retained["first_due_at"] is not None
+                else None
+            )
             # An unchanged wall time retains its signed instant, including a DST fold.
             # Only new/edited values pass through ambiguous-local-time validation.
             due = _form_datetime(
@@ -6686,34 +6782,33 @@ def create_web_router(
             payload["due_binding"] = json.dumps(
                 asdict(calculated) if calculated else None, sort_keys=True, default=str
             )
-            token = care_preview_signer.sign(
-                payload, session=request.cookies[SESSION_COOKIE], now=datetime.now(UTC)
-            )
         except ValueError as error:
-            return smart_care_error(request, principal, error)
-        return protected_page(
+            return retain_edit(str(error), 422)
+        return smart_care_page(
             request,
-            "smart_care_preview.html",
             principal,
+            "smart_care_preview.html",
             context={
                 **context,
                 **selected,
-                "preview_token": token,
                 "interval_days": interval,
                 "first_due_at": due,
                 "calculated_due": calculated,
                 "channel": payload["channel"],
             },
+            payload=payload,
+            token_field="preview_token",
         )
 
     @router.post("/animals/{animal_id}/smart-care/confirm", response_class=HTMLResponse)
     async def smart_care_confirm(request: Request, animal_id: str) -> Response:
-        principal, form, rejection = await protected_form(request)
-        if rejection is not None:
+        principal, form, rejection = await protected_form(request, retain_rejected_values=True)
+        if rejection is not None and (principal is None or form is None):
             return rejection
         assert principal is not None and form is not None
         if "reminder.manage" not in principal.capabilities:
             return _access_denied(request, "Care setup access denied")
+        selected = None
         try:
             payload = smart_care_token(request, str(form.get("preview_token", "")), "confirm")
             context = smart_care_context(principal, animal_id)
@@ -6732,18 +6827,80 @@ def create_web_router(
                     raise FormValidationError(
                         "This schedule changed. Review the current schedule again."
                     )
+                if command.read_streams != reminder_fact_service.capture_history_expectations(
+                    tuple(guard.key for guard in command.read_streams)
+                ):
+                    raise FormValidationError("Care history changed. Review the schedule again.")
                 if payload["due_binding"] != smart_care_due_binding(command):
                     raise FormValidationError(
                         "Care history changed the next due date. Review the schedule again."
                     )
-                reminder_rule_service.save_subject_schedule(command)
+                if rejection is None:
+                    reminder_rule_service.save_subject_schedule(command)
         except (
             ValueError,
             KeyError,
             ExpectedVersionConflictError,
             IdempotencyConflictError,
         ) as error:
-            return smart_care_error(request, principal, error)
+            # A verified confirmation whose rule/history changed can retain the
+            # keeper's values for a new edit/preview. Never renew its stale confirm
+            # token, or recover an invalid token or changed Animal/source context.
+            if selected is not None:
+                try:
+                    context = smart_care_context(principal, animal_id)
+                    if payload["binding"] != smart_care_binding(principal, context):
+                        raise FormValidationError("The care setup context changed.")
+                    selected = smart_care_selection(
+                        principal, context, payload["reminder_type"], payload["choice"]
+                    )
+                    return smart_care_edit_page(
+                        request,
+                        principal,
+                        context,
+                        selected,
+                        {
+                            "purpose": "edit",
+                            "binding": payload["binding"],
+                            "rule": smart_care_rule_binding(selected["existing"]),
+                            "choice": payload["choice"],
+                            "reminder_type": payload["reminder_type"],
+                            "first_due_at": payload["first_due_at"],
+                        },
+                        interval=payload["interval_days"],
+                        first_due=_form_datetime_value(
+                            datetime.fromisoformat(payload["first_due_at"]),
+                            principal.household_timezone,
+                        ),
+                        applicability=True,
+                        error=f"{error} Your values are retained. Review them and preview "
+                        "the current schedule again.",
+                        status_code=403 if rejection is not None else 422,
+                    )
+                except ValueError:
+                    pass
+            return (
+                rejection if rejection is not None else smart_care_error(request, principal, error)
+            )
+        if rejection is not None:
+            return smart_care_page(
+                request,
+                principal,
+                "smart_care_preview.html",
+                context={
+                    **context,
+                    **selected,
+                    "interval_days": payload["interval_days"],
+                    "first_due_at": datetime.fromisoformat(payload["first_due_at"]),
+                    "calculated_due": reminder_fact_service.preview_subject_schedule(command),
+                    "channel": payload["channel"],
+                    "error": "Your submission could not be verified. Review the retained "
+                    "schedule and confirm again to submit it.",
+                },
+                payload=payload,
+                token_field="preview_token",
+                status_code=403,
+            )
         return RedirectResponse(f"/animals/{animal_id}/care", status_code=303)
 
     @router.get(

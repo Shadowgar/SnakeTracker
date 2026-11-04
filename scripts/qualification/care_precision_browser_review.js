@@ -31,7 +31,7 @@ const readSql=(sql,args=[])=>JSON.parse(execFileSync("python3",["-c",
   // Seed an exact existing override through the authenticated preview and confirmation route.
   const animal=manifest.paths["Pelodryas caerulea"], edit=animal+"/smart-care/feeding/edit?choice=manual";
   await go(edit);
-  let response=await post(animal+"/smart-care/feeding/preview",{choice:"manual",interval_days:"2",first_due_at:exact});
+  let response=await post(animal+"/smart-care/feeding/preview",{choice:"manual",interval_days:"2",first_due_at:exact,edit_token:await page.locator('[name="edit_token"]').inputValue()});
   let html=await response.text();let token=html.match(/name="preview_token" value="([^"]+)"/)[1];
   await post(animal+"/smart-care/confirm",{preview_token:token});
   await go(edit);await validField('[name="first_due_at"]');

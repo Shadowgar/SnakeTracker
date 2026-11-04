@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Set
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
@@ -792,13 +793,22 @@ class ReminderFactService:
             if rule.subject_type == subject_type and rule.subject_id == subject_id:
                 self.recalculate_rule(household_id, rule.rule_id, now=now)
 
-    def agenda_for(self, household_id: UUID, *, now: datetime) -> tuple[ReminderAgendaItem, ...]:
+    def agenda_for(
+        self,
+        household_id: UUID,
+        *,
+        now: datetime,
+        subjects: Set[tuple[str, UUID]] | None = None,
+    ) -> tuple[ReminderAgendaItem, ...]:
+        """Calculate a household agenda, optionally restricted before reading subject histories."""
         calculated_at = _aware_utc(now, "Agenda calculation time")
         timezone = ZoneInfo(self._projection.household_timezone(household_id))
         today = calculated_at.astimezone(timezone).date()
         items: list[ReminderAgendaItem] = []
         for rule in self._projection.rules_for(household_id):
             if not rule.enabled:
+                continue
+            if subjects is not None and (rule.subject_type, rule.subject_id) not in subjects:
                 continue
             calculation = self._calculation(rule)
             if calculation is None:
