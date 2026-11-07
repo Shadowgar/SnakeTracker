@@ -1,0 +1,30 @@
+.plant-detail-page { gap: var(--space-4); }
+.plant-detail-page .detail-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-block: 0;
+}
+.plant-detail-page .detail-list > div:last-child { grid-column: 1 / -1; }
+.plant-detail-page .detail-list dt { color: var(--color-text-muted); font-size: var(--text-sm); }
+.plant-detail-page .detail-list dd { margin: 0; overflow-wrap: anywhere; }
+.plant-profile-identity { display: grid; grid-template-columns: 7rem minmax(0, 1fr); align-items: start; }
+.plant-profile-identity .taxon-reference-media { width: 100%; }
+.plant-profile-identity .taxon-reference-media > img {
+  width: 100%;
+  height: auto;
+  max-height: 14rem;
+  aspect-ratio: auto;
+  object-fit: contain;
+}
+.plant-profile-identity .reference-attribution { margin: 0; }
+.plant-profile-status { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-2); }
+.plant-watering-link { display: inline-block; padding-block: var(--space-2); }
+
+@media (min-width: 600px) {
+  .plant-profile-identity { grid-template-columns: 11rem minmax(0, 1fr); }
+}
+
+@media (max-width: 599px) {
+  .plant-profile-identity { padding-inline: var(--space-3); }
+}

@@ -1,0 +1,530 @@
+{
+  "sourceRevision": "71eb88c01390d3672c470c1a50a80e707233c181",
+  "checks": [
+    {
+      "name": "reference-1440",
+      "geometry": {
+        "viewport": 1440,
+        "scrollWidth": 1440,
+        "image": {
+          "x": 236,
+          "y": 16,
+          "width": 112,
+          "height": 800,
+          "bottom": 816
+        },
+        "header": {
+          "x": 236,
+          "y": 16,
+          "width": 768,
+          "height": 870.0625,
+          "bottom": 886.0625
+        },
+        "title": {
+          "x": 364,
+          "y": 417.3125,
+          "width": 344.5,
+          "height": 36.28125,
+          "bottom": 453.59375
+        },
+        "details": {
+          "x": 236,
+          "y": 926.0625,
+          "width": 768,
+          "height": 269.1875,
+          "bottom": 1195.25
+        },
+        "watering": {
+          "x": 236,
+          "y": 1397.046875,
+          "width": 768,
+          "height": 712.953125,
+          "bottom": 2110
+        },
+        "schedule": {
+          "x": 250.59375,
+          "y": 1584.25,
+          "width": 235.890625,
+          "height": 49.03125,
+          "bottom": 1633.28125
+        },
+        "naturalImage": {
+          "width": 1001,
+          "height": 987
+        },
+        "imageStyle": {
+          "height": "800px",
+          "objectFit": "cover"
+        }
+      },
+      "accessibility": [],
+      "screenshot": "reference-1440.png"
+    },
+    {
+      "name": "long-name-1440",
+      "geometry": {
+        "viewport": 1440,
+        "scrollWidth": 1440,
+        "image": {
+          "x": 236,
+          "y": 16,
+          "width": 112,
+          "height": 800,
+          "bottom": 816
+        },
+        "header": {
+          "x": 236,
+          "y": 16,
+          "width": 768,
+          "height": 870.0625,
+          "bottom": 886.0625
+        },
+        "title": {
+          "x": 364,
+          "y": 308.46875,
+          "width": 640,
+          "height": 253.96875,
+          "bottom": 562.4375
+        },
+        "details": {
+          "x": 236,
+          "y": 926.0625,
+          "width": 768,
+          "height": 269.1875,
+          "bottom": 1195.25
+        },
+        "watering": {
+          "x": 236,
+          "y": 1397.046875,
+          "width": 768,
+          "height": 712.953125,
+          "bottom": 2110
+        },
+        "schedule": {
+          "x": 250.59375,
+          "y": 1584.25,
+          "width": 235.890625,
+          "height": 49.03125,
+          "bottom": 1633.28125
+        },
+        "naturalImage": {
+          "width": 1001,
+          "height": 987
+        },
+        "imageStyle": {
+          "height": "800px",
+          "objectFit": "cover"
+        }
+      },
+      "accessibility": [],
+      "screenshot": "long-name-1440.png"
+    },
+    {
+      "name": "missing-image-1440",
+      "geometry": {
+        "viewport": 1440,
+        "scrollWidth": 1440,
+        "image": null,
+        "header": {
+          "x": 236,
+          "y": 16,
+          "width": 768,
+          "height": 73.21875,
+          "bottom": 89.21875
+        },
+        "title": {
+          "x": 308,
+          "y": 32.3125,
+          "width": 344.5,
+          "height": 36.28125,
+          "bottom": 68.59375
+        },
+        "details": {
+          "x": 236,
+          "y": 129.21875,
+          "width": 768,
+          "height": 269.1875,
+          "bottom": 398.40625
+        },
+        "watering": {
+          "x": 236,
+          "y": 600.203125,
+          "width": 768,
+          "height": 712.953125,
+          "bottom": 1313.15625
+        },
+        "schedule": {
+          "x": 250.59375,
+          "y": 787.40625,
+          "width": 235.890625,
+          "height": 49.03125,
+          "bottom": 836.4375
+        },
+        "naturalImage": null,
+        "imageStyle": null
+      },
+      "accessibility": [],
+      "screenshot": "missing-image-1440.png"
+    },
+    {
+      "name": "reference-390",
+      "geometry": {
+        "viewport": 390,
+        "scrollWidth": 390,
+        "image": {
+          "x": 0,
+          "y": 10.390625,
+          "width": 112,
+          "height": 800,
+          "bottom": 810.390625
+        },
+        "header": {
+          "x": 0,
+          "y": 10.390625,
+          "width": 390,
+          "height": 866.0625,
+          "bottom": 876.453125
+        },
+        "title": {
+          "x": 128,
+          "y": 400.234375,
+          "width": 262,
+          "height": 57.03125,
+          "bottom": 457.265625
+        },
+        "details": {
+          "x": 0,
+          "y": 916.453125,
+          "width": 390,
+          "height": 293.1875,
+          "bottom": 1209.640625
+        },
+        "watering": {
+          "x": 0,
+          "y": 1411.4375,
+          "width": 390,
+          "height": 808.953125,
+          "bottom": 2220.390625
+        },
+        "schedule": {
+          "x": 14.59375,
+          "y": 1670.640625,
+          "width": 235.890625,
+          "height": 49.03125,
+          "bottom": 1719.671875
+        },
+        "naturalImage": {
+          "width": 1001,
+          "height": 987
+        },
+        "imageStyle": {
+          "height": "800px",
+          "objectFit": "cover"
+        }
+      },
+      "accessibility": [],
+      "screenshot": "reference-390.png"
+    },
+    {
+      "name": "long-name-390",
+      "geometry": {
+        "viewport": 390,
+        "scrollWidth": 390,
+        "image": {
+          "x": 0,
+          "y": 10.390625,
+          "width": 112,
+          "height": 800,
+          "bottom": 810.390625
+        },
+        "header": {
+          "x": 0,
+          "y": 10.390625,
+          "width": 390,
+          "height": 866.0625,
+          "bottom": 876.453125
+        },
+        "title": {
+          "x": 128,
+          "y": 229.140625,
+          "width": 262,
+          "height": 399.21875,
+          "bottom": 628.359375
+        },
+        "details": {
+          "x": 0,
+          "y": 916.453125,
+          "width": 390,
+          "height": 293.1875,
+          "bottom": 1209.640625
+        },
+        "watering": {
+          "x": 0,
+          "y": 1411.4375,
+          "width": 390,
+          "height": 808.953125,
+          "bottom": 2220.390625
+        },
+        "schedule": {
+          "x": 14.59375,
+          "y": 1670.640625,
+          "width": 235.890625,
+          "height": 49.03125,
+          "bottom": 1719.671875
+        },
+        "naturalImage": {
+          "width": 1001,
+          "height": 987
+        },
+        "imageStyle": {
+          "height": "800px",
+          "objectFit": "cover"
+        }
+      },
+      "accessibility": [],
+      "screenshot": "long-name-390.png"
+    },
+    {
+      "name": "missing-image-390",
+      "geometry": {
+        "viewport": 390,
+        "scrollWidth": 390,
+        "image": null,
+        "header": {
+          "x": 0,
+          "y": 10.390625,
+          "width": 390,
+          "height": 63.625,
+          "bottom": 74.015625
+        },
+        "title": {
+          "x": 72,
+          "y": 26.703125,
+          "width": 270.765625,
+          "height": 28.515625,
+          "bottom": 55.21875
+        },
+        "details": {
+          "x": 0,
+          "y": 114.015625,
+          "width": 390,
+          "height": 293.1875,
+          "bottom": 407.203125
+        },
+        "watering": {
+          "x": 0,
+          "y": 609,
+          "width": 390,
+          "height": 808.953125,
+          "bottom": 1417.953125
+        },
+        "schedule": {
+          "x": 14.59375,
+          "y": 868.203125,
+          "width": 235.890625,
+          "height": 49.03125,
+          "bottom": 917.234375
+        },
+        "naturalImage": null,
+        "imageStyle": null
+      },
+      "accessibility": [],
+      "screenshot": "missing-image-390.png"
+    },
+    {
+      "name": "reference-320",
+      "geometry": {
+        "viewport": 320,
+        "scrollWidth": 320,
+        "image": {
+          "x": 0,
+          "y": 10.390625,
+          "width": 112,
+          "height": 800,
+          "bottom": 810.390625
+        },
+        "header": {
+          "x": 0,
+          "y": 10.390625,
+          "width": 320,
+          "height": 866.0625,
+          "bottom": 876.453125
+        },
+        "title": {
+          "x": 128,
+          "y": 392.03125,
+          "width": 192,
+          "height": 57.03125,
+          "bottom": 449.0625
+        },
+        "details": {
+          "x": 0,
+          "y": 916.453125,
+          "width": 320,
+          "height": 317.1875,
+          "bottom": 1233.640625
+        },
+        "watering": {
+          "x": 0,
+          "y": 1435.4375,
+          "width": 320,
+          "height": 880.953125,
+          "bottom": 2316.390625
+        },
+        "schedule": {
+          "x": 14.59375,
+          "y": 1742.640625,
+          "width": 235.890625,
+          "height": 49.03125,
+          "bottom": 1791.671875
+        },
+        "naturalImage": {
+          "width": 1001,
+          "height": 987
+        },
+        "imageStyle": {
+          "height": "800px",
+          "objectFit": "cover"
+        }
+      },
+      "accessibility": [],
+      "screenshot": "reference-320.png"
+    },
+    {
+      "name": "long-name-320",
+      "geometry": {
+        "viewport": 320,
+        "scrollWidth": 320,
+        "image": {
+          "x": 0,
+          "y": 10.390625,
+          "width": 112,
+          "height": 800,
+          "bottom": 810.390625
+        },
+        "header": {
+          "x": 0,
+          "y": 10.390625,
+          "width": 320,
+          "height": 866.0625,
+          "bottom": 876.453125
+        },
+        "title": {
+          "x": 128,
+          "y": 163.90625,
+          "width": 192,
+          "height": 513.28125,
+          "bottom": 677.1875
+        },
+        "details": {
+          "x": 0,
+          "y": 916.453125,
+          "width": 320,
+          "height": 317.1875,
+          "bottom": 1233.640625
+        },
+        "watering": {
+          "x": 0,
+          "y": 1435.4375,
+          "width": 320,
+          "height": 880.953125,
+          "bottom": 2316.390625
+        },
+        "schedule": {
+          "x": 14.59375,
+          "y": 1742.640625,
+          "width": 235.890625,
+          "height": 49.03125,
+          "bottom": 1791.671875
+        },
+        "naturalImage": {
+          "width": 1001,
+          "height": 987
+        },
+        "imageStyle": {
+          "height": "800px",
+          "objectFit": "cover"
+        }
+      },
+      "accessibility": [],
+      "screenshot": "long-name-320.png"
+    },
+    {
+      "name": "missing-image-320",
+      "geometry": {
+        "viewport": 320,
+        "scrollWidth": 320,
+        "image": null,
+        "header": {
+          "x": 0,
+          "y": 10.390625,
+          "width": 320,
+          "height": 92.140625,
+          "bottom": 102.53125
+        },
+        "title": {
+          "x": 72,
+          "y": 26.703125,
+          "width": 248,
+          "height": 57.03125,
+          "bottom": 83.734375
+        },
+        "details": {
+          "x": 0,
+          "y": 142.53125,
+          "width": 320,
+          "height": 317.1875,
+          "bottom": 459.71875
+        },
+        "watering": {
+          "x": 0,
+          "y": 661.515625,
+          "width": 320,
+          "height": 880.953125,
+          "bottom": 1542.46875
+        },
+        "schedule": {
+          "x": 14.59375,
+          "y": 968.71875,
+          "width": 235.890625,
+          "height": 49.03125,
+          "bottom": 1017.75
+        },
+        "naturalImage": null,
+        "imageStyle": null
+      },
+      "accessibility": [],
+      "screenshot": "missing-image-320.png"
+    }
+  ],
+  "failures": [
+    "reference-1440: photo exceeds 240px height",
+    "reference-1440: thumbnail became a vertical strip",
+    "reference-1440: title pushed down header",
+    "reference-1440: header exceeds 320px",
+    "reference-1440: plant details pushed down",
+    "reference-1440: watering section requires excessive scrolling",
+    "long-name-1440: photo exceeds 240px height",
+    "long-name-1440: thumbnail became a vertical strip",
+    "long-name-1440: title pushed down header",
+    "reference-390: photo exceeds 240px height",
+    "reference-390: thumbnail became a vertical strip",
+    "reference-390: title pushed down header",
+    "reference-390: header exceeds 320px",
+    "reference-390: plant details pushed down",
+    "reference-390: watering section requires excessive scrolling",
+    "long-name-390: photo exceeds 240px height",
+    "long-name-390: thumbnail became a vertical strip",
+    "reference-320: photo exceeds 240px height",
+    "reference-320: thumbnail became a vertical strip",
+    "reference-320: title pushed down header",
+    "reference-320: header exceeds 320px",
+    "reference-320: plant details pushed down",
+    "reference-320: watering section requires excessive scrolling",
+    "long-name-320: photo exceeds 240px height",
+    "long-name-320: thumbnail became a vertical strip"
+  ],
+  "externalRequests": [],
+  "pageErrors": [],
+  "status": "failed"
+}
