@@ -4,6 +4,14 @@ Status: November 7, 2026. Integrated functionality is deployed; **M6.6 final own
 acceptance remains pending**. This current-status note supplements historical
 receipts without rewriting their dates, source attribution or architectural approvals.
 
+The November 7 PR #34/#35 deployment attempt ended **ROLLED BACK — PRODUCTION
+HEALTHY** at `2026-11-07T10:15:48.404552+00:00`. The previous source/image identified
+below remains live. PR #34's Plant Detail correction is merged and qualified but
+**not live**; a new attempt requires an owner decision. The
+[incident receipt](production-rollback-20261107.md) records the operator check
+failure, preserved data and recovery outcome. No milestone acceptance follows
+from that rollback or the retained candidate qualification.
+
 ## Completed evidence to reuse
 
 [PR #33](https://github.com/Shadowgar/SnakeTracker/pull/33) merged normally as
@@ -37,7 +45,7 @@ earlier test's revision or create milestone acceptance.
 
 | Item | Remaining evidence or owner decision |
 | --- | --- |
-| Plant Detail presentation defect | Finish the bounded correction and its populated-image/mobile/desktop regression; owner reviews the result and separately authorizes merge/deployment. The existing deployment does not establish that this newly reported defect is fixed. |
+| Plant Detail presentation defect | PR #34's bounded correction and regression are merged and qualified with PR #35, but the November 7 deployment attempt was rolled back. The defect remains live on the previous release. Correct and verify the operator configuration-comparison check, then obtain a new owner deployment decision; no retry is authorized by this note. |
 | Physical device and screen reader | Walk the changed guide, Smart Care edit/preview/confirmation, plant and history screens on the owner's actual device and with a screen reader; record platform, focus/control names, errors and outcome. Chromium viewport and automated accessibility results do not substitute for this acceptance. Use isolated fixtures for deliberate business writes. |
 | Frog Guide source/content publication | Decide the [exact two-guide publication proposal](frog-guide-publication.md). Code and presentation are live, but the reviewed guide content remains unpublished in the production receipt. Import requires separate explicit authorization and exact qualified taxa. |
 | Full taxonomy archive and Natural History content | The bounded local catalog/provider overlay is deployed; production-sized full-archive source/rights/import/capacity qualification is still unperformed. Decide whether to require it for closeout or explicitly defer it through the existing governance process. X3 code is deployed, but development Natural History content has not been published. Neither import is authorized by this closeout. |

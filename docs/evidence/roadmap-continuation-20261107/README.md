@@ -1,8 +1,14 @@
 # Current roadmap status — November 7, 2026
 
-The combined release is deployed and healthy according to the retained November 6
-verification receipt. **M6.6 owner acceptance and formal M7/M8 qualification remain
-open. M9 is a preparation handoff, with no public sharing implemented or enabled.**
+**November 7 deployment outcome: ROLLED BACK — PRODUCTION HEALTHY.** The PR #34/#35
+release is merged and qualified, but its deployment attempt was rolled back. The
+previous release remains live, and the Plant Detail correction is **not live**.
+See the [deployment incident receipt](production-rollback-20261107.md) for the exact
+source/image identities, cause and verified recovery. Another deployment attempt
+requires an owner decision.
+
+**M6.6 owner acceptance and formal M7/M8 qualification remain open. M9 is a
+preparation handoff, with no public sharing implemented or enabled.**
 
 This is the current implementation-status supplement to the
 [frozen roadmap](../../roadmap/milestones.md). Its earlier statements that X1 was
@@ -17,9 +23,12 @@ and bytes; no unchecked requirement or Proposed ADR is silently promoted.
   `71eb88c01390d3672c470c1a50a80e707233c181`, with the identical qualified source
   tree and deployed schema 27. [M6.6 closeout](m66-closeout.md) records the source,
   image and reused evidence, plus the remaining acceptance items.
-- **Plant Detail correction:** a separate focused correction fixes the confirmed
-  112 × 800 px thumbnail defect. It remains subject to owner merge/deployment
-  approval; writing this note does not change the live application.
+- **Plant Detail correction:** PR #34 fixes the confirmed 112 × 800 px thumbnail
+  defect and is merged with PR #35 in qualified source
+  `cf772cf8348f3eeb2ec069754b585bffd6c926cf`. The November 7 attempt was rolled back
+  before opening the proxy to the candidate; the correction is not live. Preserve
+  the qualified artifact for a new owner deployment decision after the operator
+  configuration-comparison defect is corrected and verified.
 - **Frog content:** two version-1 guides are ready for the
   [bounded publication decision](frog-guide-publication.md). They remain unpublished.
 - **M9:** the [implementation handoff](m9-handoff.md) identifies the first useful
@@ -27,14 +36,15 @@ and bytes; no unchecked requirement or Proposed ADR is silently promoted.
 
 ## M7/M8: completed evidence versus remaining requirements
 
-Evidence below is reused within its original scope. The operator receipts live in
+Historical evidence below is reused within its original scope. The operator receipts live in
 `output/combined-production-deploy-20261104/{REPORT.md,COMPLETE.json,SHA256SUMS}` in
 the shared workspace, with prior X1–X5 and integrated candidate receipts linked from
-[M6.6 closeout](m66-closeout.md). No production recovery or migration was repeated.
+[M6.6 closeout](m66-closeout.md). This documentation update repeats no production
+recovery or migration.
 
 | Requirement | Evidence available | Still required |
 | --- | --- | --- |
-| Coherent encrypted backups and isolated restore | X1 normal-worker backup lease checks; latest encrypted recovery point `53785bb3-bace-478e-9891-eb4aa052af86`; restored 105 comparable tables and all 46 attachment versions; integrity/FK checks passed | Independently retained off-device copy and independent key-recovery exercise; representative RPO 6h / RTO 60min / 20 GiB qualification |
+| Coherent encrypted backups and isolated restore | X1 normal-worker backup lease checks; then-current encrypted recovery point `53785bb3-bace-478e-9891-eb4aa052af86`; restored 105 comparable tables and all 46 attachment versions; integrity/FK checks passed | Independently retained off-device copy and independent key-recovery exercise; representative RPO 6h / RTO 60min / 20 GiB qualification |
 | Upgrade and data preservation | Actual schema 25 → 26 → 27 deployment, 109 pre-existing tables preserved, event high-water 1,051 unchanged; accepted installed ARM64 migration/compatibility checks | Complete supported fresh-install/upgrade/rollback/event/projection/plugin/backup matrix and evidence accounting, including missing-plugin/newer-contract refusal |
 | Security and operation | Accepted hosted gates and actual ARM64 image scan: zero **fixed** HIGH/CRITICAL findings; successful live HTTPS/PWA/worker checks and existing runbooks; both historical urllib3 alerts verified fixed | Operator incident exercise, consolidated security and owner acceptance; scan scope is not a claim of no vulnerabilities |
 | Native Pi and storage | Actual native deployment, SQLite 3.40.1 migration and isolated restoration under the owner's SD-only exception | Formal representative cold/warm, CPU, memory, thermal/throttling and durability budgets; SSD/ext4 requirement remains unmet unless formally reconciled with the exception. No new SSD purchase is mandated here |
@@ -60,14 +70,16 @@ uv and uvx. It can support a future offline SBOM conversion; no extra scan or re
 is needed solely to recover that inventory. A standard SBOM and artifact signature
 have not yet been produced or verified by this task.
 
-The current open alerts are different: [msgpack GHSA-j586-36cw-2gc2](https://github.com/Shadowgar/SnakeTracker/security/dependabot/81)
+At PR #35 preparation, the open alerts were different: [msgpack GHSA-j586-36cw-2gc2](https://github.com/Shadowgar/SnakeTracker/security/dependabot/81)
 (high) and [Mako GHSA-5639-2j2p-m4mx](https://github.com/Shadowgar/SnakeTracker/security/dependabot/4)
 (medium). This candidate updates only their lock records to msgpack 1.2.3 and Mako
 1.4.2. msgpack belongs to the development audit/cache path and is absent from the
 retained runtime image. Mako is an Alembic runtime dependency; the advisory's
 Windows-only path does not match the Debian production platform, but the patched
-version removes the affected dependency from the candidate. The GitHub alerts stay
-open until a patch reaches the default branch; no production remediation is claimed.
+version removes the affected dependency from the candidate. The combined-release
+preflight subsequently confirmed zero open Dependabot alerts after the patches
+reached the default branch. The November 7 rollback means these candidate updates
+are not the current production release; no production remediation is claimed.
 
 The first Plant Detail PR Container gate also identified CVE-2026-109518 in a cached
 amd64 apt upgrade layer (apt/libapt-pkg6.0 2.6.1). Its fresh ARM64 scan already had
@@ -113,9 +125,11 @@ application suite is left to the required hosted gate, not repeated locally.
 
 ## Decisions that move the roadmap forward
 
-1. Review the Plant Detail correction and authorize its normal merge and a planned
-   deployment separately. The annotated reference plate also needs a separately
-   qualified replacement if a clean photograph is wanted.
+1. Review the [verified rollback and retry prerequisites](production-rollback-20261107.md)
+   and decide whether to authorize a new deployment attempt of the retained qualified
+   PR #34/#35 release. Its normal merges are complete; its Plant Detail correction
+   is not live. The annotated reference plate also needs a separately qualified
+   replacement if a clean photograph is wanted.
 2. Approve or decline the exact Frog Guide publication proposal; resolve the
    remaining M6.6 content, manual accessibility and owner acceptance items.
 3. Name an off-device recovery destination and independently recoverable key
