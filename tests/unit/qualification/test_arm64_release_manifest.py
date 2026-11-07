@@ -1,11 +1,21 @@
 """Retained compatibility declarations must identify the actual qualified build."""
 
+import importlib.util
 import json
+import sys
+from pathlib import Path
 
 import pytest
 
-from scripts.qualification import arm64_release
 from snaketracker.operations.release_compatibility import export_release_compatibility
+
+ROOT = Path(__file__).parents[3]
+MODULE_PATH = ROOT / "scripts/qualification/arm64_release.py"
+SPEC = importlib.util.spec_from_file_location("arm64_release", MODULE_PATH)
+assert SPEC is not None and SPEC.loader is not None
+arm64_release = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = arm64_release
+SPEC.loader.exec_module(arm64_release)
 
 SOURCE_SHA = "a" * 40
 IMAGE_ID = "sha256:" + "b" * 64
