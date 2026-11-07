@@ -72,3 +72,18 @@ the existing qualified reference-image acquisition process, never ordinary page
 view downloads. Exact licensed fixture bytes and provenance are retained under
 [`tests/fixtures/reference-images`](../../../tests/fixtures/reference-images/swiss-cheese-plant.json),
 SHA-256 `5d73cdcbf18f47f96252a308d8678f0ed03631678a15e0f34972352c187ab9a5`.
+
+## Required gate remediation discovered during integration
+
+The first hosted Container gate failed CVE-2026-109518 in apt/libapt-pkg6.0 2.6.1
+from a cached amd64 upgrade layer. The same head's fresh ARM64 evidence contained
+patched 2.6.2 and passed its actual scan. An adjacent Dockerfile minimum-version
+guard now requires 2.6.2 for both packages and invalidates that stale layer.
+
+The roadmap readiness check also identified open Mako and msgpack alerts. The
+shared narrow prerequisite updates only their lock records to Mako 1.4.2 and
+msgpack 1.2.3. These identical Dockerfile/lock corrections are included in both
+roadmap PRs so each proposed candidate can pass the required gates independently.
+They modify no application logic, database schema or public-sharing settings.
+New evidence justifies qualification of the corrected candidates; the already
+deployed release was not rebuilt or rescanned.
