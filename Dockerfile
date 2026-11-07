@@ -18,6 +18,11 @@ RUN apt-get update \
         && dpkg --compare-versions "$installed_version" ge '3.0.22-1~deb12u2' \
         || exit 1; \
     done \
+    && for package in apt libapt-pkg6.0; do \
+        installed_version="$(dpkg-query -W -f='${Version}' "$package")" \
+        && dpkg --compare-versions "$installed_version" ge '2.6.2' \
+        || exit 1; \
+    done \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid $SNAKETRACKER_UID snaketracker \
     && useradd --uid $SNAKETRACKER_UID --gid $SNAKETRACKER_UID --create-home --shell /usr/sbin/nologin snaketracker
@@ -35,7 +40,7 @@ COPY deploy/docker/entrypoint.sh /usr/local/bin/snaketracker-entrypoint
 RUN chmod 0555 /usr/local/bin/snaketracker-entrypoint \
     && chown -R snaketracker:snaketracker /app \
     && dpkg --print-architecture \
-    && dpkg-query -W -f='${binary:Package}=${Version}\n' libssl3 openssl
+    && dpkg-query -W -f='${binary:Package}=${Version}\n' libssl3 openssl apt libapt-pkg6.0
 
 USER snaketracker
 ENTRYPOINT ["/usr/local/bin/snaketracker-entrypoint"]

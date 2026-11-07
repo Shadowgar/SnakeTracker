@@ -90,6 +90,7 @@ def in_image():
     from alembic.script import ScriptDirectory
 
     import snaketracker
+    from snaketracker.operations.release_compatibility import export_release_compatibility
 
     package = Path(snaketracker.__file__).parent
     assert str(package).startswith("/app/.venv/"), package
@@ -139,10 +140,23 @@ def in_image():
                 "migration_chain": chain,
                 "migration_checks": ["check_x5_upgrade", "check_bioactive_upgrade"],
                 "frog_bundle_sha256": FROG_SHA,
+                "release_compatibility": json.loads(
+                    export_release_compatibility(require_build_identity=True)
+                ),
                 "packaged": packaged(Path("/app")),
                 "installed": hashes(package),
             }
         )
+    )
+
+
+def retain_compatibility(manifest, *, source_sha, image_id):
+    assert manifest["application"]["build_git_sha"] == source_sha, (
+        "Release compatibility build identity differs from the qualified source"
+    )
+    save(
+        "release-compatibility.json",
+        {"source_sha": source_sha, "image_id": image_id, "manifest": manifest},
     )
 
 
@@ -184,6 +198,7 @@ def qualify():
     runtime = json.loads(completed.stdout)
     assert runtime["packaged"] == packaged(Path.cwd()), "Packaged file set or bytes differ"
     assert runtime["installed"] == hashes(Path("src/snaketracker")), "Installed source differs"
+    retain_compatibility(runtime["release_compatibility"], source_sha=source_sha, image_id=image_id)
     save(
         "image-identity.json",
         {

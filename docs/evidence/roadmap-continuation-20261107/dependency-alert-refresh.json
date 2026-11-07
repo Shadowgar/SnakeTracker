@@ -1,0 +1,84 @@
+{
+  "alerts": [
+    {
+      "advisory": {
+        "cve_id": "CVE-2026-97688",
+        "ghsa_id": "GHSA-gh4c-6fx4-qh6g",
+        "published_at": "2026-09-30T15:00:38Z",
+        "severity": "medium",
+        "summary": "urllib3: Chunked Deflate streaming can enter an infinite loop",
+        "updated_at": "2026-09-30T15:00:39Z",
+        "withdrawn_at": null
+      },
+      "dependency": {
+        "manifest_path": "uv.lock",
+        "package": {
+          "ecosystem": "pip",
+          "name": "urllib3"
+        },
+        "relationship": "transitive",
+        "scope": "runtime",
+        "version_requirement": "= 2.7.0"
+      },
+      "dismissed_at": null,
+      "dismissed_reason": null,
+      "fixed_at": "2026-10-26T17:05:43Z",
+      "html_url": "https://github.com/Shadowgar/SnakeTracker/security/dependabot/1",
+      "number": 1,
+      "security_vulnerability": {
+        "first_patched_version": {
+          "identifier": "2.8.0"
+        },
+        "package": {
+          "ecosystem": "pip",
+          "name": "urllib3"
+        },
+        "severity": "medium",
+        "vulnerable_version_range": ">= 2.6.2, < 2.8.0"
+      },
+      "state": "fixed",
+      "updated_at": "2026-10-26T17:05:43Z"
+    },
+    {
+      "advisory": {
+        "cve_id": "CVE-2026-97689",
+        "ghsa_id": "GHSA-vxq7-64xx-v4gw",
+        "published_at": "2026-09-30T14:46:18Z",
+        "severity": "high",
+        "summary": "urllib3: HTTPResponse.stream()/read_chunked() buffers an unbounded chunk-size line into memory",
+        "updated_at": "2026-09-30T14:46:20Z",
+        "withdrawn_at": null
+      },
+      "dependency": {
+        "manifest_path": "uv.lock",
+        "package": {
+          "ecosystem": "pip",
+          "name": "urllib3"
+        },
+        "relationship": "transitive",
+        "scope": "runtime",
+        "version_requirement": "= 2.7.0"
+      },
+      "dismissed_at": null,
+      "dismissed_reason": null,
+      "fixed_at": "2026-10-26T17:05:43Z",
+      "html_url": "https://github.com/Shadowgar/SnakeTracker/security/dependabot/2",
+      "number": 2,
+      "security_vulnerability": {
+        "first_patched_version": {
+          "identifier": "2.8.0"
+        },
+        "package": {
+          "ecosystem": "pip",
+          "name": "urllib3"
+        },
+        "severity": "high",
+        "vulnerable_version_range": ">= 1.10.3, < 2.8.0"
+      },
+      "state": "fixed",
+      "updated_at": "2026-10-26T17:05:43Z"
+    }
+  ],
+  "checked_at": "2026-11-07T05:13:14.108256+00:00",
+  "method": "GitHub read-only REST Dependabot alerts/1 and alerts/2; no rescan"
+}

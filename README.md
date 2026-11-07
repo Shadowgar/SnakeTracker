@@ -1,7 +1,7 @@
 # Care Keeper
 
 Care Keeper is a self-hosted, mobile-first app for keeping an exotic-animal household organized.
-It supports snakes, lizards, spiders, and scorpions, with care actions tailored to each group. The
+It supports snakes, lizards, spiders, scorpions, and Frogs, with care actions tailored to each group. The
 repository and Python package retain the historical name `snaketracker`.
 
 ## What it does
@@ -18,14 +18,19 @@ repository and Python package retain the historical name `snaketracker`.
   reports distinguish cash spent, stock on hand, and the value of supplies used.
 - **Planning and insight:** Set reminders, search records, review animal analytics and care-window
   estimates, and export supported reports as CSV.
+- **Guided setup and plant care:** Review sourced Care Guides where published, explicitly confirm
+  Smart Care feeding suggestions, and manage bioactive enclosures and individual plant watering.
+  Manual setup remains available; plant intervals are keeper choices.
 - **Household operation:** Use household-scoped accounts, encrypted backups, health checks, and a
   separate worker for scheduled jobs. The interface is server-rendered and installable as a PWA;
   care records and writes require a connection.
 
-Care Keeper currently serves one household with multiple users. The species directory is
-implemented; sourced care guides, automatic care suggestions, and bioactive plant-care workflows
-are later M6.6 work. Formal Raspberry Pi deployment and release qualification are tracked in the
-[roadmap](docs/roadmap/milestones.md).
+Care Keeper currently serves one household with multiple users. X1–X5, Smart Care and Bioactive
+code is integrated and deployed; the two reviewed Frog Guides still require separate publication
+approval. Deployment does not imply final milestone acceptance. See the
+[current roadmap status and next decisions](docs/evidence/roadmap-continuation-20261107/README.md)
+for M6.6 closeout, remaining M7/M8 qualification, and the M9 album handoff. The
+[roadmap](docs/roadmap/milestones.md) retains the historical requirements and approval baseline.
 
 ## Run locally
 
