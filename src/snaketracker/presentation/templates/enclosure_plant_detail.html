@@ -1,15 +1,22 @@
 {% extends "base.html" %}
 {% from "icons.html" import icon %}
 {% block title %}{{ plant.label or plant.species_display }} · {{ enclosure.name }} · Care Keeper{% endblock %}
+{% block page_styles %}<link rel="stylesheet" href="/static/plant-detail.css?v=1">{% endblock %}
 {% block content %}
-<section class="form-page" aria-labelledby="page-title">
+<section class="form-page plant-detail-page" aria-labelledby="page-title">
   <header class="plant-profile-identity">
     {% if reference_taxon %}
     <span class="taxon-reference-media"><img src="/directory/reference-images/{{ reference_taxon.taxon_id }}" alt="Species reference image for {{ reference_taxon.display_name }}" width="1200" height="800" decoding="async"><small class="reference-attribution">Species reference · Photo: {{ reference_taxon.image_creator }} · <a href="{{ reference_taxon.image_license_url }}" rel="noopener noreferrer">{{ reference_taxon.image_license_code|replace('cc-', 'CC ')|upper }}</a> · <a href="{{ reference_taxon.image_source_page_url or reference_taxon.source_url }}" rel="noopener noreferrer">{{ 'iNaturalist' if (reference_taxon.image_provider or reference_taxon.provider) == 'inaturalist' else (reference_taxon.image_provider or reference_taxon.provider)|replace('_', ' ')|title }}</a></small></span>
     {% else %}
     <span class="taxon-placeholder plant-placeholder" aria-hidden="true">{{ icon('plant') }}</span>
     {% endif %}
-    <div><p class="page-kicker">{{ enclosure.name }} · Plant</p><h1 id="page-title">{{ plant.label or plant.species_display }}</h1><p class="lede">{{ plant.species_display }}{% if plant.confirmed_scientific_name and plant.confirmed_common_name %} · <i>{{ plant.confirmed_scientific_name }}</i>{% endif %}</p>{% if reference_taxon %}<span class="status-badge">Species reference</span>{% endif %}</div>
+    <div>
+      <p class="page-kicker">{{ enclosure.name }} · Plant</p>
+      <h1 id="page-title">{{ plant.label or plant.species_display }}</h1>
+      <p class="lede">{{ plant.species_display }}{% if plant.confirmed_scientific_name and plant.confirmed_common_name %} · <i>{{ plant.confirmed_scientific_name }}</i>{% endif %}</p>
+      <div class="plant-profile-status"><span class="status-badge">{{ plant.status|capitalize }}</span>{% if reference_taxon %}<span class="status-badge">Species reference</span>{% endif %}</div>
+      <a class="plant-watering-link" href="#history">Watering &amp; history</a>
+    </div>
   </header>
   <dl class="card detail-list">
     <div><dt>Status</dt><dd>{{ plant.status|capitalize }}</dd></div>
@@ -18,7 +25,6 @@
     <div><dt>Directory identity</dt><dd>{% if plant.taxon_id %}<a href="/directory/{{ plant.taxon_id }}">View plant in directory</a>{% else %}Keeper-entered plant{% endif %}</dd></div>
     <div><dt>Notes</dt><dd>{{ plant.notes or 'None' }}</dd></div>
   </dl>
-  {% if plant.taxon_id and care_guide_available %}<section class="card"><h2>Plant reference</h2><p>Pot-grown guidance does not establish an enclosure watering interval or safety for your animals. Your watering schedule is a separate keeper choice.</p><a href="/directory/{{ plant.taxon_id }}/care-guide">Read plant Care Guide</a></section>{% elif plant.taxon_id %}<section class="card"><h2>Plant reference</h2><p>No reviewed guidance available.</p></section>{% endif %}
   <section class="card" id="history"><h2>Plant watering</h2>
     {% if plant.status == 'active' %}
     <p>{% if watering_rule and watering_rule.enabled %}Every {{ watering_rule.interval_days }} days.{% else %}No watering schedule enabled.{% endif %} {% if watering_due %}Next due {{ watering_due.due_at.astimezone(household_zone).strftime('%b %-d, %Y · %-I:%M %p') }}.{% endif %}</p>
@@ -32,6 +38,7 @@
     <h3>Watering history</h3><ul class="record-list">{% for event in watering_history|reverse %}<li><strong>{{ event.occurred_at.astimezone(household_zone).strftime('%b %-d, %Y · %-I:%M %p') }}</strong> {{ event.notes or 'Watered' }}</li>{% else %}<li>No watering recorded.</li>{% endfor %}</ul>
     <a href="/enclosures/{{ enclosure.enclosure_id }}/care-history?plant_id={{ plant.enclosure_plant_id }}">Review, correct or void watering history</a>
   </section>
+  {% if plant.taxon_id and care_guide_available %}<section class="card"><h2>Plant reference</h2><p>Pot-grown guidance does not establish an enclosure watering interval or safety for your animals. Your watering schedule is a separate keeper choice.</p><a href="/directory/{{ plant.taxon_id }}/care-guide">Read plant Care Guide</a></section>{% elif plant.taxon_id %}<section class="card"><h2>Plant reference</h2><p>No reviewed guidance available.</p></section>{% endif %}
   <div class="form-actions"><a href="/enclosures/{{ enclosure.enclosure_id }}">Back to enclosure</a>{% if plant.status == 'active' %}<a class="button-link secondary-link" href="/enclosures/{{ enclosure.enclosure_id }}/plants/{{ plant.enclosure_plant_id }}/edit">Edit plant</a><a class="button-link danger-link" href="/enclosures/{{ enclosure.enclosure_id }}/plants/{{ plant.enclosure_plant_id }}/remove">Remove plant</a>{% endif %}</div>
 </section>
 {% endblock %}

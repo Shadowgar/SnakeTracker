@@ -1,0 +1,8 @@
+{
+  "src/snaketracker/presentation/templates/enclosure_plant_detail.html": "c3410799edd87f48ad9c7fd3ab29f36ecc7be81459ee9532ebbd51ff979d098c",
+  "src/snaketracker/presentation/static/plant-detail.css": "36658f3c4a4ff7fa1809ed07595581fc13545dfff714f7ecf0b86c9366a52602",
+  "scripts/qualification/plant_detail_fixture.py": "45bcb3072a4364ed4ade9faa040118ff87977594cc3dafa3b4858b037955d096",
+  "scripts/qualification/plant_detail_browser_review.js": "ca5a6ae7def36cdaaa1065d632f76832a35d5116ba5cdf933e2d77c053f11e13",
+  "tests/fixtures/reference-images/swiss-cheese-plant.webp": "5d73cdcbf18f47f96252a308d8678f0ed03631678a15e0f34972352c187ab9a5",
+  "tests/fixtures/reference-images/swiss-cheese-plant.json": "915275889de9fb58e79a2c5d7503aaf36166f8f5084362fa9263368d13ab94cf"
+}

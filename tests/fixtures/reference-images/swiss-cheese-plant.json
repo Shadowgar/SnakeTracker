@@ -1,0 +1,13 @@
+{
+  "taxon_id": "3b47da96-23f1-489c-a6a9-29e3a890013e",
+  "source_url": "https://upload.wikimedia.org/wikipedia/commons/d/d6/Monstera_deliciosa_-_zraj%C3%ADc%C3%AD_plodenstv%C3%AD.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+  "creator": "Kostka Martin",
+  "attribution": "Kostka Martin · Wikimedia Commons",
+  "license_code": "cc0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "provider": "wikimedia_commons",
+  "source_page_url": "https://commons.wikimedia.org/wiki/File:Monstera_deliciosa_-_zraj%C3%ADc%C3%AD_plodenstv%C3%AD.jpg",
+  "retrieved_at": "2026-09-27T09:18:13.728543+00:00",
+  "local_sha256": "5d73cdcbf18f47f96252a308d8678f0ed03631678a15e0f34972352c187ab9a5",
+  "fixture_note": "Exact retained CC0 reference bytes, copied without editing for Plant Detail layout regression. Contains annotations; not a proposed replacement image."
+}
