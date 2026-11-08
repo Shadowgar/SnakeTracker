@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><meta name="theme-color" content="#100d18"><title>{% block title %}Shared with Care Keeper{% endblock %}</title><link rel="icon" href="/static/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/static/app.css?v=x4-amphibian-v1"><link rel="stylesheet" href="/static/sharing.css?v=m9-photo-v1"></head>
+  <body class="public-sharing-body"><a class="skip-link" href="#main-content">Skip to main content</a>
+    <header class="public-brand"><span class="brand"><span class="brand-mark" aria-hidden="true">C</span>Care Keeper</span><span>Shared with care</span></header>
+    {% if preview %}<aside class="sharing-preview-banner" aria-label="Private preview"><strong>Private preview</strong><span>Only the deliberately selected public content is shown. This preview does not make it live.</span><a href="{{ preview_back }}">Return to sharing choices</a></aside>{% endif %}
+    <main id="main-content" class="public-sharing-main" tabindex="-1">{% block content %}{% endblock %}</main>
+    <footer class="public-footer">A collection shared by its keeper · Care Keeper</footer>
+  </body>
+</html>
+

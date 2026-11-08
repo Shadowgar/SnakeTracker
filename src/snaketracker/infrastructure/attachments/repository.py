@@ -21,6 +21,21 @@ class SQLAlchemyAttachmentRepository:
     def __init__(self, engine: Engine) -> None:
         self._engine = engine
 
+    def retained_bytes(self, household_id: UUID) -> int:
+        """Count every immutable version and only staging not already finalized."""
+        with self._engine.connect() as connection:
+            total = connection.execute(
+                text(
+                    "SELECT (SELECT coalesce(sum(size_bytes),0) FROM attachment_versions "
+                    "WHERE household_id=:h) + (SELECT coalesce(sum(s.size_bytes),0) "
+                    "FROM attachment_staging s WHERE s.household_id=:h AND NOT EXISTS "
+                    "(SELECT 1 FROM attachment_versions v "
+                    "WHERE v.staged_attachment_id=s.staged_attachment_id))"
+                ),
+                {"h": str(household_id)},
+            ).scalar_one()
+        return int(total)
+
     def staged_by_idempotency(
         self, household_id: UUID, actor_user_id: UUID, idempotency_key: str
     ) -> StagedProfilePhoto | None:

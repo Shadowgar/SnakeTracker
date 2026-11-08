@@ -1,0 +1,87 @@
+{
+  "checks": [
+    {
+      "name": "owner-album-final-390",
+      "viewport": 390,
+      "scroll": 390,
+      "violations": [],
+      "images": [
+        {
+          "width": 356,
+          "height": 240,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        },
+        {
+          "width": 356,
+          "height": 240,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        }
+      ]
+    },
+    {
+      "name": "owner-sharing-final-390",
+      "viewport": 390,
+      "scroll": 390,
+      "violations": [],
+      "images": []
+    },
+    {
+      "name": "owner-collection-final-390",
+      "viewport": 390,
+      "scroll": 390,
+      "violations": [],
+      "images": []
+    },
+    {
+      "name": "owner-album-final-320",
+      "viewport": 320,
+      "scroll": 320,
+      "violations": [],
+      "images": [
+        {
+          "width": 286,
+          "height": 240,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        },
+        {
+          "width": 286,
+          "height": 240,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        }
+      ]
+    },
+    {
+      "name": "owner-sharing-final-320",
+      "viewport": 320,
+      "scroll": 320,
+      "violations": [],
+      "images": []
+    },
+    {
+      "name": "owner-collection-final-320",
+      "viewport": 320,
+      "scroll": 320,
+      "violations": [],
+      "images": []
+    }
+  ],
+  "screenshots": [
+    "owner-album-final-390.png",
+    "owner-sharing-final-390.png",
+    "owner-collection-final-390.png",
+    "owner-album-final-320.png",
+    "owner-sharing-final-320.png",
+    "owner-collection-final-320.png"
+  ],
+  "externalRequests": [],
+  "errors": [],
+  "status": "passed"
+}

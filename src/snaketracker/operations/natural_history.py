@@ -69,9 +69,10 @@ def main() -> None:
                 "0025_natural_history",
                 "0026_amphibian_care_guides",
                 "0027_bioactive_plant_care",
+                "0028_public_photo_sharing",
             }:
                 parser.error(
-                    "Natural History schema 0025, 0026 or 0027 is required; "
+                    "Natural History schema 0025, 0026, 0027 or 0028 is required; "
                     "this command never migrates."
                 )
     finally:

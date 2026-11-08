@@ -1,0 +1,13 @@
+{% extends "public_base.html" %}
+{% block title %}{{ profile.title }} · Care Keeper{% endblock %}
+{% block content %}
+  {% if collection_path %}<a class="sharing-back" href="{{ collection_path }}">← Collection</a>{% elif profile.collection_slug is defined and profile.collection_slug %}<a class="sharing-back" href="/c/{{ profile.collection_slug }}">← {{ profile.collection_title or 'Collection' }}</a>{% endif %}
+  <section class="public-animal-hero" aria-labelledby="page-title">
+    {% if profile.profile_photo %}<div class="public-hero-image"><img src="{{ photo_paths.get(profile.profile_photo.token, '/m/' ~ profile.profile_photo.token) }}" alt="{{ profile.profile_photo.caption or profile.title }}" width="{{ profile.profile_photo.width }}" height="{{ profile.profile_photo.height }}"></div>{% else %}<div class="public-hero-placeholder" aria-hidden="true">{{ profile.title[0]|upper }}</div>{% endif %}
+    <div class="public-hero-copy"><p class="page-kicker">Meet</p><h1 id="page-title">{{ profile.title }}</h1>{% if profile.species %}<p class="public-species">{{ profile.species }}</p>{% endif %}{% if profile.description %}<p class="public-introduction">{{ profile.description }}</p>{% endif %}<a class="button-link secondary" href="#album">Explore the album <span aria-hidden="true">↓</span></a></div>
+  </section>
+  <section class="public-album-section" id="album" aria-labelledby="album-title"><header class="sharing-section-heading"><h2 id="album-title">Photo album</h2><p>{{ profile.photos|length }} shared {{ 'photo' if profile.photos|length == 1 else 'photos' }}</p></header>
+    <div class="album-grid public-album-grid">{% for photo in profile.photos %}<figure class="public-photo-card"><a href="{{ photo_paths.get(photo.token, '/m/' ~ photo.token) }}" aria-label="View {{ photo.caption or ('photo ' ~ loop.index ~ ' of ' ~ profile.title) }}"><img src="{{ photo_paths.get(photo.token, '/m/' ~ photo.token) }}" alt="{{ photo.caption or ('Photo ' ~ loop.index ~ ' of ' ~ profile.title) }}" width="{{ photo.width }}" height="{{ photo.height }}" loading="lazy"></a>{% if photo.caption %}<figcaption>{{ photo.caption }}</figcaption>{% endif %}</figure>{% else %}<div class="card album-empty"><h3>No photos shared yet</h3><p>The keeper has not selected any album photos for visitors.</p></div>{% endfor %}</div>
+  </section>
+{% endblock %}
+

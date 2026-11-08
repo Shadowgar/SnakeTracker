@@ -30,7 +30,7 @@ def test_retained_manifest_binds_installed_build_to_qualified_image(tmp_path, mo
     assert retained["source_sha"] == SOURCE_SHA
     assert retained["image_id"] == IMAGE_ID
     assert retained["manifest"]["application"]["build_git_sha"] == SOURCE_SHA
-    assert retained["manifest"]["relational_schema"]["mutable_versions"] == [27]
+    assert retained["manifest"]["relational_schema"]["mutable_versions"] == [28]
     assert retained["manifest"]["qualification"]["status"] == "not_asserted"
 
 

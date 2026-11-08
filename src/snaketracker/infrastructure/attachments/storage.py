@@ -105,6 +105,24 @@ class LocalAttachmentStorage:
             fcntl.flock(descriptor, fcntl.LOCK_UN)
             os.close(descriptor)
 
+    @contextmanager
+    def album_admission_lock(self) -> Iterator[None]:
+        """Serialize album quota admission through the immutable event commit."""
+        lock_path = self._staging_root.parent / ".album-admission.lock"
+        self._ensure_parent(lock_path)
+        descriptor = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o600)
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX)
+            yield
+        finally:
+            fcntl.flock(descriptor, fcntl.LOCK_UN)
+            os.close(descriptor)
+
+    def available_bytes(self) -> int:
+        root = self._staging_root.parent
+        self._ensure_parent(root / ".space-check")
+        return shutil.disk_usage(root).free
+
     def staged_exists(self, staged_attachment_id: UUID) -> bool:
         return self._staged_path(staged_attachment_id).is_file()
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import warnings
+from collections.abc import Callable
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -157,6 +158,8 @@ class AttachmentRepository(Protocol):
 
     def staged_attachment_ids(self) -> frozenset[UUID]: ...
 
+    def retained_bytes(self, household_id: UUID) -> int: ...
+
 
 class AttachmentStorage(Protocol):
     """Private local storage for unserved staging files and immutable versions."""
@@ -177,6 +180,8 @@ class AttachmentStorage(Protocol):
 
     def lifecycle_lock(self) -> AbstractContextManager[None]: ...
 
+    def available_bytes(self) -> int: ...
+
 
 class AttachmentService:
     """Keep profile-photo bytes separate from the Animal event stream."""
@@ -187,12 +192,23 @@ class AttachmentService:
         animals: AnimalService,
         repository: AttachmentRepository,
         storage: AttachmentStorage,
+        quota_bytes: int = 256 * 1024 * 1024,
+        free_space_reserve_bytes: int = 0,
     ) -> None:
         self._animals = animals
         self._repository = repository
         self._storage = storage
+        if quota_bytes <= 0 or free_space_reserve_bytes < 0:
+            raise ValueError("Photo quota and storage reserve must be bounded positive values.")
+        self._quota = quota_bytes
+        self._reserve = free_space_reserve_bytes
 
-    def stage_profile_photo(self, command: StageProfilePhotoCommand) -> StagedProfilePhoto:
+    def stage_profile_photo(
+        self,
+        command: StageProfilePhotoCommand,
+        *,
+        admission: Callable[[ProfilePhotoMetadata], None] | None = None,
+    ) -> StagedProfilePhoto:
         if self._animals.profile_for(command.household_id, command.animal_id) is None:
             raise AttachmentValidationError("Animal does not exist in this household.")
         processed = _process_profile_photo(command.content, command.declared_media_type)
@@ -218,6 +234,21 @@ class AttachmentService:
                         "Idempotency key conflicts with a different profile-photo upload."
                     )
                 return existing
+            # All photo entry points share this cross-process check, including primary
+            # uploads. Removed versions and unfinalized staging remain allocated.
+            if (
+                self._repository.retained_bytes(command.household_id) + metadata.size_bytes
+                > self._quota
+            ):
+                raise AttachmentValidationError(
+                    "Household retained-photo quota reached. Removed versions still count."
+                )
+            if self._storage.available_bytes() < self._reserve + 4 * metadata.size_bytes:
+                raise AttachmentValidationError(
+                    "Insufficient storage reserve for this photo and recovery copies."
+                )
+            if admission is not None:
+                admission(metadata)
             self._storage.stage(staged.staged_attachment_id, processed.content)
             try:
                 self._repository.create_staged(staged)

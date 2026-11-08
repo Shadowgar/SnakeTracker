@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ animal.name }} · Public profile choices · Care Keeper{% endblock %}
+{% block page_styles %}<link rel="stylesheet" href="/static/sharing.css?v=m9-photo-v1">{% endblock %}
+{% block content %}
+<section class="sharing-page" aria-labelledby="page-title">
+  <header class="page-heading"><div><a class="sharing-back" href="/animals/{{ animal.animal_id }}">← {{ animal.name }}</a><p class="page-kicker">Deliberately shared</p><h1 id="page-title">Public profile choices</h1><p class="lede">Write the profile visitors will see. Private records and keeper notes stay private.</p></div><a class="button-link secondary" href="/animals/{{ animal.animal_id }}/album">Manage album</a></header>
+  {% include "sharing_notice.html" %}
+  {% if not collection or not collection.enabled %}<p class="sharing-notice">Household sharing is off. Your choices are saved privately. <a href="/sharing">Collection sharing settings</a></p>{% endif %}
+  {% if publication %}<div class="card sharing-preview-action"><p class="sharing-link" data-public-url="/p/{{ publication.slug }}">{% if public_enabled and publication.is_public and collection and collection.enabled %}<a href="/p/{{ publication.slug }}">Open public profile</a>{% else %}Reserved link: <code>/p/{{ publication.slug }}</code>{% endif %}</p><a class="button-link secondary" href="/animals/{{ animal.animal_id }}/sharing/preview">Preview public profile</a></div>{% endif %}
+  {% if can_manage %}<form class="card form-stack sharing-profile-form" method="post" action="/animals/{{ animal.animal_id }}/sharing">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}">
+    <h2>What visitors can see</h2>
+    <label>Public display name<input name="title" maxlength="120" required autocomplete="off" value="{{ values.get('title', publication.title if publication else '') }}"><small>Enter a name to publish. Nothing is copied from the private profile automatically.</small></label>
+    <label>Link name<input name="slug" maxlength="90" required pattern="[a-z0-9-]+" autocapitalize="none" spellcheck="false" placeholder="ember" value="{{ values.get('slug', publication.slug if publication else '') }}"><small>Lowercase letters, numbers and hyphens. A random suffix keeps the address distinct.</small></label>
+    <label>Public species label <span class="muted">(optional)</span><input name="species" maxlength="120" value="{{ values.get('species', publication.species if publication else '') }}"></label>
+    <label>Public introduction <span class="muted">(optional)</span><textarea name="description" maxlength="2000" rows="4">{{ values.get('description', publication.description if publication else '') }}</textarea></label>
+    <label>Public profile photo<select name="cover_media_id"><option value="">No public profile photo</option>{% for photo in photos if photo.is_public %}<option value="{{ photo.media_id }}" {% if values.get('cover_media_id') == photo.media_id|string or (not values and publication and publication.cover_media_id == photo.media_id) %}selected{% endif %}>{{ photo.caption or ('Album photo ' ~ photo.position) }}</option>{% endfor %}</select><small>Only album photos explicitly selected for sharing are available. This does not change the primary keeper profile photo.</small></label>
+    <label class="sharing-check"><input type="checkbox" name="is_public" value="true" {% if values.get('is_public') == 'true' or (not values and publication and publication.is_public) %}checked{% endif %}><span>Make this Animal’s profile public<small>Requires household sharing and released public delivery. Uncheck to revoke this profile and every shared photo beneath it.</small></span></label>
+    <div class="form-actions"><a href="/animals/{{ animal.animal_id }}">Cancel</a><button type="submit">Save public profile choices</button></div>
+  </form>{% elif animal.status == 'active' %}<p>An owner or administrator manages this Animal’s public profile.</p>{% endif %}
+</section>
+{% endblock %}

@@ -55,6 +55,7 @@ class Settings(BaseSettings):
     password_reset_delivery_path: Path | None = None
     platform_operator_user_ids: str = ""
     build_git_sha: str | None = None
+    public_sharing_enabled: bool = False
 
     @property
     def updates_ledger_path(self) -> Path | None:
@@ -131,6 +132,11 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def require_absolute_production_storage_paths(self) -> Self:
+        if self.environment is Environment.PRODUCTION and self.public_sharing_enabled:
+            raise ValueError(
+                "public release qualification and owner approval are pending; "
+                "public sharing cannot be enabled in production"
+            )
         if self.environment is Environment.PRODUCTION and not self.session_cookie_secure:
             raise ValueError("production session cookies must be secure")
         if self.environment is Environment.PRODUCTION and not self.database_path.is_absolute():
@@ -213,6 +219,7 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         "SNAKETRACKER_PASSWORD_RESET_DELIVERY_PATH": "password_reset_delivery_path",
         "SNAKETRACKER_PLATFORM_OPERATOR_USER_IDS": "platform_operator_user_ids",
         "SNAKETRACKER_BUILD_GIT_SHA": "build_git_sha",
+        "SNAKETRACKER_PUBLIC_SHARING_ENABLED": "public_sharing_enabled",
     }
     for environment_key, field_name in keys.items():
         if environment_key in source:

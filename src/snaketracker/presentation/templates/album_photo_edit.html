@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Edit album photo · {{ animal.name }} · Care Keeper{% endblock %}
+{% block page_styles %}<link rel="stylesheet" href="/static/sharing.css?v=m9-photo-v1">{% endblock %}
+{% block content %}
+<section class="sharing-page" aria-labelledby="page-title">
+  <header><a class="sharing-back" href="/animals/{{ animal.animal_id }}/album">← {{ animal.name }}’s album</a><h1 id="page-title">Photo details</h1></header>
+  {% include "sharing_notice.html" %}
+  <div class="sharing-columns"><figure class="card album-large-photo"><img src="/animals/{{ animal.animal_id }}/album/{{ photo.media_id }}/photo" width="{{ photo.width }}" height="{{ photo.height }}" alt="{{ photo.caption or ('Photo of ' ~ animal.name) }}"></figure>
+    <div class="form-stack">{% if can_manage %}<form class="card form-stack" method="post" action="/animals/{{ animal.animal_id }}/album/{{ photo.media_id }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}">
+      <label>Caption<textarea name="caption" rows="3" maxlength="500">{{ values.get('caption', photo.caption) }}</textarea><small>A shared photo’s caption is public too. Leave out private details.</small></label>
+      <label>Album position<input name="position" type="number" min="1" max="10000" required value="{{ values.get('position', photo.position) }}"><small>Lower numbers appear first.</small></label>
+      <label class="sharing-check"><input name="is_public" type="checkbox" value="true" {% if values.get('is_public') == 'true' or (not values and photo.is_public) %}checked{% endif %}><span>Include this photo in the public album<small>It appears only while both the household and this Animal allow sharing. Uncheck to revoke public access.</small></span></label>
+      <div class="form-actions"><a href="/animals/{{ animal.animal_id }}/album">Cancel</a><button type="submit">Save photo choices</button></div>
+    </form>
+    <details class="card sharing-remove"><summary>Remove this photo</summary><p>Remove it from this album and revoke public delivery. The immutable historical version remains in protected storage and still counts toward storage usage.</p><form method="post" action="/animals/{{ animal.animal_id }}/album/{{ photo.media_id }}/remove"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}-remove"><button class="danger" type="submit">Remove photo from album</button></form></details>
+    {% else %}<div class="card"><p>{{ photo.caption or 'No caption' }}</p><p>{{ 'Selected for sharing' if photo.is_public else 'Private photo' }}.{% if animal.status == 'active' %} An owner or administrator can edit album photos.{% endif %}</p></div>{% endif %}</div>
+  </div>
+</section>
+{% endblock %}
+

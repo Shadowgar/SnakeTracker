@@ -31,8 +31,13 @@ approval. Deployment does not imply final milestone acceptance. The
 [M6.6 final acceptance package](docs/evidence/m6.6-final-acceptance-20261108/README.md)
 records the remaining iPhone/VoiceOver checks and owner decisions. See the
 [current roadmap status and next decisions](docs/evidence/roadmap-continuation-20261107/README.md)
-for M6.6 closeout, remaining M7/M8 qualification, and the M9 album handoff. The
+for M6.6 closeout and remaining M7/M8 qualification. The
 [roadmap](docs/roadmap/milestones.md) retains the historical requirements and approval baseline.
+
+The [M9 public-photo candidate](docs/evidence/m9-public-media/README.md) adds separate Animal
+albums, optional public Animal profiles and a public collection gallery. It is development work;
+production public delivery remains disabled pending architecture, release and security approval.
+Video remains the next M9 implementation slice.
 
 ## Run locally
 

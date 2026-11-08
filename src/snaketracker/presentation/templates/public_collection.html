@@ -1,0 +1,9 @@
+{% extends "public_base.html" %}
+{% block title %}{{ collection.title }} · Care Keeper{% endblock %}
+{% block content %}
+  <header class="public-collection-heading"><p class="page-kicker">A keeper’s collection</p><h1 id="page-title">{{ collection.title }}</h1>{% if collection.description %}<p class="public-introduction">{{ collection.description }}</p>{% endif %}</header>
+  <section aria-labelledby="animals-heading"><div class="sharing-section-heading"><h2 id="animals-heading">Meet the Animals</h2><p>Profiles and photographs chosen by their keeper.</p></div>
+    <div class="public-collection-grid">{% for animal in collection.animals %}<article class="public-collection-card"><a href="{{ animal_paths.get(animal.slug, '/p/' ~ animal.slug) }}" class="public-collection-photo" aria-label="View {{ animal.title }}’s public profile">{% if animal.profile_photo %}<img src="{{ photo_paths.get(animal.profile_photo.token, '/m/' ~ animal.profile_photo.token) }}" alt="{{ animal.profile_photo.caption or animal.title }}" width="{{ animal.profile_photo.width }}" height="{{ animal.profile_photo.height }}" loading="lazy">{% else %}<span class="public-card-placeholder" aria-hidden="true">{{ animal.title[0]|upper }}</span>{% endif %}</a><div class="public-collection-copy"><h3><a href="{{ animal_paths.get(animal.slug, '/p/' ~ animal.slug) }}">{{ animal.title }}</a></h3>{% if animal.species %}<p>{{ animal.species }}</p>{% endif %}<a href="{{ animal_paths.get(animal.slug, '/p/' ~ animal.slug) }}#album">Explore album <span aria-hidden="true">→</span></a></div></article>{% else %}<div class="card album-empty"><h3>No Animals shared yet</h3><p>The keeper has not selected any profiles for this collection.</p></div>{% endfor %}</div>
+  </section>
+{% endblock %}
+
