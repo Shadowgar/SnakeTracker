@@ -1,0 +1,117 @@
+{
+  "purpose": "Documentation extract of retained dated operator receipts; no new production inspection in this task. No household identifiers, credentials, or runtime environment values included.",
+  "sources": [
+    {
+      "workspace_path": "output/combined-production-deploy-20261104/COMPLETE.json",
+      "sha256": "177852b4216911f789abb1b1c1a465f5904af5bb1c8677cd52954b9748bc19ce"
+    },
+    {
+      "workspace_path": "output/combined-production-deploy-20261107/ROLLBACK-VERIFIED.json",
+      "sha256": "c3a16e80544637b9e6773702021826472d19375250cefc4dff8ff13202464af5"
+    },
+    {
+      "workspace_path": "output/combined-production-deploy-20261107/FINAL-VERIFICATION.json",
+      "sha256": "728e8076b3cf748d3404f1bb74a9d7d3b423f3bfdc899ed8de56eaf16b45bac9"
+    },
+    {
+      "workspace_path": "output/combined-production-retry-20261108/FINAL-VERIFICATION.json",
+      "sha256": "0b6275aa36b689080b9519a4fe6a2afb99ee9a62d51829dce4451f205f583dd3"
+    },
+    {
+      "workspace_path": "output/combined-production-retry-20261108/CLOSEOUT-VERIFICATION.json",
+      "sha256": "11b8a878bfb3aa5256caca209f28d32d6e6921a0fc3cff8bd752c13a5ca02c24"
+    }
+  ],
+  "original_activation": {
+    "status": "CARE KEEPER COMBINED PRODUCTION RELEASE SUCCESSFUL",
+    "deployed_at": "2026-11-04T10:50:49.360708-05:00",
+    "verified_and_published_at": "2026-11-07T04:46:08.362221+00:00",
+    "source_sha": "8ebffb6287742f3aef5ad985ef99cf1036a3c623",
+    "merge_sha": "71eb88c01390d3672c470c1a50a80e707233c181",
+    "source_tree": "142752c8e58f72c0c2fe69a80aa95cd7e42c1eda",
+    "image_id": "sha256:ab0ddd40f4d54db63b6945146e163a0431670a62e8a112c5b06a675c1c5818f4",
+    "schema": "0027_bioactive_plant_care",
+    "event_high_water_before": 1051,
+    "event_high_water_after": 1051,
+    "migration_tables_preserved": 109,
+    "final_protected_tables_preserved": 35,
+    "attachment_versions_preserved": 46,
+    "backup_id": "53785bb3-bace-478e-9891-eb4aa052af86",
+    "frog_guides_published": false,
+    "taxonomy_import_performed": false,
+    "development_natural_history_published": false
+  },
+  "november_7_rollback": {
+    "status": "ROLLED BACK \u2014 PRODUCTION HEALTHY",
+    "restored_at": "2026-11-07T10:15:48.404552+00:00",
+    "source_sha": "8ebffb6287742f3aef5ad985ef99cf1036a3c623",
+    "image_id": "sha256:ab0ddd40f4d54db63b6945146e163a0431670a62e8a112c5b06a675c1c5818f4",
+    "schema": "0027_bioactive_plant_care",
+    "outage_seconds": 158.439417,
+    "production_database_restored": false,
+    "migrations_executed": false,
+    "data_comparison": {
+      "table_count": 110,
+      "all_business_records_identical": true,
+      "ignored_table": "backup_leases",
+      "ignored_reminder_column": "calculated_at",
+      "schema": "0027_bioactive_plant_care",
+      "event_high_water": 1052,
+      "attachment_versions_verified": 46,
+      "retained_archive_inventories_identical": true
+    },
+    "cause": "Overly strict operator hash treated absent and empty DNS lists as different; no effective runtime configuration change. Both candidate and rollback had identical omission behavior."
+  },
+  "november_8_retry": {
+    "status": "DEPLOYED AND VERIFIED",
+    "verified_at": "2026-11-08T05:46:24.973513+00:00",
+    "deployed_at": "2026-11-08T05:36:18.209375+00:00",
+    "source_sha": "cf772cf8348f3eeb2ec069754b585bffd6c926cf",
+    "image_id": "sha256:1f9ea52a9ce535f50a2d5e4795d5f62b13c0dc4f297ac58191d6bbf1611cdc39",
+    "artifact_id": 13565316198,
+    "previous_source": "8ebffb6287742f3aef5ad985ef99cf1036a3c623",
+    "previous_image": "sha256:ab0ddd40f4d54db63b6945146e163a0431670a62e8a112c5b06a675c1c5818f4",
+    "backup_run_id": "741e4100-8f62-4146-9f2d-d596f9c3bc79",
+    "outage_seconds": 28.27,
+    "free_bytes_before": 7668527104,
+    "free_bytes_after": 7540764672,
+    "schema": 27,
+    "event_high_water": 1053,
+    "attachment_versions": 46,
+    "retained_backup_archives": 12,
+    "data_preservation": "passed with exact operator session/audit accounting",
+    "browser_routes": 21,
+    "browser_static_readiness_checks": 8,
+    "plant_viewports": [
+      1440,
+      390,
+      320
+    ],
+    "axe_violations": 0,
+    "all_services_healthy": true,
+    "automatic_restarts": 0,
+    "temporary_operator_session_revoked": true,
+    "rollback_performed": false,
+    "migration_performed": false,
+    "qualified_image_rebuilt": false,
+    "reference_content_published": false,
+    "formal_milestone_acceptance_changed": false,
+    "m9_started": false,
+    "verification_harness_corrections": [
+      "demo record visual selection",
+      "contained portrait bitmap versus border box",
+      "CSP-safe accessibility evaluation",
+      "empty-query Directory landing expectation"
+    ]
+  },
+  "dated_closeout": {
+    "checked_at": "2026-11-08T05:49:55.934233+00:00",
+    "status": "DEPLOYED AND VERIFIED",
+    "source": "cf772cf8348f3eeb2ec069754b585bffd6c926cf",
+    "image": "sha256:1f9ea52a9ce535f50a2d5e4795d5f62b13c0dc4f297ac58191d6bbf1611cdc39",
+    "free_bytes": 7539240960,
+    "operational_floor_bytes": 6710886400,
+    "qualified_checkout_clean": true,
+    "original_attempt_script_preserved": true
+  }
+}
