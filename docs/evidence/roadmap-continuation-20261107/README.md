@@ -1,8 +1,12 @@
-# Current roadmap status — November 7, 2026
+# Current roadmap status — November 8, 2026
 
-The combined release is deployed and healthy according to the retained November 6
-verification receipt. **M6.6 owner acceptance and formal M7/M8 qualification remain
-open. M9 is a preparation handoff, with no public sharing implemented or enabled.**
+**DEPLOYED AND VERIFIED:** the owner-authorized PR #34/#35 retry completed
+November 8, 2026. Exact source `cf772cf8348f3eeb2ec069754b585bffd6c926cf` is live,
+including the verified Plant Detail correction. See the
+[November 8 retry record](production-retry-20261108.md) for exact image, recovery,
+data-preservation and actual browser evidence.
+**M6.6 owner acceptance and formal M7/M8 qualification remain open. M9 is a
+preparation handoff; implementation has not started and public sharing is disabled.**
 
 This is the current implementation-status supplement to the
 [frozen roadmap](../../roadmap/milestones.md). Its earlier statements that X1 was
@@ -17,9 +21,13 @@ and bytes; no unchecked requirement or Proposed ADR is silently promoted.
   `71eb88c01390d3672c470c1a50a80e707233c181`, with the identical qualified source
   tree and deployed schema 27. [M6.6 closeout](m66-closeout.md) records the source,
   image and reused evidence, plus the remaining acceptance items.
-- **Plant Detail correction:** a separate focused correction fixes the confirmed
-  112 × 800 px thumbnail defect. It remains subject to owner merge/deployment
-  approval; writing this note does not change the live application.
+- **Plant Detail correction and compatibility exporter:** PRs #34/#35 merged
+  normally into `cf772cf8348f3eeb2ec069754b585bffd6c926cf`. The November 7
+  attempt rolled back after an operator DNS comparison error. The separately
+  authorized November 8 retry passed production acceptance: 21 authenticated
+  routes, eight static/readiness checks, and Plant Detail at 1440/390/320 px with
+  zero axe violations or horizontal overflow. The layout fix is live; see the
+  [retry record](production-retry-20261108.md).
 - **Frog content:** two version-1 guides are ready for the
   [bounded publication decision](frog-guide-publication.md). They remain unpublished.
 - **M9:** the [implementation handoff](m9-handoff.md) identifies the first useful
@@ -30,15 +38,17 @@ and bytes; no unchecked requirement or Proposed ADR is silently promoted.
 Evidence below is reused within its original scope. The operator receipts live in
 `output/combined-production-deploy-20261104/{REPORT.md,COMPLETE.json,SHA256SUMS}` in
 the shared workspace, with prior X1–X5 and integrated candidate receipts linked from
-[M6.6 closeout](m66-closeout.md). No production recovery or migration was repeated.
+[M6.6 closeout](m66-closeout.md). The later November 7 rollback and November 8
+retry evidence remain separate. No migration or database restoration accompanies
+this schema-27 binary update.
 
 | Requirement | Evidence available | Still required |
 | --- | --- | --- |
-| Coherent encrypted backups and isolated restore | X1 normal-worker backup lease checks; latest encrypted recovery point `53785bb3-bace-478e-9891-eb4aa052af86`; restored 105 comparable tables and all 46 attachment versions; integrity/FK checks passed | Independently retained off-device copy and independent key-recovery exercise; representative RPO 6h / RTO 60min / 20 GiB qualification |
+| Coherent encrypted backups and isolated restore | X1 normal-worker backup lease checks; current retry recovery point `741e4100-8f62-4146-9f2d-d596f9c3bc79` covers event 1,053 and all 46 attachment versions; isolated restoration passed; earlier `5a52775c-17be-4730-a6a0-b5a51de743a3` and other recovery assets remain retained | Independently retained off-device copy and independent key-recovery exercise; representative RPO 6h / RTO 60min / 20 GiB qualification |
 | Upgrade and data preservation | Actual schema 25 → 26 → 27 deployment, 109 pre-existing tables preserved, event high-water 1,051 unchanged; accepted installed ARM64 migration/compatibility checks | Complete supported fresh-install/upgrade/rollback/event/projection/plugin/backup matrix and evidence accounting, including missing-plugin/newer-contract refusal |
 | Security and operation | Accepted hosted gates and actual ARM64 image scan: zero **fixed** HIGH/CRITICAL findings; successful live HTTPS/PWA/worker checks and existing runbooks; both historical urllib3 alerts verified fixed | Operator incident exercise, consolidated security and owner acceptance; scan scope is not a claim of no vulnerabilities |
 | Native Pi and storage | Actual native deployment, SQLite 3.40.1 migration and isolated restoration under the owner's SD-only exception | Formal representative cold/warm, CPU, memory, thermal/throttling and durability budgets; SSD/ext4 requirement remains unmet unless formally reconciled with the exception. No new SSD purchase is mandated here |
-| Release evidence | Qualified source/tree/image identity, retained image and scan evidence, accepted 1,710 hosted tests from the deployed candidate | Retained SBOM, artifact signing/verification evidence, complete matrix, operator exercises and owner security/accessibility/performance/recovery/integrity acceptance |
+| Release evidence | Qualified source/tree/image identity, retained image and scan evidence, accepted 1,719 hosted tests for exact combined target `cf772cf8`; prior 1,710-test qualification remains historical | Retained SBOM, artifact signing/verification evidence, complete matrix, operator exercises and owner security/accessibility/performance/recovery/integrity acceptance |
 
 Neither M7 nor M8 is recorded as complete. An actual successful deployment under
 the owner's bounded exception is not the formal `Raspberry Pi deployment qualified`
@@ -60,22 +70,24 @@ uv and uvx. It can support a future offline SBOM conversion; no extra scan or re
 is needed solely to recover that inventory. A standard SBOM and artifact signature
 have not yet been produced or verified by this task.
 
-The current open alerts are different: [msgpack GHSA-j586-36cw-2gc2](https://github.com/Shadowgar/SnakeTracker/security/dependabot/81)
+The prior [msgpack GHSA-j586-36cw-2gc2](https://github.com/Shadowgar/SnakeTracker/security/dependabot/81)
 (high) and [Mako GHSA-5639-2j2p-m4mx](https://github.com/Shadowgar/SnakeTracker/security/dependabot/4)
-(medium). This candidate updates only their lock records to msgpack 1.2.3 and Mako
-1.4.2. msgpack belongs to the development audit/cache path and is absent from the
-retained runtime image. Mako is an Alembic runtime dependency; the advisory's
-Windows-only path does not match the Debian production platform, but the patched
-version removes the affected dependency from the candidate. The GitHub alerts stay
-open until a patch reaches the default branch; no production remediation is claimed.
+(medium) alerts were fixed on the default branch on November 7 at 07:12:43 UTC.
+The November 8 read-only API refresh reports **zero open Dependabot alerts**.
+The exact target lock contains msgpack 1.2.3 and Mako 1.4.2. GitHub reports both as
+transitive runtime dependencies; the retained production graph is distinct:
+msgpack belongs to the development audit/cache path and is absent from the actual
+runtime image, while Mako is an Alembic runtime dependency. This metadata refresh
+reran no scan. Its receipt is `security-alert-refresh.json` in the retry output
+folder. Existing qualification retains its original scope and limitations.
 
 The first Plant Detail PR Container gate also identified CVE-2026-109518 in a cached
 amd64 apt upgrade layer (apt/libapt-pkg6.0 2.6.1). Its fresh ARM64 scan already had
-2.6.2 and passed. Both roadmap candidates now require at least 2.6.2 in the
+2.6.2 and passed. The merged candidates require at least 2.6.2 in the
 Dockerfile, invalidating the stale layer and preventing its reuse. These matching
 Dockerfile/lock prerequisites allow independent required gates; no ignore rule or
-weakened scan threshold was added. New candidate verification is warranted by this
-new evidence, without rescanning or rebuilding the deployed image.
+weakened scan threshold was added. Those candidate checks passed before merge. The unchanged qualified image is
+reused for this deployment; no scan or build is repeated.
 
 ## Implemented release-readiness improvement
 
@@ -113,9 +125,10 @@ application suite is left to the required hosted gate, not repeated locally.
 
 ## Decisions that move the roadmap forward
 
-1. Review the Plant Detail correction and authorize its normal merge and a planned
-   deployment separately. The annotated reference plate also needs a separately
-   qualified replacement if a clean photograph is wanted.
+1. Record the remaining physical-device, screen-reader and owner acceptance
+   decisions for the deployed correction. The annotated reference plate still
+   needs a separately qualified replacement if a clean photograph is wanted; the
+   layout correction does not authorize replacing that content.
 2. Approve or decline the exact Frog Guide publication proposal; resolve the
    remaining M6.6 content, manual accessibility and owner acceptance items.
 3. Name an off-device recovery destination and independently recoverable key

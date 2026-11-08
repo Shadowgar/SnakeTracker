@@ -1,7 +1,7 @@
 # M6.6 — current closeout and remaining owner acceptance
 
-Status: November 7, 2026. Integrated functionality is deployed; **M6.6 final owner
-acceptance remains pending**. This current-status note supplements historical
+Status: November 8, 2026. Integrated functionality and the PR #34/#35 correction
+are **deployed and verified**. **M6.6 final owner acceptance remains pending**. This current-status note supplements historical
 receipts without rewriting their dates, source attribution or architectural approvals.
 
 ## Completed evidence to reuse
@@ -9,7 +9,7 @@ receipts without rewriting their dates, source attribution or architectural appr
 [PR #33](https://github.com/Shadowgar/SnakeTracker/pull/33) merged normally as
 `71eb88c01390d3672c470c1a50a80e707233c181`. Its tree
 `142752c8e58f72c0c2fe69a80aa95cd7e42c1eda` equals qualified application source
-`8ebffb6287742f3aef5ad985ef99cf1036a3c623`, deployed in ARM64 image
+`8ebffb6287742f3aef5ad985ef99cf1036a3c623`, historically deployed in ARM64 image
 `sha256:ab0ddd40f4d54db63b6945146e163a0431670a62e8a112c5b06a675c1c5818f4`.
 Schema is `0027_bioactive_plant_care`. Production activation occurred November 4;
 the completed live verification and truthful combined release entry were recorded
@@ -33,11 +33,19 @@ wording describes those earlier candidates, not the current release. The later
 production receipt establishes deployment; it does not retroactively change an
 earlier test's revision or create milestone acceptance.
 
+The [November 8 retry record](production-retry-20261108.md) establishes the current
+PR #34/#35 source `cf772cf8348f3eeb2ec069754b585bffd6c926cf`, immutable image and fresh
+schema-27 recovery point. Actual authenticated browser checks passed 21 routes and
+eight static/readiness checks. Plant Detail passed at 1440/390/320 px, with bounded
+proportional photographs, accessible Watering/History, retained attribution and
+zero axe violations or horizontal overflow. **The Plant Detail layout fix is live.**
+The earlier November 7 rollback and the original activation evidence above remain
+attributed to their actual sources; neither is erased or relabeled.
+
 ## Only unfinished closeout items
 
 | Item | Remaining evidence or owner decision |
 | --- | --- |
-| Plant Detail presentation defect | Finish the bounded correction and its populated-image/mobile/desktop regression; owner reviews the result and separately authorizes merge/deployment. The existing deployment does not establish that this newly reported defect is fixed. |
 | Physical device and screen reader | Walk the changed guide, Smart Care edit/preview/confirmation, plant and history screens on the owner's actual device and with a screen reader; record platform, focus/control names, errors and outcome. Chromium viewport and automated accessibility results do not substitute for this acceptance. Use isolated fixtures for deliberate business writes. |
 | Frog Guide source/content publication | Decide the [exact two-guide publication proposal](frog-guide-publication.md). Code and presentation are live, but the reviewed guide content remains unpublished in the production receipt. Import requires separate explicit authorization and exact qualified taxa. |
 | Full taxonomy archive and Natural History content | The bounded local catalog/provider overlay is deployed; production-sized full-archive source/rights/import/capacity qualification is still unperformed. Decide whether to require it for closeout or explicitly defer it through the existing governance process. X3 code is deployed, but development Natural History content has not been published. Neither import is authorized by this closeout. |
