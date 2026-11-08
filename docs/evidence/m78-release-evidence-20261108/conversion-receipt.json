@@ -1,0 +1,14 @@
+{
+  "status": "offline_conversion_passed",
+  "image_id": "sha256:1f9ea52a9ce535f50a2d5e4795d5f62b13c0dc4f297ac58191d6bbf1611cdc39",
+  "source_sha": "cf772cf8348f3eeb2ec069754b585bffd6c926cf",
+  "qualification_artifact_id": 13565176872,
+  "qualification_zip_sha256": "3013b4cea5b6187af5dee8901035f924316095e174adf58ee391c1a61280857a",
+  "scan_sha256": "0a42aae639aa6443b93be9013aeaa705ac3e974ffdeae37b4b10d4783615988c",
+  "archive_sha256": "92ae80dc4a755f92c59be71ad6982e504e6d3cd1f2bbb485fbd728283f718f60",
+  "sbom_sha256": "bf26580823edc8a4998dc359b29b01191b24432f8c4acb2ef522772fae1b4131",
+  "component_occurrences": 1145,
+  "signature_status": "not_supplied; production signing authority not selected",
+  "production_database_access": false,
+  "image_build_or_scan": false
+}
