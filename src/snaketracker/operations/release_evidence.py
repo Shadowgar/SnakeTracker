@@ -21,7 +21,10 @@ MAX_JSON_BYTES = 64 * 1024 * 1024
 
 
 def _json_bytes(document: dict[str, Any]) -> bytes:
-    return (json.dumps(document, sort_keys=True, indent=2, ensure_ascii=False) + "\n").encode()
+    data = (json.dumps(document, sort_keys=True, indent=2, ensure_ascii=False) + "\n").encode()
+    if len(data) > MAX_JSON_BYTES:
+        raise ValueError("JSON evidence exceeds the 64 MiB output limit.")
+    return data
 
 
 def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -187,9 +190,10 @@ def export_evidence(
         "signature": "not_supplied",
         "qualification": "not_asserted",
     }
+    index_bytes = _json_bytes(index)
     output.mkdir(mode=0o700)
     (output / "sbom.cdx.json").write_bytes(sbom)
-    (output / "release-evidence.json").write_bytes(_json_bytes(index))
+    (output / "release-evidence.json").write_bytes(index_bytes)
     return index
 
 

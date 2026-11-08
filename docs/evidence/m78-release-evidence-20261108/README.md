@@ -62,6 +62,22 @@ qualification retain their original scope. They were not repeated for this offli
 conversion. Fresh focused test/lint/type/architecture/link results are retained
 with this change; none closes the broader M7/M8 gates below.
 
+### PR #37 review correction: exported JSON size
+
+Review thread `PRRT_kwDOTtc1m860-2zK` identified that a small retained inventory
+could expand beyond the verifier's 64 MiB JSON limit. A focused regression lowered
+the limit to 4,096 bytes: a 1,854-byte inventory containing a repeated Unicode
+target produced a 14,255-byte SBOM. Before the fix, the test failed with
+`DID NOT RAISE ValueError`; export had created a bundle the verifier could not read.
+
+Serialization now checks the actual UTF-8 byte length against the same bound used
+by the reader. Both SBOM and index are serialized and checked before the output
+directory is created. The regression verifies rejection without output or input
+mutation; a boundary case verifies successful export and signature verification
+at the exact size limit. The focused suite passes **30 tests with 100% line and
+branch coverage**. The retained conversion and its unsigned qualification status
+above are unchanged; no accepted artifact was regenerated or rescanned.
+
 ## Remaining mandatory public-release work
 
 | Gate | Reuse already accepted | Remaining work or precise owner decision |

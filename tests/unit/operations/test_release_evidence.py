@@ -273,6 +273,44 @@ def test_bounded_json_read_and_strict_digest_syntax(inputs, tmp_path, monkeypatc
         export(inputs, tmp_path / "output")
 
 
+def test_expanded_sbom_is_rejected_before_creating_output(inputs, tmp_path, monkeypatch):
+    document = json.loads(inputs[0].read_text())
+    document["Results"] = [
+        {
+            "Target": "é" * 600,
+            "Type": "python-pkg",
+            "Packages": [{"Name": f"package-{n}", "Version": "1"} for n in range(8)],
+        }
+    ]
+    inputs[0].write_text(json.dumps(document, ensure_ascii=False))
+    originals = [path.read_bytes() for path in inputs]
+    assert len(originals[0]) < 4096
+    monkeypatch.setattr(release_evidence, "MAX_JSON_BYTES", 4096)
+
+    output = tmp_path / "output"
+    with pytest.raises(ValueError, match="JSON evidence exceeds"):
+        export(inputs, output)
+
+    assert not output.exists()
+    assert originals == [path.read_bytes() for path in inputs]
+
+
+def test_export_at_json_size_limit_remains_verifiable(inputs, tmp_path, monkeypatch):
+    reference = tmp_path / "reference"
+    export(inputs, reference)
+    byte_limit = max(
+        inputs[0].stat().st_size,
+        (reference / "sbom.cdx.json").stat().st_size,
+        (reference / "release-evidence.json").stat().st_size,
+    )
+    monkeypatch.setattr(release_evidence, "MAX_JSON_BYTES", byte_limit)
+
+    bundle = tmp_path / "bundle"
+    export(inputs, bundle)
+    signature, key = sign(bundle, tmp_path)
+    assert verify(inputs, bundle, signature, key)["signature"] == "verified_ed25519"
+
+
 def test_conflicting_duplicate_package_metadata_is_rejected(inputs, tmp_path):
     document = json.loads(inputs[0].read_text())
     package = document["Results"][0]["Packages"][0]
