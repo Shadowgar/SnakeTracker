@@ -27,7 +27,9 @@ repository and Python package retain the historical name `snaketracker`.
 
 Care Keeper currently serves one household with multiple users. X1–X5, Smart Care and Bioactive
 code is integrated and deployed; the two reviewed Frog Guides still require separate publication
-approval. Deployment does not imply final milestone acceptance. See the
+approval. Deployment does not imply final milestone acceptance. The
+[M6.6 final acceptance package](docs/evidence/m6.6-final-acceptance-20261108/README.md)
+records the remaining iPhone/VoiceOver checks and owner decisions. See the
 [current roadmap status and next decisions](docs/evidence/roadmap-continuation-20261107/README.md)
 for M6.6 closeout, remaining M7/M8 qualification, and the M9 album handoff. The
 [roadmap](docs/roadmap/milestones.md) retains the historical requirements and approval baseline.
