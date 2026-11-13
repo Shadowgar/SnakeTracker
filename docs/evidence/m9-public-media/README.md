@@ -130,6 +130,20 @@ timeouts during filesystem writes. Serialized final feature tests and browser ch
 passed. No unrelated session-authentication change or storage investigation was made;
 these local results are not native performance/durability acceptance.
 
+### Hosted qualification correction — November 12 continuation
+
+The initial candidate's hosted quality run passed 1,743 tests and failed one
+obsolete five-tab expectation: the new Album tab makes six. The corrected assertion
+checks all six and the Album destination. Its ARM64 image built successfully, then
+the runtime probe rejected the new migration because its declared chain ended at
+27. The probe now requires 28 and runs a populated 27 → 28 → 27 → 28 preservation
+check, sharing-event replay and refusal of downgrade after retained sharing history,
+using only release-installed dependencies. These six focused correction tests pass.
+Application and migration bytes are unchanged from the independently reviewed
+candidate; existing browser/security evidence retains its original scope. Final
+hosted check identities are attached to the PR head, without claiming failed runs
+passed or regenerating accepted production artifacts.
+
 ## Review screenshots
 
 - [Public Animal, desktop](screenshots/public-animal-1440.png)

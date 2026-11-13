@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 
 import pytest
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 
 from snaketracker.operations.release_compatibility import export_release_compatibility
 
@@ -19,6 +21,18 @@ SPEC.loader.exec_module(arm64_release)
 
 SOURCE_SHA = "a" * 40
 IMAGE_ID = "sha256:" + "b" * 64
+
+
+def test_runtime_probe_qualifies_actual_m9_migration_head():
+    config = Config(ROOT / "alembic.ini")
+    config.set_main_option("script_location", str(ROOT / "migrations"))
+    chain = arm64_release.verify_migration_chain(ScriptDirectory.from_config(config))
+    assert chain == [
+        "0025_natural_history",
+        "0026_amphibian_care_guides",
+        "0027_bioactive_plant_care",
+        "0028_public_photo_sharing",
+    ]
 
 
 def test_retained_manifest_binds_installed_build_to_qualified_image(tmp_path, monkeypatch):

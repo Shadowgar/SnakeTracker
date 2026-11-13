@@ -85,6 +85,19 @@ def preflight():
     assert os.environ["TRIVY_IMAGE"] == SCANNER
 
 
+def verify_migration_chain(script):
+    chain = [
+        "0025_natural_history",
+        "0026_amphibian_care_guides",
+        "0027_bioactive_plant_care",
+        "0028_public_photo_sharing",
+    ]
+    assert script.get_heads() == [chain[-1]]
+    for previous, current in itertools.pairwise(chain):
+        assert script.get_revision(current).down_revision == previous
+    return chain
+
+
 def in_image():
     from alembic.config import Config
     from alembic.script import ScriptDirectory
@@ -101,10 +114,7 @@ def in_image():
     config = Config("/app/alembic.ini")
     config.set_main_option("script_location", "/app/migrations")
     script = ScriptDirectory.from_config(config)
-    chain = ["0025_natural_history", "0026_amphibian_care_guides", "0027_bioactive_plant_care"]
-    assert script.get_heads() == [chain[-1]]
-    for previous, current in itertools.pairwise(chain):
-        assert script.get_revision(current).down_revision == previous
+    chain = verify_migration_chain(script)
     versions = {
         name: capture("dpkg-query", "-W", "-f=${Version}", name) for name in ("libssl3", "openssl")
     }
@@ -123,6 +133,7 @@ def in_image():
         for name, function in (
             ("x5", "check_x5_upgrade"),
             ("bioactive", "check_bioactive_upgrade"),
+            ("public_sharing", "check_public_sharing_upgrade"),
         ):
             check = runpy.run_path(
                 qualification / f"tests/integration/test_{name}_migration_runtime.py"
@@ -138,7 +149,11 @@ def in_image():
                 "trusted_schema": 0,
                 "openssl": versions,
                 "migration_chain": chain,
-                "migration_checks": ["check_x5_upgrade", "check_bioactive_upgrade"],
+                "migration_checks": [
+                    "check_x5_upgrade",
+                    "check_bioactive_upgrade",
+                    "check_public_sharing_upgrade",
+                ],
                 "frog_bundle_sha256": FROG_SHA,
                 "release_compatibility": json.loads(
                     export_release_compatibility(require_build_identity=True)
