@@ -154,3 +154,12 @@ passed or regenerating accepted production artifacts.
 [Full browser results](browser-results.json) retain 23 page checks plus the complete
 owner-to-visitor journey. [Final mobile owner results](owner-mobile-results.json)
 retain the six scoped gutter checks. The images contain fictional fixture data only.
+
+### Native textarea correction
+
+PR review reproduced a 422 response for browser CRLF line breaks. Shared text
+validation now normalizes CRLF before length/control checks. The final 26-test
+feature run passes all four native multiline forms, normalized length bounds,
+private/public lifecycle, authorization, quotas, replay and encrypted recovery.
+An independent review covers the one-line source delta; the refreshed source
+binding and scope are in [the security receipt](security-review.md).

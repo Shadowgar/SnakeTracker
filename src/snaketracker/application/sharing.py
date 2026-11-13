@@ -608,7 +608,7 @@ def _command(payload: AlbumPhotoChangedV1 | AlbumPhotoRemovedV1) -> dict[str, ob
 def _text(value: str, name: str, maximum: int, *, required: bool = False) -> str:
     if not isinstance(value, str):
         raise SharingValidationError(f"{name} must be text.")
-    value = value.strip()
+    value = value.replace("\r\n", "\n").strip()
     if len(value) > maximum or (required and not value):
         raise SharingValidationError(
             f"{name} must contain {'1' if required else '0'}-{maximum} characters."

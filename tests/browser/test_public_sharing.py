@@ -173,6 +173,71 @@ def publish(client, animal, media):
     return public_path, collection_path
 
 
+def test_native_textarea_line_endings_are_normalized_for_every_sharing_form(tmp_path):
+    with sharing_client(tmp_path) as client:
+        _setup(client)
+        animal = _register(client, "Multiline fixture", "snake", "Python regius")
+        introduction = "First line\r\nSecond line"
+        response = post_form(
+            client,
+            "/sharing",
+            data={"title": "Collection", "slug": "collection", "description": introduction},
+        )
+        assert response.status_code == 303, response.text
+        response = post_form(
+            client,
+            animal + "/sharing",
+            data={"title": "Ember", "slug": "ember", "description": introduction},
+        )
+        assert response.status_code == 303, response.text
+        response = post_form(
+            client,
+            animal + "/album/upload",
+            data={"caption": introduction},
+            files={"photo": ("photo.png", PHOTO, "image/png")},
+        )
+        assert response.status_code == 303, response.text
+        media = re.search(r'data-media-id="([^"]+)"', client.get(animal + "/album").text)[1]
+        response = post_form(
+            client,
+            animal + "/album/" + media,
+            data={"caption": "Updated\r\ncaption", "position": "1"},
+        )
+        assert response.status_code == 303, response.text
+        # Native CRLF encoding must not consume extra characters from the text limit.
+        bounded = "a" * 1998 + "\r\nb"
+        response = post_form(
+            client,
+            "/sharing",
+            data={"title": "Collection", "slug": "collection", "description": bounded},
+        )
+        assert response.status_code == 303, response.text
+        with client.app.state.database_engine.connect() as connection:
+            assert connection.execute(
+                text("SELECT description FROM sharing_household_current")
+            ).scalar_one() == bounded.replace("\r\n", "\n")
+            assert connection.execute(
+                text("SELECT description FROM sharing_animal_current")
+            ).scalar_one() == introduction.replace("\r\n", "\n")
+            assert (
+                connection.execute(text("SELECT caption FROM animal_album_current")).scalar_one()
+                == "Updated\ncaption"
+            )
+        # Other embedded controls remain invalid and cannot replace accepted content.
+        for invalid in ("lone\rcarriage return", "embedded\x00control"):
+            response = post_form(
+                client,
+                "/sharing",
+                data={"title": "Collection", "slug": "collection", "description": invalid},
+            )
+            assert response.status_code == 422
+            assert "unsupported control" in response.text
+        with client.app.state.database_engine.connect() as connection:
+            assert connection.execute(
+                text("SELECT description FROM sharing_household_current")
+            ).scalar_one() == bounded.replace("\r\n", "\n")
+
+
 def test_private_album_and_publication_are_deliberate_and_revocable(tmp_path):
     with sharing_client(tmp_path) as client:
         _setup(client)
