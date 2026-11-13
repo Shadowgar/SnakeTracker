@@ -33,6 +33,7 @@ from snaketracker.application.readiness import PlatformReadiness
 from snaketracker.application.reminders import ReminderFactService, ReminderRuleService
 from snaketracker.application.reports import ReportService
 from snaketracker.application.search import SearchService
+from snaketracker.application.sharing import SharingService
 from snaketracker.application.species_directory import SpeciesDirectoryService
 from snaketracker.bootstrap.compatibility import inspect_startup_compatibility
 from snaketracker.bootstrap.configuration import (
@@ -94,6 +95,7 @@ from snaketracker.infrastructure.purchases.projections import (
 from snaketracker.infrastructure.reminders.projections import SQLAlchemyReminderProjection
 from snaketracker.infrastructure.search.fts import SQLAlchemyFTSSearchRepository
 from snaketracker.infrastructure.security.passwords import Argon2PasswordHasher
+from snaketracker.infrastructure.sharing.projections import SQLAlchemySharingProjection
 from snaketracker.infrastructure.taxonomy.care_guides import SQLAlchemyCareGuideRepository
 from snaketracker.infrastructure.taxonomy.catalog import LocalTaxonomyCatalog
 from snaketracker.infrastructure.taxonomy.inaturalist import INaturalistTaxonomyProvider
@@ -107,6 +109,8 @@ from snaketracker.infrastructure.taxonomy.repository import SQLAlchemyTaxonRepos
 from snaketracker.platform.notifications.service import NotificationIntentService
 from snaketracker.presentation.admin import create_admin_router
 from snaketracker.presentation.health import create_health_router
+from snaketracker.presentation.sharing import create_sharing_router
+from snaketracker.presentation.sharing_guard import PublicSharingGuard
 from snaketracker.presentation.web import create_web_router
 from snaketracker.worker.projections import ProjectionWorker
 
@@ -206,6 +210,7 @@ def build_application(settings: Settings) -> FastAPI:
             engine.dispose()
 
     app = create_application(readiness=readiness, lifespan=lifespan)
+    app.add_middleware(PublicSharingGuard, enabled=settings.public_sharing_enabled)
     if settings.runtime_secret is not None and compatibility.normal_readiness:
         secret = settings.runtime_secret.get_secret_value().encode()
         password_hasher = Argon2PasswordHasher()
@@ -249,9 +254,13 @@ def build_application(settings: Settings) -> FastAPI:
                 GBIFImageProvider(),
             ),
         )
+        photo_reserve_bytes = 0 if settings.environment is Environment.TEST else 6_710_886_400
+        photo_quota_bytes = 256 * 1024 * 1024
         attachment_service = AttachmentService(
             animals=animal_service,
             repository=SQLAlchemyAttachmentRepository(engine),
+            quota_bytes=photo_quota_bytes,
+            free_space_reserve_bytes=photo_reserve_bytes,
             storage=LocalAttachmentStorage(
                 settings.attachment_storage_path or settings.database_path.parent / "attachments"
             ),
@@ -367,6 +376,27 @@ def build_application(settings: Settings) -> FastAPI:
                 natural_history_development=settings.environment is Environment.TEST,
                 production_release_history_path=settings.updates_ledger_path,
                 care_preview_secret=secret,
+            )
+        )
+        app.include_router(
+            create_sharing_router(
+                sharing=SharingService(
+                    event_store,
+                    SQLAlchemySharingProjection(engine),
+                    animals=animal_service,
+                    attachments=attachment_service,
+                    storage=LocalAttachmentStorage(
+                        settings.attachment_storage_path
+                        or settings.database_path.parent / "attachments"
+                    ),
+                    quota_bytes=photo_quota_bytes,
+                    free_space_reserve_bytes=photo_reserve_bytes,
+                ),
+                animals=animal_service,
+                identity=web_identity_service,
+                secure_cookie=settings.session_cookie_secure,
+                expected_origin=external_origin,
+                public_enabled=settings.public_sharing_enabled,
             )
         )
         app.include_router(

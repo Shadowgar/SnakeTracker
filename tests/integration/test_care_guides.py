@@ -396,7 +396,8 @@ def test_animal_reference_reads_only_its_explicitly_linked_current_guide(
             assert response.status_code == 200
             assert 'class="animal-reference-content"' in response.text
             nav = response.text.split('class="animal-section-nav"', 1)[1].split("</nav>", 1)[0]
-            assert nav.count("<a ") == 5
+            assert nav.count("<a ") == 6
+            assert f'href="{url}/album">Album</a>' in nav
             assert nav.index(">Care</a>") < nav.index(">Guides &amp; Species Reference</a>")
             assert f'href="{url}/reference" aria-current="page"' in nav
             assert "Species Overview / Natural History" in response.text

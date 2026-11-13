@@ -17,7 +17,7 @@ from snaketracker.bootstrap.compatibility import (
     ("metadata", "database_is_empty", "expected_mode"),
     [
         (
-            {"manifest_version": 1, "relational_schema_version": 27},
+            {"manifest_version": 1, "relational_schema_version": 28},
             False,
             CompatibilityMode.NORMAL,
         ),
@@ -34,7 +34,7 @@ from snaketracker.bootstrap.compatibility import (
             CompatibilityMode.RECOVERY_REQUIRED,
         ),
         (
-            {"manifest_version": 1, "relational_schema_version": 28},
+            {"manifest_version": 1, "relational_schema_version": 29},
             False,
             CompatibilityMode.RECOVERY_REQUIRED,
         ),
@@ -75,7 +75,7 @@ def test_known_alembic_revision_is_compatible(tmp_path) -> None:
         with engine.begin() as connection:
             connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
             connection.execute(
-                text("INSERT INTO alembic_version VALUES ('0027_bioactive_plant_care')")
+                text("INSERT INTO alembic_version VALUES ('0028_public_photo_sharing')")
             )
 
         assert inspect_database_compatibility(engine).mode is CompatibilityMode.NORMAL
@@ -189,7 +189,7 @@ def test_unknown_non_household_contract_requires_restricted_recovery(tmp_path) -
         with engine.begin() as connection:
             connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
             connection.execute(
-                text("INSERT INTO alembic_version VALUES ('0027_bioactive_plant_care')")
+                text("INSERT INTO alembic_version VALUES ('0028_public_photo_sharing')")
             )
             connection.execute(
                 text(

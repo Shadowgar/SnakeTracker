@@ -1,0 +1,12 @@
+{
+  "source": "cf772cf8348f3eeb2ec069754b585bffd6c926cf",
+  "new_schema": 28,
+  "mode": "recovery_required",
+  "reason": "relational_schema_unknown",
+  "worker_exit": 2,
+  "no_mutable_startup": true,
+  "database_bytes_unchanged": true,
+  "image": "sha256:1f9ea52a9ce535f50a2d5e4795d5f62b13c0dc4f297ac58191d6bbf1611cdc39",
+  "fixture_runtime_uid": 1000,
+  "harness_corrections": "Earlier attempts failed to access UID1000 private testfiles as imageUID1001 and used unsupportedrouteintrospection; those are not counted as schema refusal. The corrected container runs only this disposable fixture as UID1000."
+}

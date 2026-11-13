@@ -116,7 +116,7 @@ def test_explicit_offline_dry_run_retain_select_history_and_withdraw(
     )
 
 
-def test_operator_schema_27_preserves_populated_care_and_can_withdraw_publication(
+def test_operator_current_schema_preserves_populated_care_and_can_withdraw_publication(
     tmp_path, monkeypatch, capsys
 ):
     engine, boot, _, enclosures, _, enclosure, *_ = _setup(tmp_path)
@@ -149,7 +149,7 @@ def test_operator_schema_27_preserves_populated_care_and_can_withdraw_publicatio
                 }
 
         before = snapshot()
-        assert before[1]["alembic_version"] == [("0027_bioactive_plant_care",)]
+        assert before[1]["alembic_version"] == [("0028_public_photo_sharing",)]
         assert before[1]["household_summaries"]
         assert before[1]["animal_current"]
         assert len(before[1]["enclosure_plant_current"]) == 2

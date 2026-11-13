@@ -1,0 +1,1 @@
+"""SQLite synchronous publication projections."""

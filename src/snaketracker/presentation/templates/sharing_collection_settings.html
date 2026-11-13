@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Collection sharing · Care Keeper{% endblock %}
+{% block page_styles %}<link rel="stylesheet" href="/static/sharing.css?v=m9-photo-v1">{% endblock %}
+{% block content %}
+<section class="sharing-page" aria-labelledby="page-title">
+  <header class="page-heading"><div><p class="page-kicker">Your collection, your choice</p><h1 id="page-title">Collection sharing</h1><p class="lede">Choose the introduction visitors see. Animals and photos stay private until you select them.</p></div></header>
+  {% include "sharing_notice.html" %}
+  <div class="sharing-columns">
+    <section class="card form-stack" aria-labelledby="collection-details">
+      <h2 id="collection-details">Public collection details</h2>
+      {% if publication %}<p class="sharing-link" data-public-url="/c/{{ publication.slug }}">{% if public_enabled and publication.enabled %}<a href="/c/{{ publication.slug }}">Open public collection</a>{% else %}Reserved link: <code>/c/{{ publication.slug }}</code>{% endif %}</p><a class="secondary button-link" href="/sharing/preview">Preview collection</a>{% endif %}
+      {% if can_manage %}<form method="post" action="/sharing" class="form-stack">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}">
+        <label>Public collection name<input name="title" maxlength="120" required value="{{ values.get('title', publication.title if publication else '') }}" autocomplete="off"><small>Use a name you are comfortable sharing. Your household name is never copied here.</small></label>
+        <label>Link name<input name="slug" maxlength="90" pattern="[a-z0-9-]+" required value="{{ values.get('slug', publication.slug if publication else '') }}" placeholder="forest-collection" autocapitalize="none" spellcheck="false"><small>Lowercase letters, numbers and hyphens. A random suffix makes the link distinct; changing this name revokes the old link.</small></label>
+        <label>Public introduction<textarea name="description" rows="4" maxlength="2000">{{ values.get('description', publication.description if publication else '') }}</textarea></label>
+        <label class="sharing-check"><input type="checkbox" name="enabled" value="true" {% if values.get('enabled') == 'true' or (not values and publication and publication.enabled) %}checked{% endif %}><span>Enable sharing for this household<small>Only Animals marked public and photos selected for sharing can appear. Uncheck to revoke all visitor access.</small></span></label>
+        <div class="form-actions"><button type="submit">Save sharing choices</button></div>
+      </form>{% else %}<p>An owner or administrator manages publication settings.</p>{% endif %}
+    </section>
+    <section aria-labelledby="collection-animals"><h2 id="collection-animals">Choose your Animals</h2><p>Each Animal has its own public profile and photo choices.</p>
+      <div class="sharing-animal-list">{% for row in animals %}<a class="card sharing-animal-row" href="/animals/{{ row.animal.animal_id }}/sharing"><span><strong>{{ row.animal.name }}</strong><small>{{ row.animal.species }}</small></span><span class="sharing-status">{{ 'Selected for sharing' if row.publication and row.publication.is_public else 'Private' }}</span></a>{% else %}<div class="card empty-state"><h3>No active Animals</h3><p>Your collection will stay empty until you deliberately select an Animal.</p></div>{% endfor %}</div>
+    </section>
+  </div>
+</section>
+{% endblock %}
+

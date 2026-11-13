@@ -1,0 +1,5 @@
+{% if not public_enabled %}<div class="sharing-notice" role="status"><strong>Public links are not live.</strong> You can organize photos, choose what to share and preview the result. Visitors cannot access these pages until public delivery is released.</div>{% endif %}
+{% if error %}<div class="alert" role="alert"><strong>Changes were not saved.</strong> {{ error }}</div>{% endif %}
+{% if request.query_params.get('saved') %}<p class="sharing-success" role="status">Your sharing choices were saved.</p>{% endif %}
+
+{% if animal is defined and animal.status != 'active' %}<p class="sharing-notice">This Animal is archived. Its album remains private and readable. Restore the Animal before editing photos or publication choices.</p>{% endif %}

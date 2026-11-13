@@ -90,10 +90,10 @@ def test_manifest_separates_readable_events_registration_writes_and_migration(tm
     assert len(declarations["projection_requirements"]) == 9
     assert ["global_search_fts", 1, 5] in declarations["projection_requirements"]
     schema = manifest["relational_schema"]
-    assert schema["current_version"] == 27
-    assert schema["mutable_versions"] == [27]
-    assert 26 in schema["migration_required_versions"]
-    assert 27 not in schema["migration_required_versions"]
+    assert schema["current_version"] == 28
+    assert schema["mutable_versions"] == [28]
+    assert 27 in schema["migration_required_versions"]
+    assert 28 not in schema["migration_required_versions"]
     assert manifest["event_writes"]["status"] == "partially_declared"
     assert manifest["plugin_compatibility"]["status"] == "unrecorded"
     assert manifest["downgrade_compatibility"]["status"] == "unrecorded"

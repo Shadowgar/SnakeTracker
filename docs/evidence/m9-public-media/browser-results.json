@@ -1,0 +1,332 @@
+{
+  "checks": [
+    {
+      "name": "owner-empty-album-1440",
+      "viewport": 1440,
+      "scroll": 1440,
+      "violations": [],
+      "images": []
+    },
+    {
+      "name": "public-empty-collection-1440",
+      "viewport": 1440,
+      "scroll": 1440,
+      "violations": [],
+      "images": []
+    },
+    {
+      "name": "owner-album-1440",
+      "viewport": 1440,
+      "scroll": 1440,
+      "violations": [],
+      "images": [
+        {
+          "width": 281.203125,
+          "height": 240,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        },
+        {
+          "width": 281.203125,
+          "height": 240,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        }
+      ]
+    },
+    {
+      "name": "owner-sharing-1440",
+      "viewport": 1440,
+      "scroll": 1440,
+      "violations": [],
+      "images": []
+    },
+    {
+      "name": "owner-collection-1440",
+      "viewport": 1440,
+      "scroll": 1440,
+      "violations": [],
+      "images": []
+    },
+    {
+      "name": "public-animal-1440",
+      "viewport": 1440,
+      "scroll": 1440,
+      "violations": [],
+      "images": [
+        {
+          "width": 561.203125,
+          "height": 398,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        },
+        {
+          "width": 280.203125,
+          "height": 240,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        },
+        {
+          "width": 280.203125,
+          "height": 240,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        }
+      ]
+    },
+    {
+      "name": "public-collection-1440",
+      "viewport": 1440,
+      "scroll": 1440,
+      "violations": [],
+      "images": [
+        {
+          "width": 376.671875,
+          "height": 240,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        }
+      ]
+    },
+    {
+      "name": "public-no-photo-1440",
+      "viewport": 1440,
+      "scroll": 1440,
+      "violations": [],
+      "images": []
+    },
+    {
+      "name": "public-long-name-1440",
+      "viewport": 1440,
+      "scroll": 1440,
+      "violations": [],
+      "images": []
+    },
+    {
+      "name": "owner-album-390",
+      "viewport": 390,
+      "scroll": 390,
+      "violations": [],
+      "images": [
+        {
+          "width": 388,
+          "height": 240,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        },
+        {
+          "width": 388,
+          "height": 240,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        }
+      ]
+    },
+    {
+      "name": "owner-sharing-390",
+      "viewport": 390,
+      "scroll": 390,
+      "violations": [],
+      "images": []
+    },
+    {
+      "name": "owner-collection-390",
+      "viewport": 390,
+      "scroll": 390,
+      "violations": [],
+      "images": []
+    },
+    {
+      "name": "public-animal-390",
+      "viewport": 390,
+      "scroll": 390,
+      "violations": [],
+      "images": [
+        {
+          "width": 356,
+          "height": 251.5,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        },
+        {
+          "width": 356,
+          "height": 240,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        },
+        {
+          "width": 356,
+          "height": 240,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        }
+      ]
+    },
+    {
+      "name": "public-collection-390",
+      "viewport": 390,
+      "scroll": 390,
+      "violations": [],
+      "images": [
+        {
+          "width": 356,
+          "height": 240,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        }
+      ]
+    },
+    {
+      "name": "public-no-photo-390",
+      "viewport": 390,
+      "scroll": 390,
+      "violations": [],
+      "images": []
+    },
+    {
+      "name": "public-long-name-390",
+      "viewport": 390,
+      "scroll": 390,
+      "violations": [],
+      "images": []
+    },
+    {
+      "name": "owner-album-320",
+      "viewport": 320,
+      "scroll": 320,
+      "violations": [],
+      "images": [
+        {
+          "width": 318,
+          "height": 240,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        },
+        {
+          "width": 318,
+          "height": 240,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        }
+      ]
+    },
+    {
+      "name": "owner-sharing-320",
+      "viewport": 320,
+      "scroll": 320,
+      "violations": [],
+      "images": []
+    },
+    {
+      "name": "owner-collection-320",
+      "viewport": 320,
+      "scroll": 320,
+      "violations": [],
+      "images": []
+    },
+    {
+      "name": "public-animal-320",
+      "viewport": 320,
+      "scroll": 320,
+      "violations": [],
+      "images": [
+        {
+          "width": 286,
+          "height": 206,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        },
+        {
+          "width": 286,
+          "height": 240,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        },
+        {
+          "width": 286,
+          "height": 240,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        }
+      ]
+    },
+    {
+      "name": "public-collection-320",
+      "viewport": 320,
+      "scroll": 320,
+      "violations": [],
+      "images": [
+        {
+          "width": 286,
+          "height": 240,
+          "fit": "contain",
+          "naturalWidth": 1200,
+          "naturalHeight": 800
+        }
+      ]
+    },
+    {
+      "name": "public-no-photo-320",
+      "viewport": 320,
+      "scroll": 320,
+      "violations": [],
+      "images": []
+    },
+    {
+      "name": "public-long-name-320",
+      "viewport": 320,
+      "scroll": 320,
+      "violations": [],
+      "images": []
+    },
+    {
+      "name": "real-upload-organize-publication-anonymous-delivery-revocation-primary-unchanged",
+      "status": "passed"
+    }
+  ],
+  "screenshots": [
+    "owner-empty-album-1440.png",
+    "public-empty-collection-1440.png",
+    "owner-album-1440.png",
+    "owner-sharing-1440.png",
+    "owner-collection-1440.png",
+    "public-animal-1440.png",
+    "public-collection-1440.png",
+    "public-no-photo-1440.png",
+    "public-long-name-1440.png",
+    "owner-album-390.png",
+    "owner-sharing-390.png",
+    "owner-collection-390.png",
+    "public-animal-390.png",
+    "public-collection-390.png",
+    "public-no-photo-390.png",
+    "public-long-name-390.png",
+    "owner-album-320.png",
+    "owner-sharing-320.png",
+    "owner-collection-320.png",
+    "public-animal-320.png",
+    "public-collection-320.png",
+    "public-no-photo-320.png",
+    "public-long-name-320.png"
+  ],
+  "externalRequests": [],
+  "errors": [],
+  "status": "passed"
+}

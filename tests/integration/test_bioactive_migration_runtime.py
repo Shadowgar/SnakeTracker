@@ -37,6 +37,7 @@ from snaketracker.infrastructure.taxonomy.catalog import LocalTaxonomyCatalog
 from snaketracker.operations.import_care_guides import load_bundle
 
 ROOT = Path(__file__).parents[2]
+BIOACTIVE_REVISION = "0027_bioactive_plant_care"
 PREVIOUS = "47f14b4790874bcf73d39331c0feb9fb4f04cbe5"
 
 
@@ -49,7 +50,7 @@ def _config(database, root):
 
 def _fixture(database, root):
     config = _config(database, root)
-    command.upgrade(config, "head")
+    command.upgrade(config, BIOACTIVE_REVISION)
     engine = create_sqlite_engine(database, require_local_storage=False)
     boot = HouseholdBootstrapService(
         SQLAlchemyHouseholdBootstrapRepository(engine),
@@ -156,9 +157,9 @@ def check_bioactive_upgrade(database: Path, root: Path = ROOT) -> None:
         engine.dispose()
         command.downgrade(config, "0026_amphibian_care_guides")
         before = _snapshot(engine)
-        for target in ("head", "0026_amphibian_care_guides", "head"):
+        for target in (BIOACTIVE_REVISION, "0026_amphibian_care_guides", BIOACTIVE_REVISION):
             engine.dispose()
-            (command.upgrade if target == "head" else command.downgrade)(config, target)
+            (command.upgrade if target == BIOACTIVE_REVISION else command.downgrade)(config, target)
             assert _snapshot(engine) == before
             with engine.connect() as c:
                 assert c.exec_driver_sql("PRAGMA trusted_schema").scalar_one() == 0

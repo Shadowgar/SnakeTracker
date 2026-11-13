@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ animal.name }} · Photo album · Care Keeper{% endblock %}
+{% block page_styles %}<link rel="stylesheet" href="/static/sharing.css?v=m9-photo-v1">{% endblock %}
+{% block content %}
+<section class="sharing-page" aria-labelledby="page-title">
+  <header class="page-heading"><div><a class="sharing-back" href="/animals/{{ animal.animal_id }}">← {{ animal.name }}</a><p class="page-kicker">Photos &amp; sharing</p><h1 id="page-title">{{ animal.name }}’s album</h1><p class="lede">Keep the moments that matter. Your primary profile photo stays separate.</p></div><a class="button-link secondary" href="/animals/{{ animal.animal_id }}/sharing">Public profile choices</a></header>
+  {% if animal.status != 'active' %}<p class="sharing-notice">This Animal is archived. Its album remains private and readable. Restore the Animal before editing photos or publication choices.</p>{% endif %}
+  {% if error %}<div class="alert" role="alert"><strong>Photo was not added.</strong> {{ error }} Select your file again to retry.</div>{% endif %}
+  {% if request.query_params.get('uploaded') %}<p class="sharing-success" role="status">Photo added privately. Choose Edit photo to manage its caption, order and sharing.</p>{% endif %}
+  {% if request.query_params.get('removed') %}<p class="sharing-success" role="status">Photo removed from the album and public access revoked. Its historical version remains protected.</p>{% endif %}
+  {% if request.query_params.get('saved') %}<p class="sharing-success" role="status">Photo choices saved.</p>{% endif %}
+  {% if can_manage and animal.status == 'active' %}<details class="card sharing-upload" {% if not photos or error %}open{% endif %}><summary>Add a photo</summary>
+    <form class="form-stack" method="post" action="/animals/{{ animal.animal_id }}/album/upload" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="idempotency_key" value="{{ command_id }}">
+      <label>Photo<input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required aria-describedby="photo-help"></label>
+      <p id="photo-help" class="muted">JPEG, PNG or WebP, up to 20 MiB. Phone orientation is corrected and embedded location/EXIF metadata is removed. Every upload starts private.</p>
+      <label>Caption<textarea name="caption" rows="2" maxlength="500" placeholder="A moment to remember">{{ values.get('caption', '') }}</textarea></label>
+      <div class="form-actions"><button type="submit">Add photo privately</button></div>
+    </form>
+  </details>{% endif %}
+  <div class="sharing-section-heading"><h2>Album photos <span class="sharing-count">{{ photos|length }}</span></h2><p class="muted">Up to 100 photos per Animal. Retained versions count toward the household’s 256 MiB photo allowance, including removed photos.</p></div>
+  <div class="album-grid">{% for photo in photos %}<article class="card album-card" data-media-id="{{ photo.media_id }}"><a href="/animals/{{ animal.animal_id }}/album/{{ photo.media_id }}" class="album-photo-link"><img src="/animals/{{ animal.animal_id }}/album/{{ photo.media_id }}/photo" width="{{ photo.width }}" height="{{ photo.height }}" alt="{{ photo.caption or ('Photo ' ~ loop.index ~ ' of ' ~ animal.name) }}" loading="lazy"></a><div class="album-card-copy"><p>{{ photo.caption or 'No caption yet' }}</p><div class="sharing-card-meta"><span class="sharing-status">{{ 'Selected for sharing' if photo.is_public else 'Private' }}</span><span>Position {{ photo.position }}</span></div><a href="/animals/{{ animal.animal_id }}/album/{{ photo.media_id }}">{{ 'Edit photo' if can_manage else 'View photo' }} <span class="visually-hidden">{{ loop.index }}</span></a></div></article>{% else %}<div class="card album-empty"><div aria-hidden="true" class="album-empty-mark">＋</div><h3>A space for their story</h3><p>Add your first photo. It will be visible only to your household until you deliberately select it for sharing.</p></div>{% endfor %}</div>
+</section>
+{% endblock %}
+

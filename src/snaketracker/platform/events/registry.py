@@ -116,6 +116,13 @@ from snaketracker.domains.reminders.contracts import (
     ReminderRuleCreatedV1,
     ReminderRuleDisabledV1,
 )
+from snaketracker.domains.sharing.contracts import (
+    AlbumPhotoAddedV1,
+    AlbumPhotoChangedV1,
+    AlbumPhotoRemovedV1,
+    AnimalPublicationChangedV1,
+    HouseholdPublicationChangedV1,
+)
 from snaketracker.platform.events.control_contracts import EventReinstatedV1, EventVoidedV1
 from snaketracker.platform.events.envelope import (
     DomainEvent,
@@ -2506,6 +2513,80 @@ HISTORICAL_CONTROL_CONTRACTS = (
     ),
 )
 
+SharingPayload = (
+    HouseholdPublicationChangedV1
+    | AnimalPublicationChangedV1
+    | AlbumPhotoAddedV1
+    | AlbumPhotoChangedV1
+    | AlbumPhotoRemovedV1
+)
+
+
+def _deserialize_sharing(
+    payload_type: type[SharingPayload], data: Mapping[str, object]
+) -> EventPayload:
+    _require_exact_fields(payload_type, data)
+    values: dict[str, Any] = dict(data)
+    for key, value in values.items():
+        if key in {"animal_id", "media_id", "attachment_version_id", "cover_media_id"}:
+            if key == "cover_media_id" and value is None:
+                continue
+            if not isinstance(value, str):
+                raise ValueError("Stored sharing identity is invalid.")
+            values[key] = UUID(value)
+        elif key in {"enabled", "is_public"}:
+            if type(value) is not bool:
+                raise ValueError("Stored sharing visibility must be boolean.")
+        elif key == "position":
+            if type(value) is not int or not 0 <= value <= 10000:
+                raise ValueError("Stored album ordering is invalid.")
+        else:
+            maximum = {
+                "slug": 80,
+                "public_token": 64,
+                "title": 120,
+                "species": 120,
+                "description": 2000,
+                "caption": 500,
+            }[key]
+            if not isinstance(value, str) or len(value) > maximum:
+                raise ValueError("Stored public text is invalid.")
+            if key in {"slug", "public_token", "title"} and not value:
+                raise ValueError("Stored public identity is empty.")
+    return payload_type(**values)
+
+
+def _sharing_deserializer(payload_type: type[SharingPayload]) -> PayloadDeserializer:
+    def deserialize(data: Mapping[str, object]) -> EventPayload:
+        return _deserialize_sharing(payload_type, data)
+
+    return deserialize
+
+
+SHARING_CONTRACTS = tuple(
+    EventContractRegistration(
+        event_type=event_type,
+        schema_version=1,
+        owner="sharing",
+        payload_type=payload_type,
+        deserialize_payload=_sharing_deserializer(payload_type),
+        subject_requirements=(SubjectRequirement("household", "primary"),)
+        + (
+            ()
+            if payload_type is HouseholdPublicationChangedV1
+            else (SubjectRequirement("animal", "related"),)
+        ),
+    )
+    for event_type, payload_type in (
+        ("sharing.household_changed", HouseholdPublicationChangedV1),
+        ("sharing.animal_changed", AnimalPublicationChangedV1),
+        ("sharing.photo_added", AlbumPhotoAddedV1),
+        ("sharing.photo_changed", AlbumPhotoChangedV1),
+        ("sharing.photo_removed", AlbumPhotoRemovedV1),
+    )
+)
+
+
 household_event_registry = EventRegistry(HOUSEHOLD_CONTRACTS)
 production_event_registry = EventRegistry(
     (
@@ -2518,6 +2599,7 @@ production_event_registry = EventRegistry(
         *PURCHASE_CONTRACTS,
         *EXPENSE_CONTRACTS,
         *REMINDER_CONTRACTS,
+        *SHARING_CONTRACTS,
     )
 )
 
